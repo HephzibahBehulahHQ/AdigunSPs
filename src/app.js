@@ -819,7 +819,7 @@ function confirmProjectChange() {
   return new Promise((resolve) => {
     const dialog = document.createElement("dialog");
     dialog.className = "modal";
-    dialog.innerHTML = `<div class="modal-head"><h2>Unsaved changes</h2></div><div class="modal-body"><p class="safety-copy">You have unsaved changes. Save before switching projects?</p><div class="modal-actions"><button type="button" class="secondary" data-change-cancel>Cancel</button><button type="button" class="secondary" data-change-continue>Continue without saving</button><button type="button" class="primary" data-change-save>Save and continue</button></div></div>`;
+    dialog.innerHTML = `<div class="modal-head"><h2>Unsaved changes</h2></div><div class="modal-body"><p class="safety-copy">You have changes since your last file or cloud save. Save a copy before switching projects?</p><div class="modal-actions"><button type="button" class="secondary" data-change-cancel>Cancel</button><button type="button" class="secondary" data-change-continue>Switch without an extra save</button><button type="button" class="primary" data-change-save>Save and continue</button></div></div>`;
     document.body.append(dialog);
     let complete = false;
     const finish = (proceed) => { if (complete) return; complete = true; if (dialog.open) dialog.close(); dialog.remove(); resolve(proceed); };
