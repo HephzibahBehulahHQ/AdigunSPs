@@ -15,21 +15,28 @@ function csvDocument(rows, locale) {
   const footer = [labels[locale] || labels.en, ui[locale]?.safety || ui.en.safety];
   return `\uFEFF${[...rows, footer].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
 }
-function scheduleRows(project, presentation) {
+function currentAllocation(project, tag) {
+  const allocations = project.ioAllocation?.allocations;
+  if (project.ioAllocation?.approved !== true || !Array.isArray(allocations)) return null;
+  return allocations.find((item) => item?.tag === tag.name && item?.address === tag.address && item?.role === tag.role) || null;
+}
+function scheduleRows(project, presentation, withAllocation = false) {
   const io = project.io || {}, inputs = new Set(io.inputs || []), outputs = new Set(io.outputs || []);
   const tags = [...(project.tags || [])].sort((a, b) => String(a.address || a.name).localeCompare(String(b.address || b.name), undefined, { numeric:true }) || String(a.name).localeCompare(String(b.name)));
-  return tags.map((tag) => [project.name, presentation.productName, presentation.companyName, presentation.attribution, tag.name, tag.type || "BOOL", tag.role || (outputs.has(tag.name) ? "output" : inputs.has(tag.name) ? "input" : "internal"), tag.address || tag.name, tag.alias || "", project.initialState?.[tag.name] ?? ""]);
+  return tags.map((tag) => { const row = [project.name, presentation.productName, presentation.companyName, presentation.attribution, tag.name, tag.type || "BOOL", tag.role || (outputs.has(tag.name) ? "output" : inputs.has(tag.name) ? "input" : "internal"), tag.address || tag.name, tag.alias || "", project.initialState?.[tag.name] ?? ""]; if (withAllocation) { const allocation = currentAllocation(project, tag); row.push(allocation?.terminal || "", allocation?.wire || "", allocation ? "Proposed · verify against hardware" : ""); } return row; });
 }
 
 export function createIoScheduleCsv(project, presentation, locale = "en") {
-  const rows = [headings[locale] || headings.en, ...scheduleRows(project, presentation)];
+  const withAllocation = project.ioAllocation?.approved === true && Array.isArray(project.ioAllocation.allocations);
+  const header = [...(headings[locale] || headings.en)]; if (withAllocation) header.push("Logical terminal", "Wire label", "Allocation note");
+  const rows = [header, ...scheduleRows(project, presentation, withAllocation)];
   return csvDocument(rows, locale);
 }
 
 export function createIoSchedulePrintHtml(project, presentation, locale = "en", safety = "") {
-  const titles = { en:"I/O Schedule", de:"E/A-Liste", yo:"Àtòjọ I/O", pcm:"I/O Schedule" }, title = titles[locale] || titles.en, rows = scheduleRows(project, presentation);
+  const titles = { en:"I/O Schedule", de:"E/A-Liste", yo:"Àtòjọ I/O", pcm:"I/O Schedule" }, title = titles[locale] || titles.en, withAllocation = project.ioAllocation?.approved === true && Array.isArray(project.ioAllocation.allocations), rows = scheduleRows(project, presentation, withAllocation), headers = [...(headings[locale] || headings.en)]; if (withAllocation) headers.push("Logical terminal", "Wire label", "Allocation note");
   const body = rows.map((row) => `<tr>${row.map((cell) => `<td>${html(cell)}</td>`).join("")}</tr>`).join("");
-  return `<header class="io-report-header">${reportBrand(presentation)}<h1>${html(title)}</h1><p>${html(presentation.attribution)}</p><p><strong>${html(headings[locale]?.[0] || headings.en[0])}:</strong> ${html(project.name)}</p></header><table class="io-report-table"><thead><tr>${(headings[locale] || headings.en).map((cell) => `<th>${html(cell)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table><footer class="io-report-safety">${html(safety)}</footer>`;
+  return `<header class="io-report-header">${reportBrand(presentation)}<h1>${html(title)}</h1><p>${html(presentation.attribution)}</p><p><strong>${html(headings[locale]?.[0] || headings.en[0])}:</strong> ${html(project.name)}</p></header><table class="io-report-table"><thead><tr>${headers.map((cell) => `<th>${html(cell)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table><footer class="io-report-safety">${html(safety)}</footer>`;
 }
 
 export function createWiringReferenceHtml(project, presentation, locale = "en", safety = "") {
@@ -41,7 +48,7 @@ export function createWiringReferenceHtml(project, presentation, locale = "en", 
   }[locale] || { title:"I/O Wiring Reference Worksheet", channel:"Direction", input:"Input", output:"Output", tag:"PLC tag", type:"Type", address:"Configured I/O address", signal:"Signal / alias", field:"Field device / terminal", wire:"Wire number", notes:"Wiring notes", scope:"Reference worksheet only. Complete field terminals, conductor details, protection, and ratings from the verified hardware design." };
   const inputs = new Set(project.io?.inputs || []), outputs = new Set(project.io?.outputs || []);
   const mapped = (project.tags || []).filter((tag) => inputs.has(tag.name) || outputs.has(tag.name)).sort((a, b) => String(a.address || a.name).localeCompare(String(b.address || b.name), undefined, { numeric:true }));
-  const rows = mapped.map((tag) => [inputs.has(tag.name) ? copy.input : copy.output, tag.name, tag.type || "BOOL", tag.address || tag.name, tag.alias || tag.label?.[locale] || "", "", "", ""]).map((cells) => `<tr>${cells.map((cell) => `<td>${html(cell)}</td>`).join("")}</tr>`).join("");
+  const rows = mapped.map((tag) => { const allocation = currentAllocation(project, tag); return [inputs.has(tag.name) ? copy.input : copy.output, tag.name, tag.type || "BOOL", tag.address || tag.name, tag.alias || tag.label?.[locale] || "", allocation?.terminal || "", allocation?.wire || "", allocation ? "Proposed logical channel; verify physical terminal and field wiring." : ""]; }).map((cells) => `<tr>${cells.map((cell) => `<td>${html(cell)}</td>`).join("")}</tr>`).join("");
   const headers = [copy.channel, copy.tag, copy.type, copy.address, copy.signal, copy.field, copy.wire, copy.notes];
   return `<header class="io-report-header">${reportBrand(presentation)}<h1>${html(copy.title)}</h1><p>${html(presentation.attribution)}</p><p><strong>${html(project.name)}</strong></p></header><p>${html(copy.scope)}</p><table class="io-report-table"><thead><tr>${headers.map((cell) => `<th>${html(cell)}</th>`).join("")}</tr></thead><tbody>${rows || `<tr><td colspan="8">—</td></tr>`}</tbody></table><footer class="io-report-safety">${html(safety)}</footer>`;
 }
