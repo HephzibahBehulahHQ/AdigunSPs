@@ -15,7 +15,7 @@ const terminalPosition = (component,terminal) => {
   return [component.x + 60 + local[0] * Math.cos(angle) - (local[1]-40) * Math.sin(angle), component.y + 40 + local[0] * Math.sin(angle) + (local[1]-40) * Math.cos(angle)];
 };
 const contactSymbol = (component) => ({
-  supply24vdc:"＋ 24 V ⎓",supply3phase:"L1 · L2 · L3 ∿",genericPlc24v4di4do:"PLC · 4 DI / 4 DO",digitalInputModule4:"DI · 4",digitalOutputModule4:"DO · 4",analogInputModule2:"AI · 2",analogOutputModule2:"AO · 2",
+  supply24vdc:"＋ 24 V ⎓",supply3phase:"L1 · L2 · L3 ∿",genericPlc24v4di4do:"PLC · 4 DI / 4 DO",digitalInputModule4:"DI · 4",digitalOutputModule4:"DO · 4",analogInputModule2:"AI · 2",analogOutputModule2:"AO · 2",analogSignalSource:"SIG →",analogSignalIndicator:"SIG ◉",
   contactor3P:"KM · A1 / A2",relayCoil:"──( K )──",pilotLamp:"──( × )──",solenoidValve:"──( Y )──",singlePhaseMotor:"( M 1~ )",threePhaseMotor:"( M 3~ )",overloadNC:"──┤/├── 95–96",circuitBreaker:"──o/ o──",fuse:"──[ ▭ ]──",terminal:"○ X",dcPowerRail:"⊙ 24 V rail",junction:"● J",protectiveEarth:"⏚ PE",
 })[component.type] || (component.type.includes("NC") ? "──┤/├──" : component.type.includes("NO") ? "──┤ ├──" : "──[ X ]──");
 
@@ -32,8 +32,8 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
     }).join("");
     const components = diagram.components.map((component) => {
       const spec = electricalComponentCatalog[component.type]; if (!spec) return "";
-      const symbol = contactSymbol(component), selectedClass = component.id === selectedId ? "selected" : "", height=Math.max(80,32+Math.ceil(spec.terminals.length/2)*22);
-      return `<article class="electrical-component ${selectedClass} ${simulatedOutputs[component.id] ? "energized" : ""}" data-component-id="${escape(component.id)}" data-electrical-state="${escape(component.id)}" style="left:${component.x}px;top:${component.y}px;height:${height}px;transform:rotate(${component.rotation || 0}deg)" aria-label="${escape(component.reference)} ${escape(component.label)}"><button class="electrical-component-head" data-drag-component="${escape(component.id)}" title="Drag to move">${escape(component.reference)} · ${escape(component.label)}</button><div class="electrical-symbol" aria-hidden="true">${escape(symbol)}</div>${spec.terminals.map((pin,index) => {const left=index<Math.ceil(spec.terminals.length/2),slot=left?index:index-Math.ceil(spec.terminals.length/2);return `<button class="electrical-port port-${left?"left":"right"}" style="top:${32+slot*22}px" data-terminal-component="${escape(component.id)}" data-terminal="${escape(pin)}" aria-label="${escape(component.reference)} terminal ${escape(pin)}">${escape(pin)}</button>`;}).join("")}</article>`;
+      const symbol = contactSymbol(component), selectedClass = component.id === selectedId ? "selected" : "", height=Math.max(80,32+Math.ceil(spec.terminals.length/2)*22), signalKind=["analog-signal-source","analog-signal-indicator"].includes(spec.kind), signalValue=diagram.simulation?.componentStates?.[component.id]?.signalValue;
+      return `<article class="electrical-component ${selectedClass} ${simulatedOutputs[component.id] || Number(signalValue)>0 ? "energized" : ""}" data-component-id="${escape(component.id)}" data-electrical-state="${escape(component.id)}" style="left:${component.x}px;top:${component.y}px;height:${height}px;transform:rotate(${component.rotation || 0}deg)" aria-label="${escape(component.reference)} ${escape(component.label)}"><button class="electrical-component-head" data-drag-component="${escape(component.id)}" title="Drag to move">${escape(component.reference)} · ${escape(component.label)}</button><div class="electrical-symbol" aria-hidden="true">${escape(symbol)}</div>${signalKind?`<output class="electrical-signal-value" data-electrical-signal="${escape(component.id)}">${escape(Number.isFinite(signalValue)?signalValue:"—")}</output>`:""}${spec.terminals.map((pin,index) => {const left=index<Math.ceil(spec.terminals.length/2),slot=left?index:index-Math.ceil(spec.terminals.length/2);return `<button class="electrical-port port-${left?"left":"right"}" style="top:${32+slot*22}px" data-terminal-component="${escape(component.id)}" data-terminal="${escape(pin)}" aria-label="${escape(component.reference)} terminal ${escape(pin)}">${escape(pin)}</button>`;}).join("")}</article>`;
     }).join("");
     const contactInputs = diagram.components.filter((item) => electricalComponentCatalog[item.type]?.kind === "contact").map((item) => {
       const tag = item.tag || item.reference, checked = Boolean(inputValues[tag] ?? diagram.inputStates[tag]);
@@ -67,3 +67,4 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
   };
   render();
 }
+

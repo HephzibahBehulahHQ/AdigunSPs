@@ -43,7 +43,7 @@ The application is designed for learning and early logic exploration. It does no
 - **Scan controls:** run, pause, step, reset, view energized ladder paths, inject supported simulated I/O faults, set breakpoints, replay recorded inputs, and inspect bounded scan history.
 - **Scenarios and examples:** run typed input sequences against expected outputs. The learning library contains 200 example projects with executable cases and generated generic PLC I/O schematics; these examples are educational material, not vendor-validated programs.
 - **Electrical schematic workspace:** select generic PLCs and I/O modules, NO/NC controls and sensors, contactors and auxiliaries, overload contacts, breakers, fuses, lamps, solenoid coils, motors, supplies, terminals, junctions, and PE symbols. Place, move, rotate, duplicate, edit properties and I/O mappings, and connect terminals. Saved diagrams are part of the project. A contactor's A1/A2 coil circuit drives its main and auxiliary contacts; a wired three-phase starter can switch the educational motor on/off model.
-- **Electrical example checks:** each of the 200 examples includes a generic PLC schematic with mapped Boolean I/O and associated loads where applicable. The generated validation report records project validation and 903 deterministic electrical input/output behavior cases in addition to 1,317 PLC logic cases.
+- **Electrical example checks:** each of the 200 examples includes a generic PLC schematic with mapped Boolean I/O and associated loads where applicable. Numeric tags use wired scalar analog source/module/indicator paths; these carry tag values without modeling voltage or current. The generated report records 1,317 PLC logic cases, 903 independent Boolean schematic checks, and 1,317 integrated scenario cases through the wired input → PLC logic → connected output path where supported.
 
 ### Projects and engineering tools
 
@@ -139,7 +139,7 @@ Run the complete local automated suite:
 npm test
 ```
 
-The suite covers 200 learning examples and their deterministic PLC and generic electrical behavior cases, plus focused branding, hardware/report, Adigun BOT, resource, and Modbus TCP checks. Per-example logic and electrical component results are in [`docs/engineering-validation-report.json`](docs/engineering-validation-report.json). Electrical components are generic educational models: manufacturer compatibility, detailed electrical physics, analog signal behavior, safety functions, and physical wiring are not validated. There are no separate lint, TypeScript, or browser E2E scripts configured. Full browser interaction, accessibility, security, performance, cross-browser, and PWA installation audits remain outstanding.
+The suite covers 200 learning examples and their deterministic PLC and generic electrical behavior cases, plus focused branding, hardware/report, Adigun BOT, resource, and Modbus TCP checks. The per-example report in [`docs/engineering-validation-report.json`](docs/engineering-validation-report.json) records 1,317 logic cases, 903 independent Boolean schematic checks, and 1,317 integrated PLC-to-component cases; all passed in the current run. Electrical components are generic educational models: manufacturer compatibility, detailed electrical physics, analog voltage/current physics, safety functions, and physical wiring are not validated. There are no separate lint, TypeScript, or browser E2E scripts configured. Full browser interaction, accessibility, security, performance, cross-browser, and PWA installation audits remain outstanding.
 
 Run `npm run validate:examples` to regenerate the report from the simulator checks.
 
@@ -207,3 +207,4 @@ AdigunSPs is a product of HEPHZIBAH BEHULAH, developed under the HB Elektroniker
 - [LinkedIn personal profile](https://www.linkedin.com/in/isaacoluwoleadigun/)
 
 **AdigunSPs — a product of HEPHZIBAH BEHULAH.**
+

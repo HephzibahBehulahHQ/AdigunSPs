@@ -30,6 +30,4 @@ const menuActions = {
 
 export function createApplicationMenuEntries(locale = "en") {
   const labels = commandLabels[locale] || commandLabels.en;
-  return Object.fromEntries(Object.entries(menuActions).map(([menu, entries]) => [menu, entries.map(([key, action]) => ({ label:labels[key], action }))]));
-}
-
+  return Object.fromEntries(Object.entries(menuActions).map(([menu, entries]) => [menu, entries.map(([key, action]) => ({ labe

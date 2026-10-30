@@ -100,6 +100,7 @@ body[data-theme="light"] {
 .electrical-component.energized{border-color:#22c55e;box-shadow:0 0 14px #22c55e66}
 .electrical-component-head{display:block;width:100%;overflow:hidden;padding:5px 8px;border:0;border-radius:7px 7px 0 0;background:#1b293a;color:var(--text,#eef3f8);font-size:10px;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:move}
 .electrical-symbol{display:flex;align-items:center;justify-content:center;height:42px;color:#d4af37;font:600 15px/1.2 ui-monospace,Consolas,monospace}
+.electrical-signal-value{display:block;color:#22d3ee;font:600 10px/1.2 ui-monospace,Consolas,monospace;text-align:center}
 .electrical-port{position:absolute;z-index:3;top:31px;min-width:22px;height:20px;padding:1px 3px;border:1px solid #22d3ee;border-radius:5px;background:#0b1220;color:#a5f3fc;font-size:9px;cursor:crosshair}
 .electrical-port.port-left{left:-12px}.electrical-port.port-right{right:-12px}
 .electrical-channel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0;padding:7px;border:1px solid var(--line,#39485b);border-radius:6px}
@@ -114,3 +115,4 @@ body[data-theme="light"] {
 .electrical-wire-list{display:grid;gap:5px}.electrical-wire-row{overflow:hidden;padding:6px;border:1px solid var(--line,#283344);border-radius:5px;background:transparent;color:var(--text,#d9e1ec);font-size:10px;text-align:left;text-overflow:ellipsis;white-space:nowrap}.electrical-wire-row.selected{border-color:#d4af37}
 .electrical-validation{margin:0;color:#86efac;font-size:11px}.electrical-validation.has-error,.electrical-issues .error{color:#fca5a5}.electrical-issues{margin:0;padding-left:16px;font-size:10px}.electrical-issues li{margin:3px 0}.electrical-issues .warning{color:#fcd34d}.electrical-status{min-height:16px;margin:0;color:#a5f3fc;font-size:10px}
 @media(max-width:900px){.electrical-body{grid-template-columns:minmax(0,1fr)}.electrical-inspector{max-height:42vh}.electrical-pane{padding:8px}.electrical-toolbar{gap:6px}.electrical-toolbar select{min-width:150px}}
+

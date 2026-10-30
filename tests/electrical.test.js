@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { connectElectricalTerminals, createElectricalComponent, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, rotateElectricalComponent, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, rotateElectricalComponent, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
 
@@ -61,4 +61,13 @@ const logicExample={title:{en:"Circuit integration"},tags:[{name:"Start",role:"i
 const logicProject=makeProjectFromExample(logicExample),plcOff=scan(logicProject,{Start:false},{}),circuitOff=simulateElectricalDiagram(logicProject.electrical,{Start:false},plcOff.outputs),plcOn=scan(logicProject,{Start:true},{}),circuitOn=simulateElectricalDiagram(logicProject.electrical,{Start:true},plcOn.outputs),mappedLamp=logicProject.electrical.components.find((item)=>item.tag==="Lamp");
 assert.equal(circuitOff.energized[mappedLamp.id],false,"PLC ladder output off leaves its electrically connected lamp off");
 assert.equal(circuitOn.energized[mappedLamp.id],true,"PLC ladder output on energizes the mapped connected load");
-console.log("PASS: generic industrial categories, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
+const analogTags=[{name:"RawAI",type:"REAL",role:"input",address:"IW0"},{name:"ScaledValue",type:"REAL",role:"output",address:"QW0"}],analogDiagram=createExampleElectricalDiagram(analogTags,{inputs:["RawAI"],outputs:["ScaledValue"]}),analogIn=simulateElectricalDiagram(analogDiagram,{RawAI:250},{}),analogOut=simulateElectricalDiagram(analogDiagram,{RawAI:250},{ScaledValue:25}),analogIndicator=analogDiagram.components.find((item)=>item.tag==="ScaledValue");
+assert.equal(analogIn.inputs.RawAI,250,"wired generic analog source delivers a numeric PLC input value");
+assert.equal(analogOut.analogOutputs.ScaledValue,25,"mapped analog output module carries its value to the wired indicator");
+assert.equal(analogOut.componentStates[analogIndicator.id].signalValue,25,"analog indicator exposes the delivered scalar value");
+const openAnalogInput=structuredClone(analogDiagram);openAnalogInput.wires=openAnalogInput.wires.filter((wire)=>wire.from.componentId!==analogDiagram.components.find((item)=>item.type==="analogSignalSource").id||wire.from.terminal!=="SIG+");
+assert.equal(simulateElectricalDiagram(openAnalogInput,{RawAI:250},{}).inputs.RawAI,0,"disconnected analog input resolves to a safe zero instead of passing through its raw numeric source");
+const openAnalogOutput=structuredClone(analogDiagram);openAnalogOutput.wires=openAnalogOutput.wires.filter((wire)=>wire.to.componentId!==analogIndicator.id||wire.to.terminal!=="SIG+");
+assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {ScaledValue:25}).analogOutputs,"ScaledValue"),false,"disconnected analog output is not delivered to its indicator");
+console.log("PASS: generic industrial categories, digital and scalar analog I/O paths, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
+

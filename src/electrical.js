@@ -16,6 +16,8 @@ export const electricalComponentCatalog = Object.freeze({
   proximityNC: { name:"Generic proximity sensor · NC simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:true },
   photoelectricNO: { name:"Generic photoelectric sensor · NO simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:false },
   photoelectricNC: { name:"Generic photoelectric sensor · NC simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:true },
+  analogSignalSource: { name:"Generic analog signal source · scalar simulation", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"tag-scaled scalar; no voltage physics" },
+  analogSignalIndicator: { name:"Generic analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
   contactor3P: { name:"Generic three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
   relayCoil: { name:"Generic control relay coil · 24 V DC simulation", category:"Contactors and relays", prefix:"K", terminals:["A1","A2"], kind:"load" },
   auxiliaryNO: { name:"Generic normally-open auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["13","14"], kind:"contact", normallyClosed:false },
@@ -47,6 +49,7 @@ export function createElectricalComponent(type, sequence, x = 120, y = 120) {
     nominalVoltageV:spec.nominalVoltageV ?? null, ratedVoltageV:null, ratedCurrentA:null,
     manufacturer:"", partNumber:"", simulationOnly:true, ioMap,
     coilTag:"", closed:spec.kind === "manual-switch" || spec.kind === "junction", tripped:false,
+    ...(spec.signalModel ? { signalModel:spec.signalModel, signalValue:null } : {}),
   };
 }
 
@@ -99,12 +102,22 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}) {
   const analogInputs = (tags || []).filter((tag) => tag.role === "input" && ["INT", "REAL"].includes(tag.type));
   if (analogInputs.length) {
     const module = add("analogInputModule2", 300, 640);
-    analogInputs.slice(0, 2).forEach((tag, index) => { module.ioMap[`AI${index + 1}`] = { tag: tag.name, address: /^IW\d+$/.test(tag.address||"")?tag.address:`IW${index * 2}` }; });
+    wire(returnRail,"7",module,"MANA");
+    analogInputs.slice(0, 2).forEach((tag, index) => {
+      module.ioMap[`AI${index + 1}`] = { tag: tag.name, address: /^IW\d+$/.test(tag.address||"")?tag.address:`IW${index * 2}` };
+      const source=add("analogSignalSource",80,680+index*80,tag.name);
+      wire(source,"SIG+",module,`AI${index+1}+`); wire(source,"SIG−",module,`AI${index+1}−`);
+    });
   }
   const analogOutputs = (tags || []).filter((tag) => tag.role === "output" && ["INT", "REAL"].includes(tag.type));
   if (analogOutputs.length) {
     const module = add("analogOutputModule2", 560, 640);
-    analogOutputs.slice(0, 2).forEach((tag, index) => { module.ioMap[`AQ${index + 1}`] = { tag: tag.name, address: /^QW\d+$/.test(tag.address||"")?tag.address:`QW${index * 2}` }; });
+    wire(returnRail,"8",module,"MANA");
+    analogOutputs.slice(0, 2).forEach((tag, index) => {
+      module.ioMap[`AQ${index + 1}`] = { tag: tag.name, address: /^QW\d+$/.test(tag.address||"")?tag.address:`QW${index * 2}` };
+      const indicator=add("analogSignalIndicator",760,680+index*80,tag.name);
+      wire(module,`AQ${index+1}+`,indicator,"SIG+"); wire(module,`AQ${index+1}−`,indicator,"SIG−");
+    });
   }
   return { components, wires, inputStates: { ...initialState } };
 }
@@ -203,11 +216,25 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       if (poweredPair(nets, component, a, b)) contactorEnergized.add(component.id); else contactorEnergized.delete(component.id);
     }
   }
-  const nodes = makeGraph(), nets = sourceNets(nodes), plcInputs = {};
+  const nodes = makeGraph(), nets = sourceNets(nodes), plcInputs = {}, analogInputs = {}, analogOutputs = {}, componentStates = {};
   for (const controller of all) {
-    const spec = electricalComponentCatalog[controller.type]; if (!spec?.channels?.inputs) continue;
+    const spec = electricalComponentCatalog[controller.type]; if (!spec || !(spec.channels?.inputs?.length || spec.channels?.analogInputs?.length || spec.channels?.analogOutputs?.length)) continue;
     const hasReturn = nets.some(({ nets: poles }) => poles.negative?.has(key(controller.id, "M")) || poles.N?.has(key(controller.id, "M")));
-    for (const channel of spec.channels.inputs) { const tag = controller.ioMap?.[channel]?.tag; if (tag) plcInputs[tag] = Boolean(hasReturn && nets.some(({ nets: poles }) => (poles.positive || poles.L)?.has(key(controller.id, channel)))); }
+    for (const channel of spec.channels.inputs || []) { const tag = controller.ioMap?.[channel]?.tag; if (tag) plcInputs[tag] = Boolean(hasReturn && nets.some(({ nets: poles }) => (poles.positive || poles.L)?.has(key(controller.id, channel)))); }
+    for (const channel of spec.channels.analogInputs || []) {
+      const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
+      if (!tag||!signal) continue;
+      const positivePin=`${channel}+`,negativePin=`${channel}−`, connected=(a,at,b,bt)=>(diagram.wires||[]).some((wire)=>(wire.from?.componentId===a.id&&wire.from?.terminal===at&&wire.to?.componentId===b.id&&wire.to?.terminal===bt)||(wire.to?.componentId===a.id&&wire.to?.terminal===at&&wire.from?.componentId===b.id&&wire.from?.terminal===bt));
+      const value=Number(inputStates[tag]);
+      if (connected(signal,"SIG+",controller,positivePin)&&connected(signal,"SIG−",controller,negativePin)&&Number.isFinite(value)) { analogInputs[tag]=value; componentStates[signal.id]={signalValue:value,signalModel:signal.signalModel}; }
+    }
+    for (const channel of spec.channels.analogOutputs || []) {
+      const tag=controller.ioMap?.[channel]?.tag, indicator=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-indicator");
+      if (!tag||!indicator) continue;
+      const positivePin=`${channel}+`,negativePin=`${channel}−`,connected=(a,at,b,bt)=>(diagram.wires||[]).some((wire)=>(wire.from?.componentId===a.id&&wire.from?.terminal===at&&wire.to?.componentId===b.id&&wire.to?.terminal===bt)||(wire.to?.componentId===a.id&&wire.to?.terminal===at&&wire.from?.componentId===b.id&&wire.from?.terminal===bt));
+      const value=Number(outputStates[tag]);
+      if (connected(controller,positivePin,indicator,"SIG+")&&connected(controller,negativePin,indicator,"SIG−")&&Number.isFinite(value)) { analogOutputs[tag]=value; componentStates[indicator.id]={signalValue:value,signalModel:indicator.signalModel}; }
+    }
   }
   const loads = all.filter((component) => ["load", "motor"].includes(electricalComponentCatalog[component.type]?.kind));
   const energized = Object.fromEntries(loads.map((load) => {
@@ -219,6 +246,10 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         : poweredPair(nets, load, spec.terminals[0], spec.terminals[1]);
     return [load.id, Boolean(powered)];
   }));
-  const componentStates = Object.fromEntries([...loads.map((item) => [item.id, { energized: energized[item.id], ...(electricalComponentCatalog[item.type].kind === "motor" ? { running: energized[item.id], speedModel: "on/off educational state; no validated torque or speed model" } : {}) }]), ...[...contactorEnergized].map((id) => [id, { coilEnergized: true, mainContactsClosed: true }])]);
-  return { energized, componentStates, inputs: { ...inputStates, ...plcInputs }, sourceCount: supplies.length, simulationOnly: true, warnings: validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
+  Object.assign(componentStates,Object.fromEntries([...loads.map((item) => [item.id, { energized: energized[item.id], ...(electricalComponentCatalog[item.type].kind === "motor" ? { running: energized[item.id], speedModel: "on/off educational state; no validated torque or speed model" } : {}) }]), ...[...contactorEnergized].map((id) => [id, { coilEnergized: true, mainContactsClosed: true }])]));
+  const resolvedInputs={...inputStates,...plcInputs};
+  for (const controller of all) for(const channel of electricalComponentCatalog[controller.type]?.channels?.analogInputs||[]){const tag=controller.ioMap?.[channel]?.tag;if(tag)resolvedInputs[tag]=analogInputs[tag]??0;}
+  Object.assign(resolvedInputs,analogInputs);
+  return { energized, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, warnings: validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
 }
+
