@@ -77,7 +77,7 @@ for (const language of ["en", "de", "yo", "pcm"]) {
 }
 assert.equal(localizedManifestNames.size, 4, "PWA display names localize the relationship text in all four languages");
 for (const path of [...Object.values(brand.manifest), ...Object.values(brand.products.adigunsps.icons), ...Object.values(brand.products.adigunsps.splash), "assets/brand/company-official.jpg", "assets/brand/brand-overrides.css"]) assert.ok(sw.includes(path), `offline shell caches ${path}`);
-assert.match(sw, /const CACHE = "adigunsps-shell-v\\d+";/, "offline shell uses a versioned cache");
+assert.match(sw, /const CACHE = "adigunsps-shell-v[0-9]+";/, "offline shell uses a versioned cache");
 assert.ok(sw.includes("./src/industrial-catalog.js"), "catalog module is included in the refreshed offline shell");
 assert.ok(!existsSync("BRAND-ASSETS-TODO.md"), "official supplied logo is implemented; no placeholder TODO remains");
 console.log("PASS: official corporate logo, distinct product wordmark/icons, hierarchy on app/PWA/splash, four locales, and both themes");
