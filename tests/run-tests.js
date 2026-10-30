@@ -510,6 +510,12 @@ assert.ok(styles.includes("#ladderCanvas > .rung-virtual-spacer") && serviceWork
 assert.ok(styles.includes(".workspace { grid-template-rows:minmax(0, 1fr); }"), "desktop workspace rows stay viewport-bounded when virtual canvas spacers are large");
 assert.deepEqual([...html.matchAll(/data-app-menu="([^"]+)"/g)].map((match) => match[1]), Object.keys(applicationMenuLabels.en), "application menu buttons match the localized menu registry");
 assert.ok(app.includes("showApplicationMenu") && app.includes('name === "hardware-inventory"') && app.includes('name.startsWith("mode-")'), "menu actions route to existing product features");
+const actionDispatcher = app.slice(app.indexOf("function action(name)"), app.indexOf("function applyLocale()"));
+for (const actionName of new Set(Object.values(createApplicationMenuEntries("en")).flat().map((entry) => entry.action))) {
+  const hasNamedHandler = actionDispatcher.includes(`name === "${actionName}"`) ||
+    (actionName.startsWith("mode-") && actionDispatcher.includes('name.startsWith("mode-")'));
+  assert.ok(hasNamedHandler, `application menu action ${actionName} has a dispatcher handler`);
+}
 assert.ok(app.includes('id="prefTheme"') && app.includes("document.body.dataset.theme = theme") && readFileSync(new URL("../styles.css", import.meta.url), "utf8").includes('body[data-theme="light"]'), "theme selection updates the app palette and light theme styles");
 assert.ok(app.includes('<option value="R_TRIG">${edgeCopy.rising}</option>') && app.includes('<option value="F_TRIG">${edgeCopy.falling}</option>'), "LD inspector exposes localized rising and falling edge contacts");
 assert.ok(conversion.includes("type:contact.mode, inputs:[contact.tag]") && conversion.includes("edge-") && app.includes("convertLadderToFbd(project.rungs, project)"), "LD-to-FBD conversion preserves edge instruction type and identity");

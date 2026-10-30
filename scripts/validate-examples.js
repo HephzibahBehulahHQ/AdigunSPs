@@ -13,8 +13,9 @@ const results = examples.map((example) => {
     actual: item.actual,
     sequenceSteps: item.sequence?.length || 1,
   }));
-  const issues = validateProject(makeProjectFromExample(example));
-  const project = makeProjectFromExample(example), diagram = project.electrical;
+  const project = makeProjectFromExample(example), serializedProject = JSON.stringify(project), reopenedProject = JSON.parse(serializedProject);
+  const saveReopenPass = JSON.stringify(reopenedProject) === serializedProject;
+  const issues = validateProject(reopenedProject), diagram = reopenedProject.electrical;
   const boolInputs = example.tags.filter((tag) => tag.role === "input" && tag.type === "BOOL");
   const boolOutputs = example.tags.filter((tag) => tag.role === "output" && tag.type === "BOOL");
   const componentCases = [
@@ -37,10 +38,10 @@ const results = examples.map((example) => {
       const connectedNumericInputs=Object.fromEntries(Object.entries(numericInputs).filter(([name])=>Object.hasOwn(inputsForCircuit,name)));
       const dt = step.dt || testCase.dt || (example.processes?.length ? 1000 : 100);
       result = example.editorType === "FBD"
-        ? scanFBD(example.fbdBlocks, inputsForCircuit, state, example.io.outputs, dt, connectedNumericInputs)
-        : scan(example.logic, { ...inputsForCircuit, ...connectedNumericInputs }, state, dt);
-      if (example.processes?.length) {
-        const processStep = stepProcesses(example.processes, { ...result.values, ...connectedNumericInputs }, state.processStates || {}, dt);
+        ? scanFBD(reopenedProject.fbdBlocks, inputsForCircuit, state, example.io.outputs, dt, connectedNumericInputs)
+        : scan(reopenedProject, { ...inputsForCircuit, ...connectedNumericInputs }, state, dt);
+      if (reopenedProject.processes?.length) {
+        const processStep = stepProcesses(reopenedProject.processes, { ...result.values, ...connectedNumericInputs }, state.processStates || {}, dt);
         result = { ...result, processValues:processStep.values, processStates:processStep.states, values:{ ...result.values, ...connectedNumericInputs, ...processStep.values } };
       } else result.values = { ...result.values, ...connectedNumericInputs };
       state = result;
@@ -62,6 +63,8 @@ const results = examples.map((example) => {
   return {
     id: example.id,
     name: example.title.en,
+    saveReopenPass,
+    saveReopenErrors: saveReopenPass ? [] : ["Project JSON changed during save/reopen round-trip."],
     structuralPass: structural,
     structuralErrors: issues.filter((item)=>item.level==="error").map(({code,message})=>({code,message})),
     structuralWarningCount: issues.filter((item)=>item.level==="warning").length,
@@ -76,12 +79,12 @@ const results = examples.map((example) => {
     integrationFailures:integrationCases.filter((item)=>item.pass===false),
     componentPass: componentCases.length > 0 && componentCases.every((item) => item.pass),
     componentCounts: { devices:diagram.components.length, wires:diagram.wires.length, mappedInputs:boolInputs.length, mappedOutputs:boolOutputs.length },
-    passed: structural && cases.every((item) => item.pass) && componentCases.length > 0 && componentCases.every((item) => item.pass) && integrationCases.some((item) => item.supported) && integrationCases.filter((item) => item.supported).every((item) => item.pass),
+    passed: saveReopenPass && structural && cases.every((item) => item.pass) && componentCases.length > 0 && componentCases.every((item) => item.pass) && integrationCases.some((item) => item.supported) && integrationCases.filter((item) => item.supported).every((item) => item.pass),
   };
 });
 const report = {
   product: "AdigunSPs",
-  scope: "Every example runs its documented scenarios through the generic schematic input path, PLC scan, and connected digital or scalar analog output where present. Separate mapped-input and output-load path checks cover schematic I/O. Scalar analog wiring carries tag values only; it does not simulate voltage/current physics. Manufacturer hardware, electrical code, physical wiring, component layout quality, and safety are not certified.",
+  scope: "Each generated project is JSON serialized and reopened, then validated and used for mapped schematic I/O checks plus documented scenarios through the schematic input path, PLC scan, and connected digital or scalar analog output where present. This is a project-model round-trip, not a browser-storage UI test. Scalar analog wiring carries tag values only; it does not simulate voltage/current physics. Manufacturer hardware, electrical code, physical wiring, component layout quality, and safety are not certified.",
   acceptanceTarget: 200,
   caseEncoding: { logic:"logicPassBits uses testCases order from src/examples.js (1=pass, 0=fail)", electrical:"electricalPassBits uses BOOL input tag order (pressed cases), then BOOL output tag order (off then on); 1=pass, 0=fail", integration:"integrationPassBits follows testCases order; 1=pass, 0=fail, -=not applicable to a wired output model" },
   exampleCount: results.length,
@@ -93,10 +96,11 @@ const report = {
   integrationCaseCount: results.reduce((sum,item)=>sum+item.integrationCaseCount,0),
   integrationCasesPassed: results.reduce((sum,item)=>sum+item.integrationCaseCount-(item.integrationPassBits.match(/0/g)||[]).length,0),
   examplesWithComponentsPassed: results.filter((item)=>item.componentPass).length,
+  projectsSaveReopenPassed: results.filter((item)=>item.saveReopenPass).length,
   acceptanceMet: results.length === 200 && results.every((item) => item.passed),
   examples: results,
 };
 
 await writeFile(new URL("../docs/engineering-validation-report.json", import.meta.url), `${JSON.stringify(report)}\n`);
-console.log(`Examples: ${report.passed}/${report.exampleCount} passed; ${report.caseCount} logic cases; ${report.componentCasesPassed}/${report.componentCaseCount} schematic checks; ${report.integrationCasesPassed}/${report.integrationCaseCount} integrated PLC-to-component cases; target ${report.acceptanceTarget}; acceptance ${report.acceptanceMet ? "met" : "NOT MET"}.`);
+console.log(`Examples: ${report.passed}/${report.exampleCount} passed; ${report.projectsSaveReopenPassed}/${report.exampleCount} project-model JSON round-trips; ${report.caseCount} logic cases; ${report.componentCasesPassed}/${report.componentCaseCount} schematic checks; ${report.integrationCasesPassed}/${report.integrationCaseCount} integrated PLC-to-component cases; target ${report.acceptanceTarget}; acceptance ${report.acceptanceMet ? "met" : "NOT MET"}.`);
 if (!report.acceptanceMet) process.exitCode = 1;

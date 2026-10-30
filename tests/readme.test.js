@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import pkg from "../package.json" with { type:"json" };
 
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+const engineeringReport = JSON.parse(readFileSync(new URL("../docs/engineering-validation-report.json", import.meta.url), "utf8"));
 assert.ok(readme.startsWith('<p align="center">'), "README begins with the approved corporate logo presentation");
 assert.ok(readme.includes('src="assets/brand/company-official.jpg" alt="Official HEPHZIBAH BEHULAH corporate logo"'), "README logo path and alternative text are explicit");
 assert.ok(existsSync(new URL("../assets/brand/company-official.jpg", import.meta.url)), "README logo asset exists");
@@ -32,4 +33,7 @@ assert.ok(readme.includes("LinkedIn personal profile") && readme.includes("No so
 assert.ok(!existsSync(new URL("../LICENSE", import.meta.url)), "no license is invented");
 for (const script of ["dev", "build", "test", "validate:examples", "test:electrical", "test:brand", "test:hardware", "test:ai", "test:resources", "test:protocol"]) assert.ok(pkg.scripts[script], `documented npm command ${script} exists`);
 assert.ok(readme.includes("Screenshot files are not included in this repository yet"), "missing application screenshot assets are disclosed instead of fabricated");
-console.log("PASS: README hierarchy, logo, links, anchors, commands, screenshot disclosure, and license statement");
+assert.equal(engineeringReport.exampleCount, 200, "engineering report covers 200 distinct example projects");
+assert.equal(engineeringReport.projectsSaveReopenPassed, 200, "all 200 project models pass JSON save/reopen round-trips");
+assert.ok(engineeringReport.examples.every((example) => example.passed && example.saveReopenPass && example.integrationPassBits.length > 0), "every listed example has passing save/reopen, structural, and integration evidence");
+console.log("PASS: README, corporate links, 200 individually reported examples, model round-trips, and license statement");
