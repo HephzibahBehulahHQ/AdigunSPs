@@ -30,7 +30,7 @@ export async function loadAdigunRuntimeConfig(root) {
     supabase: {
       projectRef: ADIGUN_SUPABASE_PROJECT_REF,
       url: process.env.ADIGUN_SUPABASE_URL || local.ADIGUN_SUPABASE_URL || ADIGUN_SUPABASE_URL,
-      publishableKey: process.env.ADIGUN_SUPABASE_PUBLISHABLE_KEY || local.ADIGUN_SUPABASE_PUBLISHABLE_KEY || "",
+      publishableKey: process.env.ADIGUN_SUPABASE_PUBLISHABLE_KEY || local.ADIGUN_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_kUwuugYcMSOUVfSicQE1TQ_2j_B6P8o",
     },
   };
 }
