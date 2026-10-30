@@ -230,6 +230,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     }
   }
   const nodes = makeGraph(), nets = sourceNets(nodes), plcInputs = {}, analogInputs = {}, analogOutputs = {}, componentStates = {};
+  const pairedConnected=(a,aPositive,aNegative,b,bPositive,bNegative)=>{const positive=reachable(nodes,key(a.id,aPositive)),negative=reachable(nodes,key(a.id,aNegative));return positive.has(key(b.id,bPositive))&&negative.has(key(b.id,bNegative))&&![...positive].some((node)=>negative.has(node));};
   for (const controller of all) {
     const spec = electricalComponentCatalog[controller.type]; if (!spec || !(spec.channels?.inputs?.length || spec.channels?.analogInputs?.length || spec.channels?.analogOutputs?.length)) continue;
     const hasReturn = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative?.has(key(controller.id, "M")) || poles.N?.has(key(controller.id, "M"))));
@@ -237,16 +238,16 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const channel of spec.channels.analogInputs || []) {
       const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
       if (!tag||!signal) continue;
-      const positivePin=`${channel}+`,negativePin=`${channel}−`, connected=(a,at,b,bt)=>(diagram.wires||[]).some((wire)=>(wire.from?.componentId===a.id&&wire.from?.terminal===at&&wire.to?.componentId===b.id&&wire.to?.terminal===bt)||(wire.to?.componentId===a.id&&wire.to?.terminal===at&&wire.from?.componentId===b.id&&wire.from?.terminal===bt));
+      const positivePin=`${channel}+`,negativePin=`${channel}−`;
       const value=Number(inputStates[tag]);
-      if (connected(signal,"SIG+",controller,positivePin)&&connected(signal,"SIG−",controller,negativePin)&&Number.isFinite(value)) { analogInputs[tag]=value; componentStates[signal.id]={signalValue:value,signalModel:signal.signalModel}; }
+      if (pairedConnected(signal,"SIG+","SIG−",controller,positivePin,negativePin)&&Number.isFinite(value)) { analogInputs[tag]=value; componentStates[signal.id]={signalValue:value,signalModel:signal.signalModel}; }
     }
     for (const channel of spec.channels.analogOutputs || []) {
       const tag=controller.ioMap?.[channel]?.tag, indicator=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-indicator");
       if (!tag||!indicator) continue;
-      const positivePin=`${channel}+`,negativePin=`${channel}−`,connected=(a,at,b,bt)=>(diagram.wires||[]).some((wire)=>(wire.from?.componentId===a.id&&wire.from?.terminal===at&&wire.to?.componentId===b.id&&wire.to?.terminal===bt)||(wire.to?.componentId===a.id&&wire.to?.terminal===at&&wire.from?.componentId===b.id&&wire.from?.terminal===bt));
+      const positivePin=`${channel}+`,negativePin=`${channel}−`;
       const value=Number(outputStates[tag]);
-      if (connected(controller,positivePin,indicator,"SIG+")&&connected(controller,negativePin,indicator,"SIG−")&&Number.isFinite(value)) { analogOutputs[tag]=value; componentStates[indicator.id]={signalValue:value,signalModel:indicator.signalModel}; }
+      if (pairedConnected(controller,positivePin,negativePin,indicator,"SIG+","SIG−")&&Number.isFinite(value)) { analogOutputs[tag]=value; componentStates[indicator.id]={signalValue:value,signalModel:indicator.signalModel}; }
     }
   }
   const loads = all.filter((component) => ["load", "motor"].includes(electricalComponentCatalog[component.type]?.kind));
