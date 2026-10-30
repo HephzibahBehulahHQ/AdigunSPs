@@ -38,6 +38,14 @@ export const electricalComponentCatalog = Object.freeze({
 const safeNumber = (value) => value === null || value === "" || value === undefined ? null : Number(value);
 export const emptyElectricalDiagram = () => ({ components:[], wires:[] });
 
+export function nextElectricalReference(type, components = []) {
+  const spec=electricalComponentCatalog[type];
+  if(!spec)throw new Error(`Unsupported generic electrical component: ${type}`);
+  const used=new Set(components.map((component)=>String(component.reference||"").trim().toUpperCase()));
+  for(let sequence=1;sequence<=9999;sequence++)if(!used.has(`${spec.prefix}${sequence}`))return `${spec.prefix}${sequence}`;
+  throw new Error(`No available reference numbers remain for ${spec.prefix}.`);
+}
+
 export function createElectricalComponent(type, sequence, x = 120, y = 120) {
   const spec = electricalComponentCatalog[type];
   if (!spec) throw new Error(`Unsupported generic electrical component: ${type}`);
@@ -82,7 +90,7 @@ export function duplicateElectricalComponent(component, reference, offset = 40) 
 export function createExampleElectricalDiagram(tags, io, initialState = {}) {
   const components = [], wires = [];
   const add = (type, x, y, tag = "") => {
-    const sequence = components.filter((item) => item.type === type).length + 1;
+    const sequence = Number(nextElectricalReference(type,components).replace(electricalComponentCatalog[type].prefix,""));
     const component = createElectricalComponent(type, sequence, x, y); component.tag = tag; components.push(component); return component;
   };
   const wire = (a, at, b, bt) => { const result = connectElectricalTerminals({ components, wires }, { componentId: a.id, terminal: at }, { componentId: b.id, terminal: bt }); if (!result.ok) throw new Error(result.error); wires.push(result.wire); };

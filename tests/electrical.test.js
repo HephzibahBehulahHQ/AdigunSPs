@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, rotateElectricalComponent, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
 
@@ -27,6 +27,7 @@ assert.equal(connectElectricalTerminals(diagram,diagram.wires[0].from,{component
 assert.equal(moveElectricalComponent(button,257,281).x,260,"moves snap to grid");
 assert.equal(rotateElectricalComponent(button).rotation,90,"components rotate in right-angle steps");
 assert.notEqual(duplicateElectricalComponent(button,"S2").id,button.id,"component copies get new identities");
+const stopButton=createElectricalComponent("pushbuttonNC",1);assert.equal(nextElectricalReference("pushbuttonNC",[button,stopButton]),"S2","component reference numbering remains unique across types sharing the IEC S prefix");
 assert.equal(validateProject({rungs:[],tags:[],electrical:diagram}).some((issue) => issue.code.startsWith("electrical-") && issue.level === "error"),false,"project validation includes electrical diagrams");
 const duplicatedReference = structuredClone(diagram); duplicatedReference.components[2].reference = duplicatedReference.components[1].reference;
 assert.ok(validateElectricalDiagram(duplicatedReference).some((issue) => issue.code === "electrical-reference"),"duplicate component references are detected");
