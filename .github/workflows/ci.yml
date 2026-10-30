@@ -21,6 +21,16 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Restore Supabase browser bundle if omitted from install
+        shell: bash
+        run: |
+          bundle="node_modules/@supabase/supabase-js/dist/umd/supabase.js"
+          if [ ! -s "$bundle" ]; then
+            SUPABASE_ARCHIVE="$(npm pack --silent --pack-destination "$RUNNER_TEMP" @supabase/supabase-js@2.118.0)"
+            mkdir -p "$(dirname "$bundle")"
+            tar -xOf "$RUNNER_TEMP/$SUPABASE_ARCHIVE" package/dist/umd/supabase.js > "$bundle"
+          fi
+          test -s "$bundle"
       - name: Run automated suite
         run: npm test
       - name: Build static application
