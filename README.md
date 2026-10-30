@@ -95,7 +95,7 @@ The build synchronizes the four PWA manifests, syntax-checks JavaScript modules,
 ### Required
 
 - A modern browser with JavaScript ES modules, IndexedDB, and service worker support for installable/offline behavior.
-- Node.js to run the development server, build, and automated checks. The current scripts were verified with Node.js 24.13.1; `package.json` does not currently declare an `engines` range.
+- Node.js 22 or newer to run the development server, build, and automated checks; the supported minimum is declared in `package.json`.
 - A configured AdigunSPs Supabase publishable key and Auth setup for account access, guest mode, cloud projects, and profile images. Never provide a secret/service-role key to the browser.
 - A local device/browser profile for IndexedDB projects and temporary guest recovery. No physical PLC or controller is connected.
 
@@ -166,15 +166,15 @@ No production hosting provider, deployment workflow, backend service, or public 
 - The simulator does not connect to physical hardware, execute real I/O, validate a safety function, or establish standards compliance.
 - Independently review and validate all engineering work using the target vendor tools and approved safety processes before any physical industrial use.
 
-No safety certification, functional-safety compliance, supported vendor/controller catalog, or physical communication is claimed.
+No safety certification, functional-safety compliance, vendor/controller simulation compatibility, or physical communication is claimed. The 48-item manufacturer reference catalog documents published product data only.
 
 ## Known limitations and future work
 
 The following areas are incomplete or require stakeholder decisions before they can be responsibly implemented:
 
-- Full IEC conformance, complete POU/task interchange, schema validation, vendor import compatibility, device catalogs, downloads, and hardware-in-the-loop require target vendors, CPUs, dialects, and test equipment.
+- Full IEC conformance, complete POU/task interchange, schema validation, vendor import compatibility, an expanded device catalog beyond the 48 sourced references, downloads, and hardware-in-the-loop require target vendors, CPUs, dialects, authoritative manufacturer data, and test equipment.
 - Physical connectivity and OPC UA, Modbus RTU, MQTT, REST/WebSocket, SQL, or historian services require approved endpoints, protocols, and security requirements. The current Modbus tool is a local frame simulator only.
-- Cloud sync, collaboration, SSO/RBAC, centralized backup, administration, licensing, and disaster recovery require a backend, identity, hosting, data residency, and retention decisions.
+- Live verification of the implemented Supabase account/cloud flows still needs production and preview callback URLs, approved test accounts, a reachable browser preview, and authorized owner-side Auth settings. Collaboration, SSO, centralized backup, licensing, and disaster recovery remain unimplemented and need further security/hosting/data-retention decisions.
 - General model-backed AI, provider routing, voice, screenshot input, and AI policy controls require an approved provider, privacy notice, and retention policy. Current Adigun BOT behavior is a limited offline helper.
 - Classroom assignments, grading, certificates, sharing, e-signatures, and formal approval records require education and legal/quality policies.
 - Complete human translation review, larger-project browser performance, keyboard/screen-reader audits, security review, and cross-browser/PWA installation QA remain to be completed.
