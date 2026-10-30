@@ -7,6 +7,12 @@ const text = {
   pcm:{title:"Electrical schematic",palette:"Generic component library",add:"Add component",wire:"Connect terminals",cancel:"Cancel wire",remove:"Delete selected",rotate:"Rotate 90°",copy:"Duplicate",simulate:"Simulate circuit",validate:"Check diagram",properties:"Properties",components:"Components",connections:"Connections",select:"Select component or terminal",name:"Label",reference:"Reference",tag:"PLC tag",voltage:"Rated voltage (V)",current:"Rated current (A)",manufacturer:"Manufacturer (verified only)",part:"Part number (verified only)",contact:"Contact behavior",normallyOpen:"Normally open",normallyClosed:"Normally closed",manual:"Manual input states",statusReady:"Generic learning model only · no physical device connect.",addHint:"Choose generic symbol; no maker or part number dey assumed.",wireHint:"Select two terminal markers to connect dem.",wireSaved:"Connection don save",wireError:"Terminals no fit connect",valid:"Diagram check pass",invalid:"Diagram get errors",on:"Energized",off:"De-energized",floating:"Terminals wey no get wire",none:"No component selected",unknown:"Generic component no support",safety:"Simulation wiring reference only. Verify device ratings and real wiring independently before construction."},
 };
 const langText = (lang) => text[lang] || text.en;
+export function electricalSimulationStatus(result,components,labels={on:"Energized",off:"De-energized"}) {
+  const faults=(result?.faults||[]).map((fault)=>fault.message).filter(Boolean);
+  if(faults.length)return faults.join(" ");
+  const active=Object.entries(result?.energized||{}).filter(([,energized])=>energized).map(([id])=>components.find((component)=>component.id===id)?.reference).filter(Boolean);
+  return active.length?`${labels.on}: ${active.join(", ")}`:labels.off;
+}
 const componentName = (type) => electricalComponentCatalog[type]?.name || type;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g,(char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char]));
 const terminalPosition = (component,terminal) => {
@@ -51,7 +57,7 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
       else if(action==="delete"&&selected){onBeforeChange();diagram.components=diagram.components.filter((item)=>item.id!==selected.id);diagram.wires=diagram.wires.filter((wire)=>wire.from.componentId!==selected.id&&wire.to.componentId!==selected.id);selectedId=diagram.components[0]?.id||"";onChange();render();}
       else if(action==="delete-wire"&&selectedWireId){onBeforeChange();diagram.wires=diagram.wires.filter((wire)=>wire.id!==selectedWireId);selectedWireId="";onChange();render();}
       else if(action==="validate")render(issues.some((item)=>item.level==="error")?t.invalid:t.valid);
-      else if(action==="simulate"){const result=simulateElectricalDiagram(diagram,{...inputValues,...diagram.inputStates},outputValues);diagram.simulation=result;simulatedOutputs=result.energized;const faultMessage=result.faults?.map((fault)=>fault.message).join(" ");render(faultMessage|| (Object.entries(simulatedOutputs).filter(([,value])=>value).length?`${t.on}: ${Object.entries(simulatedOutputs).filter(([,value])=>value).map(([id])=>diagram.components.find((item)=>item.id===id)?.reference).join(", ")}`:t.off));}
+      else if(action==="simulate"){const result=simulateElectricalDiagram(diagram,{...inputValues,...diagram.inputStates},outputValues);diagram.simulation=result;simulatedOutputs=result.energized;render(electricalSimulationStatus(result,diagram.components,t));}
     }));
     root.querySelector("#electricalSelection")?.addEventListener("change",(event)=>{selectedId=event.target.value;root.dataset.selectedComponent=selectedId;render();});
     root.querySelectorAll("[data-select-wire]").forEach((button)=>button.addEventListener("click",()=>{selectedWireId=button.dataset.selectWire;selectedId="";render();}));
