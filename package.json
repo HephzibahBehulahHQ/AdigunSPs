@@ -1,0 +1,7 @@
+{
+  "name": "adigunsps",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev":"node scripts/dev-server.js", "build":"node scripts/build.js", "validate:examples":"node scripts/validate-examples.js", "branding:sync": "node scripts/sync-brand-manifests.js", "test": "node scripts/sync-brand-manifests.js && node tests/run-tests.js && node tests/electrical.test.js && node tests/brand.test.js && node tests/hardware.test.js && node tests/adigun-ai.test.js && node tests/resources.test.js && node tests/protocol-sim.test.js && node tests/readme.test.js && node scripts/validate-examples.js", "test:electrical":"node tests/electrical.test.js", "test:brand": "node scripts/sync-brand-manifests.js && node tests/brand.test.js", "test:hardware": "node tests/hardware.test.js", "test:ai": "node tests/adigun-ai.test.js", "test:resources": "node tests/resources.test.js", "test:protocol": "node tests/protocol-sim.test.js" }
+}

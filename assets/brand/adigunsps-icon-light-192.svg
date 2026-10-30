@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img" aria-labelledby="title">
+  <title id="title">AdigunSPs</title>
+  <rect width="192" height="192" rx="42" fill="#F8FAFC"/>
+  <rect x="23" y="23" width="146" height="146" rx="34" fill="#0B1220"/>
+  <path d="M51 127 81 62h15l30 65h-22l-6-16H77l-7 16zm33-34h8l-4-12z" fill="#22D3EE"/>
+  <path d="M122 57h22v9h-22zm0 15h22v9h-22z" fill="#D4AF37"/>
+  <text x="96" y="151" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="1.4" fill="#F8FAFC">SPs</text>
+</svg>

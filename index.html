@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B1220">
+  <meta name="description" content="AdigunSPs — a product of HEPHZIBAH BEHULAH. Offline-first PLC learning and simulation.">
+  <link id="appManifest" rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" media="(prefers-color-scheme: light)" href="assets/brand/adigunsps-icon-light-192.svg" type="image/svg+xml">
+  <link rel="icon" media="(prefers-color-scheme: dark)" href="assets/brand/adigunsps-icon-dark-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/brand/adigunsps-icon-dark-512.svg">
+  <link rel="apple-touch-startup-image" media="(prefers-color-scheme: light)" href="assets/brand/splash-light.svg">
+  <link rel="apple-touch-startup-image" media="(prefers-color-scheme: dark)" href="assets/brand/splash-dark.svg">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="assets/brand/brand-overrides.css">
+  <title>AdigunSPs — HB Elektroniker — HEPHZIBAH BEHULAH</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="AdigunSPs home"><img id="headerCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"></a>
+    <span class="product-brand"><strong id="headerProductName">AdigunSPs</strong><small id="headerDivisionLabel">BY HB ELEKTRONIKER</small></span>
+    <div class="project-name"><span class="live-dot"></span><button id="projectMenu" aria-label="Project menu"><span id="projectTitle">My first program</span><span class="chevron">▾</span></button></div>
+    <div class="top-actions"><span id="saveState" class="save-state">Saved locally</span><button id="languageButton" class="icon-button" aria-label="Change language">EN</button><button id="settingsButton" class="icon-button" aria-label="Settings">⚙</button><button id="paletteButton" class="icon-button" aria-label="Command search">⌕</button><button id="helpButton" class="icon-button" aria-label="Safety and help">?</button></div>
+  </header>
+
+  <nav class="app-menus" aria-label="Application menus">
+    <button type="button" data-app-menu="file">File</button><button type="button" data-app-menu="edit">Edit</button><button type="button" data-app-menu="view">View</button><button type="button" data-app-menu="project">Project</button><button type="button" data-app-menu="plc">PLC/SPS</button><button type="button" data-app-menu="ioTags">I/O &amp; Tags</button><button type="button" data-app-menu="programs">Programs</button><button type="button" data-app-menu="online">Online</button><button type="button" data-app-menu="debug">Debug</button><button type="button" data-app-menu="tools">Tools</button><button type="button" data-app-menu="window">Window</button><button type="button" data-app-menu="settings">Settings</button><button type="button" data-app-menu="help">Help</button>
+  </nav>
+
+  <nav class="toolbar" aria-label="Main commands">
+    <div class="tool-group"><button data-action="new" title="New project">＋ <span>New</span></button><button data-action="examples" title="Example browser">▤ <span>Examples</span></button><button data-action="save" title="Save project">▣ <span>Save</span></button><button data-action="save-as" title="Save project as">▣ <span>Save as</span></button><button data-action="import" title="Import project">⇧ <span>Import</span></button><button data-action="export" title="Export project">⇩ <span>Export</span></button><button data-action="print" title="Print project">⎙ <span>Print</span></button></div>
+    <div class="tool-group"><button data-action="undo" title="Undo (Ctrl+Z)">↶</button><button data-action="redo" title="Redo (Ctrl+Y)">↷</button><button data-action="add-contact" title="Add contact">╫ <span>Contact</span></button><button data-action="add-rung" title="Add rung">＋ <span>Rung</span></button></div>
+    <div class="tool-group sim-tools"><button data-action="io">◉ <span>I/O</span></button><button data-action="faults">⚠ <span>Faults</span></button><button data-action="operations" id="operationsButton">⌁ Operations</button><button data-action="scenario" id="scenarioButton">▹ Scenario</button><button data-action="run" class="run-button">▶ <span>Run</span></button><button data-action="pause">Ⅱ <span>Pause</span></button><button data-action="step">▷| <span>Step</span></button><button data-action="stop" class="stop-button">■ <span>Reset</span></button><button data-action="record" id="recordButton">● Record</button><button data-action="replay">↻ Replay</button><button data-action="trace">Trace</button><button data-action="events">Events</button></div>
+    <div class="tool-group zoom-tools"><button data-action="zoom-out" aria-label="Zoom out">−</button><span id="zoomValue">100%</span><button data-action="zoom-in" aria-label="Zoom in">＋</button><button data-action="grid" id="gridToggle" class="active" title="Toggle grid">▦</button></div>
+  </nav>
+
+  <main class="workspace">
+    <aside class="sidebar left-sidebar">
+      <div class="panel-heading"><span id="projectHeading">PROJECT</span><button class="subtle-button" data-action="add-rung">＋</button></div>
+      <div class="project-tree"><div class="tree-project">▾ <span id="treeProjectName">My first program</span></div><button class="tree-item selected">⌁ <span id="programTreeLabel">Program Main [LD]</span></button><button class="tree-item" data-action="tags">◉ <span id="tagsTreeLabel">Tags &amp; I/O</span></button><button class="tree-item" data-action="examples">▤ <span id="exampleTreeLabel">Example library</span></button></div>
+      <section class="side-card"><div class="panel-heading"><span id="inputsHeading">SIMULATED INPUTS</span><span class="count-pill" id="inputCount">0</span></div><div id="inputList" class="io-list"></div></section>
+      <section class="side-card output-card"><div class="panel-heading"><span id="outputsHeading">OUTPUTS</span><span class="count-pill" id="outputCount">0</span></div><div id="outputList" class="io-list"></div></section>
+      <div class="sidebar-footer"><span class="safe-icon">✓</span><span><span id="educationLabel">Educational simulation only</span><br><b id="noHardwareLabel">No hardware connected</b></span></div>
+    </aside>
+
+    <section class="editor-area" aria-label="Engineering editor">
+      <div class="editor-tabs"><button type="button" class="tab active" id="logicTab">⌁ <span id="programTabLabel">Program Main</span><em>LD</em></button><button type="button" class="tab" id="electricalTab">⌁ <span id="electricalTabLabel">Components</span></button><button type="button" class="tab" id="hmiTab">▣ HMI</button><button class="tab-add" data-action="add-rung">＋</button><span class="editor-spacer"></span><button class="subtle-button" id="panelLayoutButton" title="Panel layout" aria-label="Panel layout">▥</button><button class="subtle-button" id="fullscreenButton" title="Full screen">⛶</button><button class="subtle-button" id="zoomFit" title="Zoom to fit">⤢</button></div>
+      <div class="editor-subbar"><div><span class="crumb" id="programCrumb">Program</span><span class="crumb-sep">/</span><b id="subbarTitle">Main routine</b><select id="editorMode" class="mode-select" aria-label="Program editor"><option value="LD">Ladder · LD</option><option value="FBD">Function blocks · FBD</option><option value="ST">Structured Text · ST</option><option value="SFC">Sequence chart · SFC</option></select><span class="badge" id="ladderBadge">LD</span></div><div class="editor-opts"><button id="minimapButton" class="subtle-button">Minimap</button></div></div>
+      <div class="canvas-wrap" id="canvasWrap"><details class="logic-outline"><summary id="logicOutlineSummary">Logic outline</summary><div id="logicOutline" role="tree" aria-label="Logic outline"></div></details><div class="canvas-ruler">PLC · MAIN PROGRAM <span id="scanLabel">SCAN 0</span></div><div id="ladderCanvas" class="ladder-canvas" role="list" aria-label="Ladder rungs"></div><div id="minimap" class="minimap hidden"><span>PROGRAM MAP</span><div id="minimapContents"></div></div></div>
+      <section id="stPane" class="st-pane hidden"><div class="st-toolbar"><button class="primary" data-action="compile-st">Compile</button><span id="compileState">Ready</span><span id="stModeNotice"></span></div><textarea id="stSource" spellcheck="false" aria-label="Structured Text editor"></textarea><div id="stErrors" class="st-errors" role="status"></div></section>
+      <section id="fbdPane" class="editor-pane hidden"><div class="pane-toolbar"><span>FUNCTION BLOCK DIAGRAM</span><button class="primary" data-action="add-fbd-block">＋ Add block</button></div><details class="logic-outline fbd-logic-outline"><summary id="fbdLogicOutlineSummary">Function block outline</summary><div id="fbdLogicTree" role="tree" aria-label="Function block outline"></div></details><p id="fbdKeyboardHelp" class="sr-only"></p><div id="fbdWireAnnouncement" class="sr-only" role="status" aria-live="polite"></div><div id="fbdBlocks" class="fbd-blocks"></div></section>
+      <section id="sfcPane" class="editor-pane hidden"><div class="pane-toolbar"><span>SEQUENTIAL FUNCTION CHART</span><button class="primary" data-action="add-sfc-step">＋ Add step</button><button class="secondary" data-action="add-sfc-transition">＋ Transition</button></div><details class="logic-outline sfc-logic-outline"><summary id="sfcLogicOutlineSummary">Sequence chart outline</summary><div id="sfcLogicTree" role="tree" aria-label="Sequence chart outline"></div></details><div id="sfcChart" class="sfc-chart"></div></section>
+      <section id="hmiPane" class="editor-pane hidden"><div class="pane-toolbar"><label id="hmiScreenSelectLabel">SCREEN <select id="hmiScreenSelect" aria-label="HMI screen"></select></label><label id="hmiTitleLabel">NAME <input id="hmiTitle" value="Main HMI" aria-label="HMI screen name"></label><button class="secondary" id="addHmiScreen">＋ Screen</button><button class="secondary" id="deleteHmiScreen">Delete screen</button><label id="snapLabel"><input type="checkbox" id="snapToggle" checked><span id="snapLabelText">Snap</span></label><button class="primary" data-hmi-add="switch">＋ Switch</button><button class="secondary" data-hmi-add="lamp">＋ Lamp</button><button class="secondary" data-hmi-add="value">＋ Value</button><button class="secondary" data-hmi-add="trend">＋ Trend</button><button class="secondary" id="processesButton">Processes</button><button class="secondary" id="addAlarmButton">＋ Alarm</button><button class="secondary" id="manageAlarmsButton">Manage alarms</button><button class="secondary" id="recipesButton">Recipes</button><button class="secondary" id="alarmHistoryButton">Alarm history</button><button class="secondary" id="exportTrendHistoryButton">Export trend CSV</button><span class="safety-chip">SIMULATION ONLY · NO PLC CONNECTED</span></div><div id="hmiBoard" class="hmi-board" role="region" aria-label="HMI screen designer"></div><section id="processPanel" class="process-panel" aria-label="Process simulation"></section><section id="hmiAlarmPanel" class="hmi-alarm-panel" aria-live="polite"></section></section>
+      <section id="electricalPane" class="editor-pane electrical-editor-pane hidden" aria-label="Electrical schematic and component library"></section>
+      <div class="editor-footer"><span><kbd>Ctrl</kbd> + <kbd>K</kbd> <span id="commandHint">commands</span></span><span id="selectionLabel">Select an instruction to edit</span><span class="offline-label"><i></i> <span id="offlineLabel">Offline ready</span></span></div>
+    </section>
+
+    <aside class="sidebar right-sidebar">
+      <div class="inspector-tabs"><button class="active" id="propertiesTab">PROPERTIES</button><button data-action="watch" id="watchTab">WATCH</button></div>
+      <div id="inspectorContent" class="inspector-content"><div class="empty-inspector"><div class="inspector-icon">⌘</div><b>Instruction properties</b><p>Select a contact or coil in the ladder to edit its tag and behavior.</p></div></div>
+      <section class="diagnostic-panel"><div class="panel-heading"><span id="diagnosticsHeading">DIAGNOSTICS</span><span class="diagnostic-ok" id="diagnosticSummary">CHECKING</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Logic validation</span><span class="muted" id="logicValidationState">Ready</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Simulation engine</span><span class="muted">Ready</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Project storage</span><span class="muted">Local</span></div></section>
+      <div class="version-card"><span id="versionProductName">AdigunSPs</span><div>v0.1 · Educational</div></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar"><div class="statusbar-main"><span><i class="status-indicator"></i><span id="plcStatus">STOPPED</span></span><span><span id="scanTimeLabel">Scan time</span> <b id="scanTime">0 ms</b></span><span><span id="cycleLabel">Cycle</span> <b id="cycleCount">0</b></span><span id="taskCycleInfo">Main · 100 ms</span><span class="status-spacer"></span><span id="savedOnDeviceLabel">Project saved on this device</span><span class="footer-company-brand"><img id="footerCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"><span id="footerBrandAttribution">AdigunSPs — HB Elektroniker, a product of HEPHZIBAH BEHULAH</span></span><span id="languageStatus">English</span></div><div class="corporate-footer"><button id="footerHelpLink" type="button">Help &amp; docs</button><nav id="corporateFooterLinks" aria-label="Company links"></nav><span id="footerYear">© 2026 HEPHZIBAH BEHULAH</span></div></footer>
+  <main id="ioPrintReport" class="io-print-report" aria-hidden="true"></main>
+  <div id="printBrandAttribution" class="print-brand-attribution"><img id="printCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"><span><strong id="printProductName">AdigunSPs</strong><small id="printDivisionLabel">BY HB ELEKTRONIKER</small><span id="printBrandAttributionText">AdigunSPs — HB Elektroniker, a product of HEPHZIBAH BEHULAH</span></span></div>
+  <button id="adigunAiButton" class="floating-bot" aria-label="Adigun BOT">✦ <span>Adigun BOT</span></button>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <input id="fileInput" type="file" accept="application/json,.json,application/xml,.xml" hidden>
+  <div id="contextMenu" class="context-menu" role="menu" aria-label="Ladder editor context menu" hidden></div>
+  <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

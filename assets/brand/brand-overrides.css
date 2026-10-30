@@ -1,0 +1,116 @@
+:root {
+  --bg: #0B1220;
+  --panel: #111C2E;
+  --panel2: #16243A;
+  --line: #293952;
+  --muted: #A3AFBF;
+  --text: #F8FAFC;
+  --green: #22D3EE;
+  --green2: #103640;
+  --amber: #D4AF37;
+  --blue: #2563EB;
+}
+body[data-theme="light"] {
+  --bg: #F8FAFC;
+  --panel: #FFFFFF;
+  --panel2: #EDF2F8;
+  --line: #C9D3E0;
+  --muted: #526174;
+  --text: #152136;
+  --green: #087C8C;
+  --green2: #DFF6F9;
+  --amber: #9A7411;
+  --blue: #2563EB;
+}
+.topbar { background: var(--bg); }
+.brand { min-width: 0; flex: 0 0 auto; }
+.corporate-logo { display: block; width: 132px; height: 44px; object-fit: contain; border-radius: 3px; }
+.product-brand { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 126px; }
+.product-brand strong { color: var(--text); font-size: 17px; letter-spacing: .2px; }
+.product-brand small { color: var(--green); font-size: 8px; font-weight: 750; letter-spacing: 1.3px; }
+.footer-company-brand { gap: 7px; }
+.footer-company-brand .corporate-logo { width: 62px; height: 21px; }
+.footer-company-brand #footerBrandAttribution { max-width: 250px; color: var(--text); font-size: 8px; }
+.statusbar { height: auto; min-height: 50px; flex-direction: column; align-items: stretch; gap: 0; padding: 0 12px; }
+.statusbar-main { height: 25px; min-height: 25px; display: flex; align-items: center; gap: 16px; overflow: hidden; white-space: nowrap; }
+.corporate-footer { min-height: 24px; display: flex; align-items: center; gap: 13px; overflow-x: auto; border-top: 1px solid var(--line); white-space: nowrap; scrollbar-width: thin; }
+.corporate-footer button, .corporate-footer a { flex: none; border: 0; background: none; color: var(--muted); font: inherit; font-size: 9px; text-decoration: none; }
+.corporate-footer button { min-height: 23px; padding: 0 5px; }
+.corporate-footer nav { display: flex; align-items: center; gap: 12px; }
+.corporate-footer a { display: inline-flex; align-items: center; min-height: 23px; }
+.corporate-footer a:hover, .corporate-footer button:hover { color: var(--text); text-decoration: underline; }
+.corporate-footer a:focus-visible, .corporate-footer button:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+#footerYear { flex: none; margin-left: auto; color: var(--muted); font-size: 8px; }
+.welcome-brand-lockup { display: grid; justify-items: center; gap: 12px; }
+.welcome-company-logo { width: min(280px, 88%); height: auto; object-fit: contain; border-radius: 4px; }
+.welcome-product-wordmark, .about-product-wordmark { color: var(--text); font-size: 23px; font-weight: 750; text-align: center; }
+.welcome-product-wordmark small, .about-product-wordmark small { display: block; margin-top: 5px; color: var(--green); font-size: 9px; letter-spacing: 1.3px; }
+.about-brand-logos { display: grid; justify-items: center; gap: 12px; }
+.about-brand-logos img { width: min(280px, 88%); height: auto; border-radius: 4px; }
+.about-brand { border-left-color: var(--green); background: var(--panel2); }
+.brand-attribution { color: var(--green); }
+.print-brand-attribution { align-items: center; gap: 12px; }
+.print-brand-attribution .corporate-logo { width: 150px; height: 50px; object-fit: contain; }
+.print-brand-attribution > span { display: grid; gap: 2px; }
+.print-brand-attribution small { color: #087C8C; font-weight: 700; letter-spacing: 1px; }
+.floating-bot { position: fixed; z-index: 45; right: 18px; bottom: 42px; display: flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 13px; border: 1px solid #22D3EE; border-radius: 22px; background: #22D3EE; color: #0B1220; box-shadow: 0 4px 16px #0005; font-size: 12px; font-weight: 750; }
+.floating-bot:hover { filter: brightness(1.08); }
+.floating-bot:focus-visible { outline: 3px solid #D4AF37; outline-offset: 3px; }
+.io-report-logos img:first-child { width: 180px; max-height: 52px; object-fit: contain; }
+.io-report-logos .report-product-wordmark { display: grid; gap: 3px; }
+.io-report-logos .report-product-wordmark strong { font-size: 16px; }
+.io-report-logos .report-product-wordmark small { color: #087C8C; font-size: 8px; font-weight: 750; letter-spacing: 1px; }
+@media (max-width: 700px) {
+  .statusbar { min-height: 73px; padding: 0 7px; }
+  .statusbar-main { gap: 9px; }
+  .statusbar-main > span:nth-child(2), .statusbar-main > span:nth-child(3), .statusbar-main > #taskCycleInfo, #savedOnDeviceLabel { display: none; }
+  .corporate-footer { display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: 23px 40px; align-items: center; gap: 0 8px; overflow: visible; }
+  .corporate-footer button { grid-column: 1; grid-row: 1; justify-self: start; }
+  .corporate-footer nav { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(2, max-content); gap: 0 8px; align-content: center; min-width: 0; }
+  .corporate-footer a { min-height: 19px; }
+  .corporate-footer a[data-brand-link="linkedin"] { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+  #footerYear { grid-column: 1; grid-row: 2; justify-self: start; align-self: start; margin-left: 0; }
+  .topbar { gap: 8px; padding: 0 8px; }
+  .corporate-logo { width: 96px; height: 32px; }
+  .product-brand { min-width: 94px; }
+  .product-brand strong { font-size: 14px; }
+  .product-brand small { font-size: 7px; letter-spacing: .8px; }
+  .save-state { display: none; }
+  .top-actions { gap: 5px; }
+  .footer-company-brand .corporate-logo { display: none; }
+  .footer-company-brand #footerBrandAttribution { max-width: 185px; }
+  .floating-bot { right: 9px; bottom: 38px; min-height: 38px; }
+}
+@media print { .floating-bot { display: none !important; } }
+/* Generic, simulation-only electrical component workspace. */
+.electrical-editor-pane{height:100%;min-height:0;overflow:hidden}
+.electrical-pane{display:flex;flex-direction:column;gap:10px;height:100%;min-height:0;padding:14px;color:var(--text,#d9e1ec)}
+.electrical-toolbar{display:flex;align-items:end;gap:8px;flex-wrap:wrap;padding:10px;border:1px solid var(--line,#283344);border-radius:10px;background:var(--panel,#111a28)}
+.electrical-toolbar label,.electrical-field{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted,#9aa8b9)}
+.electrical-toolbar select,.electrical-field input,.electrical-field select{min-height:34px;min-width:170px;padding:6px 9px;border:1px solid var(--line,#39485b);border-radius:6px;background:var(--surface,#0b1220);color:var(--text,#e9eef5)}
+.electrical-safety,.electrical-muted{margin:0;padding:8px 10px;border-left:3px solid #22d3ee;background:color-mix(in srgb,#22d3ee 7%,transparent);font-size:11px;color:var(--muted,#aab5c3)}
+.electrical-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;flex:1;min-height:0}
+.electrical-board-wrap{position:relative;overflow:auto;border:1px solid var(--line,#283344);border-radius:10px;background:var(--surface,#0b1220)}
+.electrical-board{position:relative;width:2200px;height:1400px;overflow:hidden;background-image:linear-gradient(to right,color-mix(in srgb,#64748b 18%,transparent) 1px,transparent 1px),linear-gradient(to bottom,color-mix(in srgb,#64748b 18%,transparent) 1px,transparent 1px);background-size:20px 20px;touch-action:none}
+.electrical-wire-layer{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.electrical-wire{fill:none;stroke:#22d3ee;stroke-width:3;stroke-linejoin:round;pointer-events:stroke;cursor:pointer}
+.electrical-wire.selected{stroke:#d4af37;stroke-width:5}
+.electrical-component{position:absolute;z-index:1;width:120px;height:80px;transform-origin:60px 40px;border:1px solid #64748b;border-radius:8px;background:var(--panel,#111a28);box-shadow:0 5px 14px #0005;touch-action:none}
+.electrical-component.selected{outline:2px solid #d4af37;outline-offset:2px}
+.electrical-component.energized{border-color:#22c55e;box-shadow:0 0 14px #22c55e66}
+.electrical-component-head{display:block;width:100%;overflow:hidden;padding:5px 8px;border:0;border-radius:7px 7px 0 0;background:#1b293a;color:var(--text,#eef3f8);font-size:10px;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:move}
+.electrical-symbol{display:flex;align-items:center;justify-content:center;height:42px;color:#d4af37;font:600 15px/1.2 ui-monospace,Consolas,monospace}
+.electrical-port{position:absolute;z-index:3;top:31px;min-width:22px;height:20px;padding:1px 3px;border:1px solid #22d3ee;border-radius:5px;background:#0b1220;color:#a5f3fc;font-size:9px;cursor:crosshair}
+.electrical-port.port-left{left:-12px}.electrical-port.port-right{right:-12px}
+.electrical-channel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0;padding:7px;border:1px solid var(--line,#39485b);border-radius:6px}
+.electrical-channel legend{padding:0 4px;color:var(--text,#eef3f8);font:700 10px ui-monospace,Consolas,monospace}
+.electrical-channel .electrical-field{min-width:0}.electrical-channel .electrical-field select,.electrical-channel .electrical-field input{min-width:0;width:100%}
+.electrical-empty{position:absolute;left:50%;top:40%;width:260px;padding:14px;border:1px dashed #64748b;border-radius:8px;color:var(--muted,#9aa8b9);font-size:12px;text-align:center;transform:translateX(-50%)}
+.electrical-inspector{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;padding:12px;border:1px solid var(--line,#283344);border-radius:10px;background:var(--panel,#111a28)}
+.electrical-inspector h3{margin:4px 0;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#22d3ee}
+.electrical-field input,.electrical-field select{box-sizing:border-box;width:100%;min-width:0}
+.electrical-inspector form{display:grid;gap:8px}
+.electrical-input{display:flex;align-items:center;gap:8px;font-size:11px}
+.electrical-wire-list{display:grid;gap:5px}.electrical-wire-row{overflow:hidden;padding:6px;border:1px solid var(--line,#283344);border-radius:5px;background:transparent;color:var(--text,#d9e1ec);font-size:10px;text-align:left;text-overflow:ellipsis;white-space:nowrap}.electrical-wire-row.selected{border-color:#d4af37}
+.electrical-validation{margin:0;color:#86efac;font-size:11px}.electrical-validation.has-error,.electrical-issues .error{color:#fca5a5}.electrical-issues{margin:0;padding-left:16px;font-size:10px}.electrical-issues li{margin:3px 0}.electrical-issues .warning{color:#fcd34d}.electrical-status{min-height:16px;margin:0;color:#a5f3fc;font-size:10px}
+@media(max-width:900px){.electrical-body{grid-template-columns:minmax(0,1fr)}.electrical-inspector{max-height:42vh}.electrical-pane{padding:8px}.electrical-toolbar{gap:6px}.electrical-toolbar select{min-width:150px}}

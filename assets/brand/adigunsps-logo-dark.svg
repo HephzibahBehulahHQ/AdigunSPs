@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="140" viewBox="0 0 640 140" role="img" aria-labelledby="title">
+  <title id="title">AdigunSPs</title>
+  <rect width="640" height="140" rx="14" fill="#101820"/>
+  <text x="34" y="91" font-family="Inter,Arial,sans-serif" font-size="65" font-weight="760" letter-spacing="-2.5" fill="#f1f5f3">Adigun</text>
+  <text x="258" y="91" font-family="Inter,Arial,sans-serif" font-size="65" font-weight="760" letter-spacing="-2.5" fill="#63d39a">SPs</text>
+  <path d="M379 72h32l10-20 17 39 15-29 11 10h72" fill="none" stroke="#edb95b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="549" cy="72" r="5" fill="#63d39a"/>
+</svg>

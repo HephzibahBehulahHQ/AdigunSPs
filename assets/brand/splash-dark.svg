@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1600" viewBox="0 0 900 1600" role="img" aria-labelledby="title">
+  <title id="title">AdigunSPs — HB Elektroniker — HEPHZIBAH BEHULAH</title>
+  <rect width="900" height="1600" fill="#0B1220"/>
+  <image href="company-official.jpg" x="130" y="430" width="640" height="214"/>
+  <text x="450" y="780" text-anchor="middle" font-family="system-ui,Arial,sans-serif" font-size="66" font-weight="750" fill="#F8FAFC">AdigunSPs</text>
+  <text x="450" y="838" text-anchor="middle" font-family="system-ui,Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="2" fill="#22D3EE">BY HB ELEKTRONIKER</text>
+  <path d="M300 875h300" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
+  <text x="450" y="930" text-anchor="middle" font-family="system-ui,Arial,sans-serif" font-size="22" fill="#CBD5E1">A product of HEPHZIBAH BEHULAH</text>
+</svg>
