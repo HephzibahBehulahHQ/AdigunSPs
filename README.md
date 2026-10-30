@@ -154,9 +154,9 @@ Focused suites are available as `npm run test:electrical`, `npm run test:industr
 
 ## Deployment
 
-The built application is a static web bundle. Publish the contents of `dist/` to an HTTPS static host; keep `service-worker.js` at the same path as `index.html` and serve JavaScript modules and web manifests with appropriate MIME types. Increment the service-worker cache version when releasing shell changes.
+The public application is available at [AdigunSPs on GitHub Pages](https://hephzibahbehulahhq.github.io/AdigunSPs/). Every push to `main` runs `.github/workflows/deploy-pages.yml`, which runs the validation suite, builds the static bundle into `dist/`, and publishes it to GitHub Pages. The first deployment completed successfully on 2026-10-30. Keep asset, manifest, and service-worker URLs relative so they work under the repository path `/AdigunSPs/`; increment the service-worker cache version when releasing shell changes.
 
-No production hosting provider, deployment workflow, backend service, or public application URL is configured in this repository. The GitHub repository is source code hosting, not a deployed application URL. The application currently stores projects in each browser and has no shared or server-side data service.
+Run locally with `npm ci` and `npm run dev`. GitHub Pages builds do not receive local `.env` files: browser-local design and project storage work, while account and cloud-save features require the public Supabase publishable key and Auth configuration to be supplied to the deployment.
 
 ## Security and safety
 
