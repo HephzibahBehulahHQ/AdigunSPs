@@ -32,7 +32,9 @@ for (const language of ["en", "de", "yo", "pcm"]) for (const theme of ["light", 
   assert.ok(existsSync(view.companyLogo) && existsSync(view.productIcon), `${language}/${theme} identity assets exist`);
 }
 
-const html = read("index.html"), app = read("src/app.js"), sw = read("service-worker.js");
+const html = read("index.html"), app = read("src/app.js"), sw = read("service-worker.js"), brandCss = read("assets/brand/brand-overrides.css");
+assert.ok(brandCss.includes("--surface: #0B1220") && brandCss.includes("--surface: #FFFFFF"), "electrical surfaces have explicit dark and light color tokens");
+for (const selector of [".electrical-component-head", ".electrical-port", ".electrical-signal-value", ".electrical-inspector h3", ".electrical-validation", ".electrical-issues .warning"]) assert.ok(brandCss.includes(`body[data-theme=\"light\"] ${selector}`), `electrical ${selector} has a readable light-theme treatment`);
 for (const id of ["headerCorporateLogo", "headerProductName", "headerDivisionLabel", "footerCorporateLogo", "footerBrandAttribution", "corporateFooterLinks", "footerHelpLink", "footerYear", "printCorporateLogo", "printProductName", "printDivisionLabel", "printBrandAttributionText", "adigunAiButton"]) assert.ok(html.includes(`id="${id}"`), `${id} identity surface`);
 assert.ok(html.includes('class="floating-bot"') && html.includes("Adigun BOT"), "floating assistant launcher is present");
 assert.ok(app.includes("image.src = presentation.companyLogo") && app.includes("presentation.divisionLabel"), "runtime consumes central corporate and division identity");
