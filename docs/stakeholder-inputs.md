@@ -4,8 +4,9 @@ The current application is a local educational simulator. These inputs unlock th
 
 | Decision | Owner/input needed | Requirements affected |
 |---|---|---|
+| AdigunSPs account backend and production origin | Product/security owner | Confirm whether the connected Supabase project `VoltPRo` is the intended target; provide the approved production origin and auth callback URLs; decide signup/email verification, privacy/retention, guest enforcement, profile fields, and trusted admin provisioning. The currently visible Cloudflare Sites project is a different product, and this repository has no Supabase or Cloudflare app configuration. |
 | PLC vendors, CPU models, IEC dialects, and supported hardware | Engineering/product owner | Device catalog, hardware configuration, download, HIL, conformance checks |
-| Backend and hosting model, data residency, identity provider, and retention | Product/security owner | Cloud/on-prem sync, SSO, roles, collaboration, encrypted backup, admin console |
+| Data residency, offline sync, and encrypted backup strategy | Product/security owner | Cloud/on-prem project sync, residency requirements, collaboration, encryption, and recovery guarantees |
 | AI model/provider, routing, privacy notice, and data retention | Product/privacy owner | Adigun BOT, voice, screenshot review, assistant audit, evaluation |
 | Approved process models and operating ranges | Controls engineering owner | Tank, conveyor, motor, heater, pump, PID and digital-twin simulations |
 | Protocol hardware and test endpoints | Controls/network owner | OPC UA, Modbus, MQTT, REST, historian and traffic simulator |

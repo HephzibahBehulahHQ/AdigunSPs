@@ -32,9 +32,31 @@ import { resolveProjectLanguage } from "../src/project-language.js";
 import { runStandardsChecks, STANDARDS_CHECK_SCOPE } from "../src/standards.js";
 import { compileWorkerRequest } from "../src/st-compiler-worker.js";
 import { createPlcopenXml, parsePlcopenXml } from "../src/plcopen.js";
+import { assertProjectFileSize, normalizeImportedProject } from "../src/project-import.js";
 import { formatLocaleDateTime, formatLocaleNumber, formatLocaleTime } from "../src/formatting.js";
 
 assert.equal(examples.length, 200, "there must be exactly 200 examples");
+const importableDefault = defaultProject(), normalizedDefault = normalizeImportedProject(importableDefault);
+assert.deepEqual(normalizedDefault, importableDefault, "native project imports preserve project fields");
+assert.notEqual(normalizedDefault, importableDefault, "native project imports do not mutate the parsed input object");
+for (const example of examples) {
+  const nativeProject = makeProjectFromExample(example), importedProject = normalizeImportedProject(nativeProject);
+  assert.deepEqual(importedProject, nativeProject, `${example.id}: supported native project data survives import validation`);
+}
+const legacyImport = normalizeImportedProject({ name:"Legacy project", rungs:[{ contacts:[{ tag:"Start" }] }] });
+assert.deepEqual(legacyImport.rungs[0].branches, [[{ tag:"Start", mode:"NO" }]], "legacy single-path contacts receive the supported NO default");
+assert.deepEqual(legacyImport.io, { inputs:[], outputs:[] }, "legacy projects receive safe empty I/O lists");
+assert.throws(() => normalizeImportedProject(null), /root must be an object/, "project import rejects a non-object root");
+assert.throws(() => normalizeImportedProject({ name:"", rungs:[] }), /project name/, "project import rejects an empty project name");
+assert.throws(() => normalizeImportedProject({ name:"Unsafe", rungs:[], ...JSON.parse('{"__proto__":{"polluted":true}}') }), /unsafe property name/, "project import rejects prototype-related keys");
+assert.throws(() => normalizeImportedProject({ name:"Bad contact", rungs:[{ branches:[[ { tag:"Start", mode:"EXEC" } ]] }] }), /unsupported contact mode/, "project import rejects unsupported contact instructions");
+assert.throws(() => normalizeImportedProject({ name:"Bad shape", rungs:[{ branches:"not branches" }] }), /invalid branch list/, "project import rejects malformed branch containers");
+assert.throws(() => normalizeImportedProject({ name:"Bad tag", tags:[{ name:"Level", type:"OBJECT" }], rungs:[] }), /unsupported type/, "project import rejects unsupported tag types");
+assertProjectFileSize(5 * 1024 * 1024);
+assert.throws(() => assertProjectFileSize(5 * 1024 * 1024 + 1), /no larger than 5 MiB/, "oversized project files are rejected before reading");
+const appSource = readFileSync(new URL("../src/app.js", import.meta.url), "utf8"), importHandler = appSource.slice(appSource.indexOf('$("#fileInput").addEventListener("change"'), appSource.indexOf("async function showPalette"));
+assert.ok(importHandler.indexOf("assertProjectFileSize(file.size)") < importHandler.indexOf("await file.text()"), "file size is checked before importing file content");
+assert.ok(importHandler.indexOf("normalizeImportedProject(parsed)") < importHandler.indexOf("pushHistory()"), "invalid imports are rejected before project state is changed");
 for (const [locale, label] of Object.entries({en:"200 learning examples",de:"200 Lernbeispiele",yo:"Àpẹẹrẹ ẹ̀kọ́ 200",pcm:"200 learning examples"})) assert.equal(ui[locale].allExamples, label, `${locale}: example count label matches library`);
 const plcopenProject = defaultProject(); plcopenProject.name = "PLC & Training"; plcopenProject.rungs = [{ ...plcopenProject.rungs[0], timer:undefined }, { id:"plain-rung", comment:"Sensor interlock", branches:[[{ tag:"Sensor", mode:"NC" }]], coil:"Lamp" }];
 plcopenProject.tags.find((tag) => tag.name === "Motor").alias = "Drive A";

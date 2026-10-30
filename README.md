@@ -154,7 +154,7 @@ No production hosting provider, CI/CD workflow, backend service, or public appli
 ## Security and safety
 
 - Projects and recovery snapshots stay in the browser profile. Exported project files may contain user-created logic, tags, and project metadata; store and share them accordingly.
-- Imported projects are handled as application data and checked against the supported project model. Do not import files from sources you do not trust.
+- Imported projects are handled as application data, limited to 5 MiB, bounded for nesting and PLC model size, and checked for supported tags, contacts, and project structure before replacing the current project. This is input validation, not a malware scanner; do not import files from sources you do not trust.
 - The implemented Adigun BOT helper is read-only and offline. It does not send project data to an AI provider and does not generate or approve PLC programs.
 - The simulator does not connect to physical hardware, execute real I/O, validate a safety function, or establish standards compliance.
 - Independently review and validate all engineering work using the target vendor tools and approved safety processes before any physical industrial use.
