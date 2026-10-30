@@ -4,6 +4,7 @@ import { makeProjectFromExample, runExampleChecks, scan, scanFBD } from "../src/
 import { stepProcesses } from "../src/process.js";
 import { validateProject } from "../src/validation.js";
 import { electricalComponentCatalog, simulateElectricalDiagram } from "../src/electrical.js";
+import { normalizeImportedProject } from "../src/project-import.js";
 
 const results = examples.map((example) => {
   const cases = runExampleChecks(example).map((item) => ({
@@ -13,7 +14,7 @@ const results = examples.map((example) => {
     actual: item.actual,
     sequenceSteps: item.sequence?.length || 1,
   }));
-  const project = makeProjectFromExample(example), serializedProject = JSON.stringify(project), reopenedProject = JSON.parse(serializedProject);
+  const project = makeProjectFromExample(example), serializedProject = JSON.stringify(project), reopenedProject = normalizeImportedProject(JSON.parse(serializedProject));
   const saveReopenPass = JSON.stringify(reopenedProject) === serializedProject;
   const issues = validateProject(reopenedProject), diagram = reopenedProject.electrical;
   const boolInputs = example.tags.filter((tag) => tag.role === "input" && tag.type === "BOOL");
@@ -84,7 +85,7 @@ const results = examples.map((example) => {
 });
 const report = {
   product: "AdigunSPs",
-  scope: "Each generated project is JSON serialized and reopened, then validated and used for mapped schematic I/O checks plus documented scenarios through the schematic input path, PLC scan, and connected digital or scalar analog output where present. This is a project-model round-trip, not a browser-storage UI test. Scalar analog wiring carries tag values only; it does not simulate voltage/current physics. Manufacturer hardware, electrical code, physical wiring, component layout quality, and safety are not certified.",
+  scope: "Each generated project is JSON serialized and parsed through the same structural import normalizer used by the app before validation, mapped schematic I/O checks, and documented scenarios through the schematic input path, PLC scan, and connected digital or scalar analog output where present. This import-normalized project-model round-trip is not a browser-storage UI test. Scalar analog wiring carries tag values only; it does not simulate voltage/current physics. Manufacturer hardware, electrical code, physical wiring, component layout quality, and safety are not certified.",
   acceptanceTarget: 200,
   caseEncoding: { logic:"logicPassBits uses testCases order from src/examples.js (1=pass, 0=fail)", electrical:"electricalPassBits uses BOOL input tag order (pressed cases), then BOOL output tag order (off then on); 1=pass, 0=fail", integration:"integrationPassBits follows testCases order; 1=pass, 0=fail, -=not applicable to a wired output model" },
   exampleCount: results.length,
