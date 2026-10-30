@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
-import { electricalSimulationStatus } from "../src/electrical-ui.js";
+import { electricalSimulationStatus, electricalSymbolSvg } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
 
 const supply = createElectricalComponent("supply24vdc",1,103,103);
@@ -15,6 +15,10 @@ for (const [from,to] of [
 ]) { const result = connectElectricalTerminals(diagram,from,to); assert.equal(result.ok,true); diagram.wires.push(result.wire); }
 
 assert.ok(Object.keys(electricalComponentCatalog).length >= 25,"catalog covers generic PLC, controls, protection, motors, actuators, power, and wiring categories");
+for(const type of Object.keys(electricalComponentCatalog))assert.match(electricalSymbolSvg(createElectricalComponent(type,1)),/^<svg class="electrical-standard-symbol"[\s\S]*<\/svg>$/u,`${type} renders a named electrical schematic symbol`);
+assert.notEqual(electricalSymbolSvg({...createElectricalComponent("pushbuttonNO",1),normallyClosed:false}),electricalSymbolSvg({...createElectricalComponent("pushbuttonNO",1),normallyClosed:true}),"editable contact behavior is reflected in its schematic symbol");
+assert.notEqual(electricalSymbolSvg({...createElectricalComponent("circuitBreaker",1),closed:true}),electricalSymbolSvg({...createElectricalComponent("circuitBreaker",1),closed:false}),"breaker contact position is reflected in its schematic symbol");
+assert.match(electricalSymbolSvg({...createElectricalComponent("fuse",1),tripped:true}),/FU · OPEN/u,"a tripped fuse is visibly open in the schematic");
 assert.equal(button.x,220,"components snap to a 20-unit grid");
 assert.equal(validateElectricalDiagram(diagram).some((issue) => issue.level === "error"),false,"wired generic circuit is structurally valid");
 assert.equal(simulateElectricalDiagram(diagram,{Start:false}).energized[lamp.id],false,"open normally-open contact leaves lamp de-energized");
