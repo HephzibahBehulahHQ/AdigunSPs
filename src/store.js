@@ -1,5 +1,6 @@
 const DB_NAME = "adigunsps-local";
 const DB_VERSION = 1;
+const GUEST_RECOVERY_GRACE_MS = 24 * 60 * 60 * 1000;
 
 function db() {
   return new Promise((resolve, reject) => {
@@ -25,7 +26,13 @@ async function requestStore(name, mode, action) {
 }
 
 export const store = {
-  all: () => requestStore("projects", "readonly", (s) => s.getAll()),
+  all: async () => {
+    const projects = await requestStore("projects", "readonly", (s) => s.getAll());
+    const expired = projects.filter((project) => Number.isFinite(project.__adigunGuestExpiresAt) && Date.now() > project.__adigunGuestExpiresAt + GUEST_RECOVERY_GRACE_MS);
+    await Promise.all(expired.map((project) => store.remove(project.id)));
+    const expiredIds = new Set(expired.map((project) => project.id));
+    return projects.filter((project) => !expiredIds.has(project.id));
+  },
   get: (id) => requestStore("projects", "readonly", (s) => s.get(id)),
   touch: (project) => requestStore("projects", "readwrite", (s) => s.put(project)),
   save: async (project) => {

@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile, watch } from "node:fs";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadAdigunRuntimeConfig, serializeAdigunRuntimeConfig } from "./runtime-config.js";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const port = Number(process.env.ADIGUN_DEV_PORT || 8080);
@@ -13,6 +14,19 @@ createServer((request, response) => {
   if (url.pathname === "/__live") {
     response.writeHead(200, { "Content-Type":"text/event-stream", "Cache-Control":"no-cache", Connection:"keep-alive" });
     response.write("retry: 1000\n\n"); clients.add(response); request.on("close", () => clients.delete(response)); return;
+  }
+  if (url.pathname === "/runtime-config.js") {
+    loadAdigunRuntimeConfig(root).then((config) => {
+      response.writeHead(200, { "Content-Type":"text/javascript; charset=utf-8", "Cache-Control":"no-store" }).end(serializeAdigunRuntimeConfig(config));
+    }).catch(() => response.writeHead(500).end("Runtime configuration unavailable"));
+    return;
+  }
+  if (url.pathname === "/vendor/supabase.js") {
+    readFile(resolve(root, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js"), (error, content) => {
+      if (error) { response.writeHead(500).end("Supabase client package is not installed"); return; }
+      response.writeHead(200, { "Content-Type":"text/javascript; charset=utf-8", "Cache-Control":"no-store" }).end(content);
+    });
+    return;
   }
   const relative = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
   const path = resolve(root, `.${relative}`);

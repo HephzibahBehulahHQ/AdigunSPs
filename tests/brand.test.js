@@ -40,7 +40,8 @@ for (const language of ["en", "de", "yo", "pcm"]) for (const theme of ["light", 
   assert.ok(existsSync(view.companyLogo) && existsSync(view.productIcon), `${language}/${theme} identity assets exist`);
 }
 
-const html = read("index.html"), app = read("src/app.js"), sw = read("service-worker.js"), brandCss = read("assets/brand/brand-overrides.css");
+const html = read("index.html"), app = read("src/app.js"), sw = read("service-worker.js"), brandCss = read("assets/brand/brand-overrides.css"), appCss = read("styles.css");
+assert.ok(appCss.includes(".statusbar-main{display:flex") && appCss.includes("@media(max-width:900px)") && appCss.includes(".corporate-footer{width:100%"), "branding footer reflows and preserves company attribution in narrow windows");
 assert.ok(brandCss.includes("--surface: #0B1220") && brandCss.includes("--surface: #FFFFFF"), "electrical surfaces have explicit dark and light color tokens");
 for (const selector of [".electrical-component-head", ".electrical-port", ".electrical-signal-value", ".electrical-inspector h3", ".electrical-validation", ".electrical-issues .warning"]) assert.ok(brandCss.includes(`body[data-theme=\"light\"] ${selector}`), `electrical ${selector} has a readable light-theme treatment`);
 assert.ok(brandCss.includes('body[data-theme="light"] .context-menu button{color:var(--text)}') && brandCss.includes('body[data-theme="light"] .context-menu button.danger{color:#991b1b}'), "context-menu commands and danger actions remain readable in the light theme");
@@ -76,6 +77,6 @@ for (const language of ["en", "de", "yo", "pcm"]) {
 }
 assert.equal(localizedManifestNames.size, 4, "PWA display names localize the relationship text in all four languages");
 for (const path of [...Object.values(brand.manifest), ...Object.values(brand.products.adigunsps.icons), ...Object.values(brand.products.adigunsps.splash), "assets/brand/company-official.jpg", "assets/brand/brand-overrides.css"]) assert.ok(sw.includes(path), `offline shell caches ${path}`);
-assert.ok(sw.includes("adigunsps-shell-v78"), "light-theme dialog updates refresh the offline shell cache");
+assert.ok(sw.includes("adigunsps-shell-v82") && sw.includes("./src/industrial-catalog.js"), "catalog module is included in the refreshed offline shell");
 assert.ok(!existsSync("BRAND-ASSETS-TODO.md"), "official supplied logo is implemented; no placeholder TODO remains");
 console.log("PASS: official corporate logo, distinct product wordmark/icons, hierarchy on app/PWA/splash, four locales, and both themes");

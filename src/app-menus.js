@@ -12,8 +12,15 @@ const commandLabels = {
   pcm:{new:"New project",examples:"Example browser",save:"Save",saveAs:"Save as",import:"Import",export:"Export",exportXml:"Export PLCopen XML",print:"Print",projects:"Project manager",tags:"Tags and I/O",undo:"Undo",redo:"Redo",copy:"Copy rung",cut:"Cut rung",paste:"Paste rung",find:"Find and replace",zoomIn:"Zoom in",zoomOut:"Zoom out",grid:"Toggle grid",panel:"Panel layout",fullscreen:"Full screen",io:"I/O and tags",faults:"Fault injection",run:"Run",pause:"Pause",step:"Step",reset:"Reset",record:"Record trace",replay:"Replay trace",scenario:"Run scenario",operations:"Operations estimates",watch:"Watch table",trace:"Trace history",events:"Event log",standards:"Check project rules",ai:"Adigun BOT · offline helper",protocol:"Modbus TCP simulator",resources:"External resources",help:"Safety and help",hardware:"Hardware inventory / BOM",device:"PLC/device profile",settings:"Project task and preferences",modeLD:"Ladder diagram (LD)",modeFBD:"Function block diagram (FBD)",modeST:"Structured Text (ST)",modeSFC:"Sequential function chart (SFC)",compile:"Compile Structured Text",language:"Change language"}
 };
 
+const localProjectLabels = {
+  en:{ saveLocal:"Save locally (JSON)", openLocal:"Open local project" },
+  de:{ saveLocal:"Lokal speichern (JSON)", openLocal:"Lokales Projekt öffnen" },
+  yo:{ saveLocal:"Fipamọ́ sí ẹ̀rọ (JSON)", openLocal:"Ṣí iṣẹ́ ẹ̀rọ yìí" },
+  pcm:{ saveLocal:"Save locally (JSON)", openLocal:"Open local project" },
+};
+
 const menuActions = {
-  file:[["new","new"],["examples","examples"],["save","save"],["saveAs","save-as"],["import","import"],["export","export"],["exportXml","export-plcopen"],["print","print"],["projects","projects"]],
+  file:[["new","new"],["examples","examples"],["save","save"],["saveLocal","save-local"],["openLocal","open-local"],["saveAs","save-as"],["import","import"],["export","export"],["exportXml","export-plcopen"],["print","print"],["projects","projects"]],
   edit:[["undo","undo"],["redo","redo"],["copy","copy"],["cut","cut"],["paste","paste"],["find","find"]],
   view:[["zoomIn","zoom-in"],["zoomOut","zoom-out"],["grid","grid"],["panel","panel-layout"],["fullscreen","fullscreen"]],
   project:[["projects","projects"],["tags","tags"],["hardware","hardware-inventory"],["device","device-configuration"],["settings","settings"]],
@@ -29,7 +36,7 @@ const menuActions = {
 };
 
 export function createApplicationMenuEntries(locale = "en") {
-  const labels = commandLabels[locale] || commandLabels.en;
+  const labels = { ...(commandLabels[locale] || commandLabels.en), ...(localProjectLabels[locale] || localProjectLabels.en) };
   return Object.fromEntries(Object.entries(menuActions).map(([menu, entries]) => [menu, entries.map(([key, action]) => ({ label:labels[key], action }))]));
 }
 

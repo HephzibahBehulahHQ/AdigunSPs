@@ -32,7 +32,7 @@ for (const url of [
 ]) assert.ok(readme.includes(`(${url})`), `README includes supplied corporate link ${url}`);
 assert.ok(readme.includes("LinkedIn personal profile") && readme.includes("No software license or redistribution terms have been provided"), "personal LinkedIn and pending license are accurately described");
 assert.ok(!existsSync(new URL("../LICENSE", import.meta.url)), "no license is invented");
-for (const script of ["dev", "build", "test", "validate:examples", "test:electrical", "test:brand", "test:hardware", "test:ai", "test:resources", "test:protocol"]) assert.ok(pkg.scripts[script], `documented npm command ${script} exists`);
+for (const script of ["dev", "build", "test", "validate:examples", "test:electrical", "test:industrial-catalog", "test:brand", "test:hardware", "test:ai", "test:resources", "test:protocol"]) assert.ok(pkg.scripts[script], `documented npm command ${script} exists`);
 assert.ok(readme.includes("Screenshot files are not included in this repository yet"), "missing application screenshot assets are disclosed instead of fabricated");
 assert.ok(readme.includes("docs/browser-smoke-check.md") && browserSmoke.includes("not full end-to-end coverage") && browserSmoke.includes("adigunsps-shell-v78") && browserSmoke.includes("visually rechecked"), "manual browser smoke evidence and its limits are disclosed");
 assert.equal(engineeringReport.exampleCount, 200, "engineering report covers 200 distinct example projects");

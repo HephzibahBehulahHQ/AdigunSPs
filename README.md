@@ -44,6 +44,7 @@ The application is designed for learning and early logic exploration. It does no
 - **Scenarios and examples:** run typed input sequences against expected outputs. The learning library contains 200 example projects with executable cases and generated generic PLC I/O schematics; these examples are educational material, not vendor-validated programs.
 - **Electrical schematic workspace:** select generic PLCs and I/O modules, NO/NC controls and sensors, contactors and auxiliaries, overload contacts, breakers, fuses, lamps, solenoid coils, motors, supplies, terminals, junctions, and PE symbols. Place, move, rotate, duplicate, edit properties and I/O mappings, and connect terminals. Automatically generated references remain unique across component types that share a prefix. Saved diagrams are part of the project. A contactor's A1/A2 coil circuit drives its main and auxiliary contacts; a wired three-phase starter can switch the educational motor on/off model.
 - **Electrical example checks:** each of the 200 examples includes a generic PLC schematic with mapped Boolean I/O and associated loads where applicable. Numeric tags use wired scalar analog source/module/indicator paths; values follow terminal connectivity through intermediate feed-through blocks, without modeling voltage or current. Shorted source poles are surfaced as simulation faults and do not energize connected loads. The generated report records 1,317 PLC logic cases, 903 independent Boolean schematic checks, and 1,317 integrated scenario cases through the wired input → PLC logic → connected output path where supported. Focused circuit tests also verify feed-through continuity, shorted analog nets, and distinct three-phase paths.
+- **Manufacturer product reference:** the electrical Components workspace includes a searchable, source-linked catalog of 48 distinct product references. These manufacturer entries are informational and do not claim hardware simulation support. The catalog gap from the requested 500 entries, sourcing limits, and expansion criteria are documented in [`docs/industrial-catalog.md`](docs/industrial-catalog.md); the executable simulation library remains generic and educational.
 
 ### Projects and engineering tools
 
@@ -74,7 +75,7 @@ Open [http://127.0.0.1:8080/](http://127.0.0.1:8080/). The local development ser
 
 ## Technology and architecture
 
-AdigunSPs uses browser-native HTML, CSS, and JavaScript ES modules without a frontend framework or third-party runtime dependencies. Node.js runs the local development server and build/test scripts. Projects use browser storage; the static application has no API server, account service, or cloud database.
+AdigunSPs uses browser-native HTML, CSS, and JavaScript ES modules with a pinned Supabase JavaScript client for authentication, profiles, avatars, and owner-scoped cloud projects. Node.js runs the local development server and build/test scripts. Projects are also stored locally in IndexedDB for authenticated offline work and temporary guest recovery.
 
 ```mermaid
 flowchart TD
@@ -95,7 +96,8 @@ The build synchronizes the four PWA manifests, syntax-checks JavaScript modules,
 
 - A modern browser with JavaScript ES modules, IndexedDB, and service worker support for installable/offline behavior.
 - Node.js to run the development server, build, and automated checks. The current scripts were verified with Node.js 24.13.1; `package.json` does not currently declare an `engines` range.
-- A local device/browser profile for project storage. No PLC, backend, API key, or external account is required for the implemented local features.
+- A configured AdigunSPs Supabase publishable key and Auth setup for account access, guest mode, cloud projects, and profile images. Never provide a secret/service-role key to the browser.
+- A local device/browser profile for IndexedDB projects and temporary guest recovery. No physical PLC or controller is connected.
 
 ### Recommended
 
@@ -106,11 +108,14 @@ The repository does not define a minimum memory, CPU, operating-system, or brows
 
 ## Run locally
 
-The development server and test/build scripts have no npm package dependencies, so an install step is not required.
+The Supabase JavaScript client is pinned in `package-lock.json`. Use Node.js 22 or later and install the locked dependencies before starting the development server.
 
 ```powershell
 git clone https://github.com/HephzibahBehulahHQ/AdigunSPs.git
 cd AdigunSPs
+npm ci
+Copy-Item .env.example .env
+# Set ADIGUN_SUPABASE_PUBLISHABLE_KEY in .env from the AdigunSPs project.
 npm run dev
 ```
 
@@ -121,7 +126,7 @@ $env:ADIGUN_DEV_PORT = "8081"
 npm run dev
 ```
 
-Then open `http://127.0.0.1:8081/`. The only supported environment setting is `ADIGUN_DEV_PORT`; no `.env` file or backend configuration is needed.
+Then open `http://127.0.0.1:8081/`. `ADIGUN_DEV_PORT` selects the local port. Account access requires the AdigunSPs publishable key; without it, the editor is locked and displays the configuration state. Guest access also requires anonymous sign-ins enabled in Supabase Auth. See [Supabase integration setup](docs/supabase-integration.md) for the current project settings and deployment dependencies.
 
 ## Build and tests
 
@@ -131,7 +136,7 @@ Create the static production bundle:
 npm run build
 ```
 
-This generates the localized manifests, checks JavaScript syntax, and writes the deployable files to `dist/`.
+This generates the localized manifests, checks JavaScript syntax, writes the runtime Supabase configuration, copies the pinned browser SDK into `dist/vendor/`, and writes the deployable files to `dist/`. Supply the AdigunSPs URL and publishable key through the documented runtime environment; never supply a secret or service-role key to a browser build.
 
 Run the complete local automated suite:
 
@@ -139,17 +144,19 @@ Run the complete local automated suite:
 npm test
 ```
 
-The suite covers 200 learning examples and their deterministic PLC and generic electrical behavior cases, plus focused branding, hardware/report, Adigun BOT, resource, and Modbus TCP checks. Each example is JSON serialized, parsed through the same bounded structural normalizer as the app import flow, then validated and used for integrated simulation; this still does not exercise browser-storage UI controls. The per-example report in [`docs/engineering-validation-report.json`](docs/engineering-validation-report.json) records those round-trip results, 1,317 logic cases, 903 independent Boolean schematic checks, and 1,317 integrated PLC-to-component cases; all passed in the current run. Focused electrical tests check catalog symbol rendering, terminal continuity, contactor coil paths, breaker and fuse properties, supply shorts, distinct three-phase paths, analog signal routing through terminals, mappings, and saved diagram round-trips. Electrical components are generic educational models: manufacturer compatibility, detailed electrical physics, analog voltage/current physics, safety functions, and physical wiring are not validated. A limited manual Chrome smoke check covers onboarding, Continue, the Tools menu and Adigun BOT quick action, File → Project manager open/close, live localization, and generic component add/validate/delete; selected light-theme contrast checks are recorded in [`docs/browser-smoke-check.md`](docs/browser-smoke-check.md). There are no separate lint, TypeScript, or browser E2E scripts configured. Full browser interaction, accessibility, security, performance, cross-browser, and PWA installation audits remain outstanding.
+The suite covers 200 learning examples and their deterministic PLC and generic electrical behavior cases, plus focused branding, hardware/report, Adigun BOT, resource, Modbus TCP, account, and Supabase-client checks. Account tests cover reused server-issued guest expiry, sign-in method delegation, owner-bound cloud project/version save/list/open, anonymous cloud denial, and trusted administrator role checks. Each example is JSON serialized, parsed through the same bounded structural normalizer as the app import flow, then validated and used for integrated simulation; this still does not exercise browser-storage UI controls. Project-import checks accept all 200 generated project models, preserve supported data, and reject malformed roots, unsafe property names, unsupported tag/contact shapes, malformed optional FBD, SFC, process, HMI, or electrical data, unknown electrical component types and terminals, and oversized files. The per-example report in [`docs/engineering-validation-report.json`](docs/engineering-validation-report.json) records those import-normalized round-trip results, 1,317 logic cases, 903 independent Boolean schematic checks, and 1,317 integrated PLC-to-component cases; all passed in the current run. Focused electrical tests check catalog symbol rendering, terminal continuity, contactor coil paths, breaker and fuse properties, supply shorts, distinct three-phase paths, analog signal routing through terminals, mappings, and saved diagram round-trips. Electrical components are generic educational models: manufacturer compatibility, detailed electrical physics, analog voltage/current physics, safety functions, and physical wiring are not validated. A limited manual Chrome smoke check recorded in [`docs/browser-smoke-check.md`](docs/browser-smoke-check.md) covers onboarding, Continue, menus, localization, and generic component interactions; fresh browser verification could not reach the current local preview in this pass. There are no separate lint, TypeScript, or browser E2E scripts configured. Full browser interaction, accessibility, security, performance, cross-browser, and PWA installation audits remain outstanding. Current account project IDs, migration versions, Auth settings, callback dependencies, and live-test limits are in [`docs/supabase-integration.md`](docs/supabase-integration.md).
+
+GitHub Actions runs `npm test` and `npm run build` on pushes and pull requests targeting `main`; it verifies source quality and creates no deployment.
 
 Run `npm run validate:examples` to regenerate the report from the simulator checks.
 
-Focused suites are available as `npm run test:electrical`, `npm run test:brand`, `npm run test:hardware`, `npm run test:ai`, `npm run test:resources`, and `npm run test:protocol`.
+Focused suites are available as `npm run test:electrical`, `npm run test:industrial-catalog`, `npm run test:brand`, `npm run test:hardware`, `npm run test:ai`, `npm run test:resources`, `npm run test:protocol`, and `npm run test:supabase`.
 
 ## Deployment
 
 The built application is a static web bundle. Publish the contents of `dist/` to an HTTPS static host; keep `service-worker.js` at the same path as `index.html` and serve JavaScript modules and web manifests with appropriate MIME types. Increment the service-worker cache version when releasing shell changes.
 
-No production hosting provider, CI/CD workflow, backend service, or public application URL is configured in this repository. The GitHub repository is source code hosting, not a deployed application URL. The application currently stores projects in each browser and has no shared or server-side data service.
+No production hosting provider, deployment workflow, backend service, or public application URL is configured in this repository. The GitHub repository is source code hosting, not a deployed application URL. The application currently stores projects in each browser and has no shared or server-side data service.
 
 ## Security and safety
 

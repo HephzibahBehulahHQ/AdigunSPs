@@ -20,7 +20,7 @@
     <a class="brand" href="#" aria-label="AdigunSPs home"><img id="headerCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"></a>
     <span class="product-brand"><strong id="headerProductName">AdigunSPs</strong><small id="headerDivisionLabel">BY HB ELEKTRONIKER</small></span>
     <div class="project-name"><span class="live-dot"></span><button id="projectMenu" aria-label="Project menu"><span id="projectTitle">My first program</span><span class="chevron">▾</span></button></div>
-    <div class="top-actions"><span id="saveState" class="save-state">Saved locally</span><button id="languageButton" class="icon-button" aria-label="Change language">EN</button><button id="settingsButton" class="icon-button" aria-label="Settings">⚙</button><button id="paletteButton" class="icon-button" aria-label="Command search">⌕</button><button id="helpButton" class="icon-button" aria-label="Safety and help">?</button></div>
+    <div class="top-actions"><span id="saveState" class="save-state">Saved locally</span><button id="accountButton" class="icon-button" aria-label="Account">Account</button><button id="languageButton" class="icon-button" aria-label="Change language">EN</button><button id="settingsButton" class="icon-button" aria-label="Settings">⚙</button><button id="paletteButton" class="icon-button" aria-label="Command search">⌕</button><button id="helpButton" class="icon-button" aria-label="Safety and help">?</button></div>
   </header>
 
   <nav class="app-menus" aria-label="Application menus">
@@ -71,6 +71,8 @@
   <input id="fileInput" type="file" accept="application/json,.json,application/xml,.xml" hidden>
   <div id="contextMenu" class="context-menu" role="menu" aria-label="Ladder editor context menu" hidden></div>
   <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
+  <script src="runtime-config.js"></script>
+  <script src="vendor/supabase.js"></script>
   <script type="module" src="src/app.js"></script>
 </body>
 </html>

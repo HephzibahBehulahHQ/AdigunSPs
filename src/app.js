@@ -21,6 +21,8 @@ import { isHistoricalBreakpoint, shiftHistoricalBreakpoints } from "./trace-util
 import { sortProjectsByRecent } from "./project-list.js";
 import { recordOperationsScan, calculateOperations, createOperationsReportCsv } from "./operations.js";
 import { resolveProjectLanguage } from "./project-language.js";
+import { supabaseClient, supabaseStatus } from "./supabase-client.js";
+import { createAccountService } from "./account.js";
 import { ensureHmiScreens, addHmiScreen, selectHmiScreen, renameHmiScreen, deleteActiveHmiScreen } from "./hmi-screens.js";
 
 let examplesPromise;
@@ -60,6 +62,8 @@ let sim = { outputs: {}, timers: {}, energized: {}, values: {} };
 let runTimer = null, scans = 0, zoom = 100, selection = null, selectedContacts = new Set(), history = [], future = [], grid = true, copiedRung = null, copiedFbdBlocks = null, panSpaceHeld = false, canvasPan = null, viewProjectId = null;
 let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor = 0, traceInitial = null, traceInitialFaults = [], traceProjectKey = "", traceMismatches = [], traceBreakpoints = new Set();
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
+const accountService = createAccountService(supabaseClient);
+let accountUser = null, accountAccess = "checking", guestExpiresAt = null, guestTimer = null;
 const forcedInputs = {};
 const ladderRungHeights = new Map();
 const fbdBlockHeights = new Map();
@@ -75,7 +79,7 @@ const t = (key) => ui[language]?.[key] || ui.en[key] || key;
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1900); }
 function logEvent(type, message, detail = {}) { eventLog.unshift({ time:new Date().toISOString(), scan:scans, type, message, ...detail }); if (eventLog.length > 500) eventLog.length = 500; }
 function projectRungs(p) { return p.rungs.map((r) => ({ ...r, branches: r.branches?.length ? r.branches : [r.contacts || []] })); }
-function serializeProject() { return { ...project, rungs: projectRungs(project) }; }
+function serializeProject() { const { __adigunGuestExpiresAt, ...savedProject } = project; return { ...savedProject, rungs: projectRungs(project) }; }
 function reportLanguage() { return resolveProjectLanguage(project, language); }
 function stCompileSignature(source, tags) { return JSON.stringify([source, tags]); }
 function getSTCompilerWorker() {
@@ -98,7 +102,7 @@ function compileSTSource(source, tags) {
   });
 }
 function pushHistory() { history.push(structuredClone(project)); if (history.length > 60) history.shift(); future = []; }
-async function persist(show = false, force = false) { if (!project) return; if (!preferences.autosave && !force) { $("#saveState").textContent = language === "de" ? "Nicht gespeichert" : "Unsaved changes"; return; } project.updatedAt = Date.now(); $("#saveState").textContent = t("saving"); try { await store.save(serializeProject()); $("#saveState").textContent = t("saved"); if (show) toast(t("savedToast")); } catch { $("#saveState").textContent = "Storage unavailable"; toast("Browser storage unavailable"); } }
+async function persist(show = false, force = false) { if (!project) return; if (!preferences.autosave && !force && accountAccess !== "guest") { $("#saveState").textContent = language === "de" ? "Nicht gespeichert" : "Unsaved changes"; return; } project.updatedAt = Date.now(); $("#saveState").textContent = t("saving"); try { const storedProject = serializeProject(); if (accountAccess === "guest" && guestExpiresAt) storedProject.__adigunGuestExpiresAt = Date.parse(guestExpiresAt); await store.save(storedProject); $("#saveState").textContent = accountAccess === "guest" ? "Temporary guest work" : t("saved"); if (show) toast(t("savedToast")); } catch { $("#saveState").textContent = "Storage unavailable"; toast("Browser storage unavailable"); } }
 function inferTags() {
   const roles = new Map((project.tags || []).map((tag) => [tag.name, tag.role]));
   const inputs = new Set((project.io?.inputs || []).filter((name) => roles.get(name) !== "internal" && roles.get(name) !== "output"));
@@ -961,6 +965,80 @@ function renameTag(oldName, newName) {
   project.io ||= { inputs: [], outputs: [] }; for (const key of ["inputs", "outputs"]) project.io[key] = (project.io[key] || []).map((name) => name === oldName ? newName : name);
   if (project.initialState && Object.hasOwn(project.initialState, oldName)) { project.initialState[newName] = project.initialState[oldName]; delete project.initialState[oldName]; }
 }
+const accountCopy = {
+  en:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",email:"Email",password:"Password",name:"Display name",reset:"Reset password",guestStart:"Continue as guest · 10 minutes",member:"Signed in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile image",admin:"Admin overview",verify:"Check your email to finish registration.",saved:"Cloud project saved as a new copy.",config:"Account service is not configured for this deployment.",authDisabled:"Guest access is unavailable. Sign in or create an account.",expired:"Your 10-minute guest session has ended. Sign in to continue; temporary work is preserved on this device.",error:"Account request failed",profileSaved:"Profile saved."},
+  de:{account:"Konto",guest:"Gast",signIn:"Anmelden",register:"Konto erstellen",email:"E-Mail",password:"Passwort",name:"Anzeigename",reset:"Passwort zurücksetzen",guestStart:"Als Gast fortfahren · 10 Minuten",member:"Angemeldet",saveProfile:"Profil speichern",saveCloud:"In der Cloud speichern",refresh:"Cloud-Projekte laden",open:"Öffnen",signOut:"Abmelden",cloud:"Deine Cloud-Projekte",avatar:"Profilbild",admin:"Admin-Übersicht",verify:"Prüfe deine E-Mail, um die Registrierung abzuschließen.",saved:"Cloud-Projekt als neue Kopie gespeichert.",config:"Der Kontodienst ist für diese Bereitstellung nicht konfiguriert.",authDisabled:"Gastzugriff ist nicht verfügbar. Melde dich an oder erstelle ein Konto.",expired:"Deine 10-minütige Gastsitzung ist beendet. Melde dich an, um fortzufahren; temporäre Arbeit bleibt auf diesem Gerät erhalten.",error:"Kontoanfrage fehlgeschlagen",profileSaved:"Profil gespeichert."},
+  yo:{account:"Àkọọ́lẹ̀",guest:"Àlejò",signIn:"Wọlé",register:"Ṣẹ̀dá àkọọ́lẹ̀",email:"Íméèlì",password:"Ọ̀rọ̀ aṣínà",name:"Orúkọ ìfihàn",reset:"Tún ọ̀rọ̀ aṣínà ṣe",guestStart:"Tẹ̀síwájú gẹ́gẹ́ bí àlejò · ìṣẹ́jú 10",member:"O ti wọlé",saveProfile:"Fipamọ́ profaili",saveCloud:"Fipamọ́ sínú Cloud",refresh:"Tún àwọn iṣẹ́ Cloud ṣe",open:"Ṣí i",signOut:"Jáde",cloud:"Àwọn iṣẹ́ Cloud rẹ",avatar:"Àwòrán profaili",admin:"Àkótán admin",verify:"Ṣàyẹ̀wò íméèlì rẹ láti parí ìforúkọsílẹ̀.",saved:"A ti fipamọ́ ẹ̀dà tuntun sí Cloud.",config:"A kò tíì ṣètò iṣẹ́ àkọọ́lẹ̀ fún ìfisílẹ̀ yìí.",authDisabled:"Àlejò kò sí báyìí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀.",expired:"Ìgbà àlejò ìṣẹ́jú mẹ́wàá ti parí. Wọlé láti tẹ̀síwájú; iṣẹ́ ìgbà díẹ̀ ṣì wà lórí ẹ̀rọ yìí.",error:"Ìbéèrè àkọọ́lẹ̀ kò ṣiṣẹ́",profileSaved:"A ti fipamọ́ profaili."},
+  pcm:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",email:"Email",password:"Password",name:"Name wey go show",reset:"Reset password",guestStart:"Continue as guest · 10 minutes",member:"You don sign in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile picture",admin:"Admin overview",verify:"Check your email make registration finish.",saved:"We save new cloud copy.",config:"Account service no set for this deployment.",authDisabled:"Guest access no dey available. Sign in or create account.",expired:"Your 10-minute guest time don finish. Sign in to continue; temporary work remain for this device.",error:"Account request fail",profileSaved:"Profile don save."}
+};
+function accountText(key) { return (accountCopy[language] || accountCopy.en)[key] || accountCopy.en[key] || key; }
+function setAccountAccess(state, expiresAt = null) {
+  accountAccess = state; guestExpiresAt = expiresAt;
+  const locked = !["guest", "member"].includes(state);
+  if (locked && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
+  for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
+  const button = $("#accountButton");
+  if (button) button.textContent = state === "guest" && expiresAt ? `${accountText("guest")} · ${Math.max(0, Math.ceil((Date.parse(expiresAt) - Date.now()) / 1000))}s` : state === "member" ? accountText("account") : accountText("signIn");
+  if (state === "guest") { $("#saveState").textContent = "Temporary guest work"; startGuestCountdown(); }
+  else if (state === "member") { clearInterval(guestTimer); $("#saveState").textContent = "Saved locally"; }
+  else { clearInterval(guestTimer); $("#saveState").textContent = state === "expired" ? accountText("expired") : accountText("authDisabled"); if (button) button.title = state === "expired" ? accountText("expired") : accountText("authDisabled"); }
+}
+function startGuestCountdown() {
+  clearInterval(guestTimer);
+  const tick = () => {
+    const remaining = Date.parse(guestExpiresAt) - Date.now();
+    if (remaining <= 0) { setAccountAccess("expired"); showAccount(); return; }
+    const button = $("#accountButton"); if (button) button.textContent = `${accountText("guest")} · ${Math.floor(remaining / 60000).toString().padStart(2,"0")}:${Math.floor(remaining % 60000 / 1000).toString().padStart(2,"0")}`;
+  };
+  tick(); guestTimer = setInterval(tick, 1000);
+}
+async function initializeAccountAccess() {
+  if (!accountService) { setAccountAccess("unconfigured"); return; }
+  try {
+    const { data, error } = await supabaseClient.auth.getSession(); if (error) throw error;
+    const user = data?.session?.user;
+    if (user?.is_anonymous) { const guest = await accountService.ensureGuestSession(user); setAccountAccess("guest", guest.expiresAt); return; }
+    if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; return; }
+    const guest = await accountService.startGuestSession();
+    const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null;
+    setAccountAccess("guest", guest.expiresAt);
+  } catch (error) {
+    setAccountAccess(error?.code === "guest-session-expired" ? "expired" : "account-required");
+  }
+}
+async function updateAccountAfterAuth(user) {
+  if (user?.is_anonymous) { const guest = await accountService.ensureGuestSession(user); accountUser = user; setAccountAccess("guest", guest.expiresAt); }
+  else if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; await persist(true, true); if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+}
+async function loadCloudProjectList() {
+  const rows = await accountService.listCloudProjects(accountUser);
+  const html = rows.map((row) => { const latest = [...(row.adigun_cloud_project_versions || [])].sort((a,b) => b.version - a.version)[0]; return `<div class="project-row"><span><b>${escapeHtml(row.title)}</b><small>v${latest?.version || 0} · ${escapeHtml(row.updated_at)}</small></span><button type="button" data-cloud-open="${escapeAttr(row.id)}">${accountText("open")}</button></div>`; }).join("") || `<p class="safety-copy">${language === "de" ? "Noch keine Cloud-Projekte." : language === "yo" ? "Kò sí iṣẹ́ Cloud síbẹ̀." : "No cloud projects yet."}</p>`;
+  $("#cloudProjectList").innerHTML = html;
+  $("#cloudProjectList").querySelectorAll("[data-cloud-open]").forEach((button) => button.addEventListener("click", async () => {
+    try { const record = await accountService.openCloudProject(accountUser, button.dataset.cloudOpen); const next = normalizeImportedProject(structuredClone(record.payload)); const issues = validateProject(next).filter((issue) => issue.level === "error"); if (issues.length) throw new Error(issues.map((issue) => issue.message).join(" ")); project = next; await persist(true, true); render(); $("#modal").close(); }
+    catch (error) { toast(`${accountText("error")}: ${error.message}`); }
+  }));
+}
+function showAccount() {
+  const presentation = brandPresentation(language, currentBrandTheme());
+  const signedIn = accountUser && !accountUser.is_anonymous;
+  const lockedText = accountAccess === "expired" ? accountText("expired") : accountService ? accountText("authDisabled") : accountText("config");
+  const authForm = `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountText("password")}<input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required></label><label class="field">${accountText("name")}<input id="accountName" maxlength="120" autocomplete="name"></label><div class="modal-actions"><button class="primary" id="accountSignIn" type="button">${accountText("signIn")}</button><button class="secondary" id="accountRegister" type="button">${accountText("register")}</button><button class="secondary" id="accountReset" type="button">${accountText("reset")}</button></div></form>`;
+  const memberContent = signedIn ? `<p class="safety-copy">${accountText("member")}: ${escapeHtml(accountUser.email || "")}</p><label class="field">${accountText("name")}<input id="accountName" maxlength="120" value="${escapeAttr(accountUser.user_metadata?.display_name || "")}"></label><label class="field">${accountText("avatar")}<input id="accountAvatar" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="modal-actions"><button class="secondary" id="accountProfileSave">${accountText("saveProfile")}</button><button class="primary" id="accountCloudSave">${accountText("saveCloud")}</button><button class="secondary" id="accountCloudRefresh">${accountText("refresh")}</button>${accountService.isAdministrator(accountUser) ? `<button class="secondary" id="accountAdminShow">${accountText("admin")}</button>` : ""}<button class="secondary" id="accountSignOut">${accountText("signOut")}</button></div><div id="cloudProjectList" class="project-list"></div><div id="accountAdminList" class="project-list"></div>` : authForm;
+  modal(`${presentation.productName} · ${accountText("account")}`, `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section>${accountService ? "" : `<p class="safety-copy" role="alert">${lockedText}</p>`}${memberContent}${!signedIn && accountService ? `<p class="safety-copy" id="accountFeedback" role="status">${accountAccess === "guest" ? `${accountText("guest")}: ${Math.max(0, Math.ceil((Date.parse(guestExpiresAt) - Date.now()) / 1000))}s` : lockedText}</p><button class="secondary" id="accountStartGuest">${accountText("guestStart")}</button>` : ""}<div class="modal-actions"><button class="primary" id="accountClose">${accountCopy[language]?.close || (language === "de" ? "Schließen" : language === "yo" ? "Pade" : "Close")}</button></div></div>`);
+  $("#accountClose").onclick = () => $("#modal").close();
+  $("#accountSignIn")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signIn($("#accountEmail").value, $("#accountPassword").value); if (error) throw error; await updateAccountAfterAuth(data.user); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
+  $("#accountRegister")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signUp($("#accountEmail").value, $("#accountPassword").value, $("#accountName").value, `${location.origin}${location.pathname}`); if (error) throw error; if (data.user && data.session) { await updateAccountAfterAuth(data.user); $("#modal").close(); } else $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
+  $("#accountReset")?.addEventListener("click", async () => { try { const { error } = await accountService.requestPasswordReset($("#accountEmail").value, `${location.origin}${location.pathname}`); if (error) throw error; $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
+  $("#accountStartGuest")?.addEventListener("click", async () => { try { const guest = await accountService.startGuestSession(); const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null; setAccountAccess("guest", guest.expiresAt); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("authDisabled")} ${error.message}`; } });
+  $("#accountProfileSave")?.addEventListener("click", async () => { try { await accountService.updateProfile(accountUser, $("#accountName").value); const file = $("#accountAvatar").files?.[0]; if (file) await accountService.uploadAvatar(accountUser, file); toast(accountText("profileSaved")); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
+  $("#accountCloudSave")?.addEventListener("click", async () => { try { await accountService.saveCloudProject(accountUser, serializeProject()); toast(accountText("saved")); await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
+  $("#accountCloudRefresh")?.addEventListener("click", async () => { try { await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
+  $("#accountAdminShow")?.addEventListener("click", async () => { try { const profiles = await accountService.listProfilesForAdministrator(accountUser); $("#accountAdminList").innerHTML = `<h3>${accountText("admin")}</h3>${profiles.map((profile) => `<div class="project-row"><span><b>${escapeHtml(profile.display_name || profile.user_id)}</b><small>${escapeHtml(profile.created_at)}</small></span></div>`).join("") || `<p class="safety-copy">0</p>`}`; } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
+  $("#accountSignOut")?.addEventListener("click", async () => { try { const { error } = await accountService.signOut(); if (error) throw error; accountUser = null; await initializeAccountAccess(); showAccount(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
+  if (signedIn) loadCloudProjectList().catch((error) => { const list = $("#cloudProjectList"); if (list) list.textContent = `${accountText("error")}: ${error.message}`; });
+}
+document.addEventListener("keydown", (event) => { if (accountAccess !== "guest" && accountAccess !== "member" && !event.target.closest?.("dialog")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
 function showWelcome() { const presentation = brandPresentation(language, currentBrandTheme()); modal(presentation.productName, `<div class="modal-body"><div class="welcome-brand-lockup"><img class="welcome-company-logo" src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="welcome-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p><p class="safety-copy">${tour[language].welcome}</p><p class="safety-copy"><strong>${t("safety")}</strong></p><div class="modal-actions"><button class="secondary" id="welcomeTour">${tour[language].start}</button><button class="primary" id="welcomeContinue">${tour[language].continue}</button></div></div>`); $("#welcomeContinue").onclick = () => { localStorage.setItem("adigun-safety-seen", "yes"); $("#modal").close(); }; $("#welcomeTour").onclick = () => { localStorage.setItem("adigun-safety-seen", "yes"); showTutorial(0); }; }
 function showTutorial(stepIndex = 0) { const steps = tour[language].steps, step = steps[stepIndex]; modal(`${tour[language].title} · ${stepIndex + 1}/${steps.length}`, `<div class="modal-body"><h3 class="tour-step-title">${step[0]}</h3><p class="safety-copy">${step[1]}</p><div class="modal-actions">${stepIndex ? `<button class="secondary" id="tourBack">${tour[language].previous}</button>` : ""}${stepIndex < steps.length - 1 ? `<button class="primary" id="tourNext">${tour[language].next}</button>` : `<button class="primary" id="tourFinish">${tour[language].finish}</button>`}</div></div>`); $("#tourBack")?.addEventListener("click", () => showTutorial(stepIndex - 1)); $("#tourNext")?.addEventListener("click", () => showTutorial(stepIndex + 1)); $("#tourFinish")?.addEventListener("click", () => $("#modal").close()); }
 function showFindReplace() {
@@ -1055,6 +1133,7 @@ function showApplicationMenu(event) {
   showContextMenu(event, entries);
 }
 function action(name) {
+  if (accountAccess === "guest" && ["export", "save-local"].includes(name)) { toast(accountText("authDisabled")); showAccount(); return; }
   if (name === "adigun-ai") { showAdigunAI(); return; }
   if (name === "resources") { showResources(); return; }
   if (name === "protocol-simulator") { showProtocolSimulator(); return; }
@@ -1086,6 +1165,8 @@ function action(name) {
   if (name === "add-sfc-transition") { addSfcTransition(); return; }
   if (name === "compile-st") { compileST(true); return; }
   if (name === "save") { persist(true, true); return; }
+  if (name === "save-local") { exportProject(); return; }
+  if (name === "open-local") { importProject(); return; }
   if (name === "save-as") { const copyName = prompt(t("saveAs"), `${project.name} copy`); if (copyName?.trim()) { project = { ...structuredClone(project), id: crypto.randomUUID(), name: copyName.trim(), lastOpenedAt:Date.now() }; persist(true, true); render(); } return; }
   if (name === "new") { project = defaultProject(); project.lastOpenedAt = Date.now(); stopSimulation(); persist(); render(); } else if (name === "examples") showExamples(); else if (name === "import") importProject(); else if (name === "export") exportProject(); else if (name === "add-rung") addRung(); else if (name === "add-contact") { if (selection?.rung != null) rungAction("add", selection.rung); else addRung(); } else if (name === "undo") undo(); else if (name === "redo") redo(); else if (name === "run") runSimulation(); else if (name === "pause") { if (runTimer) { clearInterval(runTimer); runTimer = null; logEvent("pause", "Simulation paused"); window.adigunPaused = true; updateStatus(); } } else if (name === "step") { if (runTimer) return; doScan(); } else if (name === "stop") { stopSimulation(); toast(t("resetDone")); } else if (name === "zoom-in") setZoom(zoom + 10); else if (name === "zoom-out") setZoom(zoom - 10); else if (name === "grid") { grid = !grid; $("#canvasWrap").classList.toggle("no-grid", !grid); $("#gridToggle").classList.toggle("active", grid); } else if (name === "projects") showProjects(); else if (name === "tags") showTags(); else if (name === "help") showHelp();
 }
@@ -1183,7 +1264,8 @@ document.addEventListener("keydown", (event) => {
   else if (key === "delete" && selection?.kind === "contact") { event.preventDefault(); if (selectedContacts.size > 1) deleteSelectedContacts(); else $("#removeContact")?.click(); }
 });
 document.addEventListener("pointerdown", (event) => { const menu = $("#contextMenu"); if (!menu.hidden && !menu.contains(event.target)) hideContextMenu(); });
-async function init() { try { const projects = await store.all(); project = sortProjectsByRecent(projects)[0] || defaultProject(); project.lastOpenedAt = Date.now(); if (!projects.length) await store.save(project); else await store.touch(project); } catch { project = defaultProject(); project.lastOpenedAt = Date.now(); } language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale(); sim.values = { ...(project.initialState || {}) }; render(); if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+async function init() { document.documentElement.dataset.supabaseStatus = supabaseStatus.ready && supabaseClient ? "ready" : supabaseStatus.reason; try { const projects = await store.all(); project = sortProjectsByRecent(projects)[0] || defaultProject(); project.lastOpenedAt = Date.now(); } catch { project = defaultProject(); project.lastOpenedAt = Date.now(); } language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale(); sim.values = { ...(project.initialState || {}) }; render(); await initializeAccountAccess(); if (accountAccess === "member") await store.touch(project); else if (accountAccess === "guest") await persist(false, true); if (["unconfigured", "account-required", "expired"].includes(accountAccess)) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+$("#accountButton").addEventListener("click", showAccount);
 applyPreferences(); $("#settingsButton").addEventListener("click", showSettings); document.querySelectorAll("[data-app-menu]").forEach((button) => button.addEventListener("click", showApplicationMenu)); $("#logicTab").addEventListener("click", () => { workspaceView = "logic"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#electricalTab").addEventListener("click", () => { workspaceView = "electrical"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#hmiTab").addEventListener("click", () => { workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#processesButton").addEventListener("click", showProcessManager); $("#addAlarmButton").addEventListener("click", showAlarmSetup); $("#manageAlarmsButton").addEventListener("click", showAlarmManager); $("#recipesButton").addEventListener("click", showRecipes); $("#alarmHistoryButton").addEventListener("click", showAlarmHistory); $("#exportTrendHistoryButton").addEventListener("click", exportTrendHistory);
 $("#adigunAiButton").addEventListener("click", showAdigunAI);
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);

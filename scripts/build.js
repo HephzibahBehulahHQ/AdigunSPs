@@ -1,7 +1,8 @@
-import { cp, mkdir, readdir, rm, stat } from "node:fs/promises";
+import { cp, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadAdigunRuntimeConfig, serializeAdigunRuntimeConfig } from "./runtime-config.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(root, "dist");
@@ -30,8 +31,11 @@ for (const file of ["index.html", "styles.css", "service-worker.js", "manifest.w
   await cp(join(root, file), join(output, file));
 }
 for (const directory of ["src", "assets"]) await cp(join(root, directory), join(output, directory), { recursive:true });
+await mkdir(join(output, "vendor"), { recursive:true });
+await cp(join(root, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js"), join(output, "vendor", "supabase.js"));
+await writeFile(join(output, "runtime-config.js"), serializeAdigunRuntimeConfig(await loadAdigunRuntimeConfig(root)), "utf8");
 
-const required = ["index.html", "styles.css", "service-worker.js", "src/app.js", "src/engine.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
+const required = ["index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
 for (const file of required) if (!(await stat(join(output, file))).isFile()) throw new Error(`Built app is missing ${file}`);
 const html = await (await import("node:fs/promises")).readFile(join(output, "index.html"), "utf8");
 if (!html.includes('src="src/app.js"') || !html.includes('href="styles.css"')) throw new Error("Built entry point is missing its application script or stylesheet.");
