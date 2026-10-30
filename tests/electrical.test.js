@@ -18,6 +18,9 @@ assert.equal(button.x,220,"components snap to a 20-unit grid");
 assert.equal(validateElectricalDiagram(diagram).some((issue) => issue.level === "error"),false,"wired generic circuit is structurally valid");
 assert.equal(simulateElectricalDiagram(diagram,{Start:false}).energized[lamp.id],false,"open normally-open contact leaves lamp de-energized");
 assert.equal(simulateElectricalDiagram(diagram,{Start:true}).energized[lamp.id],true,"closed contact completes supply-to-load paths");
+const terminal=createElectricalComponent("terminal",1),terminalCircuit={components:[supply,terminal,button,lamp],wires:[]};
+for(const [from,to] of [[{componentId:supply.id,terminal:"+"},{componentId:terminal.id,terminal:"1"}],[{componentId:terminal.id,terminal:"2"},{componentId:button.id,terminal:"13"}],[{componentId:button.id,terminal:"14"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}]]){const result=connectElectricalTerminals(terminalCircuit,from,to);assert.equal(result.ok,true);terminalCircuit.wires.push(result.wire);}
+assert.equal(simulateElectricalDiagram(terminalCircuit,{Start:true}).energized[lamp.id],true,"the two terminals of a feed-through block preserve circuit continuity");
 assert.equal(connectElectricalTerminals(diagram,{componentId:"missing",terminal:"1"},{componentId:lamp.id,terminal:"+"}).ok,false,"unknown endpoints are rejected");
 assert.equal(connectElectricalTerminals(diagram,diagram.wires[0].from,diagram.wires[0].to).ok,false,"duplicate wires are rejected");
 assert.equal(connectElectricalTerminals(diagram,diagram.wires[0].from,{componentId:supply.id,terminal:"−"}).ok,false,"a branch needs a visible junction or distribution rail");

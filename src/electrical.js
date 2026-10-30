@@ -29,7 +29,7 @@ export const electricalComponentCatalog = Object.freeze({
   solenoidValve: { name:"Generic solenoid valve coil · 24 V DC simulation", category:"Actuators and indicators", prefix:"Y", terminals:["A1","A2"], kind:"load" },
   singlePhaseMotor: { name:"Generic single-phase motor · on/off model", category:"Motors", prefix:"M", terminals:["U1","U2","PE"], kind:"motor", phasePairs:[["U1","U2"]] },
   threePhaseMotor: { name:"Generic three-phase motor · on/off model", category:"Motors", prefix:"M", terminals:["U1","V1","W1","PE"], kind:"motor", phasePairs:[["U1","V1"],["V1","W1"],["W1","U1"]] },
-  terminal: { name:"Generic terminal block", category:"Terminals and wiring", prefix:"X", terminals:["1"], kind:"terminal" },
+  terminal: { name:"Generic feed-through terminal block", category:"Terminals and wiring", prefix:"X", terminals:["1","2"], kind:"pass-through" },
   dcPowerRail: { name:"Generic 24 V DC distribution rail", category:"Terminals and wiring", prefix:"XR", terminals:["1","2","3","4","5","6","7","8"], kind:"junction" },
   junction: { name:"Generic electrical junction", category:"Terminals and wiring", prefix:"J", terminals:["1","2","3","4"], kind:"junction" },
   protectiveEarth: { name:"Protective-earth terminal", category:"Terminals and wiring", prefix:"PE", terminals:["PE"], kind:"earth" },
@@ -184,6 +184,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       const spec = electricalComponentCatalog[component.type]; if (!spec) continue;
       const signal = Boolean(inputStates[component.tag || component.reference]);
       if (spec.kind === "junction") for (let i = 0; i < spec.terminals.length; i++) for (let j = i + 1; j < spec.terminals.length; j++) addEdge(key(component.id, spec.terminals[i]), key(component.id, spec.terminals[j]));
+      else if (spec.kind === "pass-through") addEdge(key(component.id,spec.terminals[0]),key(component.id,spec.terminals[1]));
       else if (spec.kind === "contact" || spec.kind === "overload-contact") {
         const closed = spec.kind === "overload-contact" ? !(component.tripped || signal) : component.normallyClosed ? !signal : signal;
         if (closed) addEdge(key(component.id, spec.terminals[0]), key(component.id, spec.terminals[1]));
