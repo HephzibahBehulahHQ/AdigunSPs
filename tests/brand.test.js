@@ -4,6 +4,14 @@ import { brand, brandPresentation } from "../src/brand.js";
 import { ui } from "../src/locale-ui.js";
 
 const read = (path) => readFileSync(path, "utf8");
+const contrastRatio = (foreground, background) => {
+  const luminance = (hex) => {
+    const channels = hex.match(/[a-f0-9]{2}/gi).map((channel) => parseInt(channel, 16) / 255).map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2);
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+};
 assert.equal(brand.company.name, "HEPHZIBAH BEHULAH");
 assert.equal(brand.division.name, "HB Elektroniker");
 assert.equal(brand.division.accent, "#22D3EE");
@@ -35,6 +43,9 @@ for (const language of ["en", "de", "yo", "pcm"]) for (const theme of ["light", 
 const html = read("index.html"), app = read("src/app.js"), sw = read("service-worker.js"), brandCss = read("assets/brand/brand-overrides.css");
 assert.ok(brandCss.includes("--surface: #0B1220") && brandCss.includes("--surface: #FFFFFF"), "electrical surfaces have explicit dark and light color tokens");
 for (const selector of [".electrical-component-head", ".electrical-port", ".electrical-signal-value", ".electrical-inspector h3", ".electrical-validation", ".electrical-issues .warning"]) assert.ok(brandCss.includes(`body[data-theme=\"light\"] ${selector}`), `electrical ${selector} has a readable light-theme treatment`);
+assert.ok(brandCss.includes('body[data-theme="light"] .context-menu button{color:var(--text)}') && brandCss.includes('body[data-theme="light"] .context-menu button.danger{color:#991b1b}'), "context-menu commands and danger actions remain readable in the light theme");
+for (const selector of [".app-menus button", ".tool-group button", ".panel-heading", ".tree-project", ".tree-item", ".sidebar-footer", ".editor-tabs .tab", ".editor-opts", ".field", ".field-help"]) assert.ok(brandCss.includes(`body[data-theme=\"light\"] ${selector}`), `application chrome and dialogs ${selector} have explicit light-theme text colors`);
+for (const [foreground, background, surface] of [["#152136", "#edf2f1", "context-menu"], ["#334155", "#ffffff", "application chrome"], ["#991b1b", "#edf2f1", "danger menu command"]]) assert.ok(contrastRatio(foreground, background) >= 4.5, `${surface} meets the WCAG AA normal-text contrast target`);
 for (const id of ["headerCorporateLogo", "headerProductName", "headerDivisionLabel", "footerCorporateLogo", "footerBrandAttribution", "corporateFooterLinks", "footerHelpLink", "footerYear", "printCorporateLogo", "printProductName", "printDivisionLabel", "printBrandAttributionText", "adigunAiButton"]) assert.ok(html.includes(`id="${id}"`), `${id} identity surface`);
 assert.ok(html.includes('class="floating-bot"') && html.includes("Adigun BOT"), "floating assistant launcher is present");
 assert.ok(app.includes("image.src = presentation.companyLogo") && app.includes("presentation.divisionLabel"), "runtime consumes central corporate and division identity");
@@ -65,6 +76,6 @@ for (const language of ["en", "de", "yo", "pcm"]) {
 }
 assert.equal(localizedManifestNames.size, 4, "PWA display names localize the relationship text in all four languages");
 for (const path of [...Object.values(brand.manifest), ...Object.values(brand.products.adigunsps.icons), ...Object.values(brand.products.adigunsps.splash), "assets/brand/company-official.jpg", "assets/brand/brand-overrides.css"]) assert.ok(sw.includes(path), `offline shell caches ${path}`);
-assert.ok(sw.includes("adigunsps-shell-v75"), "light-theme electrical style updates refresh the offline shell cache");
+assert.ok(sw.includes("adigunsps-shell-v78"), "light-theme dialog updates refresh the offline shell cache");
 assert.ok(!existsSync("BRAND-ASSETS-TODO.md"), "official supplied logo is implemented; no placeholder TODO remains");
 console.log("PASS: official corporate logo, distinct product wordmark/icons, hierarchy on app/PWA/splash, four locales, and both themes");

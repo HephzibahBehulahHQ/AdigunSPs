@@ -123,4 +123,27 @@ body[data-theme="light"] .electrical-signal-value,body[data-theme="light"] .elec
 body[data-theme="light"] .electrical-validation{color:#166534}
 body[data-theme="light"] .electrical-validation.has-error,body[data-theme="light"] .electrical-issues .error{color:#991b1b}
 body[data-theme="light"] .electrical-issues .warning{color:#854d0e}
+body[data-theme="light"] .context-menu button{color:var(--text)}
+body[data-theme="light"] .context-menu button.danger{color:#991b1b}
+body[data-theme="light"] .app-menus button{color:#334155}
+body[data-theme="light"] .app-menus button:hover,body[data-theme="light"] .app-menus button:focus-visible{background:#e2e8f0;color:#0f172a}
+body[data-theme="light"] .tool-group button{color:#334155}
+body[data-theme="light"] .tool-group button:hover,body[data-theme="light"] .tool-group button.active{background:#dbe5e9;color:#0f172a}
+body[data-theme="light"] .tool-group .stop-button{color:#991b1b}
+body[data-theme="light"] .panel-heading,body[data-theme="light"] .tree-item,body[data-theme="light"] .sidebar-footer,body[data-theme="light"] .editor-opts{color:#475569}
+body[data-theme="light"] .tree-project,body[data-theme="light"] .rung-num,body[data-theme="light"] .rung-comment{color:#344256}
+body[data-theme="light"] .tree-item.selected{background:#213b34;color:#d1fae5}
+body[data-theme="light"] .sidebar-footer b{color:#253745}
+body[data-theme="light"] .editor-tabs .tab{color:#27374a}
+body[data-theme="light"] .editor-tabs .tab em{color:#087c8c;border-color:#087c8c}
+body[data-theme="light"] .editor-subbar{border-color:#c9d3e0;color:#334155}
+body[data-theme="light"] .crumb{color:#475569}
+body[data-theme="light"] .badge{background:#e2e8f0;color:#334155}
+body[data-theme="light"] .canvas-ruler{color:#475569;border-color:#c9d3e0}
+body[data-theme="light"] .canvas-ruler span{color:#334155}
+body[data-theme="light"] .rung-head{color:#475569}
+body[data-theme="light"] .io-row{color:#eaf0f0}
+body[data-theme="light"] .io-address{color:#a3b1b8}
+body[data-theme="light"] .field,body[data-theme="light"] .fbd-block label,body[data-theme="light"] .sfc-step label,body[data-theme="light"] .find-fields label,body[data-theme="light"] .pane-toolbar label{color:#475569}
+body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[data-theme="light"] .io-modal-grid h3{color:#475569}
 @media(max-width:900px){.electrical-body{grid-template-columns:minmax(0,1fr)}.electrical-inspector{max-height:42vh}.electrical-pane{padding:8px}.electrical-toolbar{gap:6px}.electrical-toolbar select{min-width:150px}}
