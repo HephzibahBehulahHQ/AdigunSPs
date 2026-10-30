@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 21778)
-Total output lines: 594
-
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { examples } from "../src/examples.js";
@@ -278,7 +275,54 @@ const deletionModel = [{ branches:[[{ tag:"A" }, { tag:"B" }], [{ tag:"C" }]], c
 const deletedContacts = removeSelectedContacts(deletionModel, [selectedA, selectedB, { rung:0, branch:1, contact:0 }].map(contactSelectionKey));
 assert.equal(deletedContacts.removed, 3, "multi-delete removes selected contacts across rung branches");
 assert.deepEqual(deletedContacts.rungs[0].branches, [[], []], "multi-delete uses stable indices when removing contacts");
-assert.equ…1778 tokens truncated…uts.Lamp, true, "TON lamp energizes after preset");
+assert.equal(deletionModel[0].branches[0].length, 2, "multi-delete does not mutate the prior project model");
+const invalidFbdProject = structuredClone(project); invalidFbdProject.fbdBlocks = [{ id:"bad-add", type:"ADD", inputs:["Start", "Start"], outputTag:"Motor" }];
+assert.ok(validateProject(invalidFbdProject).some((issue) => issue.code === "fbd-numeric-type"), "FBD arithmetic rejects BOOL inputs");
+const validComparison = { tags:[{name:"Speed",type:"REAL"},{name:"Limit",type:"INT"},{name:"High",type:"BOOL"}], io:{inputs:["Speed","Limit"],outputs:["High"]}, fbdBlocks:[{id:"cmp-high",type:"GT",inputs:["Speed","Limit"],outputTag:"High"}] };
+assert.deepEqual(validateFbdBlocks(validComparison), [], "FBD comparison accepts numeric inputs and a BOOL result");
+const invalidComparison = { ...validComparison, tags:[...validComparison.tags,{name:"WrongResult",type:"REAL"}], fbdBlocks:[{id:"cmp-bad",type:"GT",inputs:["Start","Limit"],outputTag:"WrongResult"}] };
+assert.ok(validateFbdBlocks(invalidComparison).some((issue) => issue.code === "fbd-input-tag" && issue.tag === "Start"), "FBD wiring reports undeclared inputs inline");
+assert.ok(validateFbdBlocks(invalidComparison).some((issue) => issue.code === "fbd-output-type" && issue.blockIndex === 0), "FBD wiring validates comparison output type per block");
+const cyclicFbd = { tags:[{name:"A",type:"BOOL"},{name:"B",type:"BOOL"}], fbdBlocks:[{id:"cycle-a",type:"AND",inputs:["B"],outputTag:"A"},{id:"cycle-b",type:"OR",inputs:["A"],outputTag:"B"}] };
+assert.equal(validateFbdBlocks(cyclicFbd).filter((issue) => issue.code === "fbd-cycle").length, 2, "FBD dependency cycles are attached to each affected block");
+const conversionProject = { tags:[{name:"Start",type:"BOOL"},{name:"Stop",type:"BOOL"},{name:"Sensor",type:"BOOL"},{name:"Motor",type:"BOOL"},{name:"Lamp",type:"BOOL"}], io:{inputs:["Start","Stop","Sensor"],outputs:["Motor","Lamp"]}, rungs:[{branches:[[{tag:"Start",mode:"NO"},{tag:"Stop",mode:"NC"}]],coil:"Motor"},{branches:[[{tag:"Sensor",mode:"NO"}]],coil:"Lamp",timer:{tag:"T0.0",type:"TON",preset:1500}}] };
+conversionProject.fbdBlocks = convertLadderToFbd(conversionProject.rungs,conversionProject);
+assert.deepEqual(validateFbdBlocks(conversionProject),[],"LD-to-FBD conversion declares valid intermediate tags and emits correct block arities");
+assert.equal(scanFBD(conversionProject.fbdBlocks,{Start:true,Stop:false,Sensor:false},{},["Motor","Lamp"],100).outputs.Motor,true,"LD-to-FBD conversion preserves a normally-closed interlock result");
+assert.equal(requiredFbdInputs("GT"), 2, "FBD comparison exposes two input ports");
+assert.equal(requiredFbdInputs("SCALE"), 1, "FBD scaling exposes one input port");
+const wireBlocks = [{id:"bool-source",type:"TRUE",inputs:[],outputTag:"Ready"},{id:"num-source",type:"SCALE",inputs:["Raw"],outputTag:"Speed"},{id:"target",type:"GT",inputs:["Speed","Limit"],outputTag:"Fast"}];
+assert.equal(connectFbdPorts(wireBlocks,0,2,0).ok,false,"FBD wiring rejects BOOL-to-numeric connections");
+assert.deepEqual(connectFbdPorts(wireBlocks,1,2,0).blocks[2].inputs,["Speed","Limit"],"FBD wiring accepts compatible numeric inputs");
+assert.equal(connectFbdPorts(wireBlocks,1,2,2).code,"port","FBD wiring rejects unavailable input ports");
+const wireCycle = [{id:"wire-a",type:"AND",inputs:["B"],outputTag:"A"},{id:"wire-b",type:"AND",inputs:["Permit"],outputTag:"B"}];
+assert.equal(connectFbdPorts(wireCycle,0,1,1).code,"cycle","FBD wiring rejects connections that create dependency cycles");
+const searchableProject = { tags:[{name:"Ready",type:"BOOL"}], rungs:[], fbdBlocks:[{type:"AND",inputs:["Ready","Permit"],outputTag:"Enabled"}], sfc:{steps:[{actions:["Ready"]}],transitions:[{condition:"Ready"}]} };
+assert.equal(countProjectMatches(searchableProject,"FBD","Ready"),4,"Find counts tag names and references across FBD and SFC logic");
+assert.equal(countProjectMatches({...searchableProject,stSource:"Ready := TRUE;"},"ST","ready"),1,"Find remains case-insensitive in Structured Text");
+const dependentBlocks = [{ id:"sum", type:"ADD", inputs:["Scaled", "Offset"], outputTag:"Sum" }, { id:"scale", type:"SCALE", inputs:["Raw"], outputTag:"Scaled", rawMin:0, rawMax:100, scaledMin:0, scaledMax:10 }];
+assert.deepEqual(orderFbdBlocks(dependentBlocks).blocks.map((block) => block.id), ["scale", "sum"], "FBD dependencies execute in topological order regardless of editor order");
+assert.equal(scanFBD(dependentBlocks, {}, {}, ["Sum"], 100, { Raw:50, Offset:2 }).outputs.Sum, 7, "FBD consumers receive values from earlier dependencies even when shown first");
+const cyclicBlocks = [{ id:"left", type:"AND", inputs:["Right"], outputTag:"Left" }, { id:"right", type:"AND", inputs:["Left"], outputTag:"Right" }];
+assert.ok(orderFbdBlocks(cyclicBlocks).errors[0]?.includes("cycle"), "FBD dependency cycles are rejected");
+assert.ok(scanFBD(cyclicBlocks, {}, {}, ["Left", "Right"]).errors[0]?.includes("cycle"), "FBD runtime reports dependency cycles without executing them");
+const duplicateFbd = structuredClone(project); duplicateFbd.fbdBlocks = [{ id:"first", type:"AND", inputs:["Start"], outputTag:"Motor" }, { id:"second", type:"AND", inputs:["Stop"], outputTag:"Motor" }];
+assert.ok(validateProject(duplicateFbd).some((issue) => issue.code === "fbd-dependency"), "FBD duplicate output producers are rejected");
+const scaleProject = structuredClone(project); scaleProject.tags.push({ name:"RawAI", type:"REAL", role:"input" }, { name:"ScaledAI", type:"REAL", role:"internal" }); scaleProject.io.inputs.push("RawAI"); scaleProject.fbdBlocks = [{ id:"scale", type:"SCALE", inputs:["RawAI"], outputTag:"ScaledAI", rawMin:0, rawMax:1000, scaledMin:0, scaledMax:100 }];
+assert.equal(validateProject(scaleProject).some((issue) => issue.code.startsWith("fbd-scale")), false, "well-formed analog scaling block validates");
+scaleProject.fbdBlocks[0].rawMax = 0;
+assert.ok(validateProject(scaleProject).some((issue) => issue.code === "fbd-scale-range"), "analog scaling rejects a zero-width raw range");
+const invalidProject = structuredClone(project); invalidProject.tags.find((tag) => tag.name === "Start").type = "REAL";
+assert.ok(validateProject(invalidProject).some((issue) => issue.code === "contact-type"), "non-BOOL contact type is reported");
+const badTimerProject = structuredClone(project); badTimerProject.rungs[1].timer.preset = 0;
+assert.ok(validateProject(badTimerProject).some((issue) => issue.code === "timer-preset"), "zero timer preset is reported");
+const badTimerTypeProject = structuredClone(project); badTimerTypeProject.rungs[1].timer.type = "TOFETY";
+assert.ok(validateProject(badTimerTypeProject).some((issue) => issue.code === "timer-type"), "unknown LD timer types are rejected");
+let result = scan(project, { Start: true, Stop: false, Sensor: true }, {}, 100);
+assert.equal(result.outputs.Motor, true, "motor rung energizes when Start is pressed and Stop is closed");
+assert.equal(result.outputs.Lamp, false, "TON lamp remains off before preset");
+for (let i = 0; i < 15; i++) result = scan(project, { Start: true, Stop: false, Sensor: true }, result, 100);
+assert.equal(result.outputs.Lamp, true, "TON lamp energizes after preset");
 result = scan(project, { Start: true, Stop: true, Sensor: false }, result, 100);
 assert.equal(result.outputs.Motor, false, "stop input de-energizes motor");
 assert.equal(result.outputs.Lamp, false, "TON resets when its input goes false");
@@ -547,4 +591,3 @@ assert.ok(html.includes('id="contextMenu"') && app.includes('showContextMenu(eve
 assert.ok(html.includes('id="panelLayoutButton"') && app.includes("function showPanelLayout()") && app.includes('id="panelLeftToggle"') && app.includes('id="panelRightToggle"'), "view provides persisted project and inspector panel controls");
 assert.match(app, /setPointerCapture\(event\.pointerId\)/, "HMI widgets support pointer and touch repositioning");
 console.log(`PASS: ${examples.length} examples, ${examples.reduce((n, e) => n + e.testCases.length, 0)} cases, process models, LD TON/TOF/TP, replay, breakpoints, ST, FBD, SFC, HMI, validation and UI bindings`)
-
