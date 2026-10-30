@@ -67,4 +67,3 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
   };
   render();
 }
-

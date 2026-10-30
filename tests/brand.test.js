@@ -66,4 +66,3 @@ for (const path of [...Object.values(brand.manifest), ...Object.values(brand.pro
 assert.ok(sw.includes("adigunsps-shell-v74"), "electrical simulation update refreshes offline shell cache");
 assert.ok(!existsSync("BRAND-ASSETS-TODO.md"), "official supplied logo is implemented; no placeholder TODO remains");
 console.log("PASS: official corporate logo, distinct product wordmark/icons, hierarchy on app/PWA/splash, four locales, and both themes");
-

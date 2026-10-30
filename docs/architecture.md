@@ -30,4 +30,3 @@ The application includes a deterministic scan engine, editable LD, FBD, ST, and 
 5. **AI and release assurance (partial):** offline read-only Adigun BOT exists; model-backed services, policy/retention controls, evaluation gates, security/performance audits, cross-browser testing, and production deployment remain open.
 
 Each later phase depends on stakeholder decisions about target PLC vendors, backend/data residency, AI model and privacy policy, Yoruba/Pidgin glossary review, and intended deployment environment.
-

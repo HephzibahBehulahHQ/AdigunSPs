@@ -274,4 +274,3 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   if(sourceShorts.length)for(const tag of Object.keys(plcInputs))resolvedInputs[tag]=false;
   return { energized, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, warnings: [...validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning"),...sourceShorts] };
 }
-

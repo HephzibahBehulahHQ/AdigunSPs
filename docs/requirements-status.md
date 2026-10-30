@@ -27,4 +27,3 @@ Stakeholder decisions and responsible boundaries are listed in `stakeholder-inpu
 
 The verified official HEPHZIBAH BEHULAH banner is the single corporate image mark in onboarding, About/Help, footer, print exports, and splash screens. AdigunSPs remains a separate text wordmark; its product-only launcher icons are used for favicon and PWA installation. HB Elektroniker appears as the division label with the official cyan accent. The footer now includes the supplied corporate/social destinations, a localized Help/docs link, the LinkedIn personal-profile label, and the current year. Central brand configuration generates the four localized PWA manifests and selects the same approved corporate artwork in light and dark themes; the product palette follows the published navy, gold, blue, ivory, and cyan tokens. The official font is not present in the design-system repository, so the interface uses a system sans-serif fallback until that font is published.
 
-

@@ -100,4 +100,3 @@ const report = {
 await writeFile(new URL("../docs/engineering-validation-report.json", import.meta.url), `${JSON.stringify(report)}\n`);
 console.log(`Examples: ${report.passed}/${report.exampleCount} passed; ${report.caseCount} logic cases; ${report.componentCasesPassed}/${report.componentCaseCount} schematic checks; ${report.integrationCasesPassed}/${report.integrationCaseCount} integrated PLC-to-component cases; target ${report.acceptanceTarget}; acceptance ${report.acceptanceMet ? "met" : "NOT MET"}.`);
 if (!report.acceptanceMet) process.exitCode = 1;
-
