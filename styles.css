@@ -86,3 +86,5 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
   .footer-company-brand,.footer-company-brand #footerBrandAttribution{max-width:42vw}
   .corporate-footer nav{display:none}
 }
+
+.password-input-wrap{display:flex;align-items:center;gap:8px}.password-input-wrap input{flex:1;min-width:0}.password-visibility{flex:none;min-height:42px;padding:0 12px}
