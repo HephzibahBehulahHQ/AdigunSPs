@@ -207,7 +207,11 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     if (kind === "single-phase-source") return { component, nets: Object.fromEntries(["L", "N", "PE"].map((pin) => [pin, reachable(nodes, key(component.id, pin))])) };
     return { component, nets: { positive: reachable(nodes, key(component.id, "+")), negative: reachable(nodes, key(component.id, "−")) } };
   });
-  const poweredPair = (nets, component, a, b) => nets.some(({ nets: poles }) => poles.positive?.has(key(component.id, a)) && poles.negative?.has(key(component.id, b)) || poles.L?.has(key(component.id, a)) && poles.N?.has(key(component.id, b)));
+  const sourceHasShort=(poles)=>{const names=Object.keys(poles);for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++)if([...poles[names[i]]].some((node)=>poles[names[j]].has(node)))return true;return false;};
+  const poweredPair = (nets, component, a, b) => nets.some(({ nets: poles }) => {
+    const positive=poles.positive||poles.L,negative=poles.negative||poles.N;
+    return !sourceHasShort(poles) && positive && negative && positive.has(key(component.id,a)) && negative.has(key(component.id,b));
+  });
   // Coil power is derived from terminal voltage paths, never from the output tag alone.
   for (let pass = 0; pass < 2; pass++) {
     const nodes = makeGraph(), nets = sourceNets(nodes);
@@ -219,8 +223,8 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   const nodes = makeGraph(), nets = sourceNets(nodes), plcInputs = {}, analogInputs = {}, analogOutputs = {}, componentStates = {};
   for (const controller of all) {
     const spec = electricalComponentCatalog[controller.type]; if (!spec || !(spec.channels?.inputs?.length || spec.channels?.analogInputs?.length || spec.channels?.analogOutputs?.length)) continue;
-    const hasReturn = nets.some(({ nets: poles }) => poles.negative?.has(key(controller.id, "M")) || poles.N?.has(key(controller.id, "M")));
-    for (const channel of spec.channels.inputs || []) { const tag = controller.ioMap?.[channel]?.tag; if (tag) plcInputs[tag] = Boolean(hasReturn && nets.some(({ nets: poles }) => (poles.positive || poles.L)?.has(key(controller.id, channel)))); }
+    const hasReturn = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative?.has(key(controller.id, "M")) || poles.N?.has(key(controller.id, "M"))));
+    for (const channel of spec.channels.inputs || []) { const tag = controller.ioMap?.[channel]?.tag; if (tag) plcInputs[tag] = Boolean(hasReturn && nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, channel)))); }
     for (const channel of spec.channels.analogInputs || []) {
       const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
       if (!tag||!signal) continue;
@@ -240,7 +244,10 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   const energized = Object.fromEntries(loads.map((load) => {
     const spec = electricalComponentCatalog[load.type];
     const powered = spec.kind === "motor" && spec.phasePairs?.length > 1
-      ? nets.some(({ nets: poles }) => [["L1", "U1"], ["L2", "V1"], ["L3", "W1"]].every(([phase, pin]) => poles[phase]?.has(key(load.id, pin))))
+      ? nets.some(({ nets: poles }) => {
+        const phaseNets=[["L1","U1"],["L2","V1"],["L3","W1"]].map(([phase,pin])=>({phase,pin,nodes:poles[phase]}));
+        return !sourceHasShort(poles) && phaseNets.every(({nodes,pin})=>nodes?.has(key(load.id,pin))) && phaseNets.every(({nodes},index)=>phaseNets.slice(index+1).every((other)=>![...nodes].some((node)=>other.nodes?.has(node))));
+      })
       : spec.kind === "motor"
         ? nets.some(({ nets: poles }) => poles.L?.has(key(load.id, "U1")) && poles.N?.has(key(load.id, "U2")))
         : poweredPair(nets, load, spec.terminals[0], spec.terminals[1]);
@@ -250,6 +257,12 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   const resolvedInputs={...inputStates,...plcInputs};
   for (const controller of all) for(const channel of electricalComponentCatalog[controller.type]?.channels?.analogInputs||[]){const tag=controller.ioMap?.[channel]?.tag;if(tag)resolvedInputs[tag]=analogInputs[tag]??0;}
   Object.assign(resolvedInputs,analogInputs);
-  return { energized, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, warnings: validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
+  const sourceShorts=nets.flatMap(({component,nets:poles})=>{
+    const names=Object.keys(poles),shorted=[];
+    for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++)if([...poles[names[i]]].some((node)=>poles[names[j]].has(node)))shorted.push(`${names[i]}/${names[j]}`);
+    return shorted.length?[{level:"error",code:"electrical-source-short",message:`${component.reference||component.id} source poles are shorted: ${shorted.join(", ")}. Connected loads are de-energized in this simulation.`}]:[];
+  });
+  if(sourceShorts.length)for(const tag of Object.keys(plcInputs))resolvedInputs[tag]=false;
+  return { energized, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, warnings: [...validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning"),...sourceShorts] };
 }
 
