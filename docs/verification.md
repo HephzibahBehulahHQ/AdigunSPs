@@ -4,8 +4,8 @@
 
 - `npm test` passed: all 200 example projects, 1,317 logic cases, 903 schematic checks, and 1,317 integrated PLC-to-component cases, plus the focused branding, accessibility, Supabase, account, hardware, AI, resource, protocol, and allocator checks.
 - `npm run build` passed and syntax-checked 45 source modules; `git -c core.whitespace=cr-at-eol diff --check` reported no whitespace errors.
-- GitHub CI run 41125538546 and GitHub Pages deployment run 41125538938 both completed successfully for `e29a5c7` on 2026-10-30.
-- A live browser smoke on 2026-10-31 opened the deployed PLC editor, showed `ALL GOOD` diagnostics, and opened the account screen with an existing authenticated session. This does not verify new account registration, email confirmation/reset, guest access, cloud project writes, or multi-user isolation.
+- GitHub CI run 41241827147 and GitHub Pages deployment run 41241827187 both completed successfully for documentation commit `669b063` on 2026-10-31; the application implementation remains the previously verified `e29a5c7` build.
+- A live browser smoke on 2026-10-31 opened the deployed PLC editor, showed `ALL GOOD` diagnostics, recognized an existing authenticated session, and successfully refreshed the cloud-project list (empty account). This does not verify new account registration, email confirmation/reset, guest access, cloud project writes, or multi-user isolation.
 - Supabase project `fqcbfnktdvqojyezxeis` reported `ACTIVE_HEALTHY`; both repository migrations are present and all four public application tables report RLS enabled. The production Site URL and exact Pages redirect allowlist were inspected; Auth toggles and real user data isolation were not inspected. Current security advisors report two policy warnings and leaked-password protection disabled; Pro is required for the latter.
 - Remaining limits are listed in `requirements-status.md` and `stakeholder-inputs.md`; deployment does not make this educational simulator a certified safety PLC or validate physical hardware.
 ## Historical checks — 2026-10-30
@@ -100,3 +100,4 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+
