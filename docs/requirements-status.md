@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `04d759812ddea9ca1d4568e64de486766c9dba51`; CI run #87 and GitHub Pages deploy #53 both succeeded on that commit. The local checkout matches `origin/main`, and its service-worker shell cache is v111. The hosted-AI client is included in the published Pages build; authenticated inference remains unverified. The 709-CSS-pixel compact layout was verified previously. Full accessibility, security, performance, installation, and account/cloud end-to-end audits remain incomplete.
+This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `b886b323bc48679cf9329ce08cadf4943942a40f`; CI run #89 and Pages deploy #54 succeeded on it. This is a documentation-only follow-up to app commit `04d759812ddea9ca1d4568e64de486766c9dba51`. The local checkout matches `origin/main`, and the published shell cache is v111. The hosted-AI client is included in Pages; authenticated inference remains unverified. The 709-CSS-pixel compact layout was verified previously. Full accessibility, security, performance, installation, and account/cloud end-to-end audits remain incomplete.
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|
@@ -27,5 +27,6 @@ Stakeholder decisions and responsible boundaries are listed in `stakeholder-inpu
 ## Branding
 
 The verified official HEPHZIBAH BEHULAH banner is the single corporate image mark in onboarding, About/Help, footer, print exports, and splash screens. AdigunSPs remains a separate text wordmark; its product-only launcher icons are used for favicon and PWA installation. HB Elektroniker appears as the division label with the official cyan accent. The footer now includes the supplied corporate/social destinations, a localized Help/docs link, the LinkedIn personal-profile label, and the current year. Central brand configuration generates the four localized PWA manifests and selects the same approved corporate artwork in light and dark themes; the product palette follows the published navy, gold, blue, ivory, and cyan tokens. The official font is not present in the design-system repository, so the interface uses a system sans-serif fallback until that font is published.
+
 
 
