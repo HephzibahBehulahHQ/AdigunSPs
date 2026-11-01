@@ -1,6 +1,6 @@
 # Decisions needed to complete the platform
 
-The current application is a local educational simulator. These inputs unlock the requirements that cannot be responsibly selected from the screenshots or empty source repository alone.
+The current application is a deployed educational simulator. These stakeholder inputs identify requirements that still need owner decisions or external verification.
 
 | Decision | Owner/input needed | Requirements affected |
 |---|---|---|
