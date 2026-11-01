@@ -271,6 +271,15 @@ assert.deepEqual(makeProjectFromExample(examples[95]).rungs.map((rung) => rung.c
 for (const example of examples) {
   assert.ok(example.title.en && example.title.de && example.title.yo && example.title.pcm, `${example.id}: four localized titles`);
   assert.ok(example.description.en && example.description.de && example.description.yo && example.description.pcm, `${example.id}: four localized descriptions`);
+  if (Number(example.id.slice(3)) <= 100) {
+    for (const locale of ["en", "de", "yo", "pcm"]) {
+      const description = example.description[locale];
+      for (const tag of example.tags.filter((item) => item.role === "input")) {
+        const mentions = description.match(new RegExp(`\\b${tag.name}\\b`, "g")) || [];
+        assert.equal(mentions.length, 1, `${example.id}/${locale}: summary names input ${tag.name} exactly once`);
+      }
+    }
+  }
   for (const field of [example.category, example.difficulty, example.learningObjective, example.expectedBehavior, example.faultExplanations]) assert.ok(field.en && field.de && field.yo && field.pcm, `${example.id}: localized example metadata`);
   assert.ok(example.logic.rungs.length && example.tags.length && example.io.inputs.length && example.io.outputs.length, `${example.id}: project content`);
   for (const tag of example.tags) assert.ok(tag.label.en && tag.label.de && tag.label.yo && tag.label.pcm, `${example.id}: localized tag label`);
