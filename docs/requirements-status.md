@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `ed092a3eb65a6b6e3be4e597019ffc1eff48b756`; CI run #95 and Pages deploy #57 succeeded on it. The cached-avatar fallback correction is included in this release, and the published shell cache is v112. The hosted-AI client is included in Pages; authenticated inference remains unverified. The 709-CSS-pixel compact layout was verified previously. Full accessibility, security, performance, installation, and account/cloud end-to-end audits remain incomplete.
+This is a current implementation audit, not a production-readiness claim. The live application release is `ed092a3eb65a6b6e3be4e597019ffc1eff48b756`; CI run #95 and Pages deploy #57 succeeded for it on 2026-11-01. It includes the cached-avatar fallback correction and shell cache v112. A later docs-only audit update passed CI run #96 without changing the published app. The hosted-AI client is included in Pages; authenticated inference remains unverified. The 709-CSS-pixel compact layout was verified previously. Full accessibility, security, performance, installation, and account/cloud end-to-end audits remain incomplete.
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|
