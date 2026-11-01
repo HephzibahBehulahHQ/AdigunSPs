@@ -2,11 +2,11 @@
 
 ## Latest release verification — 2026-11-01
 
-- PR #39 merged to `main` as `f9cd38f76e69f85398897cff1e930428ec281afd`; GitHub Actions CI run `41330378252` and Pages deployment `41330378242` both succeeded.
-- Live reload at `https://adigunsps.hephzibahbehulah.com/` displayed the updated welcome subtitle and all six tour steps. The live browser had an expired guest session, so the example browser was not manually opened in that session.
-- `npm test` and `npm run build` passed locally before merge. `npm run validate:examples` passed 1,000/1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. The machine-readable report records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
+- PR #40 merged to `main` as `9fb9a4c39b401a0989a285707453728a9fa91e5a`; GitHub Actions CI run `41331078330` and Pages deployment `41331078265` both succeeded. This was a documentation/test-only follow-up to app release `f9cd38f`.
+- Local Git was fetched and synchronized to the same `main` commit. The live custom-domain app returned HTTP 200 and its editor loaded; the existing guest session had expired, so account-only and example-browser interactions were not manually exercised.
+- `npm test`, `npm run build`, and `npm run validate:examples` passed against the synchronized source. Validation passed 1,000/1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. The report records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
 - The browser app can search and offer to load matching examples through Adigun BOT; automated tests cover this path. HUD voltage, current, and RPM are explicitly unmodeled. Physical-device control is not available.
-- The local branch remains `codex/adigunsps-hardening-2026-11-01` at `44dcc5d`; direct fetch could not resolve `github.com` in this environment. No exact local/remote commit-hash parity is claimed.
+- The local branch `codex/adigunsps-hardening-2026-11-01` and `origin/main` both point to `9fb9a4c39b401a0989a285707453728a9fa91e5a`.
 
 ## Documentation maintenance
 
@@ -130,6 +130,7 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+
 
 
 
