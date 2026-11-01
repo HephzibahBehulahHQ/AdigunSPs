@@ -1,8 +1,16 @@
 # Verification record
 
+## Authentication follow-up — 2026-11-01
+
+- Local app source now uses email OTP for sign-in and registration, verifies six-digit codes, removes password and duplicate guest-upgrade email fields, and displays a four-minute guest timer. `npm test` passed, including account, UI, guest-expiry, and schema checks; `npm run build` passed.
+- Applied Supabase migration `20261101151429_adigunsps_four_minute_guest_access` to project `fqcbfnktdvqojyezxeis`. A read-only query verified 15 total guest rows, 0 active, 15 expired, and 0 rows with expiry beyond four minutes after the migration.
+- These frontend changes are local and have not been deployed yet. Live email OTP delivery is still unverified; confirm the Supabase Magic Link and Change Email Address templates include `{{ .Token }}`.
+
 ## Current verification — 2026-11-01
 
-- On 2026-11-01, the current clean local checkout matched organization `main` at `b886b323bc48679cf9329ce08cadf4943942a40f`, a documentation-only follow-up to app commit `04d759812ddea9ca1d4568e64de486766c9dba51`. `npm test` and `npm run build` passed locally; the suite covers all 200 examples. GitHub Actions CI run #89 and Pages deploy #54 both succeeded. The published service-worker shell cache is v111.
+- On 2026-11-01, the current source audit used organization `main` commit `24625e1cbf61cd4deb862f42a9b96478b2ab8bf3`. GitHub Actions CI run #104 and Pages deploy #61 completed successfully. In a fresh worktree, `npm ci`, `npm test`, and `npm run build` passed locally; the suite covers all 200 examples, 1,317 logic cases, 903 schematic checks, and 1,317 integrated PLC-to-component cases. The source service-worker shell cache is v112.
+- A manual browser inspection of `https://adigunsps.hephzibahbehulah.com/` loaded the editor but showed “Account required” and the expired 10-minute guest-session notice. This does not verify a signed-in AdigunSPs app session, account flows, or cloud operations.
+- HTTPS `HEAD` requests returned `200` with `text/html` for the three product domains: `https://adigunsps.hephzibahbehulah.com/`, `https://adigunsimulator.hephzibahbehulah.com/`, and `https://adigunelectrocad.hephzibahbehulah.com/`. This confirms those endpoints serve HTML over HTTPS; it does not verify full feature behavior on the other two apps.
 - The deployed Pages release includes the consent-gated hosted-AI client and defaults to `https://adigunsps-ai.hephzibah-behulah.workers.dev`. Earlier Worker probes returned 405 for GET, 401 `authentication-required` without a bearer token, and 401 `invalid-session` for an invalid token. These verify reachability and authentication guards, not successful inference; no account writes were performed during this verification.
 - The example report covers 200/200 projects, 1,317 logic cases, 903 schematic checks, and 1,317 PLC-to-component integration cases. Required-terminal warnings are zero after spare unmapped I/O channels and unused junction/rail taps were excluded; explicitly mapped channels and protective earth still warn if unwired. This is structural validation, not electrical/safety certification.
 - Supabase project `fqcbfnktdvqojyezxeis` is `ACTIVE_HEALTHY`; the five application tables have RLS. Live policy inspection confirmed owner checks and restrictive permanent-user insert checks, including project ownership for versions. The guest RPC pins an empty search path, checks `auth.uid()` and the anonymous claim, and creates a fixed ten-minute session. Inventory: 8 expired guest rows, all exactly ten minutes, and 0 cloud projects/versions. This does not prove two-user isolation or real client cloud-write behavior.
@@ -102,5 +110,6 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+
 
 

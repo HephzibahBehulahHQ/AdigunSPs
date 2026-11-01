@@ -21,7 +21,7 @@ assert.match(app, /dataset\.appMenu === "help"\) \{ showHelpGuideMenu/);
 assert.match(app, /data-help-action="safety"/);
 assert.match(app, /data-help-action="resources"/);
 assert.match(app, /\.\.\/docs\/HELP\.md/);
-assert.match(serviceWorker, /adigunsps-shell-v112/);
+assert.match(serviceWorker, /adigunsps-shell-v113/);
 assert.match(rendered, /id="using-the-bot-window"/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-tools\.js/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-verifier\.js/);
@@ -31,4 +31,5 @@ assert.match(serviceWorker, /\.\/src\/help-markdown\.js/);
 assert.match(serviceWorker, /\.\/docs\/HELP\.md/);
 assert.match(renderHelpMarkdown("## Safe\n\n<script>alert(1)</script>"), /&lt;script&gt;/, "Markdown rendering escapes HTML");
 console.log("PASS: Help guide sections, in-menu route, safe rendering, docs, and offline cache");
+
 

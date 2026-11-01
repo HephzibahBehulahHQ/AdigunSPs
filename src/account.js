@@ -31,10 +31,12 @@ export function createAccountService(client) {
   if (!client?.auth || typeof client.from !== "function") return null;
 
   return {
-    signUp(email, password, displayName = "", emailRedirectTo) {
-      return client.auth.signUp({ email:email.trim(), password, options:{ data:{ display_name:displayName.trim().slice(0, 120) }, ...(emailRedirectTo ? { emailRedirectTo } : {}) } });
+    requestEmailOtp(email, shouldCreateUser = false, displayName = "", emailRedirectTo) {
+      return client.auth.signInWithOtp({ email:email.trim(), options:{ shouldCreateUser, ...(displayName.trim() ? { data:{ display_name:displayName.trim().slice(0, 120) } } : {}), ...(emailRedirectTo ? { emailRedirectTo } : {}) } });
     },
-    signIn(email, password) { return client.auth.signInWithPassword({ email:email.trim(), password }); },
+    verifyEmailOtp(email, token, type = "email") {
+      return client.auth.verifyOtp({ email:email.trim(), token:String(token).trim(), type });
+    },
     signOut() { return client.auth.signOut(); },
     async beginGuestUpgradeEmail(user, email) {
       if (!user?.id || !user.is_anonymous) throw new AccountError("guest-upgrade-not-guest", "Only a guest session can be upgraded.");
@@ -47,20 +49,13 @@ export function createAccountService(client) {
       }
       return result.data;
     },
-    async setGuestUpgradePassword(user, password) {
-      if (!user?.id || user.is_anonymous || !user.email || !(user.email_confirmed_at || user.confirmed_at)) throw new AccountError("guest-upgrade-email-unverified", "Confirm the email link before setting a password.");
-      return requireResult(await client.auth.updateUser({ password })).user;
-    },
-    requestPasswordReset(email, redirectTo) {
-      return client.auth.resetPasswordForEmail(email.trim(), redirectTo ? { redirectTo } : undefined);
-    },
     async ensureGuestSession(user) {
       if (!user?.id || !user.is_anonymous) throw new AccountError("guest-session-not-anonymous", "Guest access requires a valid temporary guest account.");
       if (typeof client.rpc !== "function") throw new AccountError("guest-session-unavailable", "Guest access could not be verified by the account service.");
       const result = requireResult(await client.rpc("adigun_ensure_guest_session"));
       const row = Array.isArray(result) ? result[0] : result;
       const startedAt = Date.parse(row?.started_at), expiresAt = Date.parse(row?.expires_at), serverNow = Date.parse(row?.server_now);
-      if (![startedAt, expiresAt, serverNow].every(Number.isFinite) || expiresAt <= startedAt || expiresAt - startedAt > 10 * 60_000 + 5_000) throw new AccountError("guest-session-invalid", "The account service returned an invalid guest session.");
+      if (![startedAt, expiresAt, serverNow].every(Number.isFinite) || expiresAt <= startedAt || expiresAt - startedAt > 4 * 60_000 + 5_000) throw new AccountError("guest-session-invalid", "The account service returned an invalid guest session.");
       return { startedAt, expiresAt, serverNow, remainingMs:Math.max(0, expiresAt - serverNow), serverIssued:true };
     },
     async startGuestSession() {
@@ -130,4 +125,5 @@ export function createAccountService(client) {
     },
   };
 }
+
 
