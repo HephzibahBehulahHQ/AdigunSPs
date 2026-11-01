@@ -177,12 +177,12 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 
 ## Troubleshooting
 
-**What you'll see:** The **Account** dialog shows sign-in status; compile and logic problems appear beside **Compile** or in **Diagnostics**.
+**What you'll see:** The profile icon shows account status; errors appear in **Diagnostics**.
 
-1. **I can't sign in:** Open **Account**, check the email and password, and complete any email confirmation link. If the message says the account service is not configured, contact the site administrator to check its Supabase settings.
-2. **My project disappeared:** Check **Project manager** and the browser/device where you created it. Local projects stay in that browser; check **Account → Your cloud projects** for cloud copies or import your JSON backup.
-3. **The build failed:** If compiling ST, read the error beside **Compile** and in **Diagnostics**. For simulation issues, check input values, tags, and logic validation.
-4. **I got logged out:** Open **Account** and sign in again. Local projects remain in that browser; cloud projects require an account session.
+1. **I can't sign in:** Select the profile icon (**Sign in**), enter your email, and choose **Sign in** or **Create account**. The current email sends a link, not a code; open it. Six-digit codes need `{{ .Token }}` in the email template. If no email arrives, check spam or contact the administrator.
+2. **My project disappeared:** Check **Project manager** on the browser/device used. Local projects stay there; check **Account → Your cloud projects** or import your JSON backup.
+3. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
+4. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
 
 ## Glossary
 
@@ -197,5 +197,6 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 | Scan | One cycle in which the simulator reads inputs and evaluates logic. |
 | Snapshot | A previously saved local project version available for recovery. |
 | HMI | Human-machine interface screen designed in the app. |
+
 
 
