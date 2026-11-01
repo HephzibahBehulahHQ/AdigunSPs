@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `1b8785b6`; PR #17 CI run `41308406807` and PR #18 CI run `41308536026` passed. Live Pages served service-worker cache v105, and a fresh app load at a measured 709-CSS-pixel viewport showed the compact layout. End-to-end account, cloud-write, and authenticated AI flows remain unverified; full accessibility, security, performance, and installation audits are incomplete. End-to-end account, cloud-write, and authenticated AI flows remain unverified; full accessibility, security, performance, and installation audits are incomplete.
+This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `e73be01d`; PRs #17–#20 passed CI. Live Pages served service-worker cache v105, and a fresh app load at a measured 709-CSS-pixel viewport showed the compact layout. End-to-end account, cloud-write, and authenticated AI flows remain unverified; full accessibility, security, performance, and installation audits are incomplete.
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|
