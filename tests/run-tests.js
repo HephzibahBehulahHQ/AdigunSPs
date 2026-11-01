@@ -8,6 +8,7 @@ import { buildLocalizationReport } from "../src/localization.js";
 import { defaultProject, getTaskCycleMs, makeProjectFromExample, orderFbdBlocks, runExampleChecks, scan, scanFBD, scanSFC } from "../src/engine.js";
 import { validateProject } from "../src/validation.js";
 import { countProjectMatches } from "../src/project-search.js";
+import { searchExamples } from "../src/example-search.js";
 import { validateFbdBlocks, requiredFbdInputs, connectFbdPorts } from "../src/fbd-validation.js";
 import { convertLadderToFbd } from "../src/logic-conversion.js";
 import { compileStructuredText, executeStructuredText } from "../src/structured-text.js";
@@ -35,7 +36,12 @@ import { createPlcopenXml, parsePlcopenXml } from "../src/plcopen.js";
 import { assertProjectFileSize, normalizeImportedProject } from "../src/project-import.js";
 import { formatLocaleDateTime, formatLocaleNumber, formatLocaleTime } from "../src/formatting.js";
 
-assert.equal(examples.length, 200, "there must be exactly 200 examples");
+assert.equal(examples.length, 1000, "there must be exactly 1,000 examples");
+assert.deepEqual(examples.reduce((counts, example) => (counts[example.category.en] = (counts[example.category.en] || 0) + 1, counts), {}), {
+  "Core / Beginner":200,"Motor Control":200,"Process Control":200,"Safety & Interlocks":200,"Traffic & Lighting":100,"Building Automation":100,
+}, "the library contains the requested category totals");
+assert.ok(examples.every((example) => example.logic.rungs.length >= 10 && example.logic.rungs.length <= 20), "every example contains 10–20 ladder rungs");
+assert.ok(examples.every((example) => example.description?.en && example.howToTest?.en), "every example has a scenario description and test instructions");
 const importableDefault = defaultProject(), normalizedDefault = normalizeImportedProject(importableDefault);
 assert.deepEqual(normalizedDefault, importableDefault, "native project imports preserve project fields");
 assert.notEqual(normalizedDefault, importableDefault, "native project imports do not mutate the parsed input object");
@@ -82,7 +88,9 @@ const menuDispatch = appSource.slice(appSource.indexOf("function action(name)"),
 assert.ok(Object.values(createApplicationMenuEntries("en")).flat().every((entry) => entry.action.startsWith("mode-") ? menuDispatch.includes('name.startsWith("mode-")') : menuDispatch.includes(`name === ${JSON.stringify(entry.action)}`)), "every top-menu action has an application dispatch route");
 const staticToolbarActions = [...readFileSync(new URL("../index.html", import.meta.url), "utf8").matchAll(/data-action="([^"]+)"/g)].map((match) => match[1]);
 assert.ok(staticToolbarActions.every((actionName) => menuDispatch.includes(`name === ${JSON.stringify(actionName)}`)), "every static toolbar and project-tree action has an application dispatch route");
-for (const [locale, label] of Object.entries({en:"200 learning examples",de:"200 Lernbeispiele",yo:"Àpẹẹrẹ ẹ̀kọ́ 200",pcm:"200 learning examples"})) assert.equal(ui[locale].allExamples, label, `${locale}: example count label matches library`);
+for (const [locale, label] of Object.entries({en:"1,000 learning examples",de:"1,000 Lernbeispiele",yo:"Àpẹẹrẹ ẹ̀kọ́ 1,000",pcm:"1,000 learning examples"})) assert.equal(ui[locale].allExamples, label, `${locale}: example count label matches library`);
+const sorterMatches = searchExamples(examples, "Show me a complex conveyor sorting project", "en", 3);
+assert.ok(sorterMatches.length && sorterMatches.every(({example}) => example.category.en === "Process Control") && sorterMatches[0].example.title.en.toLowerCase().includes("sorting"), "Bot library search finds and ranks a process conveyor sorting project");
 const plcopenProject = defaultProject(); plcopenProject.name = "PLC & Training"; plcopenProject.rungs = [{ ...plcopenProject.rungs[0], timer:undefined }, { id:"plain-rung", comment:"Sensor interlock", branches:[[{ tag:"Sensor", mode:"NC" }], [{ tag:"Start", mode:"NO" }]], coil:"Lamp" }];
 plcopenProject.tags.find((tag) => tag.name === "Motor").alias = "Drive A";
 plcopenProject.tags.push({ name:"Delay", type:"TIME" }); plcopenProject.initialState.Delay = 1500;
@@ -249,12 +257,12 @@ assert.equal(stWorkerResult.id, 17, "compiler worker response preserves request 
 assert.equal(stWorkerResult.result.ok, true, "compiler worker compiles valid Structured Text");
 assert.equal(getTaskCycleMs({ task:{ cycleMs:250 } }), 250, "projects retain their configured task cycle");
 assert.equal(getTaskCycleMs({ task:{ cycleMs:0 } }), 100, "invalid task cycles use the safe default");
-assert.equal(new Set(examples.map((example) => example.id)).size, 200, "example ids must be distinct");
-assert.ok(examples.slice(-10, -5).every((example) => example.logic.rungs[0].counter && example.testCases.every((testCase) => testCase.sequence?.length)), "counter examples include scripted multi-scan scenarios");
+assert.equal(new Set(examples.map((example) => example.id)).size, 1000, "example ids must be distinct");
+assert.ok(examples.slice(190, 200).every((example) => example.additionalTestCases?.some((testCase) => testCase.sequence?.length && Object.keys(testCase.expectedSignals || {}).length)), "core examples include asserted timer and counter multi-scan scenarios");
 assert.ok(examples.slice(95, 100).every((example) => example.logic.outputTag === "PhaseB" && example.logic.rungs.some((rung) => rung.coilMode === "set") && example.logic.rungs.some((rung) => rung.coilMode === "reset") && example.testCases.every((testCase) => testCase.sequence?.length)), "sequencer examples include set/reset logic and multi-scan scenarios");
-assert.ok(examples.every((example) => !example.editorType || example.editorType === "LD"), "all 200 educational examples use the ladder editor");
-assert.equal(new Set(examples.map((example) => example.id)).size, 200, "example IDs are unique");
-assert.equal(new Set(examples.map((example) => example.title.en)).size, 200, "example titles are unique");
+assert.ok(examples.every((example) => !example.editorType || example.editorType === "LD"), "all 1,000 educational examples use the ladder editor");
+assert.equal(new Set(examples.map((example) => example.id)).size, 1000, "example IDs are unique");
+assert.equal(new Set(examples.map((example) => example.title.en)).size, 1000, "example titles are unique");
 assert.ok(examples.slice(5, 10).every((example) => example.logic.rungs.some((rung) => rung.scale?.inputTag === "RawAI" && rung.scale.outputTag === "ScaledValue")), "analog examples use an LD SCALE instruction");
 assert.ok(examples.slice(15, 20).every((example) => example.processes.some((model) => model.type === "pid")), "PID examples include a simulated controller");
 assert.equal(makeProjectFromExample(examples[5]).editorType, undefined, "scaling examples load into the ladder editor");
@@ -563,6 +571,9 @@ const visibleHeight = (virtualRungs.end - virtualRungs.start) * 130 + Math.max(0
 assert.equal(virtualRungs.top + (virtualRungs.start ? 10 : 0) + visibleHeight + (virtualRungs.end < 1000 ? 10 : 0) + virtualRungs.bottom, virtualRungs.total, "virtual spacer and visible rung sizes preserve the full scroll extent");
 assert.deepEqual(calculateRungWindow([], 0, 500), { start:0, end:0, top:0, bottom:0, total:0 }, "empty ladder virtualization has no rows or spacers");
 assert.ok(app.includes("calculateRungWindow") && app.includes("project.rungs.slice(windowRange.start, windowRange.end)") && app.includes("ladderPrinting = true") && app.includes('workspaceView === "hmi" || mode !== "LD"'), "large LD projects render a scroll window, restore all rungs for printing, and size the window after workspace changes");
+const brandStyles = readFileSync(new URL("../assets/brand/brand-overrides.css", import.meta.url), "utf8");
+assert.ok(html.includes('<details id="simulationHud"') && html.indexOf('id="simulationHud"') < html.indexOf('<main class="workspace"') && html.includes('data-hud="rungs"') && html.includes('id="simulationNarrator"') && html.includes('id="soundToggle"') && styles.includes(".simulation-hud{flex:none") && app.includes("searchExamples(examples, question, language, 3)") && app.includes("Not modeled because this simulator does not calculate") && app.includes("PLC evaluates the change on this scan.") && app.includes("function updateMotorHum()"), "collapsible nonblocking HUD, real-time narrator and motor sound, and Bot example search are wired");
+assert.ok(styles.includes("@keyframes wire-flow") && styles.includes("@keyframes motor-turn") && styles.includes("@keyframes relay-pull") && brandStyles.includes(".electrical-wire.energized") && brandStyles.includes("@keyframes electrical-current-flow"), "ladder and schematic wires, motors, and relay symbols animate on state changes");
 assert.ok(!/^import\s+\{\s*examples\s*\}\s+from\s+["']\.\/examples\.js["']/m.test(app) && app.includes('import("./examples.js")') && app.includes("async function showExamples"), "learning examples load on demand when the example browser is opened");
 assert.ok(app.includes('new Worker(new URL("./st-compiler-worker.js", import.meta.url)') && app.includes("compiledSTSignature !== signature") && app.includes("if (!worker) return Promise.resolve(compileStructuredText(source, tags));") && serviceWorker.includes("./src/st-compiler-worker.js"), "Structured Text compilation uses an offline-cached worker, scan-time cache, and synchronous fallback");
 assert.ok(styles.includes("#ladderCanvas > .rung-virtual-spacer") && serviceWorker.includes("./src/ladder-virtualization.js"), "virtual ladder spacers are styled and their windowing module is available offline");
@@ -658,4 +669,5 @@ assert.ok(html.includes('id="contextMenu"') && app.includes('showContextMenu(eve
 assert.ok(html.includes('id="panelLayoutButton"') && app.includes("function showPanelLayout()") && app.includes('id="panelLeftToggle"') && app.includes('id="panelRightToggle"'), "view provides persisted project and inspector panel controls");
 assert.match(app, /setPointerCapture\(event\.pointerId\)/, "HMI widgets support pointer and touch repositioning");
 console.log(`PASS: ${examples.length} examples, ${examples.reduce((n, e) => n + e.testCases.length, 0)} cases, process models, LD TON/TOF/TP, replay, breakpoints, ST, FBD, SFC, HMI, validation and UI bindings`)
+
 

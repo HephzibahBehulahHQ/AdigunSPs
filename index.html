@@ -31,9 +31,15 @@
   <nav class="toolbar" aria-label="Main commands">
     <div class="tool-group"><button data-action="new" title="New project">＋ <span>New</span></button><button data-action="examples" title="Example browser">▤ <span>Examples</span></button><button data-action="save" title="Save project">▣ <span>Save</span></button><button data-action="save-as" title="Save project as">▣ <span>Save as</span></button><button data-action="import" title="Import project">⇧ <span>Import</span></button><button data-action="export" title="Export project">⇩ <span>Export</span></button><button data-action="print" title="Print project">⎙ <span>Print</span></button></div>
     <div class="tool-group"><button data-action="undo" title="Undo (Ctrl+Z)">↶</button><button data-action="redo" title="Redo (Ctrl+Y)">↷</button><button data-action="add-contact" title="Add contact">╫ <span>Contact</span></button><button data-action="add-rung" title="Add rung">＋ <span>Rung</span></button></div>
-    <div class="tool-group sim-tools"><button data-action="io">◉ <span>I/O</span></button><button data-action="faults">⚠ <span>Faults</span></button><button data-action="operations" id="operationsButton">⌁ Operations</button><button data-action="scenario" id="scenarioButton">▹ Scenario</button><button data-action="run" class="run-button">▶ <span>Run</span></button><button data-action="pause">Ⅱ <span>Pause</span></button><button data-action="step">▷| <span>Step</span></button><button data-action="stop" class="stop-button">■ <span>Reset</span></button><button data-action="record" id="recordButton">● Record</button><button data-action="replay">↻ Replay</button><button data-action="trace">Trace</button><button data-action="events">Events</button></div>
+    <div class="tool-group sim-tools"><button data-action="io">◉ <span>I/O</span></button><button data-action="faults">⚠ <span>Faults</span></button><button data-action="operations" id="operationsButton">⌁ Operations</button><button data-action="scenario" id="scenarioButton">▹ Scenario</button><button data-action="run" class="run-button">▶ <span>Run</span></button><button data-action="pause">Ⅱ <span>Pause</span></button><button data-action="step">▷| <span>Step</span></button><button data-action="stop" class="stop-button">■ <span>Reset</span></button><button data-action="sound" id="soundToggle" aria-pressed="false">♫ Sound off</button><button data-action="record" id="recordButton">● Record</button><button data-action="replay">↻ Replay</button><button data-action="trace">Trace</button><button data-action="events">Events</button></div>
     <div class="tool-group zoom-tools"><button data-action="zoom-out" aria-label="Zoom out">−</button><span id="zoomValue">100%</span><button data-action="zoom-in" aria-label="Zoom in">＋</button><button data-action="grid" id="gridToggle" class="active" title="Toggle grid">▦</button></div>
   </nav>
+
+  <details id="simulationHud" class="simulation-hud" aria-label="Simulation dashboard" hidden>
+    <summary><span>Simulation HUD · select to expand</span><b data-hud="status" data-state="ready">READY</b><small>Canvas remains visible and interactive</small></summary>
+    <div class="hud-metrics"><div><small>SCAN</small><b data-hud="scan">0</b></div><div><small>ACTIVE RUNGS</small><b data-hud="rungs">0</b></div><div><small>ACTIVE TIMERS</small><b data-hud="timers">0</b></div><div><small>VOLTAGE</small><b>Not modeled</b></div><div><small>CURRENT</small><b>Not modeled</b></div><div><small>MOTOR RPM</small><b>Not modeled</b></div></div>
+    <div class="hud-log" id="simulationNarrator" role="log" aria-live="polite"><b>System log</b><span>Run or step to observe PLC scan events.</span></div>
+  </details>
 
   <main class="workspace">
     <aside class="sidebar left-sidebar">
@@ -82,4 +88,5 @@
   <script type="module" src="src/app.js"></script>
 </body>
 </html>
+
 

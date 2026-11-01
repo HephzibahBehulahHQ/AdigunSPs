@@ -5,6 +5,7 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 ## Table of contents
 
 - [Getting started](#getting-started)
+- [Taking the onboarding tour](#taking-the-onboarding-tour)
 - [Navigating the interface](#navigating-the-interface)
 - [Creating a project](#creating-a-project)
 - [Saving your work](#saving-your-work)
@@ -27,6 +28,15 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 3. To register or sign in, select the profile icon. It is labelled **Sign in** when signed out and **Account** after sign-in. Enter your email, choose **Create account** or **Sign in**, then enter the email code or open the sign-in link.
 
 The first screen has the product bar, menus, and toolbar above the editor. The project tree and simulated inputs are on the left; the canvas is centered; Properties, Watch, and Diagnostics sit on the right. Run, storage, language, and help status appear in the footer.
+
+## Taking the onboarding tour
+
+**What you'll see:** Welcome offers **Start quick tour** or **Continue**.
+
+1. Start the tour; reopen via **? → Safety and help → Start quick tour**.
+2. Use **Back/Next**; **Finish** exits.
+
+Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model limits. 1,000 examples pass checks. Physical control unavailable; devices are software models.
 
 ## Navigating the interface
 
@@ -96,14 +106,14 @@ Commands include **New project** (start empty), **Project manager** (open saved 
 
 AdigunSPs does not have a general-purpose “Build” button. In this app, **Run** starts the PLC simulation; **Compile** checks and runs the supported Structured Text workflow.
 
-**What you'll see:** Simulation status appears in the footer and Diagnostics; Structured Text shows a compile status beside **Compile**.
+**What you'll see:** Starting **Run** opens the simulation HUD with scan, active rung, active timer, and status readouts; it also adds a live System log. Voltage, current, and motor RPM are shown as **Not modeled**.
 
 1. Add logic in **Program / Main** or choose **Programs** to open FBD, ST, or SFC.
 2. For ladder logic, set simulated inputs in the **Simulated inputs** panel and select **Run** to scan continuously, or **Step** for one scan. Select **Pause** to pause; **Reset** stops and clears simulation state.
 3. For Structured Text, open the ST editor and select **Compile**. The editor shows the compile result; inspect errors there and in **Diagnostics** before running.
-4. A successful simulation shows changing outputs, scan count, and run status. A failed compile reports an error; fix the indicated source and compile again.
+4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
 
-Simulation is educational and does not certify a design or operate physical hardware.
+The HUD is educational: voltage, current, and motor RPM are not calculated. This simulator does not certify a design or operate physical hardware.
 
 **How to build a first ladder:**
 
@@ -114,13 +124,13 @@ Simulation is educational and does not certify a design or operate physical hard
 
 ## Using Adigun BOT
 
-Adigun BOT answers curated PLC learning questions and can draft a limited set of Boolean gate, timer-lamp, and start/stop ladder projects locally. It can also prepare reviewed tag-rename and ladder-rung deletion plans for the open project; deleting a rung only affects the canvas after you import the plan. It is a deterministic offline helper, not a general AI model; unsupported project edits are declined.
+Adigun BOT answers PLC questions, drafts supported gate/timer/start-stop logic, prepares reviewed tag/rung edits, and searches the example library. It is an offline helper; unsupported edits are declined.
 
-**What you'll see:** Adigun BOT opens in a movable panel above the workspace. Its chat has a text prompt, optional 🎙 **Voice input**, question shortcuts, and a transcript; build requests still open a separate review dialog.
+**What you'll see:** Adigun BOT opens in a movable panel with a prompt, optional 🎙 **Voice input**, shortcuts, and transcript.
 
-1. Open **Adigun BOT** from the floating assistant button or **Tools**. Type a supported request or select **Voice input** and speak when your browser supports microphone recognition.
-2. Submit the prompt. Review the plan, sketch, and expected-versus-simulated outputs; nothing changes in the active project at this stage. Import and save are disabled if the supported draft fails verification.
-3. Choose **Preview on canvas** to inspect the draft without saving. Select **Commit project** to import it, or **Discard preview** (or press Escape) to restore your prior project. You can also choose **Import to canvas** to commit directly; confirm replacing unsaved work if asked.
+1. Open **Adigun BOT** from its floating button or **Tools**. Type a request or choose **Voice input** if supported.
+2. Submit and review the plan, sketch, and expected outputs. Import is disabled if checks fail.
+3. Use **Preview on canvas** to inspect, **Commit project** or **Import to canvas** to apply, or **Discard preview** / Escape to roll back.
 4. Signed-in users can choose **Save locally** or **Save to cloud**. Guests may import drafts, but both save actions are disabled until they sign in; a draft remains available in the current tab while they open the account dialog.
 5. Choose **Edit request** to return to the prompt with the request restored, or **Discard** to close the draft. For exact supported requests and limits, read [BOT.md](BOT.md).
 
@@ -137,7 +147,7 @@ Adigun BOT answers curated PLC learning questions and can draft a limited set of
 
 New co-pilot suggestions set an unread dot and notification; the window stays closed.
 
-The builder creates FBD gates, a TON delayed lamp, or an LD start/stop circuit with generic PLC I/O and simulated devices. It can rename a declared tag or remove a selected rung. Motor outputs use simulated contactor and motor models. It cannot plan other edits, build traffic-light sequences, or debug arbitrary FBD paths; all behavior is simulated.
+The builder supports FBD gates, a TON lamp, LD start/stop, tag rename, and selected-rung deletion. Other project edits are not available; electrical models are educational.
 
 ### Hosted AI privacy
 
@@ -158,12 +168,12 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 
 ## Using ready-made example projects
 
-**What you'll see:** **Example browser** opens a searchable list of 200 learning examples with category and difficulty filters.
+**What you'll see:** **Example browser** opens a searchable list of 1,000 examples across Core / Beginner, Motor Control, Process Control, Safety & Interlocks, Traffic & Lighting, and Building Automation, with category and difficulty filters.
 
 1. Select **Examples** on the toolbar, **File → Example browser**, or **Example library** in the project tree.
-2. Search or choose a category, then select an example row. Confirm if prompted; the selected example becomes the current project.
-3. To keep the example unchanged, load it first, then open **Project manager**, choose the duplicate icon beside it, and open the copy before editing. You can also use **Save as** to export a named project file.
-4. Run the example's simulated inputs and use **Step**, **Run**, or the example test report to explore its behavior.
+2. Search by scenario or choose a category, then select an example row. Each row shows a description and **How to test**. Confirm if prompted; the selected example becomes the current project. Use **Show 50 more** to browse additional results.
+3. To preserve the original, open **Project manager** and choose its duplicate icon before editing; **Save as** exports a separate file.
+4. Follow the example's **How to test** steps, then use **Step** or **Run** to explore the expected behavior. Voltage, current, and RPM readouts are marked **Not modeled** because the app does not calculate those physical quantities.
 
 ## Troubleshooting
 
@@ -187,4 +197,5 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 | Scan | One cycle in which the simulator reads inputs and evaluates logic. |
 | Snapshot | A previously saved local project version available for recovery. |
 | HMI | Human-machine interface screen designed in the app. |
+
 

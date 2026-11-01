@@ -23,6 +23,8 @@ assert.equal(button.x,220,"components snap to a 20-unit grid");
 assert.equal(validateElectricalDiagram(diagram).some((issue) => issue.level === "error"),false,"wired generic circuit is structurally valid");
 assert.equal(simulateElectricalDiagram(diagram,{Start:false}).energized[lamp.id],false,"open normally-open contact leaves lamp de-energized");
 assert.equal(simulateElectricalDiagram(diagram,{Start:true}).energized[lamp.id],true,"closed contact completes supply-to-load paths");
+assert.ok(simulateElectricalDiagram(diagram,{Start:true}).energizedWires.includes(diagram.wires[0].id),"supply-connected schematic wires are marked live for the animated conductor path");
+assert.ok(!simulateElectricalDiagram(diagram,{Start:false}).energizedWires.includes(diagram.wires[1].id),"open contacts isolate downstream wires from the energized path");
 const breaker=createElectricalComponent("circuitBreaker",1),fuseComponent=createElectricalComponent("fuse",1),protectionCircuit={components:[supply,breaker,fuseComponent,lamp],wires:[]};
 for(const [from,to] of [[{componentId:supply.id,terminal:"+"},{componentId:breaker.id,terminal:"1"}],[{componentId:breaker.id,terminal:"2"},{componentId:fuseComponent.id,terminal:"1"}],[{componentId:fuseComponent.id,terminal:"2"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}]]){const result=connectElectricalTerminals(protectionCircuit,from,to);assert.equal(result.ok,true);protectionCircuit.wires.push(result.wire);}
 assert.equal(simulateElectricalDiagram(protectionCircuit,{}).energized[lamp.id],true,"closed generic protection devices pass the circuit path");breaker.closed=false;assert.equal(simulateElectricalDiagram(protectionCircuit,{}).energized[lamp.id],false,"opening the breaker property interrupts its wired load");breaker.closed=true;fuseComponent.tripped=true;assert.equal(simulateElectricalDiagram(protectionCircuit,{}).energized[lamp.id],false,"tripping the fuse property interrupts its wired load");
@@ -103,3 +105,4 @@ assert.equal(simulateElectricalDiagram(openAnalogInput,{RawAI:250},{}).inputs.Ra
 const openAnalogOutput=structuredClone(analogDiagram);openAnalogOutput.wires=openAnalogOutput.wires.filter((wire)=>wire.to.componentId!==analogIndicator.id||wire.to.terminal!=="SIG+");
 assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {ScaledValue:25}).analogOutputs,"ScaledValue"),false,"disconnected analog output is not delivered to its indicator");
 console.log("PASS: generic industrial categories, digital and scalar analog I/O paths, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
+

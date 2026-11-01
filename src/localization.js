@@ -8,7 +8,7 @@ function flattenStrings(value, prefix = "", result = new Map()) {
 }
 
 function localizedExampleFields(example) {
-  const fields = ["title", "description", "category", "difficulty", "learningObjective", "expectedBehavior", "faultExplanations"].map((field) => [field, example[field]]);
+  const fields = ["title", "description", "howToTest", "category", "difficulty", "learningObjective", "expectedBehavior", "faultExplanations"].map((field) => [field, example[field]]);
   for (const [index, tag] of (example.tags || []).entries()) fields.push([`tags[${index}].label`, tag.label]);
   for (const [index, testCase] of (example.testCases || []).entries()) fields.push([`testCases[${index}].name`, testCase.name]);
   return fields;
@@ -31,3 +31,4 @@ export function buildLocalizationReport(bundles, examples = []) {
   });
   return { schema:"adigunsps-localization-audit-v1", generatedAt:new Date().toISOString(), rows };
 }
+

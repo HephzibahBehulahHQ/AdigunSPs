@@ -147,3 +147,5 @@ body[data-theme="light"] .io-address{color:#a3b1b8}
 body[data-theme="light"] .field,body[data-theme="light"] .fbd-block label,body[data-theme="light"] .sfc-step label,body[data-theme="light"] .find-fields label,body[data-theme="light"] .pane-toolbar label{color:#475569}
 body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[data-theme="light"] .io-modal-grid h3{color:#475569}
 @media(max-width:900px){.electrical-body{grid-template-columns:minmax(0,1fr)}.electrical-inspector{max-height:42vh}.electrical-pane{padding:8px}.electrical-toolbar{gap:6px}.electrical-toolbar select{min-width:150px}}
+.electrical-wire.energized{stroke:#65fff0;stroke-width:4;stroke-dasharray:7 9;filter:drop-shadow(0 0 4px #19f4ff);animation:electrical-current-flow .65s linear infinite}@keyframes electrical-current-flow{to{stroke-dashoffset:-32}}@media(prefers-reduced-motion:reduce){.electrical-wire.energized{animation:none}}
+

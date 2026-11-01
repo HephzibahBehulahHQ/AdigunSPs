@@ -6,8 +6,9 @@ AdigunSPs is an educational PLC editor and simulator. The simulator has no physi
 2. To sign in or create an account, open **Account**, enter your email, choose an option, then enter the six-digit code sent to your email.
 3. Select **Examples** on the toolbar and open an example, or select **New** to start an empty project.
 4. In the left **Simulated inputs** panel, toggle an input. In **Program / Main**, inspect or edit the ladder; add logic with **Contact** and **Rung**.
-5. Select **Run** to simulate repeated scans, **Step** to run once, **Pause** to pause, or **Reset** to clear simulation state. Watch outputs and the footer status.
+5. Select **Run** to simulate repeated scans, **Step** to run once, **Pause** to pause, or **Reset** to clear simulation state. Watch the HUD for active rungs, timers, and status; voltage, current, and RPM are not modeled. Toggle **♫ Sound off** to enable or disable local interface sounds.
 6. Guest work is a temporary draft in the current tab. After sign-in, **Save** stores a cloud copy and **Save locally (JSON)** downloads a portable copy; use **Project manager** for saved projects and recovery snapshots.
 
 Press **Ctrl+K** to search actions. Open **Help** in the top menu for the full guide, safety notes, and guided tour.
+
 

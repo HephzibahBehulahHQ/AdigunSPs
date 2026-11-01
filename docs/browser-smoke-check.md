@@ -1,6 +1,6 @@
 # Browser smoke check
 
-Date: 2026-10-30  
+Date: 2026-10-30
 Environment: Chrome, local development preview at `http://127.0.0.1:8081/`, 1280×821 browser window.
 
 ## Observed working
@@ -15,7 +15,7 @@ Environment: Chrome, local development preview at `http://127.0.0.1:8081/`, 1280
 
 Visual inspection found light-theme contrast problems in electrical controls, application menus and chrome, and shared form labels. The theme tokens and affected component, terminal, status, validation, application-chrome, and dialog-label colors were corrected in `assets/brand/brand-overrides.css`. After bumping the service-worker cache to `adigunsps-shell-v78`, Chrome visually rechecked the component selector and properties, component card and terminals, main menus, toolbar, sidebar labels, File dropdown, and Settings dialog. At 711×693, dialog labels and helper text were legible on the light surface and the dialog content retained its own scroll area. File → Project manager opened its dialog, and Escape closed it. The temporary components were removed afterward. Focused branding tests and the production build pass.
 
-This is a focused manual smoke check, not full end-to-end coverage. It does not prove every menu command, toolbar button, dialog, canvas gesture, property, or example through browser storage. Narrow viewport and zoom sweeps, all 200 browser open/save/reopen workflows, screen-reader checks, cross-browser/PWA installation, and security/performance audits remain outstanding. Automated example results are model-level JSON round-trips as detailed in `engineering-validation-report.json`.
+This is a focused manual smoke check, not full end-to-end coverage. It does not prove every menu command, toolbar button, dialog, canvas gesture, property, or example through browser storage. Narrow viewport and zoom sweeps, all 1,000 browser open/save/reopen workflows, screen-reader checks, cross-browser/PWA installation, and security/performance audits remain outstanding. Automated example results are model-level JSON round-trips as detailed in `engineering-validation-report.json`.
 ## Production avatar follow-up
 
 Date: 2026-11-01
@@ -25,3 +25,4 @@ Environment: Chrome, deployed GitHub Pages release `ed092a3` at `https://hephzib
 - The main workspace showed `ALL GOOD`. No profile, project, or account data was changed during this visual check.
 
 This confirms the existing stored avatar renders in the deployed header. It does not test a fresh avatar upload, sign-out/sign-in persistence, or other users' profiles; those still need dedicated test accounts.
+

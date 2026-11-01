@@ -56,3 +56,4 @@ for (const table of ["hardware_client_heartbeats", "hardware_device_state", "har
 
 console.log("AdigunSPs schema, owner/admin RLS semantics, guest expiry, JWT policy caching, and index checks passed.");
 
+

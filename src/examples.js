@@ -1,4 +1,5 @@
 import { scan } from "./engine.js";
+import { expandExampleLibrary } from "./example-expansion.js";
 
 const locales = ["en", "de", "yo", "pcm"];
 const categoryNames = {
@@ -217,6 +218,7 @@ const makeSupplementalCounterExample = (offset) => {
 const supplementalLogicExamples = Array.from({length:80}, (_,index) => makeSupplementalLogicExample(Math.floor(index / 10),additionalPatterns[index % 10],index));
 const supplementalTimerExamples = additionalPatterns.map((pattern,index) => makeSupplementalTimerExample(pattern,index));
 const supplementalCounterExamples = Array.from({length:10}, (_,index) => makeSupplementalCounterExample(index));
-export const examples = [...foundationalExamples,...supplementalLogicExamples,...supplementalTimerExamples,...supplementalCounterExamples];
+export const examples = expandExampleLibrary([...foundationalExamples,...supplementalLogicExamples,...supplementalTimerExamples,...supplementalCounterExamples]);
 
 export function exampleNames() { return categoryNames; }
+

@@ -35,7 +35,8 @@ assert.ok(!existsSync(new URL("../LICENSE", import.meta.url)), "no license is in
 for (const script of ["dev", "build", "test", "validate:examples", "test:electrical", "test:industrial-catalog", "test:brand", "test:hardware", "test:ai", "test:resources", "test:protocol"]) assert.ok(pkg.scripts[script], `documented npm command ${script} exists`);
 assert.ok(readme.includes("Screenshot files are not included in this repository yet"), "missing application screenshot assets are disclosed instead of fabricated");
 assert.ok(readme.includes("docs/browser-smoke-check.md") && browserSmoke.includes("not full end-to-end coverage") && browserSmoke.includes("adigunsps-shell-v78") && browserSmoke.includes("visually rechecked"), "manual browser smoke evidence and its limits are disclosed");
-assert.equal(engineeringReport.exampleCount, 200, "engineering report covers 200 distinct example projects");
-assert.equal(engineeringReport.projectsSaveReopenPassed, 200, "all 200 project models pass JSON save/reopen round-trips");
+assert.equal(engineeringReport.exampleCount, 1000, "engineering report covers 1,000 distinct example projects");
+assert.equal(engineeringReport.projectsSaveReopenPassed, 1000, "all 1,000 project models pass JSON save/reopen round-trips");
 assert.ok(engineeringReport.examples.every((example) => example.passed && example.saveReopenPass && example.integrationPassBits.length > 0), "every listed example has passing save/reopen, structural, and integration evidence");
-console.log("PASS: README, corporate links, 200 individually reported examples, model round-trips, and license statement");
+console.log("PASS: README, corporate links, 1,000 individually reported examples, model round-trips, and license statement");
+
