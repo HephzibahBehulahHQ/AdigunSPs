@@ -16,7 +16,7 @@ const context = {
   fetch: async (request) => { networkCalls += 1; return new Response("payload", { headers: { "content-type": request.url.endsWith(".js") ? "text/javascript" : "text/event-stream" } }); },
 };
 vm.runInNewContext(readFileSync("service-worker.js", "utf8"), context);
-assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v106";/, "release cache version must advance when runtime modules change");
+assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v111";/, "release cache version must advance when runtime modules change");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/menu-dismissal\.js"/, "menu dismissal module must be included in the offline app shell");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/adigun-bot-verifier\.js"/, "Bot verification module must be included in the offline app shell");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/adigun-bot-preview\.js"/, "Bot preview module must be included in the offline app shell");

@@ -12,7 +12,7 @@ const localizedQuestions = {
 };
 for (const language of ["en", "de", "yo", "pcm"]) {
   const c = adigunAiLabels(language);
-  assert.ok(c.name.includes("Adigun BOT") && c.privacy.includes("AdigunSPs") && c.privacy.includes("HB Elektroniker") && c.privacy.includes("HEPHZIBAH BEHULAH"), `${language} assistant identity and full ownership disclosure`);
+  assert.ok(c.name.includes("Adigun BOT") && c.privacy.split(/[.!?。]/).filter(Boolean).length === 1, `${language} assistant identity with a concise privacy sentence`);
   assert.ok(createApplicationMenuEntries(language).tools.some((entry) => entry.action === "adigun-ai" && entry.label.includes("Adigun BOT")), `${language} Tools menu entry`);
   assert.match(answerAdigunQuestion({ question:"scan cycle", project, language }), /scan|Zyklus|Scan|ka ìwọlé/i, `${language} scan explanation`);
   assert.ok(answerAdigunQuestion({ question:"explain project", project, language }).includes("3"), `${language} project context counts`);

@@ -47,7 +47,7 @@ export function createAccountService(client) {
       return client.auth.resetPasswordForEmail(email.trim(), redirectTo ? { redirectTo } : undefined);
     },
     async ensureGuestSession(user) {
-      if (!user?.id || !user.is_anonymous) throw new AccountError("guest-session-not-anonymous", "A guest session requires a Supabase anonymous user.");
+      if (!user?.id || !user.is_anonymous) throw new AccountError("guest-session-not-anonymous", "Guest access requires a valid temporary guest account.");
       if (typeof client.rpc !== "function") throw new AccountError("guest-session-unavailable", "Guest access could not be verified by the account service.");
       const result = requireResult(await client.rpc("adigun_ensure_guest_session"));
       const row = Array.isArray(result) ? result[0] : result;

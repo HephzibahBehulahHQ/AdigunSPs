@@ -22,7 +22,7 @@ import { sortProjectsByRecent } from "./project-list.js";
 import { recordOperationsScan, calculateOperations, createOperationsReportCsv } from "./operations.js";
 import { resolveProjectLanguage } from "./project-language.js";
 import { supabaseClient, supabaseStatus } from "./supabase-client.js";
-import { accountAccessTitle, createAccountService } from "./account.js";
+import { createAccountService } from "./account.js";
 import { ensureHmiScreens, addHmiScreen, selectHmiScreen, renameHmiScreen, deleteActiveHmiScreen } from "./hmi-screens.js";
 
 let examplesPromise;
@@ -42,6 +42,7 @@ import { calculateRungWindow } from "./ladder-virtualization.js";
 import { createPlcopenXml, parsePlcopenXml } from "./plcopen.js";
 import { assertProjectFileSize, normalizeImportedProject } from "./project-import.js";
 import { adigunAiLabels, answerAdigunQuestion } from "./adigun-ai.js";
+import { createFloatingWindow } from "./floating-window.js";
 import { adigunAiRemoteErrorLabel, adigunAiRemoteLabels, askAdigunHostedAI } from "./adigun-ai-remote.js";
 import { adigunBotCanSave, planAdigunBotBuild, planAdigunBotCopilotFix } from "./adigun-bot-builder.js";
 import { adigunBotLadderSketch, verifyAdigunBotDraft } from "./adigun-bot-verifier.js";
@@ -60,7 +61,7 @@ const tour = {
   pcm: { title:"Quick tour", steps:[["Inputs", "Open I/O make you toggle simulated sensor and button inputs."], ["Follow the rung", "Select contact or coil make you edit am. Active path go show green during scan."], ["Run one scan", "Step do one scan, Run dey scan continously, Pause hold am, Reset clear timer and output."], ["Learn with examples", "Open Examples make you load one of the 200 tested learning projects."]], previous:"Go back", next:"Next", finish:"Finish", start:"Start quick tour", continue:"Continue", welcome:"Build and simulate PLC logic for this device. No physical controller connect." },
 };
 let language = localStorage.getItem("adigun-language") || "en";
-let adigunAiMessages = [], adigunBotDraft = null, adigunBotRecognition = null;
+let adigunAiMessages = [], adigunBotDraft = null, adigunBotRecognition = null, adigunBotWindow;
 let liveCopilotEnabled = localStorage.getItem("adigun-live-copilot") !== "off", copilotTypingUntil = 0, copilotPointerActive = false, copilotGoal = "", copilotGoalPending = false, copilotDebounce = 0, copilotTick = 0, copilotActiveState = {active:null,lastShownAt:0,dismissed:new Set()}, copilotFirstSeen = new Map();
 let adigunBotCanvasPreview = null;
 let protocolMemory = createProtocolMemory();
@@ -877,7 +878,7 @@ function stopSimulation() { logEvent("reset", `Simulation reset · ${project.nam
 function runSimulation() { if (runTimer) return; logEvent(traceReplay ? "replay" : "run", traceReplay ? "Trace replay started" : "Simulation started"); window.adigunPaused = false; const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; runTimer = setInterval(() => doScan(), delay); updateStatus(); }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch])); }
 function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#96;"); }
-function modal(title, content) { $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
+function modal(title, content) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) adigunBotWindow.open(); else botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
 function confirmProjectChange() {
   if (!hasUnsavedChanges) return Promise.resolve(true);
   return new Promise((resolve) => {
@@ -1098,12 +1099,13 @@ function setAccountAccess(state, guestSession = null) {
   for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
   const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
   if (button) {
-    button.textContent = state === "guest" || state === "guest-expired" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
-    button.title = accountAccessTitle(state, {
-      member:accountText("member"), guest:accountText("guestInfo"),
-      expired:guestSessionCopy[language]?.expired || guestSessionCopy.en.expired,
-      unavailable:accountText("authDisabled"),
-    });
+    const label = state === "member" ? accountText("account") : accountText("signIn");
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.dataset.accountState = state;
+    button.classList.toggle("is-signed-in", state === "member");
+    button.classList.toggle("is-guest", ["guest", "guest-expired"].includes(state));
+    button.classList.toggle("is-unavailable", !["member", "guest", "guest-expired"].includes(state));
   }
   if (state === "guest" && accountUser?.id) {
     if (guestSession) startGuestTrialPrompt(guestSession);
@@ -1124,7 +1126,6 @@ function setAccountAccess(state, guestSession = null) {
     if (status) status.hidden = true;
     if (notice) notice.hidden = true;
     $("#saveState").textContent = state === "member" ? "Saved locally" : accountText("authDisabled");
-    if (button && locked) button.title = accountText("authDisabled");
   }
 }
 function startGuestTrialPrompt(guestSession) {
@@ -1294,6 +1295,7 @@ function renderCopilotPanel(suggestion) {
   if(!suggestion||!liveCopilotEnabled){panel.hidden=true;panel.replaceChildren();delete panel.dataset.fingerprint;return;}
   if(!panel.hidden&&panel.dataset.fingerprint===suggestion.fingerprint)return;
   const c=adigunCopilotLabels(language),acceptLabel=suggestion.action?.type==="explain-component"?c.inspect:c.accept;
+  adigunBotWindow?.setBadge(true);const notice={en:"New Adigun BOT suggestion is ready.",de:"Ein neuer Adigun-BOT-Vorschlag ist verfügbar.",yo:"Àbá tuntun Adigun BOT ti ṣetán.",pcm:"New Adigun BOT suggestion dey ready."}[language]||"New Adigun BOT suggestion is ready.";toast(notice);
   panel.setAttribute("aria-label",`${c.toggle} suggestion`);panel.dataset.fingerprint=suggestion.fingerprint;
   panel.hidden=false;panel.innerHTML=`<h3>${escapeHtml(suggestion.title)}</h3><p class="copilot-more" hidden></p><div class="modal-actions"><button type="button" class="copilot-accept" data-copilot-accept>${escapeHtml(acceptLabel)}</button><button type="button" data-copilot-more>${escapeHtml(c.more)}</button><button type="button" data-copilot-dismiss>${escapeHtml(c.dismiss)}</button></div>`;
   panel.querySelector("[data-copilot-more]").onclick=()=>{const more=panel.querySelector(".copilot-more"),visible=more.hidden;more.textContent=suggestion.action?.message?`${suggestion.details} ${suggestion.action.message}`:suggestion.details;more.hidden=!visible;};
@@ -1645,8 +1647,18 @@ $("#accountButton").addEventListener("click", showAccount);
 $("#guestExpirySignIn").addEventListener("click", () => { showAccount(); $("#accountEmail")?.focus(); });
 $("#guestExpiryRegister").addEventListener("click", () => { showAccount(); $("#guestUpgradeEmail")?.focus(); });
 applyPreferences(); $("#settingsButton").addEventListener("click", showSettings); document.querySelectorAll("[data-app-menu]").forEach((button) => button.addEventListener("click", showApplicationMenu)); $("#logicTab").addEventListener("click", () => { workspaceView = "logic"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#electricalTab").addEventListener("click", () => { workspaceView = "electrical"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#hmiTab").addEventListener("click", () => { workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#processesButton").addEventListener("click", showProcessManager); $("#addAlarmButton").addEventListener("click", showAlarmSetup); $("#manageAlarmsButton").addEventListener("click", showAlarmManager); $("#recipesButton").addEventListener("click", showRecipes); $("#alarmHistoryButton").addEventListener("click", showAlarmHistory); $("#exportTrendHistoryButton").addEventListener("click", exportTrendHistory);
-$("#adigunAiButton").addEventListener("click", showAdigunAI);
+function setupAdigunBotWindow() {
+  const identity = accountUser?.id || "guest", config = globalThis.ADIGUN_RUNTIME_CONFIG?.ai || {};
+  const key = "adigunsps.bot-window.v1:" + identity;
+  adigunBotWindow = createFloatingWindow({ panel:$("#adigunBotWindow"), trigger:$("#adigunAiButton"), storageKey:key, onOpen:showAdigunAI });
+  const copy={en:["Hosted AI available","Offline helper"],de:["Gehostete KI verfügbar","Offline-Hilfe"],yo:["Hosted AI wà nílẹ̀","Olùrànlọ́wọ́ offline"],pcm:["Hosted AI dey available","Offline helper"]}[language]||["Hosted AI available","Offline helper"];
+  $("#adigunBotStatus").textContent=config.enabled&&config.workerUrl?copy[0]:copy[1];
+  const labels={en:["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"],de:["Bot-Fenster minimieren","Bot-Fenster maximieren","Bot-Fenster wiederherstellen","Bot-Fenster schließen","Bot-Fenstergröße ändern"],yo:["Dín fèrèsé Bot kù","Mú fèrèsé Bot tóbi","Dá fèrèsé Bot padà","Pa fèrèsé Bot dé","Yí ìwọ̀n fèrèsé Bot"],pcm:["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"]}[language]||["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"];
+  $("#adigunBotWindow").querySelectorAll("[data-window-action]").forEach((button,index)=>{button.setAttribute("aria-label",labels[index]);button.title=labels[index];});
+  $("#adigunBotWindow").querySelector("[data-window-resize]").setAttribute("aria-label",labels[4]);
+  if(adigunBotWindow.isOpen())showAdigunAI();
+}
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
 startAdigunCopilotObservers();
-init();
+init().then(setupAdigunBotWindow);
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js").catch(() => {});
