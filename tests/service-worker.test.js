@@ -16,6 +16,7 @@ const context = {
   fetch: async (request) => { networkCalls += 1; return new Response("payload", { headers: { "content-type": request.url.endsWith(".js") ? "text/javascript" : "text/event-stream" } }); },
 };
 vm.runInNewContext(readFileSync("service-worker.js", "utf8"), context);
+assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v87";/, "release cache version must advance when runtime modules change");
 const fetchHandler = handlers.get("fetch");
 
 async function dispatch(path) {
