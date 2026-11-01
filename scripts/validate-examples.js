@@ -17,6 +17,9 @@ const results = examples.map((example) => {
   const project = makeProjectFromExample(example), serializedProject = JSON.stringify(project), reopenedProject = normalizeImportedProject(JSON.parse(serializedProject));
   const saveReopenPass = JSON.stringify(reopenedProject) === serializedProject;
   const issues = validateProject(reopenedProject), diagram = reopenedProject.electrical;
+  const tagMap = new Map(example.tags.map((tag) => [tag.name, tag]));
+  const mappedTags = diagram.components.flatMap((component) => Object.values(component.ioMap || {}).map((mapping) => tagMap.get(mapping.tag)).filter(Boolean));
+  const warningCodes = issues.filter((item) => item.level === "warning").reduce((counts, item) => ({ ...counts, [item.code]: (counts[item.code] || 0) + 1 }), {});
   const boolInputs = example.tags.filter((tag) => tag.role === "input" && tag.type === "BOOL");
   const boolOutputs = example.tags.filter((tag) => tag.role === "output" && tag.type === "BOOL");
   const componentCases = [
@@ -69,6 +72,7 @@ const results = examples.map((example) => {
     structuralPass: structural,
     structuralErrors: issues.filter((item)=>item.level==="error").map(({code,message})=>({code,message})),
     structuralWarningCount: issues.filter((item)=>item.level==="warning").length,
+    structuralWarningCodes: warningCodes,
     logicCaseCount: cases.length,
     logicPassBits,
     logicFailures: cases.filter((item)=>!item.pass),
@@ -79,13 +83,20 @@ const results = examples.map((example) => {
     integrationPassBits,
     integrationFailures:integrationCases.filter((item)=>item.pass===false),
     componentPass: componentCases.length > 0 && componentCases.every((item) => item.pass),
-    componentCounts: { devices:diagram.components.length, wires:diagram.wires.length, mappedInputs:boolInputs.length, mappedOutputs:boolOutputs.length },
-    passed: saveReopenPass && structural && cases.every((item) => item.pass) && componentCases.length > 0 && componentCases.every((item) => item.pass) && integrationCases.some((item) => item.supported) && integrationCases.filter((item) => item.supported).every((item) => item.pass),
+    componentCounts: {
+      devices: diagram.components.length,
+      wires: diagram.wires.length,
+      mappedDigitalInputs: mappedTags.filter((tag) => tag.role === "input" && tag.type === "BOOL").length,
+      mappedDigitalOutputs: mappedTags.filter((tag) => tag.role === "output" && tag.type === "BOOL").length,
+      mappedAnalogInputs: mappedTags.filter((tag) => tag.role === "input" && ["INT", "REAL"].includes(tag.type)).length,
+      mappedAnalogOutputs: mappedTags.filter((tag) => tag.role === "output" && ["INT", "REAL"].includes(tag.type)).length,
+    },
+    passed: saveReopenPass && structural && cases.every((item) => item.pass) && componentCases.length > 0 && componentCases.every((item) => item.pass) && integrationCases.length > 0 && integrationCases.every((item) => item.supported && item.pass),
   };
 });
 const report = {
   product: "AdigunSPs",
-  scope: "Each generated project is JSON serialized and parsed through the same structural import normalizer used by the app before validation, mapped schematic I/O checks, and documented scenarios through the schematic input path, PLC scan, and connected digital or scalar analog output where present. This import-normalized project-model round-trip is not a browser-storage UI test. Scalar analog wiring carries tag values only; it does not simulate voltage/current physics. Manufacturer hardware, electrical code, physical wiring, component layout quality, and safety are not certified.",
+  scope: "Each generated project is JSON serialized and parsed through the same structural import normalizer used by the app before validation, mapped schematic I/O checks, and documented scenarios through the schematic input path, PLC scan, and connected digital or scalar analog output. Every documented scenario must have a supported output path and pass. This import-normalized project-model round-trip is not a browser-storage UI test. Scalar analog wiring carries tag values only; it does not simulate voltage/current physics. Structural warnings are reported by code and are not treated as wiring certification; the 2,804 warnings in this run are electrical-floating-terminal warnings. Manufacturer hardware, electrical code, physical wiring, component layout quality, and safety are not certified.",
   acceptanceTarget: 200,
   caseEncoding: { logic:"logicPassBits uses testCases order from src/examples.js (1=pass, 0=fail)", electrical:"electricalPassBits uses BOOL input tag order (pressed cases), then BOOL output tag order (off then on); 1=pass, 0=fail", integration:"integrationPassBits follows testCases order; 1=pass, 0=fail, -=not applicable to a wired output model" },
   exampleCount: results.length,
@@ -98,6 +109,14 @@ const report = {
   integrationCasesPassed: results.reduce((sum,item)=>sum+item.integrationCaseCount-(item.integrationPassBits.match(/0/g)||[]).length,0),
   examplesWithComponentsPassed: results.filter((item)=>item.componentPass).length,
   projectsSaveReopenPassed: results.filter((item)=>item.saveReopenPass).length,
+  structuralWarningCodes: results.reduce((counts, item) => {
+    for (const [code, count] of Object.entries(item.structuralWarningCodes)) counts[code] = (counts[code] || 0) + count;
+    return counts;
+  }, {}),
+  componentTotals: results.reduce((totals, item) => {
+    for (const [name, count] of Object.entries(item.componentCounts)) totals[name] = (totals[name] || 0) + count;
+    return totals;
+  }, {}),
   acceptanceMet: results.length === 200 && results.every((item) => item.passed),
   examples: results,
 };
@@ -105,3 +124,4 @@ const report = {
 await writeFile(new URL("../docs/engineering-validation-report.json", import.meta.url), `${JSON.stringify(report)}\n`);
 console.log(`Examples: ${report.passed}/${report.exampleCount} passed; ${report.projectsSaveReopenPassed}/${report.exampleCount} project-model JSON round-trips; ${report.caseCount} logic cases; ${report.componentCasesPassed}/${report.componentCaseCount} schematic checks; ${report.integrationCasesPassed}/${report.integrationCaseCount} integrated PLC-to-component cases; target ${report.acceptanceTarget}; acceptance ${report.acceptanceMet ? "met" : "NOT MET"}.`);
 if (!report.acceptanceMet) process.exitCode = 1;
+
