@@ -1,12 +1,20 @@
 # Verification record
 
-## Authentication follow-up — 2026-11-01
+## Release verification — 2026-11-01
+
+- Merged PR [#33](https://github.com/HephzibahBehulahHQ/AdigunSPs/pull/33) as `8299ff9567b0bdfecdc9eee1958b06db21b87a9a`. GitHub Actions CI run `41320789744` and Pages deploy `41320789756` both completed successfully.
+- Live HTTPS requests to `https://adigunsps.hephzibahbehulah.com/`, `/src/app.js`, `/src/account.js`, and `/service-worker.js` returned 200. The served app contains the OTP form and `email_change` guest-upgrade flow, and the worker reports cache v113.
+- The local checkout now tracks `origin/main` at the same commit. Local `npm test` and `npm run build` passed before merge; the merged commit also passed GitHub CI.
+- Supabase guest-expiry migration `20261101151429_adigunsps_four_minute_guest_access` is applied. A live query found 15 total guest rows, 0 active, 15 expired, and 0 expiring later than four minutes after their start.
+- No live email OTP was requested or received during verification. Confirm both the Magic Link and Change Email Address templates contain `{{ .Token }}` and test signup, sign-in, and guest upgrade with a real inbox.
+
+## Authentication implementation notes — 2026-11-01
 
 - Local app source now uses email OTP for sign-in and registration, verifies six-digit codes, removes password and duplicate guest-upgrade email fields, and displays a four-minute guest timer. `npm test` passed, including account, UI, guest-expiry, and schema checks; `npm run build` passed.
 - Applied Supabase migration `20261101151429_adigunsps_four_minute_guest_access` to project `fqcbfnktdvqojyezxeis`. A read-only query verified 15 total guest rows, 0 active, 15 expired, and 0 rows with expiry beyond four minutes after the migration.
-- These frontend changes are local and have not been deployed yet. Live email OTP delivery is still unverified; confirm the Supabase Magic Link and Change Email Address templates include `{{ .Token }}`.
+- At the time this implementation note was written, the frontend had not yet been deployed. The release and current delivery status are recorded above. Live email OTP delivery remains unverified; confirm the Supabase Magic Link and Change Email Address templates include `{{ .Token }}`.
 
-## Current verification — 2026-11-01
+## Baseline verification — commit 24625e1, before the OTP release
 
 - On 2026-11-01, the current source audit used organization `main` commit `24625e1cbf61cd4deb862f42a9b96478b2ab8bf3`. GitHub Actions CI run #104 and Pages deploy #61 completed successfully. In a fresh worktree, `npm ci`, `npm test`, and `npm run build` passed locally; the suite covers all 200 examples, 1,317 logic cases, 903 schematic checks, and 1,317 integrated PLC-to-component cases. The source service-worker shell cache is v112.
 - A manual browser inspection of `https://adigunsps.hephzibahbehulah.com/` loaded the editor but showed “Account required” and the expired 10-minute guest-session notice. This does not verify a signed-in AdigunSPs app session, account flows, or cloud operations.
@@ -110,6 +118,7 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+
 
 
 
