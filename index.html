@@ -68,7 +68,11 @@
   <main id="ioPrintReport" class="io-print-report" aria-hidden="true"></main>
   <div id="printBrandAttribution" class="print-brand-attribution"><img id="printCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"><span><strong id="printProductName">AdigunSPs</strong><small id="printDivisionLabel">BY HB ELEKTRONIKER</small><span id="printBrandAttributionText">AdigunSPs — HB Elektroniker, a product of HEPHZIBAH BEHULAH</span></span></div>
   <aside id="adigunCopilotPanel" class="copilot-panel" aria-label="Adigun BOT live co-pilot" aria-live="polite" hidden></aside>
-  <button id="adigunAiButton" class="floating-bot" aria-label="Adigun BOT">✦ <span>Adigun BOT</span></button>
+  <button id="adigunAiButton" class="floating-bot" aria-label="Adigun BOT" aria-controls="adigunBotWindow" aria-expanded="false">✦ <span>Adigun BOT</span><i class="bot-unread-badge" aria-hidden="true"></i></button>
+  <aside id="adigunBotWindow" class="bot-window" role="complementary" aria-label="Adigun BOT" tabindex="-1" hidden>
+    <header class="bot-window-titlebar" data-window-titlebar><div class="bot-window-heading"><strong id="adigunBotWindowTitle">Adigun BOT</strong><span id="adigunBotStatus">Offline helper</span></div><div class="bot-window-controls"><button type="button" data-window-action="minimize" aria-label="Minimize Bot window" title="Minimize">−</button><button type="button" data-window-action="maximize" aria-label="Maximize Bot window" title="Maximize">□</button><button type="button" data-window-action="restore" aria-label="Restore Bot window" title="Restore" hidden>▣</button><button type="button" data-window-action="close" aria-label="Close Bot window" title="Close">×</button></div></header>
+    <div class="bot-window-content" data-window-content></div><button class="bot-window-resize" data-window-resize aria-label="Resize Bot window" title="Resize"></button>
+  </aside>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <input id="fileInput" type="file" accept="application/json,.json,application/xml,.xml" hidden>
   <div id="contextMenu" class="context-menu" role="menu" aria-label="Ladder editor context menu" hidden></div>

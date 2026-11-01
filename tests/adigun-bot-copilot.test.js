@@ -41,4 +41,6 @@ dismissAdigunCopilotSuggestion(state);assert.equal(nextAdigunCopilotSuggestion(i
 assert.equal(nextAdigunCopilotSuggestion(incomplete,state,{now:now+100000,enabled:false}),null,"disabled co-pilot remains silent");
 const app=readFileSync("src/app.js","utf8"),html=readFileSync("index.html","utf8"),help=readFileSync("docs/HELP.md","utf8");
 assert.match(html,/id="adigunCopilotPanel"/);assert.match(app,/id="liveCopilotToggle"/);assert.match(app,/adigunsps:canvas-state-changed/);assert.match(app,/startAdigunCopilotObservers\(\)/);assert.match(help,/## The live co-pilot/);
+assert.match(app,/adigunBotWindow\?\.setBadge\(true\)/,"new co-pilot suggestions mark the Bot launcher");
+assert.match(app,/New Adigun BOT suggestion is ready/,"co-pilot changes announce a notification without opening the Bot window");
 console.log("PASS: co-pilot findings, stuck timers, goal prompts, action preview rollback, dismissal, idle suppression, and rate limiting");

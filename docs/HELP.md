@@ -11,6 +11,7 @@ AdigunSPs is an educational PLC programming and simulation workspace. You can ed
 - [Using commands](#using-commands)
 - [Building a project](#building-a-project)
 - [Using Adigun BOT](#using-adigun-bot)
+- [Using the Bot window](#using-the-bot-window)
 - [The live co-pilot](#the-live-co-pilot)
 - [Using ready-made example projects](#using-ready-made-example-projects)
 - [Troubleshooting](#troubleshooting)
@@ -114,13 +115,26 @@ Simulation is educational and does not certify a design or operate physical hard
 
 Adigun BOT answers curated PLC learning questions and can draft a limited set of Boolean gate, timer-lamp, and start/stop ladder projects locally. It can also prepare reviewed tag-rename and ladder-rung deletion plans for the open project; deleting a rung only affects the canvas after you import the plan. It is a deterministic offline helper, not a general AI model; unsupported project edits are declined.
 
-**What you'll see:** The assistant dialog has a text prompt, optional 🎙 **Voice input**, question shortcuts, and a transcript. A supported build request opens a review dialog with its build steps, ladder sketch, components, terminal connections, assumptions, simulation cases, and save/import choices.
+**What you'll see:** Adigun BOT opens in a movable panel above the workspace. Its chat has a text prompt, optional 🎙 **Voice input**, question shortcuts, and a transcript; build requests still open a separate review dialog.
 
 1. Open **Adigun BOT** from the floating assistant button or **Tools**. Type a supported request or select **Voice input** and speak when your browser supports microphone recognition.
 2. Submit the prompt. Review the plan, sketch, and expected-versus-simulated outputs; nothing changes in the active project at this stage. Import and save are disabled if the supported draft fails verification.
 3. Choose **Preview on canvas** to inspect the draft without saving. Select **Commit project** to import it, or **Discard preview** (or press Escape) to restore your prior project. You can also choose **Import to canvas** to commit directly; confirm replacing unsaved work if asked.
 4. Signed-in users can choose **Save locally** or **Save to cloud**. Guests may import drafts, but both save actions are disabled until they sign in; a draft remains available in the current tab while they open the account dialog.
 5. Choose **Edit request** to return to the prompt with the request restored, or **Discard** to close the draft. For exact supported requests and limits, read [BOT.md](BOT.md).
+
+## Using the Bot window
+
+**What you'll see:** Title bar controls, chat, and a lower-right resize handle; the canvas remains clickable.
+
+1. Drag the title bar to move the panel; it stays reachable.
+2. Drag the bottom-right handle to resize; layout saves per account or guest.
+3. Select **Minimize** to collapse it; the Adigun BOT button restores it.
+4. Select **Maximize**, then **Restore**, to expand and return to the previous size and position.
+5. Select **Close** to hide it; the Bot button reopens it. Window state persists after reload.
+6. On phones it fills the screen; **Close** or **Escape** returns focus to the Bot button.
+
+New co-pilot suggestions set an unread dot and notification; the window stays closed.
 
 The builder currently creates FBD gate networks, a TON delayed lamp, and an LD start/stop seal-in circuit, with tagged generic PLC I/O and connected schematic devices. It can rename a declared tag throughout supported references or remove a selected rung from the open project's draft. A Motor output uses a simulated contactor and motor model. It does not yet plan other edits, generate traffic-light sequences, or debug arbitrary FBD paths. All generated logic and electrical models are simulator-only.
 
