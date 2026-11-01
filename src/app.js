@@ -1104,9 +1104,11 @@ async function updateAccountAvatar(user, avatarUrl) {
   }
   if (requestId !== accountAvatarRequestId || accountUser?.id !== user.id || accountAccess !== "member") return;
   if (!url || !image) { showAccountAvatarFallback(image, icon); return; }
-  image.onload = () => { if (requestId === accountAvatarRequestId && accountUser?.id === user.id) { image.hidden = false; if (icon) icon.hidden = true; } };
+  const showAvatar = () => { if (requestId === accountAvatarRequestId && accountUser?.id === user.id) { image.hidden = false; if (icon) icon.hidden = true; } };
+  image.onload = showAvatar;
   image.onerror = () => { if (requestId === accountAvatarRequestId) showAccountAvatarFallback(image, icon); };
   image.src = url;
+  if (image.complete && image.naturalWidth > 0) showAvatar();
 }
 function setAccountAccess(state, guestSession = null) {
   accountAccess = state;
