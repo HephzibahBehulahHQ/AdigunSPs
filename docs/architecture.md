@@ -9,7 +9,7 @@ The application includes a deterministic scan engine, editable LD, FBD, ST, and 
 ## Assumptions
 
 - The supplied phone screenshots define a compact, touch-friendly ladder editing workflow and rung/timer visual language.
-- The official source repository is `HephzibahBehulahHQ/AdigunSPs`; at the 2026-11-01 audit, local `HEAD` and `origin/main` both resolved to `04d759812ddea9ca1d4568e64de486766c9dba51`. GitHub Actions CI run #87 and Pages deployment #53 succeeded on that commit. GitHub Pages serves the public app.
+- The official source repository is `HephzibahBehulahHQ/AdigunSPs`; at the 2026-11-01 audit, local `HEAD` and `origin/main` both resolved to `b886b323bc48679cf9329ce08cadf4943942a40f`. This documentation-only follow-up is based on app commit `04d759812ddea9ca1d4568e64de486766c9dba51`; CI run #89 and Pages deployment #54 succeeded. GitHub Pages serves the public app.
 - The dedicated AdigunSPs Supabase project is `fqcbfnktdvqojyezxeis`; VoltPro uses a separate Supabase project. The AdigunSPs project migrations and browser client configuration are documented in `supabase-integration.md`. GitHub Pages hosts the app; Cloudflare hosts the consent-gated AI Worker. The published Pages build includes the hosted-AI client and default Worker URL. Optional Actions variables can override or disable hosted AI.
 - Local project data is stored in the browser. Cloud copies are owner-scoped and each save creates a new version; team collaboration, encrypted backup, disaster recovery, and live cross-user verification are not implemented.
 - Yoruba and Nigerian Pidgin strings in this release are starter translations and need review by technical-language reviewers before production use.
@@ -30,4 +30,5 @@ The application includes a deterministic scan engine, editable LD, FBD, ST, and 
 5. **AI and release assurance (partial):** offline read-only Adigun BOT and a consent-gated Cloudflare Worker are published; the Worker verifies Supabase user tokens and pins its model. Live authenticated inference, privacy/retention review, evaluation gates, security/performance audits, and full cross-browser testing remain open.
 
 Each later phase depends on stakeholder decisions about target PLC vendors, backend/data residency, AI model and privacy policy, Yoruba/Pidgin glossary review, and intended deployment environment.
+
 
