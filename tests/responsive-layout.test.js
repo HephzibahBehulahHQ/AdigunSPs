@@ -11,6 +11,11 @@ assert.match(styles, /@media\(max-width:760px\)\{\.workspace \.left-sidebar,\.wo
 assert.match(styles, /@media\(max-width:760px\)\{\.workspace\{position:relative\}\.workspace\.mobile-left-open/, "tablet side drawers must have a positioned workspace container");
 assert.match(styles, /@media\s*\(\s*min-width:\s*761px\s*\)/, "desktop workspace layout must begin immediately above the compact breakpoint");
 assert.match(html, /id="accountButton"[^>]*class="icon-button account-button[\s\S]*?<svg[\s\S]*?account-status-dot/, "top-bar account control uses a profile icon and status dot");
+assert.match(html, /id="accountAvatarImage" class="account-avatar-image"[^>]*hidden/, "top-bar account control includes an uploaded-avatar image fallback");
+assert.match(styles, /\.account-button \.account-avatar-image\{[^}]*border-radius:50%;object-fit:cover/, "uploaded profile photos are cropped to the round account control");
+assert.match(app, /async function updateAccountAvatar\(user, avatarUrl\)[\s\S]*?accountService\.getProfile\(user\)[\s\S]*?image\.onerror[\s\S]*?showAccountAvatarFallback/, "profile avatar loads from the profile row and broken URLs fall back to the default icon");
+assert.match(app, /void updateAccountAvatar\(state === "member" \? accountUser : null\)/, "session restoration and sign-in reload the stored profile avatar");
+assert.match(app, /const profile = await accountService\.uploadAvatar\(accountUser, file\); await updateAccountAvatar\(accountUser, profile\.avatar_url\)/, "upload immediately refreshes the top-bar avatar");
 assert.doesNotMatch(html, /id="accountButton"[^>]*>Account</, "top-bar account control does not render the Account word");
 assert.match(html, /id="languageButton"[^>]*>EN<\/button>/, "compact language toggle remains visible beside the profile icon");
 assert.match(app, /button\.dataset\.accountState = state;[\s\S]*?classList\.toggle\("is-signed-in", state === "member"\)/, "signed-in state is reflected on the profile control");
@@ -22,3 +27,4 @@ assert.match(styles, /\.account-button\.is-signed-in \.account-status-dot\{backg
 assert.match(styles, /\.account-button\.is-guest \.account-status-dot\{background:#879198\}/, "guest account has a gray status dot");
 
 console.log("Responsive layout breakpoint checks passed.");
+
