@@ -2,6 +2,13 @@ export class AccountError extends Error {
   constructor(code, message) { super(message); this.name = "AccountError"; this.code = code; }
 }
 
+export function accountAccessTitle(state, labels) {
+  if (state === "member") return labels.member;
+  if (state === "guest") return labels.guest;
+  if (state === "guest-expired") return labels.expired;
+  return labels.unavailable;
+}
+
 function requireResult(result) {
   if (result?.error) throw result.error;
   return result?.data;

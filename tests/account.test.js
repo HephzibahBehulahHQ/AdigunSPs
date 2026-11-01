@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { AccountError, createAccountService } from "../src/account.js";
+import { AccountError, accountAccessTitle, createAccountService } from "../src/account.js";
+
+assert.equal(accountAccessTitle("member", { member:"Signed in" }), "Signed in");
+assert.equal(accountAccessTitle("guest", { guest:"Guest trial" }), "Guest trial");
+assert.equal(accountAccessTitle("guest-expired", { expired:"Trial ended" }), "Trial ended");
+assert.equal(accountAccessTitle("account-required", { unavailable:"Sign in required" }), "Sign in required");
 
 const authCalls = [];
 const rpcCalls = [];
