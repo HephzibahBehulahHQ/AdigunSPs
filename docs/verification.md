@@ -2,7 +2,7 @@
 
 ## Current verification — 2026-11-01
 
-- On 2026-11-01, the current clean local checkout matched organization `main` at `04d759812ddea9ca1d4568e64de486766c9dba51`. `npm test` and `npm run build` passed locally; the suite covers all 200 examples. GitHub Actions CI run #87 and Pages deploy #53 both succeeded on this commit. The current service-worker shell cache is v111.
+- On 2026-11-01, the current clean local checkout matched organization `main` at `b886b323bc48679cf9329ce08cadf4943942a40f`, a documentation-only follow-up to app commit `04d759812ddea9ca1d4568e64de486766c9dba51`. `npm test` and `npm run build` passed locally; the suite covers all 200 examples. GitHub Actions CI run #89 and Pages deploy #54 both succeeded. The published service-worker shell cache is v111.
 - The deployed Pages release includes the consent-gated hosted-AI client and defaults to `https://adigunsps-ai.hephzibah-behulah.workers.dev`. Earlier Worker probes returned 405 for GET, 401 `authentication-required` without a bearer token, and 401 `invalid-session` for an invalid token. These verify reachability and authentication guards, not successful inference; no account writes were performed during this verification.
 - The example report covers 200/200 projects, 1,317 logic cases, 903 schematic checks, and 1,317 PLC-to-component integration cases. Required-terminal warnings are zero after spare unmapped I/O channels and unused junction/rail taps were excluded; explicitly mapped channels and protective earth still warn if unwired. This is structural validation, not electrical/safety certification.
 - Supabase project `fqcbfnktdvqojyezxeis` is `ACTIVE_HEALTHY`; the five application tables have RLS. Live policy inspection confirmed owner checks and restrictive permanent-user insert checks, including project ownership for versions. The guest RPC pins an empty search path, checks `auth.uid()` and the anonymous claim, and creates a fixed ten-minute session. Inventory: 8 expired guest rows, all exactly ten minutes, and 0 cloud projects/versions. This does not prove two-user isolation or real client cloud-write behavior.
@@ -102,4 +102,5 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+
 
