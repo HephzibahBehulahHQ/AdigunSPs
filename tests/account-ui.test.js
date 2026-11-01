@@ -18,7 +18,8 @@ assert.match(app, /accountService\.beginGuestUpgradeEmail\(accountUser, email\)/
 for (const locale of ["en", "de", "yo", "pcm"]) {
   const entry = accountCopy.match(new RegExp(`${locale}:\\{[^\\n]+`))?.[0] || "";
   assert.match(entry, /4 minutes|4 Minuten|ìṣẹ́jú mẹ́rin/, `${locale} account copy describes the four-minute guest session`);
-  assert.match(entry, /6-digit|6-stelligen|nọ́ńbà mẹ́fà/, `${locale} account copy provides localized email-code guidance`);\n  assert.match(entry, /sign-in link|Anmeldelink|ìjápọ̀ ìwọlé/i, `${locale} account copy explains the magic-link fallback`);
+  assert.match(entry, /6-digit|6-stelligen|nọ́ńbà mẹ́fà/, `${locale} account copy provides localized email-code guidance`);
+  assert.match(entry, /sign-in link|Anmeldelink|ìjápọ̀ ìwọlé/i, `${locale} account copy explains the magic-link fallback`);
 }
 assert.doesNotMatch(app, /accountUpgradeEmail|guestUpgradeEmail|accountPasswordVisibility|accountReset/, "obsolete password and duplicate-email controls are absent from the interface code");
 console.log("Account UI email OTP, single-email-field, guest-preservation, and locale checks passed.");
