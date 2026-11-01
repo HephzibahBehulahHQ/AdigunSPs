@@ -107,6 +107,7 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   const wire = (a, at, b, bt) => { const result = connectElectricalTerminals({ components, wires }, { componentId: a.id, terminal: at }, { componentId: b.id, terminal: bt }); if (!result.ok) throw new Error(result.error); wires.push(result.wire); };
   const supply = add("supply24vdc", 80, 80), plc = add("genericPlc24v4di4do", 300, 80), positiveRail=add("dcPowerRail",180,80),returnRail=add("dcPowerRail",440,80);
   wire(supply, "+", positiveRail, "1"); wire(supply, "−", returnRail, "1"); wire(positiveRail,"2",plc,"L+"); wire(returnRail,"2",plc,"M");
+  const plcEarth=add("protectiveEarth",300,160); wire(plc,"PE",plcEarth,"PE");
   const boolInputs = (tags || []).filter((tag) => tag.role === "input" && tag.type === "BOOL");
   boolInputs.slice(0, 4).forEach((tag, index) => {
     const button = add("pushbuttonNO", 80, 240 + index * 120, tag.name); plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
@@ -187,7 +188,19 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
   }
   for (const component of components) {
     const spec = electricalComponentCatalog[component.type]; if (!spec) continue;
-    for (const terminal of spec.terminals) if (!wires.some((wire) => (wire.from?.componentId === component.id && wire.from?.terminal === terminal) || (wire.to?.componentId === component.id && wire.to?.terminal === terminal))) issues.push({level:"warning",code:"electrical-floating-terminal",message:`${component.reference || component.id} terminal ${terminal} is not wired.`});
+    const mappedChannels = Object.entries(component.ioMap || {}).filter(([, mapping]) => typeof mapping?.tag === "string" && mapping.tag.trim()).map(([channel]) => channel);
+    const channelNames = [...(spec.channels?.inputs || []), ...(spec.channels?.outputs || []), ...(spec.channels?.analogInputs || []), ...(spec.channels?.analogOutputs || [])];
+    const hasMappedChannel = (channels) => channels?.some((channel) => mappedChannels.includes(channel));
+    for (const terminal of spec.terminals) {
+      const channel = terminal.replace(/[+−-]$/u, "");
+      if (channelNames.includes(channel) && !mappedChannels.includes(channel)) continue;
+      if (spec.kind === "junction") continue;
+      if (spec.kind === "digital-input-module" && !hasMappedChannel(spec.channels?.inputs)) continue;
+      if (spec.kind === "digital-output-module" && !hasMappedChannel(spec.channels?.outputs)) continue;
+      if (spec.kind === "analog-input-module" && !hasMappedChannel(spec.channels?.analogInputs)) continue;
+      if (spec.kind === "analog-output-module" && !hasMappedChannel(spec.channels?.analogOutputs)) continue;
+      if (!wires.some((wire) => (wire.from?.componentId === component.id && wire.from?.terminal === terminal) || (wire.to?.componentId === component.id && wire.to?.terminal === terminal))) issues.push({level:"warning",code:"electrical-floating-terminal",message:`${component.reference || component.id} terminal ${terminal} is not wired.`});
+    }
   }
   return issues;
 }
