@@ -44,6 +44,6 @@ assert.equal(panel.listeners.size, 0, "cleanup removes panel listeners");
 
 const app = readFileSync("src/app.js", "utf8");
 assert.ok(app.includes("bindMenuDismissal(event.currentTarget, menu, hideContextMenu)"), "application menus bind trigger and panel hover dismissal");
-assert.ok(app.includes('menuBar = anchor ? $(".app-menus").getBoundingClientRect() : null') && app.includes('top = menuBar ? menuBar.bottom + 12 : event.clientY'), "application menus open below the full menu bar so sibling buttons remain reachable");
+assert.ok(app.includes('menuBar = anchor ? $(".app-menus").getBoundingClientRect() : null') && app.includes('top = menuBar ? menuBar.bottom + 32 : event.clientY'), "application menus open below the full menu bar so sibling buttons remain reachable");
 assert.ok(app.includes('document.addEventListener("pointerdown", (event) => { const menu = $("#contextMenu"); if (!menu.hidden && !menu.contains(event.target)) hideContextMenu(); })'), "outside pointerdown closes menus on mouse and touch");
 console.log("Menu dismissal tests passed.");
