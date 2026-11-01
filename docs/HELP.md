@@ -188,4 +188,3 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 | Snapshot | A previously saved local project version available for recovery. |
 | HMI | Human-machine interface screen designed in the app. |
 
-

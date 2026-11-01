@@ -36,4 +36,3 @@ assert.match(renderHelpMarkdown("## Safe\n\n<script>alert(1)</script>"), /&lt;sc
 console.log("PASS: Help guide sections, in-menu route, safe rendering, docs, and offline cache");
 
 
-
