@@ -22,7 +22,7 @@ import { sortProjectsByRecent } from "./project-list.js";
 import { recordOperationsScan, calculateOperations, createOperationsReportCsv } from "./operations.js";
 import { resolveProjectLanguage } from "./project-language.js";
 import { supabaseClient, supabaseStatus } from "./supabase-client.js";
-import { createAccountService } from "./account.js";
+import { accountAccessTitle, createAccountService } from "./account.js";
 import { ensureHmiScreens, addHmiScreen, selectHmiScreen, renameHmiScreen, deleteActiveHmiScreen } from "./hmi-screens.js";
 
 let examplesPromise;
