@@ -1,4 +1,4 @@
-import { scan, scanFBD, scanSFC, defaultProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
+import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
 import { store } from "./store.js";
 import { validateProject } from "./validation.js";
 import { compileStructuredText, executeStructuredText } from "./structured-text.js";
@@ -33,6 +33,7 @@ import { validateFbdBlocks, connectFbdPorts, requiredFbdInputs } from "./fbd-val
 import { convertLadderToFbd } from "./logic-conversion.js";
 import { formatLocaleDateTime, formatLocaleNumber, formatLocaleTime } from "./formatting.js";
 import { bindMenuDismissal } from "./menu-dismissal.js";
+import { renderHelpMarkdown } from "./help-markdown.js";
 
 import { ui, eventLogUi } from "./locale-ui.js";
 import { buildLocalizationReport} from "./localization.js";
@@ -41,6 +42,12 @@ import { calculateRungWindow } from "./ladder-virtualization.js";
 import { createPlcopenXml, parsePlcopenXml } from "./plcopen.js";
 import { assertProjectFileSize, normalizeImportedProject } from "./project-import.js";
 import { adigunAiLabels, answerAdigunQuestion } from "./adigun-ai.js";
+import { adigunAiRemoteLabels, askAdigunHostedAI } from "./adigun-ai-remote.js";
+import { adigunBotCanSave, planAdigunBotBuild, planAdigunBotCopilotFix } from "./adigun-bot-builder.js";
+import { adigunBotLadderSketch, verifyAdigunBotDraft } from "./adigun-bot-verifier.js";
+import { createAdigunBotCanvasPreview, resolveAdigunBotCanvasPreview } from "./adigun-bot-preview.js";
+import { executeAdigunBotTools } from "./adigun-bot-tools.js";
+import { analyzeAdigunCopilot, adigunCopilotLabels, nextAdigunCopilotSuggestion, dismissAdigunCopilotSuggestion } from "./adigun-bot-copilot.js";
 import { createProtocolMemory, simulateModbusTcp } from "./protocol-sim.js";
 import { renderElectricalWorkspace } from "./electrical-ui.js";
 import { allocateIoAddresses, ioHardwareProfiles, validateIoAllocation } from "./io-allocator.js";
@@ -53,7 +60,9 @@ const tour = {
   pcm: { title:"Quick tour", steps:[["Inputs", "Open I/O make you toggle simulated sensor and button inputs."], ["Follow the rung", "Select contact or coil make you edit am. Active path go show green during scan."], ["Run one scan", "Step do one scan, Run dey scan continously, Pause hold am, Reset clear timer and output."], ["Learn with examples", "Open Examples make you load one of the 200 tested learning projects."]], previous:"Go back", next:"Next", finish:"Finish", start:"Start quick tour", continue:"Continue", welcome:"Build and simulate PLC logic for this device. No physical controller connect." },
 };
 let language = localStorage.getItem("adigun-language") || "en";
-let adigunAiMessages = [];
+let adigunAiMessages = [], adigunBotDraft = null, adigunBotRecognition = null;
+let liveCopilotEnabled = localStorage.getItem("adigun-live-copilot") !== "off", copilotTypingUntil = 0, copilotPointerActive = false, copilotGoal = "", copilotGoalPending = false, copilotDebounce = 0, copilotTick = 0, copilotActiveState = {active:null,lastShownAt:0,dismissed:new Set()}, copilotFirstSeen = new Map();
+let adigunBotCanvasPreview = null;
 let protocolMemory = createProtocolMemory();
 let protocolTraffic = [];
 let workspaceView = localStorage.getItem("adigun-workspace-view") || "logic";
@@ -66,9 +75,15 @@ let runTimer = null, scans = 0, zoom = 100, selection = null, selectedContacts =
 let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor = 0, traceInitial = null, traceInitialFaults = [], traceProjectKey = "", traceMismatches = [], traceBreakpoints = new Set();
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
 const accountService = createAccountService(supabaseClient);
-let accountUser = null, accountAccess = "checking", guestTimer = null;
+let accountUser = null, accountAccess = "checking", guestTimer = null, guestDeadline = 0, guestDraftStorageKey = null;
 const guestUpgradePendingKey = "adigunsps-guest-upgrade-password-pending";
 function guestUpgradePasswordPending() { const expectedEmail = localStorage.getItem(guestUpgradePendingKey); return !!expectedEmail && !!accountUser && !accountUser.is_anonymous && accountUser.email?.toLowerCase() === expectedEmail; }
+const guestSessionCopy = {
+  en:{remaining:"Guest access · {time} left",expired:"Your 10-minute guest session has ended. Sign in or create an account to continue editing. Your temporary work is kept in this tab." ,temporary:"Temporary guest work saved in this tab."},
+  de:{remaining:"Gastzugang · noch {time}",expired:"Deine zehnminütige Gastsitzung ist beendet. Melde dich an oder erstelle ein Konto, um weiterzubearbeiten. Deine Arbeit bleibt vorübergehend in diesem Tab.",temporary:"Temporärer Gastentwurf in diesem Tab gespeichert."},
+  yo:{remaining:"Àǹfààní àlejò · {time} ló kù",expired:"Àkókò àlejò ìṣẹ́jú mẹ́wàá ti parí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀ láti tẹ̀síwájú. Iṣẹ́ rẹ ṣì wà fún ìgbà díẹ̀ nínú taabu yìí.",temporary:"A ti fi iṣẹ́ àlejò pamọ́ fún ìgbà díẹ̀ nínú taabu yìí."},
+  pcm:{remaining:"Guest access · {time} remain",expired:"Your 10-minute guest session don end. Sign in or create account to continue editing. Your temporary work dey inside this tab.",temporary:"Temporary guest work don save for this tab."},
+};
 const forcedInputs = {};
 const ladderRungHeights = new Map();
 const fbdBlockHeights = new Map();
@@ -82,7 +97,7 @@ const hmiHistory = {};
 const t = (key) => ui[language]?.[key] || ui.en[key] || key;
 
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1900); }
-function setUnsavedChanges(value) { hasUnsavedChanges = Boolean(value); const status = $("#saveState"); if (!status) return; status.textContent = hasUnsavedChanges ? "Unsaved changes" : accountAccess === "guest" || accountAccess === "member" ? "Saved locally" : t("saved"); }
+function setUnsavedChanges(value) { hasUnsavedChanges = Boolean(value); const status = $("#saveState"); if (!status) return; status.textContent = hasUnsavedChanges ? "Unsaved changes" : accountAccess === "guest" ? (guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary) : accountAccess === "guest-expired" ? "Account required" : accountAccess === "member" ? "Saved locally" : t("saved"); }
 window.addEventListener("beforeunload", (event) => { if (!hasUnsavedChanges) return; event.preventDefault(); event.returnValue = ""; });
 function logEvent(type, message, detail = {}) { eventLog.unshift({ time:new Date().toISOString(), scan:scans, type, message, ...detail }); if (eventLog.length > 500) eventLog.length = 500; }
 function projectRungs(p) { return p.rungs.map((r) => ({ ...r, branches: r.branches?.length ? r.branches : [r.contacts || []] })); }
@@ -109,7 +124,27 @@ function compileSTSource(source, tags) {
   });
 }
 function pushHistory() { history.push(structuredClone(project)); if (history.length > 60) history.shift(); future = []; }
-async function persist(show = false, force = false, options = {}) { if (!project) return false; if (options.markDirty !== false) setUnsavedChanges(true); if (!preferences.autosave && !force) { $("#saveState").textContent = language === "de" ? "Nicht gespeichert" : "Unsaved changes"; return false; } project.updatedAt = Date.now(); $("#saveState").textContent = t("saving"); try { const storedProject = serializeProject(); await store.save(storedProject); if (options.markSaved) setUnsavedChanges(false); else $("#saveState").textContent = t("saved"); if (show) toast(t("savedToast")); return true; } catch { $("#saveState").textContent = "Storage unavailable"; toast("Browser storage unavailable"); return false; } }
+async function persist(show = false, force = false, options = {}) {
+  if (adigunBotCanvasPreview) return false;
+  if (!project) return false;
+  if (options.markDirty !== false) setUnsavedChanges(true);
+  if (!preferences.autosave && !force) { $("#saveState").textContent = language === "de" ? "Nicht gespeichert" : "Unsaved changes"; return false; }
+  project.updatedAt = Date.now(); $("#saveState").textContent = t("saving");
+  try {
+    const storedProject = serializeProject();
+    if (accountAccess === "guest") {
+      if (!guestDraftStorageKey) throw new Error("Guest session storage is unavailable.");
+      sessionStorage.setItem(guestDraftStorageKey, JSON.stringify(storedProject));
+      if (options.markSaved) setUnsavedChanges(false); else $("#saveState").textContent = guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary;
+      if (show) toast(guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary);
+      return true;
+    }
+    await store.save(storedProject);
+    if (options.markSaved) setUnsavedChanges(false); else $("#saveState").textContent = t("saved");
+    if (show) toast(t("savedToast"));
+    return true;
+  } catch { $("#saveState").textContent = "Storage unavailable"; toast("Project storage unavailable"); return false; }
+}
 function inferTags() {
   const roles = new Map((project.tags || []).map((tag) => [tag.name, tag.role]));
   const inputs = new Set((project.io?.inputs || []).filter((name) => roles.get(name) !== "internal" && roles.get(name) !== "output"));
@@ -227,7 +262,23 @@ function showContextMenu(event, entries, menuLabel = (contextCopy[language] || c
   menu.onkeydown = (keyEvent) => { const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement); if (keyEvent.key === "Escape") { keyEvent.preventDefault(); hideContextMenu(); } else if (["ArrowDown", "ArrowUp"].includes(keyEvent.key)) { keyEvent.preventDefault(); buttons[(index + (keyEvent.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus(); } };
   requestAnimationFrame(() => menu.querySelector("[role=menuitem]")?.focus());
 }
-function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; }
+function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
+let helpMarkdownPromise;
+function showHelpGuideMenu(event) {
+  event.preventDefault(); hideContextMenu();
+  const menu = $("#contextMenu"), trigger = event.currentTarget;
+  menu.classList.add("help-guide-menu"); menu.setAttribute("aria-label", "AdigunSPs Help Guide"); menu.innerHTML = `<div class="help-guide-loading" role="status">Loading Help Guide…</div>`; menu.hidden = false;
+  const rect = trigger.getBoundingClientRect(), width = Math.min(760, innerWidth - 16), top = Math.min(rect.bottom + 4, innerHeight - 120);
+  menu.style.width = `${width}px`; menu.style.maxHeight = `${Math.max(120, innerHeight - top - 8)}px`; menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, top)}px`;
+  contextMenuDismiss = bindMenuDismissal(trigger, menu, hideContextMenu);
+  helpMarkdownPromise ||= fetch(new URL("../docs/HELP.md", import.meta.url)).then((response) => { if (!response.ok) throw new Error(`Help guide request failed (${response.status})`); return response.text(); });
+  helpMarkdownPromise.then((markdown) => {
+    if (menu.hidden || !menu.classList.contains("help-guide-menu")) return;
+    menu.innerHTML = `<section class="help-guide-content" role="region" aria-label="AdigunSPs Help Guide">${renderHelpMarkdown(markdown)}<div class="help-guide-actions"><button type="button" data-help-action="safety">Safety and help</button><button type="button" data-help-action="resources">External resources</button></div></section>`;
+    menu.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener("click", (click) => { click.preventDefault(); menu.querySelector(link.getAttribute("href"))?.scrollIntoView({ behavior:"smooth", block:"start" }); }));
+    menu.querySelectorAll("[data-help-action]").forEach((button) => button.addEventListener("click", () => { const next = button.dataset.helpAction; hideContextMenu(); if (next === "safety") showHelp(); else showResources(); }));
+  }).catch(() => { helpMarkdownPromise = undefined; if (!menu.hidden) menu.innerHTML = `<div class="help-guide-loading" role="alert">Help Guide could not be loaded. Check that the docs/HELP.md file is available, then reload the page.</div>`; });
+}
 function rungLayoutInfo(rung, index) {
   const branches = rungPaths(rung), signature = JSON.stringify([rung.comment || "", branches.map((branch) => branch.length), Boolean(rung.timer), Boolean(rung.counter), Boolean(rung.scale)]), key = rung.id || `rung-${index}`;
   const cached = ladderRungHeights.get(key);
@@ -258,7 +309,7 @@ function renderLadder() {
     const rungIndex = windowRange.start + windowIndex, rungLayout = layout[rungIndex];
     const card = document.createElement("article"); card.className = `rung ${selection?.rung === rungIndex ? "selected" : ""}`; card.setAttribute("role", "listitem"); card.dataset.rung = rungIndex;
     const counterText = ({ en:"CTU Counter", de:"CTU-Zähler", yo:"CTU Kọ́ńtà", pcm:"CTU Counter" })[language];
-    card.innerHTML = `<div class="rung-head"><span class="rung-num">NETWORK ${String(rungIndex + 1).padStart(2, "0")}</span><input class="rung-comment" aria-label="Rung comment" value="${escapeAttr(rung.comment || `Rung ${rungIndex + 1}`)}"><span>— LAD</span></div><div class="rail"></div><div class="rung-wire"></div><div class="rung-logic"></div><div class="rung-tools"><button data-rung-action="add" title="Add series contact">＋</button><button data-rung-action="branch" title="Add parallel branch">Y</button><button data-rung-action="remove-branch" title="Remove selected branch">−Y</button><button data-rung-action="timer" title="Add TON timer">T</button><button data-rung-action="counter" title="${counterText}">C</button><button data-rung-action="delete" title="Delete rung">×</button></div>`;
+    card.innerHTML = `<div class="rung-head"><span class="rung-num">NETWORK ${String(rungIndex + 1).padStart(2, "0")}</span><span class="rung-label">${escapeHtml(rung.label || "")}</span><input class="rung-comment" aria-label="Rung comment" value="${escapeAttr(rung.comment || `Rung ${rungIndex + 1}`)}"><span>— LAD</span></div><div class="rail"></div><div class="rung-wire"></div><div class="rung-logic"></div><div class="rung-tools"><button data-rung-action="add" title="Add series contact">＋</button><button data-rung-action="branch" title="Add parallel branch">Y</button><button data-rung-action="remove-branch" title="Remove selected branch">−Y</button><button data-rung-action="timer" title="Add TON timer">T</button><button data-rung-action="counter" title="${counterText}">C</button><button data-rung-action="res" title="Add counter reset (RES)" aria-label="Add counter reset (RES)">R</button><button data-rung-action="delete" title="Delete rung">×</button></div>`;
     const breakpointButton = document.createElement("button"); breakpointButton.dataset.rungAction = "breakpoint"; breakpointButton.title = "Toggle LD breakpoint"; breakpointButton.textContent = breakpoints.has(rung.id) ? "●" : "○"; breakpointButton.classList.toggle("active", breakpoints.has(rung.id)); card.querySelector(".rung-tools").prepend(breakpointButton);
     const logic = card.querySelector(".rung-logic"), paths = rungPaths(rung);
     card.querySelector('[data-rung-action="remove-branch"]').disabled = paths.length < 2;
@@ -284,7 +335,8 @@ function renderLadder() {
     const coil = document.createElement("div"), coilMode = rung.coilMode || "normal"; coil.className = `coil ${sim.outputs[rung.coil] ? "energized" : ""}`; coil.setAttribute("role", "button"); coil.setAttribute("tabindex", "0"); coil.setAttribute("aria-label", `${t("outputCoil")} ${rung.coil} ${coilMode}`); coil.innerHTML = `<span class="coil-label">${coilMode === "set" ? "S " : coilMode === "reset" ? "R " : ""}${escapeHtml(rung.coil || "Q0.0")}</span>`; coil.addEventListener("click", () => { selectedContacts.clear(); selection = { rung: rungIndex, kind: "coil" }; render(); }); logic.append(coil);
     coil.addEventListener("contextmenu", (event) => { selectedContacts.clear(); selection = { rung:rungIndex, kind:"coil" }; render(); const copy = contextCopy[language] || contextCopy.en; showContextMenu(event, [{ label:copy.editCoil, action:() => $("#coilField")?.focus() }, { label:copy.deleteRung, danger:true, action:() => rungAction("delete", rungIndex) }]); });
     if (rung.timer) { const timer = document.createElement("div"); timer.className = `timer-chip ${sim.timers[rung.timer.tag]?.done ? "active" : ""}`; timer.textContent = `${rung.timer.type || "TON"} ${rung.timer.tag} · ${sim.timers[rung.timer.tag]?.elapsed || 0}/${rung.timer.preset} ms`; card.append(timer); }
-    if (rung.counter) { const count = sim.counters?.[rung.counter.tag]?.count || 0, counter = document.createElement("button"); counter.className = `timer-chip ${sim.counters?.[rung.counter.tag]?.done ? "active" : ""}`; counter.textContent = `CTU ${rung.counter.tag} · ${count}/${rung.counter.preset}`; counter.setAttribute("aria-label", `${counterText} ${rung.counter.tag} ${count}/${rung.counter.preset}`); counter.onclick = () => { selectedContacts.clear(); selection = { rung:rungIndex, kind:"counter" }; render(); }; card.append(counter); }
+    if (rung.counter) { const count = sim.counters?.[rung.counter.tag]?.count || 0, counter = document.createElement("button"); counter.className = `timer-chip ${sim.counters?.[rung.counter.tag]?.done ? "active" : ""}`; counter.textContent = `${rung.counter.type || "CTU"} ${rung.counter.tag} · ${count}/${rung.counter.preset}`; counter.setAttribute("aria-label", `${counterText} ${rung.counter.tag} ${count}/${rung.counter.preset}`); counter.onclick = () => { selectedContacts.clear(); selection = { rung:rungIndex, kind:"counter" }; render(); }; card.append(counter); }
+    if (rung.res) { const reset = document.createElement("button"); reset.className = "timer-chip"; reset.textContent = `RES ${rung.res.counterTag}`; reset.setAttribute("aria-label", `Reset counter ${rung.res.counterTag}`); reset.onclick = () => { selection = { rung:rungIndex, kind:"res" }; render(); }; card.append(reset); }
     card.querySelector(".rung-comment").addEventListener("change", (event) => { pushHistory(); rung.comment = event.target.value; persist(); });
     card.querySelectorAll("[data-rung-action]").forEach((button) => button.addEventListener("click", () => rungAction(button.dataset.rungAction, rungIndex)));
     card.addEventListener("contextmenu", (event) => { if (event.target.closest(".contact, .coil, input, button, select, textarea")) return; const copy = contextCopy[language] || contextCopy.en; showContextMenu(event, [{ label:copy.addContact, action:() => rungAction("add", rungIndex) }, { label:copy.addBranch, action:() => rungAction("branch", rungIndex) }, { label:copy.addTimer, action:() => rungAction("timer", rungIndex) }, { label:copy.addCounter, action:() => rungAction("counter", rungIndex) }, { separator:true }, { label:copy.duplicateRung, action:() => { copiedRung = structuredClone(project.rungs[rungIndex]); selection = { rung:rungIndex, kind:"coil" }; pasteRung(); } }, { label:copy.deleteRung, danger:true, action:() => rungAction("delete", rungIndex) }]); });
@@ -305,7 +357,7 @@ function renderLadder() {
   if (mode === "FBD") renderFbd(); if (mode === "SFC") renderSfc();
   $("#zoomValue").textContent = `${zoom}%`; renderMinimap(); renderLogicOutline(); renderInspector(); updateStatus(); renderDiagnostics(); if ($("#modal").open && $("#modal").dataset.view === "io") renderIoModal(); if ($("#modal").open && $("#modal").dataset.view === "watch") refreshWatch(); applyWorkspaceView(); if (workspaceView === "hmi") { refreshHmi(); renderHmiAlarms(); renderProcessPanel(); }
 }
-function render() { if (viewProjectId !== project.id) { viewProjectId = project.id; ladderRungHeights.clear(); fbdBlockHeights.clear(); compiledST = null; compiledSTSignature = ""; sessionOperations = { elapsedMs:0, outputRuntimeMs:{} }; selectedContacts.clear(); fbdSelection.clear(); selection = null; simulationFaults = []; for (const tag of Object.keys(hmiHistory)) delete hmiHistory[tag]; project.viewState ||= {}; zoom = Number.isInteger(project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) ? (project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) : 100; requestAnimationFrame(() => { const wrap = $("#canvasWrap"), fbdPane = $("#fbdPane"); wrap.scrollLeft = project.viewState.scrollLeft || 0; wrap.scrollTop = project.viewState.scrollTop || 0; fbdPane.scrollLeft = project.viewState.fbdScrollLeft || 0; fbdPane.scrollTop = project.viewState.fbdScrollTop || 0; }); } renderLadder(); renderHmi(); if (workspaceView === "electrical") renderElectricalWorkspace($("#electricalPane"),project,{language,inputValues:sim.values,outputValues:{...sim.outputs,...sim.processValues},onInputChange:(tag,value)=>{sim.values[tag]=value;doScan();},onBeforeChange:pushHistory,onChange:()=>{persist();render();}}); applyWorkspaceView(); }
+function render() { if (viewProjectId !== project.id) { viewProjectId = project.id; copilotGoal="";copilotGoalPending=false;copilotFirstSeen.clear();copilotActiveState.active=null;copilotActiveState.dismissed.clear(); ladderRungHeights.clear(); fbdBlockHeights.clear(); compiledST = null; compiledSTSignature = ""; sessionOperations = { elapsedMs:0, outputRuntimeMs:{} }; selectedContacts.clear(); fbdSelection.clear(); selection = null; simulationFaults = []; for (const tag of Object.keys(hmiHistory)) delete hmiHistory[tag]; project.viewState ||= {}; zoom = Number.isInteger(project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) ? (project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) : 100; requestAnimationFrame(() => { const wrap = $("#canvasWrap"), fbdPane = $("#fbdPane"); wrap.scrollLeft = project.viewState.scrollLeft || 0; wrap.scrollTop = project.viewState.scrollTop || 0; fbdPane.scrollLeft = project.viewState.fbdScrollLeft || 0; fbdPane.scrollTop = project.viewState.fbdScrollTop || 0; }); } renderLadder(); renderHmi(); if (workspaceView === "electrical") renderElectricalWorkspace($("#electricalPane"),project,{language,inputValues:sim.values,outputValues:{...sim.outputs,...sim.processValues},onInputChange:(tag,value)=>{sim.values[tag]=value;doScan();},onBeforeChange:pushHistory,onChange:()=>{persist();render();}}); applyWorkspaceView();window.dispatchEvent(new CustomEvent("adigunsps:canvas-state-changed",{detail:{projectId:project.id}})); }
 function setZoom(value) { zoom = Math.max(60, Math.min(150, Math.round(value))); project.viewState = { ...(project.viewState || {}), ...(project.editorType === "FBD" ? { fbdZoom:zoom } : { zoom }) }; if (project.editorType === "FBD") renderFbd(); else renderLadder(); $("#zoomValue").textContent = `${zoom}%`; persist(); }
 function fitZoom() { if (project.editorType === "FBD") { setZoom(fbdZoomToFit(project.fbdBlocks || [], $("#fbdPane").clientWidth)); return; } const wrap = $("#canvasWrap"), canvas = $("#ladderCanvas"), width = Math.max(1, wrap.clientWidth - 28); setZoom(canvas.scrollWidth ? width / canvas.scrollWidth * 100 : 100); }
 function setupCanvasPanning() {
@@ -362,7 +414,7 @@ function renderMinimap() {
 }
 function scrollFbdBlockIntoView(index, focus = false) {
   const blocks = project.fbdBlocks || [], block = blocks[index], pane = $("#fbdPane"), root = $("#fbdBlocks"); if (!block) return;
-  const position = fbdBlockPosition(block, index), scale = zoom / 100, height = fbdBlockHeights.get(block.id) || (block.type === "SCALE" || block.type === "CTU" ? 300 : 240);
+  const position = fbdBlockPosition(block, index), scale = zoom / 100, height = fbdBlockHeights.get(block.id) || (block.type === "SCALE" || ["CTU", "CTD"].includes(block.type) ? 300 : 240);
   pane.scrollTo({ left:Math.max(0, (position.x + 165) * scale - pane.clientWidth / 2), top:Math.max(0, (position.y + height / 2 + 9) * scale - pane.clientHeight / 2), behavior:"auto" });
   renderFbd();
   if (focus) root.querySelector(`[data-fbd-node="${index}"] [data-fbd-drag-handle]`)?.focus();
@@ -402,9 +454,11 @@ function renderLogicOutline() {
 }
 function renderInspector() {
   const root = $("#inspectorContent");
+  if (selection?.kind === "res") { const rung = project.rungs[selection.rung], targets = project.rungs.map((item) => item.counter?.tag).filter(Boolean); root.innerHTML = `<div class="property-form"><h3>RES counter reset</h3><label class="field">Counter tag<select id="resTarget">${targets.map((tag) => `<option ${tag === rung.res?.counterTag ? "selected" : ""} value="${escapeAttr(tag)}">${escapeHtml(tag)}</option>`).join("")}</select></label><p class="field-help">When this rung is energized, CTU resets to zero; CTD reloads its preset. No counter target means the instruction has no effect.</p><button id="resRemove" class="danger-button">${t("delete")}</button></div>`; $("#resTarget").addEventListener("change", (event) => { pushHistory(); rung.res.counterTag = event.target.value; persist(); render(); }); $("#resRemove").onclick = () => { pushHistory(); delete rung.res; selection = null; render(); persist(); }; return; }
   if (selection?.kind === "counter") {
-    const rung = project.rungs[selection.rung], counter = rung.counter, copy = ({ en:{ title:"CTU counter", tag:"Counter tag", preset:"Count preset", reset:"Reset input tag", count:"Numeric count tag (optional)" }, de:{ title:"CTU-Zähler", tag:"Zählertag", preset:"Zählwert", reset:"Rücksetzeingang", count:"Numerischer Zählwert (optional)" }, yo:{ title:"CTU kọ́ńtà", tag:"Àmì kọ́ńtà", preset:"Iye ìṣirò", reset:"Àmì àtúnṣe", count:"Àmì iye nọ́ńbà (àṣàyàn)" }, pcm:{ title:"CTU counter", tag:"Counter tag", preset:"Count preset", reset:"Reset input tag", count:"Numeric count tag (optional)" } })[language];
-    root.innerHTML = `<div class="property-form"><h3>${copy.title}</h3><label class="field">${copy.tag}<input id="counterTag" value="${escapeAttr(counter.tag)}"></label><label class="field">${copy.preset}<input id="counterPreset" type="number" min="1" value="${counter.preset}"></label><label class="field">${copy.reset}<input id="counterResetTag" value="${escapeAttr(counter.resetTag || "")}" placeholder="I0.1"></label><label class="field">${copy.count}<input id="counterCountTag" value="${escapeAttr(counter.countTag || "")}" placeholder="PartCount"></label><button id="counterRemove" class="danger-button">${t("delete")}</button></div>`;
+    const rung = project.rungs[selection.rung], counter = rung.counter, copy = ({ en:{ title:"Counter", tag:"Counter tag", type:"Counter function", ctu:"Count up (CTU)", ctd:"Count down (CTD)", preset:"Count preset", reset:"Reset input tag", count:"Numeric count tag (optional)" }, de:{ title:"Zähler", tag:"Zählertag", type:"Zählerfunktion", ctu:"Vorwärtszähler (CTU)", ctd:"Rückwärtszähler (CTD)", preset:"Zählwert", reset:"Rücksetzeingang", count:"Numerischer Zählwert (optional)" }, yo:{ title:"Kọ́ńtà", tag:"Àmì kọ́ńtà", type:"Iṣẹ́ kọ́ńtà", ctu:"Ka sókè (CTU)", ctd:"Ka sọ̀kalẹ̀ (CTD)", preset:"Iye ìṣirò", reset:"Àmì àtúnṣe", count:"Àmì iye nọ́ńbà (àṣàyàn)" }, pcm:{ title:"Counter", tag:"Counter tag", type:"Counter function", ctu:"Count up (CTU)", ctd:"Count down (CTD)", preset:"Count preset", reset:"Reset input tag", count:"Numeric count tag (optional)" } })[language];
+    root.innerHTML = `<div class="property-form"><h3>${copy.title}</h3><label class="field">${copy.type}<select id="counterType"><option value="CTU">${copy.ctu}</option><option value="CTD">${copy.ctd}</option></select></label><label class="field">${copy.tag}<input id="counterTag" value="${escapeAttr(counter.tag)}"></label><label class="field">${copy.preset}<input id="counterPreset" type="number" min="1" value="${counter.preset}"></label><label class="field">${copy.reset}<input id="counterResetTag" value="${escapeAttr(counter.resetTag || "")}" placeholder="I0.1"></label><label class="field">${copy.count}<input id="counterCountTag" value="${escapeAttr(counter.countTag || "")}" placeholder="PartCount"></label><button id="counterRemove" class="danger-button">${t("delete")}</button></div>`;
+    $("#counterType").value = counter.type || "CTU"; $("#counterType").addEventListener("change", (event) => { pushHistory(); counter.type = event.target.value; if (counter.type === "CTD" && !Number(counter.initialCount)) counter.initialCount = Number(counter.preset) || 5; render(); persist(); });
     $("#counterTag").addEventListener("change", (event) => { pushHistory(); const oldTag = counter.tag; counter.tag = event.target.value.trim() || oldTag; if (sim.counters?.[oldTag]) { sim.counters[counter.tag] = sim.counters[oldTag]; delete sim.counters[oldTag]; } render(); persist(); });
     $("#counterPreset").addEventListener("change", (event) => { pushHistory(); counter.preset = Math.max(1, Number(event.target.value) || 1); render(); persist(); });
     $("#counterResetTag").addEventListener("change", (event) => { pushHistory(); counter.resetTag = event.target.value.trim(); render(); persist(); });
@@ -417,6 +471,8 @@ function renderInspector() {
     root.innerHTML = `<div class="property-form"><h3>${t("outputCoil")}</h3><label class="field">${t("tag")}<input id="coilField" value="${escapeAttr(rung.coil || "Q0.0")}"><span class="field-help">Use a BOOL output tag such as Q0.0 or Motor.</span></label><label class="field">${coilCopy.mode}<select id="coilModeField"><option value="normal">${coilCopy.normal}</option><option value="set">${coilCopy.set}</option><option value="reset">${coilCopy.reset}</option></select></label><label class="field">${t("comment")}<input id="coilComment" value="${escapeAttr(rung.comment || "")}"></label><button id="deleteRung" class="danger-button">${t("deleteRung")}</button></div>`;
     $("#coilModeField").value = rung.coilMode || "normal";
     $("#coilModeField").addEventListener("change", (event) => { pushHistory(); rung.coilMode = event.target.value === "normal" ? "normal" : event.target.value; render(); persist(); });
+    const mcrCopy = ({en:{title:"Master control relay section",none:"No MCR",start:"Start controlled section",end:"End controlled section",help:"Start uses this rung condition to enable following rungs until End."},de:{title:"Master-Control-Relay-Bereich",none:"Kein MCR",start:"MCR-Bereich starten",end:"MCR-Bereich beenden",help:"Start verwendet diese Rungbedingung bis zum End-Befehl."},yo:{title:"Agbègbè master control relay",none:"Kò sí MCR",start:"Bẹ̀rẹ̀ agbègbè",end:"Parí agbègbè",help:"Start ń lo ipò rung yìí láti ṣàkóso àwọn rung tó tẹ̀lé títí dé End."},pcm:{title:"Master control relay section",none:"No MCR",start:"Start controlled section",end:"End controlled section",help:"Start uses this rung condition to enable following rungs until End."}})[language];
+    const mcrLabel = document.createElement("label"), mcrSelect = document.createElement("select"), mcrHelp = document.createElement("span"); mcrLabel.className = "field"; mcrLabel.append(document.createTextNode(mcrCopy.title)); mcrSelect.id = "mcrField"; mcrSelect.innerHTML = `<option value="">${mcrCopy.none}</option><option value="start">${mcrCopy.start}</option><option value="end">${mcrCopy.end}</option>`; mcrSelect.value = rung.mcr || ""; mcrHelp.className = "field-help"; mcrHelp.textContent = mcrCopy.help; mcrLabel.append(mcrSelect,mcrHelp); root.querySelector(".property-form").append(mcrLabel); mcrSelect.addEventListener("change", (event) => { pushHistory(); if (event.target.value) rung.mcr = event.target.value; else delete rung.mcr; render(); persist(); });
     $("#coilField").addEventListener("change", (e) => { pushHistory(); rung.coil = e.target.value.trim() || "Q0.0"; render(); persist(); });
     $("#coilComment").addEventListener("change", (e) => { pushHistory(); rung.comment = e.target.value; render(); persist(); });
     $("#deleteRung").addEventListener("click", () => rungAction("delete", selection.rung));
@@ -424,13 +480,14 @@ function renderInspector() {
   }
   if (!selection) { root.innerHTML = `<div class="empty-inspector"><div class="inspector-icon">⌘</div><b>${t("selectInstruction")}</b><p>Select a contact or coil in the ladder to edit its tag and behavior.</p></div>`; return; }
   const rung = project.rungs[selection.rung]; const contact = rungPaths(rung)[selection.branch][selection.contact], timerCopy = ({ en:{type:"Timer type",ton:"On-delay (TON)",tof:"Off-delay (TOF)",tp:"Pulse (TP)"}, de:{type:"Zeitgliedtyp",ton:"Einschaltverzögerung (TON)",tof:"Ausschaltverzögerung (TOF)",tp:"Impuls (TP)"}, yo:{type:"Irú aago",ton:"Ìdádúró ìtan (TON)",tof:"Ìdádúró pípa (TOF)",tp:"Ìlù kan (TP)"}, pcm:{type:"Timer type",ton:"On-delay (TON)",tof:"Off-delay (TOF)",tp:"Pulse (TP)"} })[language], edgeCopy = edgeContactCopy[language] || edgeContactCopy.en;
-  root.innerHTML = `<div class="property-form"><h3>${t("contactType")}</h3><label class="field">${t("tag")}<input id="tagField" value="${escapeAttr(contact.tag)}"><span class="field-help">Use a BOOL tag such as I0.0 or Start.</span></label><label class="field">${t("contactType")}<select id="modeField"><option value="NO">${t("normallyOpen")}</option><option value="NC">${t("normallyClosed")}</option><option value="R_TRIG">${edgeCopy.rising}</option><option value="F_TRIG">${edgeCopy.falling}</option></select></label><label class="field">${t("comment")}<input id="commentField" value="${escapeAttr(rung.comment || "")}"></label>${rung.timer ? `<label class="field">${timerCopy.type}<select id="timerTypeField"><option value="TON">${timerCopy.ton}</option><option value="TOF">${timerCopy.tof}</option><option value="TP">${timerCopy.tp}</option></select></label><label class="field">${t("preset")}<input id="timerField" type="number" min="1" step="100" value="${rung.timer.preset}"></label>` : `<button id="timerAdd" class="secondary">＋ ${t("timer")}</button>`}<button id="removeContact" class="danger-button">${t("delete")}</button></div>`;
+  root.innerHTML = `<div class="property-form"><h3>${t("contactType")}</h3><label class="field">${t("tag")}<input id="tagField" value="${escapeAttr(contact.tag)}"><span class="field-help">Use a BOOL tag such as I0.0 or Start.</span></label><label class="field">${t("contactType")}<select id="modeField"><option value="NO">${t("normallyOpen")}</option><option value="NC">${t("normallyClosed")}</option><option value="R_TRIG">${edgeCopy.rising}</option><option value="F_TRIG">${edgeCopy.falling}</option></select></label><label class="field">${t("comment")}<input id="commentField" value="${escapeAttr(rung.comment || "")}"></label>${rung.timer ? `<label class="field">${timerCopy.type}<select id="timerTypeField"><option value="TON">${timerCopy.ton}</option><option value="TOF">${timerCopy.tof}</option><option value="TP">${timerCopy.tp}</option><option value="RTO">Retentive on-delay (RTO)</option></select></label><label class="field">${t("preset")}<input id="timerField" type="number" min="1" step="100" value="${rung.timer.preset}"></label>${rung.timer.type === "RTO" ? `<label class="field">Reset input tag<input id="timerResetField" value="${escapeAttr(rung.timer.resetTag || "")}" placeholder="I0.1"></label>` : ""}` : `<button id="timerAdd" class="secondary">＋ ${t("timer")}</button>`}<button id="removeContact" class="danger-button">${t("delete")}</button></div>`;
   if (rung.timer) { $("#timerTypeField").value = rung.timer.type || "TON"; $("#timerTypeField").addEventListener("change", (e) => { pushHistory(); rung.timer.type = e.target.value; render(); persist(); }); }
   $("#modeField").value = contact.mode;
   $("#tagField").addEventListener("change", (e) => { pushHistory(); contact.tag = e.target.value.trim() || contact.tag; render(); persist(); });
   $("#modeField").addEventListener("change", (e) => { pushHistory(); contact.mode = e.target.value; render(); persist(); });
   $("#commentField").addEventListener("change", (e) => { pushHistory(); rung.comment = e.target.value; render(); persist(); });
   $("#timerField")?.addEventListener("change", (e) => { pushHistory(); rung.timer.preset = Math.max(1, Number(e.target.value)); render(); persist(); });
+  $("#timerResetField")?.addEventListener("change", (e) => { pushHistory(); rung.timer.resetTag = e.target.value.trim(); render(); persist(); });
   $("#timerAdd")?.addEventListener("click", () => rungAction("timer", selection.rung));
   $("#removeContact").addEventListener("click", () => { pushHistory(); rungPaths(rung)[selection.branch].splice(selection.contact, 1); selectedContacts.clear(); selection = null; render(); persist(); });
 }
@@ -495,9 +552,9 @@ function bindFbdVirtualization(pane) {
   }, { passive:true });
 }
 function renderFbd() {
-  const root = $("#fbdBlocks"), blocks = project.fbdBlocks || [], types = ["AND", "OR", "NOT", "TON", "TOF", "TP", "CTU", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"], scaleLabels = ({ en:["Raw minimum","Raw maximum","Scaled minimum","Scaled maximum"], de:["Rohwert Minimum","Rohwert Maximum","Skalierter Mindestwert","Skalierter Höchstwert"], yo:["Iye aise tó kéré jù","Iye aise tó pọ̀ jù","Iye àbájáde tó kéré jù","Iye àbájáde tó pọ̀ jù"], pcm:["Raw minimum","Raw maximum","Scaled minimum","Scaled maximum"] })[language], scaleFields = [["rawMin",scaleLabels[0],0],["rawMax",scaleLabels[1],1000],["scaledMin",scaleLabels[2],0],["scaledMax",scaleLabels[3],100]];
+  const root = $("#fbdBlocks"), blocks = project.fbdBlocks || [], types = ["AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR", "TON", "TOF", "TP", "RTO", "CTU", "CTD", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"], scaleLabels = ({ en:["Raw minimum","Raw maximum","Scaled minimum","Scaled maximum"], de:["Rohwert Minimum","Rohwert Maximum","Skalierter Mindestwert","Skalierter Höchstwert"], yo:["Iye aise tó kéré jù","Iye aise tó pọ̀ jù","Iye àbájáde tó kéré jù","Iye àbájáde tó pọ̀ jù"], pcm:["Raw minimum","Raw maximum","Scaled minimum","Scaled maximum"] })[language], scaleFields = [["rawMin",scaleLabels[0],0],["rawMax",scaleLabels[1],1000],["scaledMin",scaleLabels[2],0],["scaledMax",scaleLabels[3],100]];
   const pane = $("#fbdPane"), retained = [...fbdSelection, ...(fbdKeyboardWireStart == null ? [] : [blocks[fbdKeyboardWireStart]?.id])].filter(Boolean); bindFbdVirtualization(pane); const positions = blocks.map(fbdBlockPosition), virtualized = blocks.length > 100, scale = zoom / 100, visibleIndices = virtualized ? fbdVisibleBlockIndices(blocks, { left:pane.scrollLeft / scale, top:Math.max(0, pane.scrollTop / scale - 9), width:pane.clientWidth / scale, height:pane.clientHeight / scale }, retained) : blocks.map((_, index) => index); root.setAttribute("aria-setsize", String(blocks.length));
-  root.innerHTML = blocks.length ? `<svg class="fbd-wires" aria-hidden="true"></svg>${visibleIndices.map((index) => { const block = blocks[index], value = sim.values[block.outputTag], shown = typeof value === "boolean" ? String(value).toUpperCase() : Number.isFinite(Number(value)) ? String(value) : "0", inputs = block.inputs || []; return `<article class="fbd-block" data-fbd-node="${index}"><div class="fbd-index">${String(index + 1).padStart(2, "0")}</div><div class="fbd-input-ports">${inputs.map((tag, inputIndex) => `<button type="button" class="fbd-port fbd-input-port" data-fbd-input-handle="${index}" data-fbd-input-index="${inputIndex}" aria-label="Connect input ${escapeAttr(tag)} on block ${index + 1}">${escapeHtml(tag)}</button>`).join("")}</div><label>Function<select data-fbd-index="${index}" data-fbd-field="type">${types.map((type) => `<option ${type === block.type ? "selected" : ""}>${type}</option>`).join("")}</select></label><label>Inputs<input data-fbd-index="${index}" data-fbd-field="inputs" value="${escapeAttr(inputs.join(", "))}" placeholder="Start, Permit"></label><label>Output tag<input data-fbd-index="${index}" data-fbd-field="outputTag" value="${escapeAttr(block.outputTag || "")}"></label>${block.type === "CTU" ? `<label>Count value tag (numeric)<input data-fbd-index="${index}" data-fbd-field="countTag" value="${escapeAttr(block.countTag || "")}" placeholder="PartCount"></label>` : ""}${["TON", "TOF", "TP", "CTU"].includes(block.type) ? `<label>${block.type === "CTU" ? "Count preset" : "Preset ms"}<input type="number" min="1" data-fbd-index="${index}" data-fbd-field="preset" value="${Number(block.preset) || 1000}"></label>` : ""}${block.type === "SCALE" ? scaleFields.map(([key,label,fallback]) => `<label>${label}<input type="number" step="any" data-fbd-index="${index}" data-fbd-field="${key}" value="${Number.isFinite(Number(block[key])) ? block[key] : fallback}"></label>`).join("") : ""}<span class="fbd-value">${escapeHtml(block.outputTag || "Output")} = ${escapeHtml(shown)}${block.type === "CTU" ? ` · CV ${sim.counters?.[block.id]?.count || 0}` : ""}</span><button type="button" class="fbd-port fbd-output-port" data-fbd-output-handle="${index}" aria-label="Drag output ${escapeAttr(block.outputTag || "Output")} from block ${index + 1}">${escapeHtml(block.outputTag || "Output")} ◉</button><button class="tag-remove" data-fbd-delete="${index}" aria-label="Delete function block">×</button></article>`; }).join("")}` : '<p class="empty-message">Add a function block and connect its output ports to downstream inputs.</p>';
+  root.innerHTML = blocks.length ? `<svg class="fbd-wires" aria-hidden="true"></svg>${visibleIndices.map((index) => { const block = blocks[index], value = sim.values[block.outputTag], shown = typeof value === "boolean" ? String(value).toUpperCase() : Number.isFinite(Number(value)) ? String(value) : "0", inputs = block.inputs || []; return `<article class="fbd-block" data-fbd-node="${index}"><div class="fbd-index">${String(index + 1).padStart(2, "0")}</div><div class="fbd-input-ports">${inputs.map((tag, inputIndex) => `<button type="button" class="fbd-port fbd-input-port" data-fbd-input-handle="${index}" data-fbd-input-index="${inputIndex}" aria-label="Connect input ${escapeAttr(tag)} on block ${index + 1}">${escapeHtml(tag)}</button>`).join("")}</div><label>Function<select data-fbd-index="${index}" data-fbd-field="type">${types.map((type) => `<option ${type === block.type ? "selected" : ""}>${type}</option>`).join("")}</select></label><label>Inputs<input data-fbd-index="${index}" data-fbd-field="inputs" value="${escapeAttr(inputs.join(", "))}" placeholder="Start, Permit"></label><label>Output tag<input data-fbd-index="${index}" data-fbd-field="outputTag" value="${escapeAttr(block.outputTag || "")}"></label>${["CTU", "CTD"].includes(block.type) ? `<label>Count value tag (numeric)<input data-fbd-index="${index}" data-fbd-field="countTag" value="${escapeAttr(block.countTag || "")}" placeholder="PartCount"></label>` : ""}${["TON", "TOF", "TP", "RTO", "CTU", "CTD"].includes(block.type) ? `<label>${["CTU", "CTD"].includes(block.type) ? "Count preset" : "Preset ms"}<input type="number" min="1" data-fbd-index="${index}" data-fbd-field="preset" value="${Number(block.preset) || 1000}"></label>` : ""}${block.type === "SCALE" ? scaleFields.map(([key,label,fallback]) => `<label>${label}<input type="number" step="any" data-fbd-index="${index}" data-fbd-field="${key}" value="${Number.isFinite(Number(block[key])) ? block[key] : fallback}"></label>`).join("") : ""}<span class="fbd-value">${escapeHtml(block.outputTag || "Output")} = ${escapeHtml(shown)}${["CTU", "CTD"].includes(block.type) ? ` · CV ${sim.counters?.[block.id]?.count || 0}` : ""}</span><button type="button" class="fbd-port fbd-output-port" data-fbd-output-handle="${index}" aria-label="Drag output ${escapeAttr(block.outputTag || "Output")} from block ${index + 1}">${escapeHtml(block.outputTag || "Output")} ◉</button><button class="tag-remove" data-fbd-delete="${index}" aria-label="Delete function block">×</button></article>`; }).join("")}` : '<p class="empty-message">Add a function block and connect its output ports to downstream inputs.</p>';
   const feedbackByBlock = validateFbdBlocks(project).reduce((map, issue) => { if (issue.blockIndex != null) (map[issue.blockIndex] ||= []).push(issue); return map; }, {}), feedbackCopy = fbdValidationCopy[language] || fbdValidationCopy.en;
   for (const index of visibleIndices) { const status = document.createElement("div"), issues = feedbackByBlock[index] || []; status.className = `fbd-validation-feedback ${issues.length ? "has-errors" : "is-valid"}`; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); status.textContent = issues.length ? `${feedbackCopy.review}: ${issues.map(fbdIssueText).slice(0,3).join(" · ")}` : feedbackCopy.valid; root.querySelector(`[data-fbd-node="${index}"]`).append(status); }
   const accessibilityCopy = fbdAccessibilityCopy[language] || fbdAccessibilityCopy.en; $("#fbdKeyboardHelp").textContent = accessibilityCopy.wiringHelp;
@@ -512,7 +569,7 @@ function renderFbd() {
     node.addEventListener("contextmenu", (event) => { if (!fbdSelection.has(block.id)) { fbdSelection.clear(); fbdSelection.add(block.id); root.querySelectorAll(".fbd-block").forEach((item) => item.classList.toggle("selected", fbdSelection.has(item.dataset.fbdBlockId))); } const copy = contextCopy[language] || contextCopy.en; showContextMenu(event, [{label:copy.copyBlocks,action:() => copyFbdSelection()},{label:copy.cutBlocks,action:() => copyFbdSelection(true)},{label:copy.duplicateBlocks,action:duplicateFbdSelection},{separator:true},{label:copy.deleteBlocks,danger:true,action:deleteFbdSelection}], copy.fbdMenu); });
   }
   drawFbdConnections(root, blocks);
-  root.querySelectorAll("[data-fbd-index]").forEach((field) => field.addEventListener("change", () => { pushHistory(); const block = blocks[Number(field.dataset.fbdIndex)], key = field.dataset.fbdField; block[key] = key === "inputs" ? field.value.split(",").map((x) => x.trim()).filter(Boolean) : ["preset", "rawMin", "rawMax", "scaledMin", "scaledMax"].includes(key) ? Number(field.value) : field.value; if (key === "type" && ["TON", "TOF", "TP", "CTU"].includes(block.type) && !Number(block.preset)) block.preset = 1000; if (key === "type" && block.type === "SCALE") Object.assign(block, { rawMin:0, rawMax:1000, scaledMin:0, scaledMax:100 }); persist(); render(); }));
+  root.querySelectorAll("[data-fbd-index]").forEach((field) => field.addEventListener("change", () => { pushHistory(); const block = blocks[Number(field.dataset.fbdIndex)], key = field.dataset.fbdField; block[key] = key === "inputs" ? field.value.split(",").map((x) => x.trim()).filter(Boolean) : ["preset", "rawMin", "rawMax", "scaledMin", "scaledMax"].includes(key) ? Number(field.value) : field.value; if (key === "type" && ["TON", "TOF", "TP", "RTO", "CTU", "CTD"].includes(block.type) && !Number(block.preset)) block.preset = 1000; if (key === "type" && block.type === "SCALE") Object.assign(block, { rawMin:0, rawMax:1000, scaledMin:0, scaledMax:100 }); persist(); render(); }));
   root.querySelectorAll("[data-fbd-delete]").forEach((button) => button.addEventListener("click", () => { pushHistory(); blocks.splice(Number(button.dataset.fbdDelete), 1); render(); persist(); }));
   root.querySelectorAll("[data-fbd-drag-handle]").forEach((handle) => handle.addEventListener("click", () => {
     if (fbdSuppressClick) { fbdSuppressClick = false; return; }
@@ -533,7 +590,7 @@ function drawFbdConnections(root, blocks) {
   const point = (blockIndex, inputIndex = null) => {
     const block = blocks[blockIndex], selector = inputIndex == null ? `[data-fbd-output-handle="${blockIndex}"]` : `[data-fbd-input-handle="${blockIndex}"][data-fbd-input-index="${inputIndex}"]`, port = root.querySelector(selector);
     if (port) { const rect = port.getBoundingClientRect(); return { x:(rect.left - box.left + rect.width / 2) / scale, y:(rect.top - box.top + rect.height / 2) / scale }; }
-    const position = fbdBlockPosition(block, blockIndex), height = fbdBlockHeights.get(block.id) || (block.type === "SCALE" || block.type === "CTU" ? 300 : 240);
+    const position = fbdBlockPosition(block, blockIndex), height = fbdBlockHeights.get(block.id) || (block.type === "SCALE" || ["CTU", "CTD"].includes(block.type) ? 300 : 240);
     if (inputIndex == null) return { x:position.x + 370, y:position.y + height / 2 };
     const inputs = block.inputs || [], count = Math.max(inputs.length, requiredFbdInputs(block.type)), tag = inputs[inputIndex] || "", portWidth = Math.min(145, Math.max(42, tag.length * 6 + 18));
     return { x:position.x - 9 - portWidth / 2, y:position.y + height / 2 + (inputIndex - (count - 1) / 2) * 22 };
@@ -714,6 +771,7 @@ function rungAction(action, rungIndex) {
   if (action === "remove-branch" && rungPaths(rung).length > 1) { pushHistory(); const paths = rungPaths(rung), branch = selection?.rung === rungIndex ? selection.branch ?? paths.length - 1 : paths.length - 1; paths.splice(branch, 1); rung.branches = paths; selection = { rung: rungIndex, branch: Math.max(0, branch - 1), contact: 0, kind: "contact" }; render(); persist(); }
   if (action === "timer") { pushHistory(); rung.timer ||= { type:"TON", tag: `T0.${rungIndex}`, preset: 1000, output: "DN" }; render(); persist(); }
   if (action === "counter") { pushHistory(); rung.counter ||= { tag:`C0.${rungIndex}`, preset:5, resetTag:"" }; selection = { rung:rungIndex, kind:"counter" }; render(); persist(); }
+  if (action === "res") { pushHistory(); const target = project.rungs.find((item) => item.counter)?.counter?.tag || "C0.0"; rung.res = { counterTag:target }; selection = { rung:rungIndex, kind:"res" }; render(); persist(); }
   if (action === "delete") { pushHistory(); project.rungs.splice(rungIndex, 1); selection = null; render(); persist(); }
 }
 function deleteSelectedContacts() { const keys = selectedContacts.size ? selectedContacts : selection?.kind === "contact" ? new Set([contactSelectionKey(selection)]) : new Set(); if (!keys.size) return; pushHistory(); const result = removeSelectedContacts(projectRungs(project), keys); if (!result.removed) return; project.rungs = result.rungs; selectedContacts.clear(); selection = null; render(); persist(); }
@@ -866,6 +924,7 @@ async function exportExampleTestReport() {
   const link = document.createElement("a"); link.href = URL.createObjectURL(file); link.download = "adigunsps-example-test-report.csv"; link.click(); URL.revokeObjectURL(link.href); toast(t("exported"));
 }
 async function showProjects() {
+  if (accountAccess !== "member") { showAccount(); return; }
   const projects = sortProjectsByRecent(await store.all()), recentLabel = ({en:"Recent projects · last opened",de:"Zuletzt geöffnete Projekte",yo:"Àwọn iṣẹ́ tí a ṣí kẹ́yìn",pcm:"Projects wey person open last"})[language];
   modal(t("titleProjects"), `<div class="modal-body"><p class="safety-copy">${recentLabel}</p><div class="project-list">${projects.map((p) => `<div class="project-row"><button class="project-open" data-open="${p.id}"><b>${escapeHtml(p.name)}</b><small>${formatLocaleDateTime(p.lastOpenedAt || p.updatedAt,language)}</small></button><button data-properties="${p.id}" title="${({en:"Project properties",de:"Projekteigenschaften",yo:"Àwọn ànímọ́ iṣẹ́",pcm:"Project properties"})[language]}">⚙</button><button data-recover="${p.id}" title="Recover an earlier snapshot">↶</button><button data-duplicate="${p.id}" title="${t("duplicate")}">⧉</button><button data-rename="${p.id}" title="${t("rename")}">✎</button><button data-delete="${p.id}" title="${t("delete")}">×</button></div>`).join("")}</div><div class="modal-actions"><button class="primary" id="newProject">＋ ${t("new")}</button></div></div>`);
   document.querySelectorAll("[data-open]").forEach((b) => b.onclick = async () => { if (!(await confirmProjectChange())) return; const next = await store.get(b.dataset.open); if (!next) return; project = next; project.lastOpenedAt = Date.now(); await store.touch(project); setUnsavedChanges(false); selection = null; stopSimulation(); $("#modal").close(); render(); });
@@ -874,7 +933,7 @@ async function showProjects() {
   document.querySelectorAll("[data-duplicate]").forEach((b) => b.onclick = async () => { const source = await store.get(b.dataset.duplicate), copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.name += " copy"; copy.lastOpenedAt = Date.now(); await store.save(copy); showProjects(); });
   document.querySelectorAll("[data-rename]").forEach((b) => b.onclick = async () => { const p = await store.get(b.dataset.rename), name = prompt(t("rename"), p.name); if (name?.trim()) { p.name = name.trim(); await store.save(p); if (project.id === p.id) { project = p; render(); } showProjects(); } });
   document.querySelectorAll("[data-delete]").forEach((b) => b.onclick = async () => { if (project.id === b.dataset.delete && !(await confirmProjectChange())) return; if (confirm(t("confirmDelete"))) { await store.remove(b.dataset.delete); if (project.id === b.dataset.delete) { project = defaultProject(); await persist(false, true, { markDirty:false, markSaved:true }); render(); } showProjects(); } });
-  $("#newProject").onclick = async () => { if (!(await confirmProjectChange())) return; project = defaultProject(); project.lastOpenedAt = Date.now(); sim = { outputs: {}, timers: {}, energized: {}, values: {} }; await persist(false, true, { markDirty:false, markSaved:true }); $("#modal").close(); render(); };
+  $("#newProject").onclick = async () => { if (!(await confirmProjectChange())) return; project = emptyProject(); project.lastOpenedAt = Date.now(); sim = { outputs: {}, timers: {}, energized: {}, values: {} }; await persist(false, true, { markDirty:false, markSaved:true }); $("#modal").close(); render(); };
 }
 async function showProjectProperties(projectId) {
   const target = await store.get(projectId); if (!target) return;
@@ -889,8 +948,8 @@ async function showRecovery(projectId) {
   modal("Recover project snapshot", `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version) => `<div class="project-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · local snapshot</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs.length,language,0)} rungs</span></div>`).join("")}</div></div>`);
   document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = async () => { if (!(await confirmProjectChange())) return; const version = versions.find((item) => item.id === button.dataset.restore); if (!version) return; project = structuredClone(version.project); await store.save(project); setUnsavedChanges(false); stopSimulation(); $("#modal").close(); render(); toast("Project snapshot restored"); });
 }
-function exportProject(projectToExport = serializeProject()) { const identity = brandPresentation(language, currentBrandTheme()); const data = new Blob([JSON.stringify({ ...projectToExport, branding:{ product:identity.productName, company:identity.companyName, attribution:identity.attribution } }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = `${projectToExport.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.adigun.json`; a.click(); URL.revokeObjectURL(a.href); setUnsavedChanges(false); toast(t("exported")); }
-async function saveProject() { const name = prompt("Project name", project.name); if (!name?.trim()) return false; const projectToSave = { ...serializeProject(), name:name.trim() }; if (accountAccess === "member") { try { await accountService.saveCloudProject(accountUser, projectToSave); setUnsavedChanges(false); toast(accountText("saved")); return true; } catch (error) { toast(`${accountText("error")}: ${error.message}`); return false; } } exportProject(projectToSave); return true; }
+function exportProject(projectToExport = serializeProject()) { if (accountAccess !== "member") { showAccount(); return false; } const identity = brandPresentation(language, currentBrandTheme()); const data = new Blob([JSON.stringify({ ...projectToExport, branding:{ product:identity.productName, company:identity.companyName, attribution:identity.attribution } }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = `${projectToExport.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.adigun.json`; a.click(); URL.revokeObjectURL(a.href); setUnsavedChanges(false); toast(t("exported")); return true; }
+async function saveProject() { if (accountAccess !== "member") { showAccount(); return false; } const name = prompt("Project name", project.name); if (!name?.trim()) return false; const projectToSave = { ...serializeProject(), name:name.trim() }; try { await accountService.saveCloudProject(accountUser, projectToSave); setUnsavedChanges(false); toast(accountText("saved")); return true; } catch (error) { toast(`${accountText("error")}: ${error.message}`); return false; } }
 function exportPlcopenProject() { try { const data = new Blob([createPlcopenXml(serializeProject())], { type:"application/xml;charset=utf-8" }), link = document.createElement("a"); link.href = URL.createObjectURL(data); link.download = `${project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.plcopen.xml`; link.click(); URL.revokeObjectURL(link.href); toast(t("exported")); } catch (error) { toast(error.message); } }
 function importProject() { $("#fileInput").click(); }
 $("#fileInput").addEventListener("change", async (event) => { const file = event.target.files[0]; event.target.value = ""; if (!file) return; try { assertProjectFileSize(file.size); const source = await file.text(), parsed = /\.xml$/i.test(file.name) || source.trimStart().startsWith("<") ? parsePlcopenXml(source) : JSON.parse(source), p = normalizeImportedProject(parsed); if (!(await confirmProjectChange())) return; p.id = crypto.randomUUID(); p.lastOpenedAt = Date.now(); pushHistory(); project = p; sim = { outputs: {}, timers: {}, energized: {}, values: { ...(p.initialState || {}) } }; await persist(false, true, { markDirty:false, markSaved:true }); render(); toast(t("imported")); } catch (error) { toast(error.message || t("invalidFile")); } });
@@ -1025,55 +1084,83 @@ function renameTag(oldName, newName) {
   if (project.initialState && Object.hasOwn(project.initialState, oldName)) { project.initialState[newName] = project.initialState[oldName]; delete project.initialState[oldName]; }
 }
 const accountCopy = {
-  en:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account to keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Display name",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"After 5 minutes, we’ll invite you to create an account. You can keep working as a guest.",trialPrompt:"Create an account to keep this project in your account. You can continue working as a guest.",member:"Signed in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile image",admin:"Admin overview",verify:"Check your email to finish registration.",upgradeVerify:"Check your email and confirm it. Return here to set your password; your guest project stays on this device.",upgradePasswordInfo:"Email confirmed. Set a password to finish upgrading this guest account.",upgradePasswordSaved:"Password saved. Your guest account is upgraded.",guestEmailExists:"That email already has an account. Sign in to it; your current project remains on this device.",saved:"Cloud project saved as a new copy.",config:"Account service is not configured for this deployment.",authDisabled:"Guest access is unavailable. Sign in or create an account.",error:"Account request failed",profileSaved:"Profile saved."},
-  de:{account:"Konto",guest:"Gast",signIn:"Anmelden",register:"Konto erstellen",upgrade:"Konto erstellen und Projekt behalten",setPassword:"Passwort festlegen",email:"E-Mail",password:"Passwort",name:"Anzeigename",reset:"Passwort zurücksetzen",guestStart:"Als Gast fortfahren",guestInfo:"Nach 5 Minuten schlagen wir ein Konto vor. Du kannst als Gast weiterarbeiten.",trialPrompt:"Erstelle ein Konto, um dieses Projekt dort zu speichern. Du kannst als Gast weiterarbeiten.",member:"Angemeldet",saveProfile:"Profil speichern",saveCloud:"In der Cloud speichern",refresh:"Cloud-Projekte laden",open:"Öffnen",signOut:"Abmelden",cloud:"Deine Cloud-Projekte",avatar:"Profilbild",admin:"Admin-Übersicht",verify:"Prüfe deine E-Mail, um die Registrierung abzuschließen.",upgradeVerify:"Bestätige deine E-Mail und kehre hierher zurück, um ein Passwort festzulegen. Dein Gastprojekt bleibt auf diesem Gerät.",upgradePasswordInfo:"E-Mail bestätigt. Lege ein Passwort fest, um das Gastkonto umzuwandeln.",upgradePasswordSaved:"Passwort gespeichert. Dein Gastkonto wurde umgewandelt.",guestEmailExists:"Für diese E-Mail gibt es bereits ein Konto. Melde dich dort an; dein aktuelles Projekt bleibt auf diesem Gerät.",saved:"Cloud-Projekt als neue Kopie gespeichert.",config:"Der Kontodienst ist für diese Bereitstellung nicht konfiguriert.",authDisabled:"Gastzugriff ist nicht verfügbar. Melde dich an oder erstelle ein Konto.",error:"Kontoanfrage fehlgeschlagen",profileSaved:"Profil gespeichert."},
-  yo:{account:"Àkọọ́lẹ̀",guest:"Àlejò",signIn:"Wọlé",register:"Ṣẹ̀dá àkọọ́lẹ̀",upgrade:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà lọ́wọ́ rẹ",setPassword:"Yan ọ̀rọ̀ aṣínà",email:"Íméèlì",password:"Ọ̀rọ̀ aṣínà",name:"Orúkọ ìfihàn",reset:"Tún ọ̀rọ̀ aṣínà ṣe",guestStart:"Tẹ̀síwájú gẹ́gẹ́ bí àlejò",guestInfo:"Lẹ́yìn ìṣẹ́jú márùn-ún, a ó dábàá kí o ṣẹ̀dá àkọọ́lẹ̀. O lè máa ṣiṣẹ́ gẹ́gẹ́ bí àlejò.",trialPrompt:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà nínú àkọọ́lẹ̀ rẹ. O lè máa ṣiṣẹ́ gẹ́gẹ́ bí àlejò.",member:"O ti wọlé",saveProfile:"Fipamọ́ profaili",saveCloud:"Fipamọ́ sínú Cloud",refresh:"Tún àwọn iṣẹ́ Cloud ṣe",open:"Ṣí i",signOut:"Jáde",cloud:"Àwọn iṣẹ́ Cloud rẹ",avatar:"Àwòrán profaili",admin:"Àkótán admin",verify:"Ṣàyẹ̀wò íméèlì rẹ láti parí ìforúkọsílẹ̀.",upgradeVerify:"Jẹ́rìí íméèlì rẹ, kí o sì padà síbí láti yan ọ̀rọ̀ aṣínà. Iṣẹ́ àlejò rẹ ṣì wà lórí ẹ̀rọ yìí.",upgradePasswordInfo:"A ti jẹ́rìí íméèlì. Yan ọ̀rọ̀ aṣínà láti parí ìmú àkọọ́lẹ̀ àlejò gòkè.",upgradePasswordSaved:"A ti fipamọ́ ọ̀rọ̀ aṣínà; àkọọ́lẹ̀ àlejò rẹ ti yí padà.",guestEmailExists:"Àkọọ́lẹ̀ kan ti wà fún íméèlì yìí. Wọlé sí i; iṣẹ́ rẹ ṣì wà lórí ẹ̀rọ yìí.",saved:"A ti fipamọ́ ẹ̀dà tuntun sí Cloud.",config:"A kò tíì ṣètò iṣẹ́ àkọọ́lẹ̀ fún ìfisílẹ̀ yìí.",authDisabled:"Àlejò kò sí báyìí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀.",error:"Ìbéèrè àkọọ́lẹ̀ kò ṣiṣẹ́",profileSaved:"A ti fipamọ́ profaili."},
-  pcm:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account make you keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Name wey go show",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"After 5 minutes, we go invite you to create account. You fit continue to work as guest.",trialPrompt:"Create account make this project dey inside your account. You fit still continue as guest.",member:"You don sign in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile picture",admin:"Admin overview",verify:"Check your email make registration finish.",upgradeVerify:"Check and confirm your email, then come back here to set password. Your guest project go remain for this device.",upgradePasswordInfo:"Email don confirm. Set password to finish upgrading this guest account.",upgradePasswordSaved:"Password don save. Guest account don upgrade.",guestEmailExists:"This email already get account. Sign in to am; your current project go remain for this device.",saved:"We save new cloud copy.",config:"Account service no set for this deployment.",authDisabled:"Guest access no dey available. Sign in or create account.",error:"Account request fail",profileSaved:"Profile don save."}
+  en:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account to keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Display name",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"10-minute guest access expires; sign in or create an account to continue editing.",trialPrompt:"Create an account to keep this project in your account. You can continue working as a guest.",member:"Signed in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile image",admin:"Admin overview",verify:"Check your email to finish registration.",upgradeVerify:"Check your email and confirm it. Return here to set your password; your guest project stays on this device.",upgradePasswordInfo:"Email confirmed. Set a password to finish upgrading this guest account.",upgradePasswordSaved:"Password saved. Your guest account is upgraded.",guestEmailExists:"That email already has an account. Sign in to it; your current project remains on this device.",saved:"Cloud project saved as a new copy.",config:"Account service is not configured for this deployment.",authDisabled:"Guest access is unavailable. Sign in or create an account.",error:"Account request failed",profileSaved:"Profile saved."},
+  de:{account:"Konto",guest:"Gast",signIn:"Anmelden",register:"Konto erstellen",upgrade:"Konto erstellen und Projekt behalten",setPassword:"Passwort festlegen",email:"E-Mail",password:"Passwort",name:"Anzeigename",reset:"Passwort zurücksetzen",guestStart:"Als Gast fortfahren",guestInfo:"Der zehnminütige Gastzugang endet; melde dich an oder erstelle ein Konto, um weiterzubearbeiten.",trialPrompt:"Erstelle ein Konto, um dieses Projekt dort zu speichern. Du kannst als Gast weiterarbeiten.",member:"Angemeldet",saveProfile:"Profil speichern",saveCloud:"In der Cloud speichern",refresh:"Cloud-Projekte laden",open:"Öffnen",signOut:"Abmelden",cloud:"Deine Cloud-Projekte",avatar:"Profilbild",admin:"Admin-Übersicht",verify:"Prüfe deine E-Mail, um die Registrierung abzuschließen.",upgradeVerify:"Bestätige deine E-Mail und kehre hierher zurück, um ein Passwort festzulegen. Dein Gastprojekt bleibt auf diesem Gerät.",upgradePasswordInfo:"E-Mail bestätigt. Lege ein Passwort fest, um das Gastkonto umzuwandeln.",upgradePasswordSaved:"Passwort gespeichert. Dein Gastkonto wurde umgewandelt.",guestEmailExists:"Für diese E-Mail gibt es bereits ein Konto. Melde dich dort an; dein aktuelles Projekt bleibt auf diesem Gerät.",saved:"Cloud-Projekt als neue Kopie gespeichert.",config:"Der Kontodienst ist für diese Bereitstellung nicht konfiguriert.",authDisabled:"Gastzugriff ist nicht verfügbar. Melde dich an oder erstelle ein Konto.",error:"Kontoanfrage fehlgeschlagen",profileSaved:"Profil gespeichert."},
+  yo:{account:"Àkọọ́lẹ̀",guest:"Àlejò",signIn:"Wọlé",register:"Ṣẹ̀dá àkọọ́lẹ̀",upgrade:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà lọ́wọ́ rẹ",setPassword:"Yan ọ̀rọ̀ aṣínà",email:"Íméèlì",password:"Ọ̀rọ̀ aṣínà",name:"Orúkọ ìfihàn",reset:"Tún ọ̀rọ̀ aṣínà ṣe",guestStart:"Tẹ̀síwájú gẹ́gẹ́ bí àlejò",guestInfo:"Àǹfààní àlejò ìṣẹ́jú mẹ́wàá parí; wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀ láti tẹ̀síwájú.",trialPrompt:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà nínú àkọọ́lẹ̀ rẹ. O lè máa ṣiṣẹ́ gẹ́gẹ́ bí àlejò.",member:"O ti wọlé",saveProfile:"Fipamọ́ profaili",saveCloud:"Fipamọ́ sínú Cloud",refresh:"Tún àwọn iṣẹ́ Cloud ṣe",open:"Ṣí i",signOut:"Jáde",cloud:"Àwọn iṣẹ́ Cloud rẹ",avatar:"Àwòrán profaili",admin:"Àkótán admin",verify:"Ṣàyẹ̀wò íméèlì rẹ láti parí ìforúkọsílẹ̀.",upgradeVerify:"Jẹ́rìí íméèlì rẹ, kí o sì padà síbí láti yan ọ̀rọ̀ aṣínà. Iṣẹ́ àlejò rẹ ṣì wà lórí ẹ̀rọ yìí.",upgradePasswordInfo:"A ti jẹ́rìí íméèlì. Yan ọ̀rọ̀ aṣínà láti parí ìmú àkọọ́lẹ̀ àlejò gòkè.",upgradePasswordSaved:"A ti fipamọ́ ọ̀rọ̀ aṣínà; àkọọ́lẹ̀ àlejò rẹ ti yí padà.",guestEmailExists:"Àkọọ́lẹ̀ kan ti wà fún íméèlì yìí. Wọlé sí i; iṣẹ́ rẹ ṣì wà lórí ẹ̀rọ yìí.",saved:"A ti fipamọ́ ẹ̀dà tuntun sí Cloud.",config:"A kò tíì ṣètò iṣẹ́ àkọọ́lẹ̀ fún ìfisílẹ̀ yìí.",authDisabled:"Àlejò kò sí báyìí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀.",error:"Ìbéèrè àkọọ́lẹ̀ kò ṣiṣẹ́",profileSaved:"A ti fipamọ́ profaili."},
+  pcm:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account make you keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Name wey go show",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"Ten-minute guest access go end; sign in or create account make you continue editing.",trialPrompt:"Create account make this project dey inside your account. You fit still continue as guest.",member:"You don sign in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile picture",admin:"Admin overview",verify:"Check your email make registration finish.",upgradeVerify:"Check and confirm your email, then come back here to set password. Your guest project go remain for this device.",upgradePasswordInfo:"Email don confirm. Set password to finish upgrading this guest account.",upgradePasswordSaved:"Password don save. Guest account don upgrade.",guestEmailExists:"This email already get account. Sign in to am; your current project go remain for this device.",saved:"We save new cloud copy.",config:"Account service no set for this deployment.",authDisabled:"Guest access no dey available. Sign in or create account.",error:"Account request fail",profileSaved:"Profile don save."}
 };
 function accountText(key) { const fallback = key === "upgradeEmail" ? ({ en:"Send confirmation email", de:"Bestätigungs-E-Mail senden", yo:"Fi íméèlì ìjẹ́rìí ránṣẹ́", pcm:"Send confirmation email" }[language] || "Send confirmation email") : null; return (accountCopy[language] || accountCopy.en)[key] || accountCopy.en[key] || fallback || key; }
-function setAccountAccess(state) {
+function setAccountAccess(state, guestSession = null) {
   accountAccess = state;
-  const locked = !["guest", "member"].includes(state);
-  if (locked && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
+  const locked = !["guest", "guest-expired", "member"].includes(state);
+  if (["guest", "guest-expired"].includes(state) && accountUser?.id) guestDraftStorageKey ||= `adigunsps-guest-draft-${accountUser.id}`;
+  if (state !== "guest" && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
   for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
-  const button = $("#accountButton");
-  if (button) button.textContent = state === "guest" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
-  if (state === "guest") { $("#saveState").textContent = "Saved locally"; startGuestTrialPrompt(); }
-  else { clearInterval(guestTimer); $("#saveState").textContent = state === "member" ? "Saved locally" : accountText("authDisabled"); if (button && locked) button.title = accountText("authDisabled"); }
+  const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
+  if (button) button.textContent = state === "guest" || state === "guest-expired" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
+  if (state === "guest" && accountUser?.id) {
+    if (guestSession) startGuestTrialPrompt(guestSession);
+    if (status) status.hidden = false;
+    if (notice) notice.hidden = true;
+    $("#saveState").textContent = guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary;
+  } else if (state === "guest-expired") {
+    clearInterval(guestTimer); guestDeadline = 0;
+    if (status) status.hidden = true;
+    if (notice) notice.hidden = false;
+    const message = $("#guestExpiryMessage"); if (message) message.textContent = guestSessionCopy[language]?.expired || guestSessionCopy.en.expired;
+    const signIn = $("#guestExpirySignIn"), register = $("#guestExpiryRegister");
+    if (signIn) signIn.textContent = accountCopy[language]?.signIn || accountCopy.en.signIn;
+    if (register) register.textContent = accountCopy[language]?.register || accountCopy.en.register;
+    $("#saveState").textContent = "Account required";
+  } else {
+    clearInterval(guestTimer); guestDeadline = 0;
+    if (status) status.hidden = true;
+    if (notice) notice.hidden = true;
+    $("#saveState").textContent = state === "member" ? "Saved locally" : accountText("authDisabled");
+    if (button && locked) button.title = accountText("authDisabled");
+  }
 }
-function startGuestTrialPrompt() {
-  if (!accountUser?.id) return;
+function startGuestTrialPrompt(guestSession) {
+  if (!accountUser?.id || !guestSession?.serverIssued) { setAccountAccess("account-required"); return; }
   clearInterval(guestTimer);
-  const startedKey = `adigunsps-guest-started-${accountUser.id}`;
-  const promptedKey = `adigunsps-guest-prompted-${accountUser.id}`;
-  let startedAt = Number(localStorage.getItem(startedKey));
-  if (!Number.isFinite(startedAt) || startedAt <= 0) { startedAt = Date.now(); localStorage.setItem(startedKey, String(startedAt)); }
+  guestDeadline = performance.now() + Math.max(0, guestSession.remainingMs);
   const tick = () => {
-    if (Date.now() - startedAt < 5 * 60_000 || localStorage.getItem(promptedKey) === "1") return;
-    localStorage.setItem(promptedKey, "1");
-    clearInterval(guestTimer);
-    toast(accountText("trialPrompt"));
+    const remainingMs = Math.max(0, guestDeadline - performance.now());
+    if (remainingMs <= 0) { setAccountAccess("guest-expired"); return; }
+    const totalSeconds = Math.ceil(remainingMs / 1000), time = `${String(Math.floor(totalSeconds / 60)).padStart(2,"0")}:${String(totalSeconds % 60).padStart(2,"0")}`;
+    const status = $("#guestSessionStatus"); if (status) status.textContent = (guestSessionCopy[language]?.remaining || guestSessionCopy.en.remaining).replace("{time}", time);
   };
-  tick(); guestTimer = setInterval(tick, 5000);
+  tick(); guestTimer = setInterval(tick, 1000);
+}
+function restoreGuestDraft() {
+  if (!guestDraftStorageKey) return false;
+  try {
+    const stored = sessionStorage.getItem(guestDraftStorageKey);
+    if (!stored) return false;
+    project = normalizeImportedProject(JSON.parse(stored));
+    sim = { outputs:{}, timers:{}, energized:{}, values:{ ...(project.initialState || {}) } };
+    scans = 0; selection = null;
+    return true;
+  } catch { sessionStorage.removeItem(guestDraftStorageKey); return false; }
 }
 async function initializeAccountAccess() {
   if (!accountService) { setAccountAccess("unconfigured"); return; }
   try {
     const { data, error } = await supabaseClient.auth.getSession(); if (error) throw error;
     const user = data?.session?.user;
-    if (user?.is_anonymous) { accountUser = user; await accountService.ensureGuestSession(user); setAccountAccess("guest"); delete project.__adigunGuestExpiresAt; return; }
+    if (user?.is_anonymous) { accountUser = user; const session = await accountService.ensureGuestSession(user); setAccountAccess(session.remainingMs > 0 ? "guest" : "guest-expired", session); delete project.__adigunGuestExpiresAt; return; }
     if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; return; }
-    await accountService.startGuestSession();
+    const session = await accountService.startGuestSession();
     const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null;
-    setAccountAccess(accountUser?.is_anonymous ? "guest" : accountUser ? "member" : "account-required");
+    setAccountAccess(accountUser?.is_anonymous ? session.remainingMs > 0 ? "guest" : "guest-expired" : accountUser ? "member" : "account-required", session);
   } catch (error) {
     accountUser = null;
     setAccountAccess("account-required");
   }
 }
 async function updateAccountAfterAuth(user) {
-  if (user?.is_anonymous) { await accountService.ensureGuestSession(user); accountUser = user; setAccountAccess("guest"); }
-  else if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; await persist(true, true); if (guestUpgradePasswordPending()) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+  if (user?.is_anonymous) { const session = await accountService.ensureGuestSession(user); accountUser = user; setAccountAccess(session.remainingMs > 0 ? "guest" : "guest-expired", session); }
+  else if (user) { const draftKey = guestDraftStorageKey; accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; const saved = await persist(true, true); if (saved && draftKey) { sessionStorage.removeItem(draftKey); guestDraftStorageKey = null; } if (guestUpgradePasswordPending()) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
 }
 async function loadCloudProjectList() {
   const rows = await accountService.listCloudProjects(accountUser);
@@ -1090,10 +1177,10 @@ function showAccount() {
   const lockedText = accountService ? accountText("authDisabled") : accountText("config");
   const authForm = `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountText("password")}<span class="password-input-wrap"><input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required><button class="secondary password-visibility" id="accountPasswordVisibility" type="button" aria-label="Show password" aria-pressed="false">Show</button></span></label><label class="field">${accountText("name")}<input id="accountName" maxlength="120" autocomplete="name"></label><div class="modal-actions"><button class="primary" id="accountSignIn" type="button">${accountText("signIn")}</button><button class="secondary" id="accountRegister" type="button">${accountText("register")}</button><button class="secondary" id="accountReset" type="button">${accountText("reset")}</button></div></form>`;
   const upgradePending = guestUpgradePasswordPending();
-  const guestEmailPending = accountAccess === "guest" && !!localStorage.getItem(guestUpgradePendingKey);
+  const guestEmailPending = ["guest", "guest-expired"].includes(accountAccess) && !!localStorage.getItem(guestUpgradePendingKey);
   const memberContent = signedIn ? `<p class="safety-copy">${accountText("member")}: ${escapeHtml(accountUser.email || "")}</p>${upgradePending ? `<p id="accountFeedback" class="safety-copy" role="status">${accountText("upgradePasswordInfo")}</p><label class="field">${accountText("password")}<input id="guestUpgradePassword" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary" id="accountUpgradePassword">${accountText("setPassword")}</button>` : `<label class="field">${accountText("name")}<input id="accountName" maxlength="120" value="${escapeAttr(accountUser.user_metadata?.display_name || "")}"></label><label class="field">${accountText("avatar")}<input id="accountAvatar" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="modal-actions"><button class="secondary" id="accountProfileSave">${accountText("saveProfile")}</button><button class="primary" id="accountCloudSave">${accountText("saveCloud")}</button><button class="secondary" id="accountCloudRefresh">${accountText("refresh")}</button>${accountService.isAdministrator(accountUser) ? `<button class="secondary" id="accountAdminShow">${accountText("admin")}</button>` : ""}<button class="secondary" id="accountSignOut">${accountText("signOut")}</button></div><div id="cloudProjectList" class="project-list"></div><div id="accountAdminList" class="project-list"></div>`}` : authForm;
-  const guestUpgrade = accountAccess === "guest" ? `<p class="safety-copy">${accountText("guestInfo")}</p><label class="field">${accountText("email")}<input id="guestUpgradeEmail" type="email" autocomplete="email" required></label><button class="secondary" id="accountUpgradeEmail">${accountText("upgradeEmail")}</button>` : "";
-  modal(`${presentation.productName} · ${accountText("account")}`, `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section>${accountService ? "" : `<p class="safety-copy" role="alert">${lockedText}</p>`}${memberContent}${guestUpgrade}${!signedIn && accountService ? `<p class="safety-copy" id="accountFeedback" role="status">${guestEmailPending ? accountText("upgradeVerify") : accountAccess === "guest" ? accountText("guest") : lockedText}</p><button class="secondary" id="accountStartGuest">${accountText("guestStart")}</button>` : ""}<div class="modal-actions"><button class="primary" id="accountClose">${accountCopy[language]?.close || (language === "de" ? "Schließen" : language === "yo" ? "Pade" : "Close")}</button></div></div>`);
+  const guestUpgrade = ["guest", "guest-expired"].includes(accountAccess) ? `<p class="safety-copy">${accountText("guestInfo")}</p><label class="field">${accountText("email")}<input id="guestUpgradeEmail" type="email" autocomplete="email" required></label><button class="secondary" id="accountUpgradeEmail">${accountText("upgradeEmail")}</button>` : "";
+  modal(`${presentation.productName} · ${accountText("account")}`, `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section>${accountService ? "" : `<p class="safety-copy" role="alert">${lockedText}</p>`}${memberContent}${guestUpgrade}${!signedIn && accountService && accountAccess !== "guest-expired" ? `<p class="safety-copy" id="accountFeedback" role="status">${guestEmailPending ? accountText("upgradeVerify") : accountAccess === "guest-expired" ? (guestSessionCopy[language]?.expired || guestSessionCopy.en.expired) : accountAccess === "guest" ? accountText("guest") : lockedText}</p><button class="secondary" id="accountStartGuest">${accountText("guestStart")}</button>` : ""}<div class="modal-actions"><button class="primary" id="accountClose">${accountCopy[language]?.close || (language === "de" ? "Schließen" : language === "yo" ? "Pade" : "Close")}</button></div></div>`);
   $("#accountClose").onclick = () => $("#modal").close();
   $("#accountPasswordVisibility")?.addEventListener("click", () => { const input = $("#accountPassword"), button = $("#accountPasswordVisibility"), visible = input.type === "password"; input.type = visible ? "text" : "password"; button.textContent = visible ? "Hide" : "Show"; button.setAttribute("aria-label", visible ? "Hide password" : "Show password"); button.setAttribute("aria-pressed", String(visible)); input.focus({ preventScroll:true }); });
   $("#accountSignIn")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signIn($("#accountEmail").value, $("#accountPassword").value); if (error) throw error; await updateAccountAfterAuth(data.user); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
@@ -1101,7 +1188,7 @@ function showAccount() {
   $("#accountUpgradePassword")?.addEventListener("click", async () => { try { accountUser = await accountService.setGuestUpgradePassword(accountUser, $("#guestUpgradePassword").value); localStorage.removeItem(guestUpgradePendingKey); setAccountAccess("member"); await persist(true, true); toast(accountText("upgradePasswordSaved")); showAccount(); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
   $("#accountRegister")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signUp($("#accountEmail").value, $("#accountPassword").value, $("#accountName").value, `${location.origin}${location.pathname}`); if (error) throw error; if (data.user && data.session) { await updateAccountAfterAuth(data.user); $("#modal").close(); } else $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
   $("#accountReset")?.addEventListener("click", async () => { try { const { error } = await accountService.requestPasswordReset($("#accountEmail").value, `${location.origin}${location.pathname}`); if (error) throw error; $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
-  $("#accountStartGuest")?.addEventListener("click", async () => { try { await accountService.startGuestSession(); const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null; setAccountAccess("guest"); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("authDisabled")} ${error.message}`; } });
+  $("#accountStartGuest")?.addEventListener("click", async () => { try { const guestSession = await accountService.startGuestSession(); const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null; setAccountAccess(guestSession.remainingMs > 0 ? "guest" : "guest-expired", guestSession); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("authDisabled")} ${error.message}`; } });
   $("#accountProfileSave")?.addEventListener("click", async () => { try { await accountService.updateProfile(accountUser, $("#accountName").value); const file = $("#accountAvatar").files?.[0]; if (file) await accountService.uploadAvatar(accountUser, file); toast(accountText("profileSaved")); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountCloudSave")?.addEventListener("click", async () => { const name = prompt("Project name", project.name); if (!name?.trim()) return; try { await accountService.saveCloudProject(accountUser, { ...serializeProject(), name:name.trim() }); setUnsavedChanges(false); toast(accountText("saved")); await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountCloudRefresh")?.addEventListener("click", async () => { try { await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
@@ -1109,7 +1196,11 @@ function showAccount() {
   $("#accountSignOut")?.addEventListener("click", async () => { try { const { error } = await accountService.signOut(); if (error) throw error; accountUser = null; await initializeAccountAccess(); showAccount(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   if (signedIn) loadCloudProjectList().catch((error) => { const list = $("#cloudProjectList"); if (list) list.textContent = `${accountText("error")}: ${error.message}`; });
 }
-document.addEventListener("keydown", (event) => { if (accountAccess !== "guest" && accountAccess !== "member" && !event.target.closest?.("dialog")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
+document.addEventListener("keydown", (event) => {
+  if (event.target.closest?.("dialog")) return;
+  if (accountAccess === "guest-expired") { event.preventDefault(); event.stopImmediatePropagation(); showAccount(); return; }
+  if (accountAccess !== "guest" && accountAccess !== "member") { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
 function showWelcome() { const presentation = brandPresentation(language, currentBrandTheme()); modal(presentation.productName, `<div class="modal-body"><div class="welcome-brand-lockup"><img class="welcome-company-logo" src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="welcome-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p><p class="safety-copy">${tour[language].welcome}</p><p class="safety-copy"><strong>${t("safety")}</strong></p><div class="modal-actions"><button class="secondary" id="welcomeTour">${tour[language].start}</button><button class="primary" id="welcomeContinue">${tour[language].continue}</button></div></div>`); $("#welcomeContinue").onclick = () => { localStorage.setItem("adigun-safety-seen", "yes"); $("#modal").close(); }; $("#welcomeTour").onclick = () => { localStorage.setItem("adigun-safety-seen", "yes"); showTutorial(0); }; }
 function showTutorial(stepIndex = 0) { const steps = tour[language].steps, step = steps[stepIndex]; modal(`${tour[language].title} · ${stepIndex + 1}/${steps.length}`, `<div class="modal-body"><h3 class="tour-step-title">${step[0]}</h3><p class="safety-copy">${step[1]}</p><div class="modal-actions">${stepIndex ? `<button class="secondary" id="tourBack">${tour[language].previous}</button>` : ""}${stepIndex < steps.length - 1 ? `<button class="primary" id="tourNext">${tour[language].next}</button>` : `<button class="primary" id="tourFinish">${tour[language].finish}</button>`}</div></div>`); $("#tourBack")?.addEventListener("click", () => showTutorial(stepIndex - 1)); $("#tourNext")?.addEventListener("click", () => showTutorial(stepIndex + 1)); $("#tourFinish")?.addEventListener("click", () => $("#modal").close()); }
 function showFindReplace() {
@@ -1144,13 +1235,34 @@ const localizationAuditCopy = {
   $("#settingsDone").onclick = () => { const cycleMs = Number($("#taskCycleMs").value); if (!Number.isInteger(cycleMs) || cycleMs < 1 || cycleMs > 60000) { toast(copy.invalidCycle); return; } project.task = { ...(project.task || {}), name:$("#taskName").value.trim() || "Main", mode:"cyclic", cycleMs }; preferences.autosave = $("#prefAutosave").checked; preferences.speed = $("#prefSpeed").value; preferences.theme = $("#prefTheme").value; preferences.trendRetention = Number($("#prefTrendRetention").value); trimTrendHistory(hmiHistory, preferences.trendRetention); preferences.contrast = $("#prefContrast").checked; preferences.dyslexia = $("#prefFont").checked; localStorage.setItem("adigun-preferences", JSON.stringify(preferences)); applyPreferences(); $("#modal").close(); updateStatus(); if (runTimer) { const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; clearInterval(runTimer); runTimer = setInterval(() => doScan(), delay); } persist(); };
 }
 function showAdigunAI() {
+  if (adigunBotDraft?.ok) return showAdigunBuildPlan();
   const c = adigunAiLabels(language);
+  const remoteCopy = adigunAiRemoteLabels(language);
+  const hostedAI = globalThis.ADIGUN_RUNTIME_CONFIG?.ai || {};
+  const remoteConsentMarkup = hostedAI.enabled && hostedAI.providerLabel
+    ? `<label class="copilot-toggle"><input id="adigunRemoteConsent" type="checkbox"> ${escapeHtml(remoteCopy.consent(hostedAI.providerLabel))}</label>`
+    : "";
+  const copilotCopy = adigunCopilotLabels(language);
   const transcript = () => adigunAiMessages.map((message) => `<article class="ai-message ${message.role}"><b>${message.role === "user" ? "You" : escapeHtml(c.name)}</b><p>${escapeHtml(message.text)}</p></article>`).join("");
-  modal(c.title, `<div class="modal-body adigun-ai"><p class="safety-copy">${escapeHtml(c.privacy)}</p><div id="adigunAiTranscript" class="ai-messages" aria-live="polite">${transcript() || `<p class="safety-copy">${escapeHtml(c.source)}</p>`}</div><form id="adigunAiForm" class="ai-form"><label class="field" for="adigunAiQuestion">${escapeHtml(c.title)}<textarea id="adigunAiQuestion" rows="2" maxlength="1000" placeholder="${escapeAttr(c.placeholder)}" required></textarea></label><div class="modal-actions"><button class="secondary" type="button" data-ai-question="scan">${escapeHtml(c.explain)}</button><button class="secondary" type="button" data-ai-question="project">${escapeHtml(c.reviewAction)}</button><button class="secondary" type="button" data-ai-question="network">${escapeHtml(c.network)}</button><button class="primary" type="submit">${escapeHtml(c.ask)}</button><button class="secondary" type="button" id="adigunAiClear">${escapeHtml(c.clear)}</button></div></form><p class="safety-copy">${escapeHtml(c.source)}</p></div>`);
-  const ask = (question) => {
+  modal(c.title, `<div class="modal-body adigun-ai"><p class="safety-copy">${escapeHtml(c.privacy)}</p><label class="copilot-toggle"><input id="liveCopilotToggle" type="checkbox" ${liveCopilotEnabled?"checked":""}> ${escapeHtml(copilotCopy.toggle)} · ${liveCopilotEnabled?escapeHtml(copilotCopy.enabled):escapeHtml(copilotCopy.disabled)}</label>${remoteConsentMarkup}<div id="adigunAiTranscript" class="ai-messages" aria-live="polite">${transcript() || `<p class="safety-copy">${escapeHtml(c.source)}</p>`}</div><form id="adigunAiForm" class="ai-form"><label class="field" for="adigunAiQuestion">${escapeHtml(c.title)}<textarea id="adigunAiQuestion" rows="2" maxlength="1000" placeholder="${escapeAttr(c.placeholder)}" required></textarea></label><div class="modal-actions"><button class="secondary" type="button" id="adigunAiVoice">🎙 Voice input</button><button class="secondary" type="button" data-ai-question="scan">${escapeHtml(c.explain)}</button><button class="secondary" type="button" data-ai-question="project">${escapeHtml(c.reviewAction)}</button><button class="secondary" type="button" data-ai-question="network">${escapeHtml(c.network)}</button><button class="primary" type="submit">${escapeHtml(c.ask)}</button><button class="secondary" type="button" id="adigunAiClear">${escapeHtml(c.clear)}</button></div></form><p class="safety-copy">${escapeHtml(c.source)} Build requests are interpreted locally; review the generated plan before importing. Physical wiring is not generated.</p></div>`);
+  $("#liveCopilotToggle").onchange = (event) => { liveCopilotEnabled=event.currentTarget.checked;localStorage.setItem("adigun-live-copilot",liveCopilotEnabled?"on":"off");if(!liveCopilotEnabled){copilotActiveState.active=null;renderCopilotPanel(null);}else scheduleCopilotAnalysis(); };
+  const ask = async (question) => {
     if (!question.trim()) return;
+    if (copilotGoalPending) { copilotGoal=question.trim();copilotGoalPending=false;adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:`I’ll use “${question.trim()}” as this project’s goal for live suggestions in this session.`});showAdigunAI();return; }
+    if (document.querySelector("#adigunRemoteConsent")?.checked) {
+      const result = await askAdigunHostedAI({ client:supabaseClient, question, project, diagnostics:validateProject(project), consent:true, workerUrl:hostedAI.workerUrl });
+      const answer = result.answer ? `${remoteCopy.hosted}: ${result.answer}` : remoteCopy[result.error === "hosted-ai-unavailable" ? "unavailable" : "failed"];
+      adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:answer});
+      showAdigunAI();return;
+    }
+    if (/\b(build|create|make|generate|add|construct|rename|delete|remove)\b/i.test(question)) {
+      const draft = await planAdigunBotBuild(question,{ project });
+      if (draft.ok) { adigunBotDraft = draft; showAdigunBuildPlan(); return; }
+      adigunAiMessages.push({ role:"user", text:question.trim() }, { role:"assistant", text:draft.reason });
+      showAdigunAI(); return;
+    }
     const diagnostics = validateProject(project);
-    adigunAiMessages.push({ role:"user", text:question.trim() }, { role:"assistant", text:answerAdigunQuestion({ question, project, selection, diagnostics, language, mode:project.editorType }) });
+    adigunAiMessages.push({ role:"user", text:question.trim() }, { role:"assistant", text:answerAdigunQuestion({ question, project, selection, diagnostics, state:sim, language, mode:project.editorType }) });
     if (adigunAiMessages.length > 40) adigunAiMessages.splice(0, adigunAiMessages.length - 40);
     showAdigunAI();
     $("#adigunAiQuestion").focus();
@@ -1158,6 +1270,165 @@ function showAdigunAI() {
   $("#adigunAiForm").onsubmit = (event) => { event.preventDefault(); ask($("#adigunAiQuestion").value); };
   document.querySelectorAll("[data-ai-question]").forEach((button) => button.onclick = () => ask(button.dataset.aiQuestion === "scan" ? c.scan : button.dataset.aiQuestion === "project" ? "Review project" : "Explain selected network"));
   $("#adigunAiClear").onclick = () => { adigunAiMessages = []; showAdigunAI(); };
+  $("#adigunAiVoice").onclick = () => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) { toast("Voice input is unavailable in this browser. Type your request instead."); return; }
+    if (adigunBotRecognition) { adigunBotRecognition.stop(); adigunBotRecognition = null; return; }
+    const recognition = new Recognition(); adigunBotRecognition = recognition; recognition.lang = ({ en:"en-US", de:"de-DE", yo:"yo-NG", pcm:"en-NG" })[language] || "en-US"; recognition.interimResults = true; recognition.continuous = false;
+    recognition.onresult = (event) => { $("#adigunAiQuestion").value = [...event.results].map((result) => result[0].transcript).join(" "); };
+    recognition.onerror = () => toast("Voice recognition could not complete. You can type the request instead.");
+    recognition.onend = () => { adigunBotRecognition = null; };
+    recognition.start(); toast("Listening… speak your build request.");
+  };
+}
+
+function renderCopilotPanel(suggestion) {
+  const panel=$("#adigunCopilotPanel");if(!panel)return;
+  if(!suggestion||!liveCopilotEnabled){panel.hidden=true;panel.replaceChildren();delete panel.dataset.fingerprint;return;}
+  if(!panel.hidden&&panel.dataset.fingerprint===suggestion.fingerprint)return;
+  const c=adigunCopilotLabels(language),acceptLabel=suggestion.action?.type==="explain-component"?c.inspect:c.accept;
+  panel.setAttribute("aria-label",`${c.toggle} suggestion`);panel.dataset.fingerprint=suggestion.fingerprint;
+  panel.hidden=false;panel.innerHTML=`<h3>${escapeHtml(suggestion.title)}</h3><p class="copilot-more" hidden></p><div class="modal-actions"><button type="button" class="copilot-accept" data-copilot-accept>${escapeHtml(acceptLabel)}</button><button type="button" data-copilot-more>${escapeHtml(c.more)}</button><button type="button" data-copilot-dismiss>${escapeHtml(c.dismiss)}</button></div>`;
+  panel.querySelector("[data-copilot-more]").onclick=()=>{const more=panel.querySelector(".copilot-more"),visible=more.hidden;more.textContent=suggestion.action?.message?`${suggestion.details} ${suggestion.action.message}`:suggestion.details;more.hidden=!visible;};
+  panel.querySelector("[data-copilot-dismiss]").onclick=()=>{dismissAdigunCopilotSuggestion(copilotActiveState);renderCopilotPanel(null);scheduleCopilotAnalysis();};
+  panel.querySelector("[data-copilot-accept]").onclick=async()=>{
+    if(suggestion.action?.type==="add-fbd-input"){
+      const draft=await planAdigunBotCopilotFix(project,suggestion.action);if(!draft.ok){toast(draft.reason);return;}adigunBotDraft=draft;showAdigunBuildPlan();return;
+    }
+    if(suggestion.action?.type==="ask-goal")copilotGoalPending=true;
+    if(suggestion.action?.type==="explain-component"){workspaceView="electrical";localStorage.setItem("adigun-workspace-view",workspaceView);render();renderCopilotPanel(null);return;}
+    const prompt=suggestion.action?.type==="ask-goal"?"":suggestion.action?.type==="explain-diagnostic"?`Explain this project check and suggest a safe next step: ${suggestion.action.message}`:"What is the current project doing?";
+    showAdigunAI();if(prompt)$("#adigunAiQuestion").value=prompt;$("#adigunAiQuestion").focus();
+  };
+}
+
+function refreshAdigunCopilot() {
+  if(!liveCopilotEnabled||$("#modal")?.open||adigunBotCanvasPreview)return;
+  const now=Date.now(),suggestions=analyzeAdigunCopilot({project,goal:copilotGoal,firstSeenAt:copilotFirstSeen,now,language});
+  const suggestion=nextAdigunCopilotSuggestion(suggestions,copilotActiveState,{now,enabled:liveCopilotEnabled,dragging:copilotPointerActive,typingUntil:copilotTypingUntil});
+  renderCopilotPanel(suggestion);
+}
+
+function scheduleCopilotAnalysis() { clearTimeout(copilotDebounce);copilotDebounce=setTimeout(refreshAdigunCopilot,350); }
+
+function startAdigunCopilotObservers() {
+  if(copilotTick)return;
+  const editing=(target)=>target?.closest?.("input, textarea, [contenteditable='true']");
+  window.addEventListener("adigunsps:canvas-state-changed",scheduleCopilotAnalysis);
+  document.addEventListener("pointerdown",(event)=>{if(event.target.closest?.("#canvasWrap, #fbdPane, #electricalPane"))copilotPointerActive=true;if(editing(event.target))copilotTypingUntil=Date.now()+2500;});
+  for(const eventName of ["pointerup","pointercancel"] )document.addEventListener(eventName,()=>{if(!copilotPointerActive)return;copilotPointerActive=false;scheduleCopilotAnalysis();});
+  document.addEventListener("input",(event)=>{if(editing(event.target)){copilotTypingUntil=Date.now()+2500;scheduleCopilotAnalysis();}});
+  document.addEventListener("keydown",(event)=>{if(editing(event.target)&&event.key.length===1){copilotTypingUntil=Date.now()+2500;scheduleCopilotAnalysis();}});
+  copilotTick=setInterval(refreshAdigunCopilot,1500);
+}
+
+function confirmBotPreviewCommit() {
+  if (!hasUnsavedChanges) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const dialog = document.createElement("dialog");
+    dialog.id = "botPreviewCommitConfirm"; dialog.className = "modal";
+    dialog.innerHTML = '<div class="modal-head"><h2>Replace current project?</h2></div><div class="modal-body"><p class="safety-copy">The current project has unsaved changes. Commit will replace it with the verified Bot draft. Cancel and discard the preview first if you need to save or keep the current work.</p><div class="modal-actions"><button type="button" class="secondary" data-bot-commit-cancel>Cancel</button><button type="button" class="primary" data-bot-commit-confirm>Replace and commit</button></div></div>';
+    document.body.append(dialog);
+    let complete = false;
+    const finish = (answer) => { if (complete) return; complete = true; if (dialog.open) dialog.close(); dialog.remove(); resolve(answer); };
+    dialog.querySelector("[data-bot-commit-cancel]").onclick = () => finish(false);
+    dialog.querySelector("[data-bot-commit-confirm]").onclick = () => finish(true);
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); finish(false); });
+    dialog.showModal();
+  });
+}
+
+async function finishAdigunBotCanvasPreview(action) {
+  const session = adigunBotCanvasPreview;
+  if (!session) return false;
+  if (action === "commit" && !(await confirmBotPreviewCommit())) return false;
+  const execution = action === "commit" ? await executeAdigunBotTools(session.transaction.before,[{name:"restore",arguments:{project:session.transaction.candidate}}]) : null;
+  if (execution && !execution.ok) { toast(`Bot import rolled back: ${execution.error}`); return false; }
+  const resolved = resolveAdigunBotCanvasPreview(session.transaction, action);
+  if (execution) resolved.project = execution.project;
+  adigunBotCanvasPreview = null;
+  session.guard.remove();
+  project = resolved.project;
+  workspaceView = session.workspaceView;
+  if (action === "commit") {
+    stopSimulation();
+    adigunBotDraft = null;
+    void persist(false, true, { markDirty:false, markSaved:true }).then(() => render());
+    toast("Verified Bot project imported to the canvas");
+  } else {
+    sim = session.sim; scans = session.scans; viewProjectId = session.viewProjectId; zoom = session.zoom; selection = session.selection;
+    selectedContacts.clear(); for (const item of session.selectedContacts) selectedContacts.add(item);
+    fbdSelection.clear(); for (const item of session.fbdSelection) fbdSelection.add(item);
+    simulationFaults = session.simulationFaults; sessionOperations = session.sessionOperations;
+    for (const key of Object.keys(hmiHistory)) delete hmiHistory[key]; Object.assign(hmiHistory, session.hmiHistory);
+    render();
+    requestAnimationFrame(() => { $("#canvasWrap").scrollLeft = session.scrollLeft; $("#canvasWrap").scrollTop = session.scrollTop; $("#fbdPane").scrollLeft = session.fbdScrollLeft; $("#fbdPane").scrollTop = session.fbdScrollTop; });
+    if (session.wasRunning) runSimulation();
+    session.focusTarget?.focus?.();
+    showAdigunBuildPlan();
+  }
+  return true;
+}
+
+function previewAdigunBotDraftOnCanvas() {
+  const draft = adigunBotDraft;
+  if (!draft?.ok || adigunBotCanvasPreview) return;
+  const verification = verifyAdigunBotDraft(draft);
+  if (!verification.passed) { toast("The Bot draft must pass verification before preview."); return; }
+  const focusTarget = document.activeElement, wasRunning = Boolean(runTimer);
+  if (runTimer) { clearInterval(runTimer); runTimer = null; }
+  const transaction = createAdigunBotCanvasPreview(project, draft.project);
+  const guard = document.createElement("div");
+  guard.id = "botPreviewGuard";
+  guard.innerHTML = '<section class="bot-preview-banner" role="dialog" aria-label="Bot project preview"><strong>Previewing verified Bot draft</strong><span>Nothing is saved yet. Commit to replace the current project or discard to restore it.</span><button type="button" id="botPreviewCommit">Commit project</button><button type="button" id="botPreviewDiscard">Discard preview</button></section>';
+  document.body.append(guard);
+  adigunBotCanvasPreview = { transaction, guard, sim:structuredClone(sim), scans, workspaceView, wasRunning, focusTarget, viewProjectId, zoom, selection:selection ? structuredClone(selection) : null, selectedContacts:[...selectedContacts], fbdSelection:[...fbdSelection], simulationFaults:structuredClone(simulationFaults), sessionOperations:structuredClone(sessionOperations), hmiHistory:structuredClone(hmiHistory), scrollLeft:$("#canvasWrap").scrollLeft, scrollTop:$("#canvasWrap").scrollTop, fbdScrollLeft:$("#fbdPane").scrollLeft, fbdScrollTop:$("#fbdPane").scrollTop };
+  project = structuredClone(transaction.candidate);
+  workspaceView = "logic";
+  sim = { outputs:{}, timers:{}, counters:{}, edges:{}, energized:{}, values:{ ...(project.initialState || {}) } };
+  scans = 0;
+  $("#modal").close();
+  render();
+  guard.querySelector("#botPreviewCommit").onclick = () => finishAdigunBotCanvasPreview("commit");
+  guard.querySelector("#botPreviewDiscard").onclick = () => finishAdigunBotCanvasPreview("discard");
+  guard.addEventListener("click", (event) => { if (event.target === guard) { event.preventDefault(); event.stopPropagation(); } });
+  guard.querySelector("#botPreviewDiscard").focus();
+}
+
+document.addEventListener("click", (event) => {
+  if (!adigunBotCanvasPreview || event.target.closest?.("#botPreviewGuard, #botPreviewCommitConfirm")) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+}, true);
+document.addEventListener("keydown", (event) => {
+  if (!adigunBotCanvasPreview) return;
+  if (event.target.closest?.("#botPreviewCommitConfirm")) { event.stopImmediatePropagation(); return; }
+  if (event.target.closest?.("#botPreviewGuard")) {
+    if (event.key === "Escape") { event.preventDefault(); void finishAdigunBotCanvasPreview("discard"); return; }
+    if (event.key === "Tab") {
+      const controls = [...document.querySelectorAll("#botPreviewGuard button")], index = controls.indexOf(document.activeElement);
+      event.preventDefault(); controls[(index + (event.shiftKey ? controls.length - 1 : 1)) % controls.length]?.focus(); return;
+    }
+    event.stopImmediatePropagation(); return;
+  }
+  event.preventDefault(); event.stopImmediatePropagation();
+}, true);
+
+function showAdigunBuildPlan() {
+  const draft = adigunBotDraft; if (!draft?.ok) return showAdigunAI();
+  const canSave = adigunBotCanSave(accountAccess), gate = canSave ? "" : `<p class="safety-copy">Sign in to save your project. Guest users can still import the draft into the current canvas.</p>`;
+  const verification = verifyAdigunBotDraft(draft), model = draft.project;
+  const components = model.electrical?.components || [], references = new Map(components.map((item) => [item.id, item.reference]));
+  const componentRows = components.map((item) => `${item.reference} ${item.type} at (${item.x}, ${item.y}); terminals ${item.terminals.join(", ")}${item.tag ? `; tag ${item.tag}` : ""}`);
+  const wireRows = (model.electrical?.wires || []).map((wire) => `${references.get(wire.from?.componentId) || "?"}.${wire.from?.terminal || "?"} → ${references.get(wire.to?.componentId) || "?"}.${wire.to?.terminal || "?"}`);
+  const caseRows = verification.cases.map((item) => `<tr><td>${escapeHtml(item.label)}</td><td><code>${escapeHtml(JSON.stringify(item.inputs))}</code></td><td><code>${escapeHtml(JSON.stringify(item.expected))}</code></td><td><code>${escapeHtml(JSON.stringify(item.actual))}</code></td><td>${item.passed ? "Pass" : "Fail"}</td></tr>`).join("");
+  const preview = `<h3>Simulation preview · ${verification.passed ? "All cases pass" : "Verification failed"}</h3>${verification.errors.length ? `<ul role="alert">${verification.errors.map((error) => `<li>${escapeHtml(error)}</li>`).join("")}</ul>` : ""}${verification.warnings.length ? `<details><summary>Project warnings (${verification.warnings.length})</summary><ul>${verification.warnings.map((item) => `<li>${escapeHtml(item.message)}</li>`).join("")}</ul></details>` : ""}<div class="table-wrap"><table><thead><tr><th>Case</th><th>Inputs</th><th>Expected</th><th>Simulated</th><th>Result</th></tr></thead><tbody>${caseRows}</tbody></table></div>`;
+  modal("Adigun BOT · Review build plan", `<div class="modal-body"><p class="safety-copy">This is a local, deterministic draft. Review the steps, ladder sketch, component list, terminal connections, assumptions, and simulation results before importing. Generated programs are simulator-only and do not represent physical wiring or safety validation.</p><h3>Build steps</h3><ol>${draft.plan.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol><h3>Ladder preview</h3><pre class="bot-ladder-preview">${escapeHtml(adigunBotLadderSketch(model))}</pre><details><summary>Components and connections (${componentRows.length} components, ${wireRows.length} wires)</summary><ul>${componentRows.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><h4>Wires</h4><ul>${wireRows.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details><h3>Assumptions</h3><ul>${draft.assumptions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>${preview}${gate}<div class="modal-actions"><button class="primary" id="botPreviewOnCanvas" ${verification.passed ? "" : "disabled"}>Preview on canvas</button><button class="secondary" id="botImportDraft" ${verification.passed ? "" : "disabled"}>Import to canvas</button><button class="secondary" id="botSaveLocal" ${canSave && verification.passed ? "" : "disabled"}>Save locally</button><button class="secondary" id="botSaveCloud" ${canSave && verification.passed ? "" : "disabled"}>Save to cloud</button><button class="secondary" id="botEditDraft">Edit request</button><button class="secondary" id="botDiscardDraft">Discard</button></div></div>`);
+  $("#botPreviewOnCanvas").onclick = previewAdigunBotDraftOnCanvas;
+  $("#botImportDraft").onclick = async () => { if (!verification.passed || !(await confirmProjectChange())) return; const execution = await executeAdigunBotTools(project,[{name:"restore",arguments:{project:draft.project}}]); if (!execution.ok) { toast(`Bot import rolled back: ${execution.error}`); return; } project = execution.project; project.lastOpenedAt = Date.now(); stopSimulation(); sim = { outputs:{}, timers:{}, counters:{}, edges:{}, energized:{}, values:{ ...project.initialState } }; scans = 0; await persist(false, true, { markDirty:false, markSaved:true }); render(); $("#modal").close(); toast("BOT draft imported to the canvas"); };
+  $("#botSaveLocal").onclick = () => { if (!adigunBotCanSave(accountAccess)) return showAccount(); exportProject(draft.project); };
+  $("#botSaveCloud").onclick = async () => { if (!adigunBotCanSave(accountAccess)) return showAccount(); try { await accountService.saveCloudProject(accountUser, draft.project); toast("BOT draft saved to your cloud projects"); } catch (error) { toast(`Cloud save failed: ${error.message}`); } };
+  $("#botEditDraft").onclick = () => { const promptText = draft.prompt || ""; adigunBotDraft = null; showAdigunAI(); $("#adigunAiQuestion").value = promptText; $("#adigunAiQuestion").focus(); };
+  $("#botDiscardDraft").onclick = () => { adigunBotDraft = null; showAdigunAI(); };
 }
 const resourceUiCopy = {
   en:{title:"External resources",scope:"Local owner registry for this browser only. There are no accounts or organization-wide approvals. Only exact approved HTTPS URLs can open. Link checks may be blocked by the remote site; blocked checks are shown as unverified.",url:"HTTPS URL",en:"English description",de:"German description",yo:"Yoruba description",pcm:"Nigerian Pidgin description",add:"Add resource",invalid:"Enter a valid HTTPS URL and a short description in all four languages.",approve:"Approve URL",revoke:"Revoke approval",approveConfirm:"Approve this exact HTTPS URL for opening?",open:"Open",openConfirm:"Open this approved external resource in a new tab?",remove:"Remove",removeConfirm:"Remove this local resource?",check:"Check link",available:"Available",broken:"Broken link",unverified:"Unverified (network or CORS blocked)",unchecked:"Not checked",unapproved:"Not approved",audit:"Download access audit",empty:"No resources have been added.",saved:"Resource saved locally."},
@@ -1200,6 +1471,7 @@ function showResources() {
 }
 function showHelp() { const repo = resources.find((resource) => resource.id === "source-repository"), presentation = brandPresentation(language, currentBrandTheme()); modal(t("titleHelp"), `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section><p class="safety-copy"><strong>${t("safety")}</strong></p><p class="safety-copy">Use the input switches to test the ladder. Run scans continuously, Step for one scan, and Reset to clear timers and outputs. Projects and recovery snapshots stay in this browser. Export a JSON file for a portable copy.</p><p class="safety-copy">Keyboard: Ctrl/⌘+K command search · Ctrl/⌘+F find · Ctrl/⌘+C/X/V copy/cut/paste rung · Ctrl/⌘+Z/Y undo/redo · Delete removes the selected contact.</p><p><button class="secondary" id="sourceRepository">${escapeHtml(repo.description[language])} ↗</button></p><div class="modal-actions"><button class="primary" id="helpTour">${tour[language].start}</button></div></div>`); $("#helpTour").onclick = () => showTutorial(0); $("#sourceRepository").onclick = () => { if (isApprovedExternalUrl(repo.url) && confirm(`Open ${repo.host} in a new tab?`)) appendResourceAudit({ resourceId:repo.id, host:repo.host, action:"open" }); window.open(repo.url, "_blank", "noopener,noreferrer"); }; }
 function showApplicationMenu(event) {
+  if (event.currentTarget.dataset.appMenu === "help") { showHelpGuideMenu(event); return; }
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
@@ -1237,8 +1509,8 @@ function action(name) {
   if (name === "save") { void saveProject(); return; }
   if (name === "save-local") { exportProject(); return; }
   if (name === "open-local") { importProject(); return; }
-  if (name === "save-as") { const copyName = prompt(t("saveAs"), `${project.name} copy`); if (copyName?.trim()) { project = { ...structuredClone(project), id: crypto.randomUUID(), name: copyName.trim(), lastOpenedAt:Date.now() }; void persist(true, true, { markDirty:false, markSaved:true }).then(() => render()); } return; }
-  if (name === "new") { void (async () => { if (!(await confirmProjectChange())) return; project = defaultProject(); project.lastOpenedAt = Date.now(); stopSimulation(); await persist(false, true, { markDirty:false, markSaved:true }); render(); })(); } else if (name === "examples") showExamples(); else if (name === "import") importProject(); else if (name === "export") exportProject(); else if (name === "add-rung") addRung(); else if (name === "add-contact") { if (selection?.rung != null) rungAction("add", selection.rung); else addRung(); } else if (name === "undo") undo(); else if (name === "redo") redo(); else if (name === "run") runSimulation(); else if (name === "pause") { if (runTimer) { clearInterval(runTimer); runTimer = null; logEvent("pause", "Simulation paused"); window.adigunPaused = true; updateStatus(); } } else if (name === "step") { if (runTimer) return; doScan(); } else if (name === "stop") { stopSimulation(); toast(t("resetDone")); } else if (name === "zoom-in") setZoom(zoom + 10); else if (name === "zoom-out") setZoom(zoom - 10); else if (name === "grid") { grid = !grid; $("#canvasWrap").classList.toggle("no-grid", !grid); $("#gridToggle").classList.toggle("active", grid); } else if (name === "projects") showProjects(); else if (name === "tags") showTags(); else if (name === "help") showHelp();
+  if (name === "save-as") { if (accountAccess !== "member") { showAccount(); return; } const copyName = prompt(t("saveAs"), `${project.name} copy`); if (copyName?.trim()) { project = { ...structuredClone(project), id: crypto.randomUUID(), name: copyName.trim(), lastOpenedAt:Date.now() }; void persist(true, true, { markDirty:false, markSaved:true }).then(() => render()); } return; }
+  if (name === "new") { void (async () => { if (!(await confirmProjectChange())) return; project = emptyProject(); project.lastOpenedAt = Date.now(); stopSimulation(); await persist(false, true, { markDirty:false, markSaved:true }); render(); })(); } else if (name === "examples") showExamples(); else if (name === "import") importProject(); else if (name === "export") exportProject(); else if (name === "add-rung") addRung(); else if (name === "add-contact") { if (selection?.rung != null) rungAction("add", selection.rung); else addRung(); } else if (name === "undo") undo(); else if (name === "redo") redo(); else if (name === "run") runSimulation(); else if (name === "pause") { if (runTimer) { clearInterval(runTimer); runTimer = null; logEvent("pause", "Simulation paused"); window.adigunPaused = true; updateStatus(); } } else if (name === "step") { if (runTimer) return; doScan(); } else if (name === "stop") { stopSimulation(); toast(t("resetDone")); } else if (name === "zoom-in") setZoom(zoom + 10); else if (name === "zoom-out") setZoom(zoom - 10); else if (name === "grid") { grid = !grid; $("#canvasWrap").classList.toggle("no-grid", !grid); $("#gridToggle").classList.toggle("active", grid); } else if (name === "projects") showProjects(); else if (name === "tags") showTags(); else if (name === "help") showHelp();
 }
 function applyLocale() {
   for (const button of document.querySelectorAll("[data-app-menu]")) button.textContent = applicationMenuLabels[language]?.[button.dataset.appMenu] || applicationMenuLabels.en[button.dataset.appMenu];
@@ -1333,11 +1605,41 @@ document.addEventListener("keydown", (event) => {
   else if (key === "delete" && project.editorType === "FBD" && fbdSelection.size) { event.preventDefault(); deleteFbdSelection(); }
   else if (key === "delete" && selection?.kind === "contact") { event.preventDefault(); if (selectedContacts.size > 1) deleteSelectedContacts(); else $("#removeContact")?.click(); }
 });
+document.addEventListener("click", (event) => {
+  if (accountAccess !== "guest-expired" || event.target.closest?.("dialog,#guestExpiryNotice,#accountButton,#languageButton,#helpButton,#footerHelpLink,[data-app-menu='help'],#contextMenu.help-guide-menu")) return;
+  if (!event.target.closest?.("#projectMenu,.toolbar,.app-menus,.workspace,#contextMenu")) return;
+  event.preventDefault(); event.stopImmediatePropagation(); showAccount();
+}, true);
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible" || accountAccess !== "guest" || !accountUser?.id) return;
+  try {
+    const guestSession = await accountService.ensureGuestSession(accountUser);
+    setAccountAccess(guestSession.remainingMs > 0 ? "guest" : "guest-expired", guestSession);
+  } catch {
+    if (guestDeadline && performance.now() >= guestDeadline) setAccountAccess("guest-expired");
+  }
+});
 document.addEventListener("pointerdown", (event) => { const menu = $("#contextMenu"); if (!menu.hidden && !menu.contains(event.target)) hideContextMenu(); });
-async function init() { document.documentElement.dataset.supabaseStatus = supabaseStatus.ready && supabaseClient ? "ready" : supabaseStatus.reason; try { await store.all(); } catch {} project = defaultProject(); project.name = "Untitled project"; project.tags = []; project.io = { inputs:[], outputs:[] }; project.initialState = {}; project.rungs = []; project.lastOpenedAt = Date.now(); language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale(); sim.values = { ...(project.initialState || {}) }; render(); await initializeAccountAccess(); if (accountAccess === "guest") await persist(false, true, { markDirty:false, markSaved:true }); setUnsavedChanges(false); if (["unconfigured", "account-required", "expired"].includes(accountAccess)) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+async function init() {
+  document.documentElement.dataset.supabaseStatus = supabaseStatus.ready && supabaseClient ? "ready" : supabaseStatus.reason;
+  setAccountAccess("checking");
+  try { await store.all(); } catch {}
+  project = defaultProject(); project.name = "Untitled project"; project.tags = []; project.io = { inputs:[], outputs:[] }; project.initialState = {}; project.rungs = []; project.lastOpenedAt = Date.now();
+  language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale();
+  await initializeAccountAccess();
+  if (["guest", "guest-expired"].includes(accountAccess)) restoreGuestDraft();
+  sim.values = { ...(project.initialState || {}) }; render();
+  if (accountAccess === "guest") await persist(false, true, { markDirty:false, markSaved:true });
+  setUnsavedChanges(false);
+  if (["unconfigured", "account-required"].includes(accountAccess)) showAccount();
+  else if (!localStorage.getItem("adigun-safety-seen")) showWelcome();
+}
 $("#accountButton").addEventListener("click", showAccount);
+$("#guestExpirySignIn").addEventListener("click", () => { showAccount(); $("#accountEmail")?.focus(); });
+$("#guestExpiryRegister").addEventListener("click", () => { showAccount(); $("#guestUpgradeEmail")?.focus(); });
 applyPreferences(); $("#settingsButton").addEventListener("click", showSettings); document.querySelectorAll("[data-app-menu]").forEach((button) => button.addEventListener("click", showApplicationMenu)); $("#logicTab").addEventListener("click", () => { workspaceView = "logic"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#electricalTab").addEventListener("click", () => { workspaceView = "electrical"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#hmiTab").addEventListener("click", () => { workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#processesButton").addEventListener("click", showProcessManager); $("#addAlarmButton").addEventListener("click", showAlarmSetup); $("#manageAlarmsButton").addEventListener("click", showAlarmManager); $("#recipesButton").addEventListener("click", showRecipes); $("#alarmHistoryButton").addEventListener("click", showAlarmHistory); $("#exportTrendHistoryButton").addEventListener("click", exportTrendHistory);
 $("#adigunAiButton").addEventListener("click", showAdigunAI);
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
+startAdigunCopilotObservers();
 init();
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js").catch(() => {});

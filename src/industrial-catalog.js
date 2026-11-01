@@ -24,6 +24,28 @@ const siemensCpus = [
   simulation:{status:"reference-only",model:null,limitations:"No Siemens CPU firmware, terminal-level wiring profile, electrical behavior, or device compatibility is implemented."},
 }));
 
+const siemensModules = [
+  {identifier:"6ES7221-1BF32-0XB0",family:"SM 1221",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital input module",digitalInputs:8,inputVoltage:"24 V DC",inputType:"Sink/source"},url:"https://mall.industry.siemens.com/mall/en/gb/Catalog/Product/6ES72211BF320XB0",title:"SM 1221, 8 DI, 24 V DC"},
+  {identifier:"6ES7221-1BH32-0XB0",family:"SM 1221",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital input module",digitalInputs:16,inputVoltage:"24 V DC",inputType:"Sink/source"},url:"https://mall.industry.siemens.com/mall/en/gb/Catalog/Product/6ES72211BH320XB0",title:"SM 1221, 16 DI, 24 V DC"},
+  {identifier:"6ES7223-1BH32-0XB0",family:"SM 1223",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital input/output module",digitalInputs:8,digitalOutputs:8,inputVoltage:"24 V DC, sink/source",output:"24 V DC transistor, 0.5 A"},url:"https://mall.industry.siemens.com/mall/en/fr/Catalog/Product/6ES7223-1BH32-0XB0",title:"SM 1223, 8 DI / 8 DO"},
+  {identifier:"6ES7223-1BL32-0XB0",family:"SM 1223",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital input/output module",digitalInputs:16,digitalOutputs:16,inputVoltage:"24 V DC, sink/source",output:"24 V DC transistor, 0.5 A"},url:"https://mall.industry.siemens.com/mall/en/de/Catalog/Product/6ES7223-1BL32-0XB0",title:"SM 1223, 16 DI / 16 DO"},
+  {identifier:"6ES7222-1HF32-0XB0",family:"SM 1222",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital output module",digitalOutputs:8,outputType:"Relay"},url:"https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=S7_1200&lang=en",title:"SIMATIC S7-1200 product overview · SM 1222 8 DO relay"},
+  {identifier:"6ES7222-1HH32-0XB0",family:"SM 1222",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital output module",digitalOutputs:16,outputType:"Relay"},url:"https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=S7_1200&lang=en",title:"SIMATIC S7-1200 product overview · SM 1222 16 DO relay"},
+  {identifier:"6ES7222-1BF32-0XB0",family:"SM 1222",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital output module",digitalOutputs:8,output:"24 V DC transistor"},url:"https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=S7_1200&lang=en",title:"SIMATIC S7-1200 product overview · SM 1222 8 DO transistor"},
+  {identifier:"6ES7222-1BH32-0XB0",family:"SM 1222",category:"Digital I/O modules",attributes:{description:"SIMATIC S7-1200 digital output module",digitalOutputs:16,output:"24 V DC transistor, 0.5 A"},url:"https://mall.industry.siemens.com/mall/en/riederpyown/Catalog/Product?SiepCountryCode=OE&mlfb=6ES7222-1BH32-0XB0",title:"SM 1222, 16 DO, 24 V DC transistor"},
+].map(({url,title,...item})=>({
+  manufacturer:"Siemens",...item,
+  source:{url,title,retrievedOn:"2026-11-01"},
+  simulation:{status:"reference-only",model:null,limitations:"No Siemens module terminal layout, configuration, compatibility, isolation, or electrical behavior is implemented; generic I/O simulation is separate."},
+}));
+
+const siemensPowerSupplies = [{
+  manufacturer:"Siemens",identifier:"6EP1332-1SH71",family:"PM 1207",category:"Power supplies",
+  attributes:{description:"SIMATIC S7-1200 PM 1207 stabilized power supply",input:"120/230 V AC",output:"24 V DC",ratedCurrent:"2.5 A"},
+  source:{url:"https://mall.industry.siemens.com/mall/NO/NO/Catalog/Product/?mlfb=6EP1332-1SH71",title:"PM 1207 power supply product data",retrievedOn:"2026-11-01"},
+  simulation:{status:"reference-only",model:null,limitations:"The educational 24 V source model does not represent this Siemens power supply, its input range, regulation, protection, or compatibility."},
+}];
+
 const omronVariants = [
   ["T61","Through-beam","15 m","NPN","pre-wired"],["T81","Through-beam","15 m","PNP","pre-wired"],
   ["T62","Through-beam","30 m","NPN","pre-wired"],["T82","Through-beam","30 m","PNP","pre-wired"],
@@ -52,6 +74,8 @@ const omronSensors = omronVariants.map(({suffix,method:categoryName,distance,out
 
 const industrialProductCatalog = Object.freeze([
   ...siemensCpus,
+  ...siemensModules,
+  ...siemensPowerSupplies,
   ...omronSensors,
   {
     manufacturer:"Schneider Electric",identifier:"TM221CE24R",family:"Modicon M221",category:"PLC controllers",

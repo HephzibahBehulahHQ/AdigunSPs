@@ -26,6 +26,15 @@ for (const language of ["en", "de", "yo", "pcm"]) {
   assert.equal(answerAdigunQuestion({ question:"safety bypass Ohm's law voltage", project, language }), c.safety, `${language} safety policy takes precedence over lesson matches`);
   assert.ok(answerAdigunQuestion({ question:"review project", project, diagnostics:[{ message:"Missing tag" }], language }).includes("Missing tag"), `${language} diagnostics context`);
 }
+const debugProject={editorType:"LD",tags:[{name:"Start",role:"input",type:"BOOL"},{name:"Motor",role:"output",type:"BOOL"}],rungs:[{id:"r1",branches:[[{tag:"Start",mode:"NO"}]],coil:"Motor"}],fbdBlocks:[]};
+for (const language of ["en","de","yo","pcm"]) {
+  const blocked=answerAdigunQuestion({question:"Why is Motor not on?",project:debugProject,state:{values:{Start:false,Motor:false}},language});
+  assert.match(blocked,/Motor/); assert.match(blocked,/Start/);
+}
+assert.match(answerAdigunQuestion({question:"Why is Motor not on?",project:debugProject,state:{values:{Start:true,Motor:true},outputs:{Motor:true}}}),/currently ON/);
+const timerDebugProject={...debugProject,rungs:[{id:"r2",branches:[[{tag:"Start",mode:"NO"}]],coil:"Motor",timer:{type:"TON",tag:"T1",preset:4000,output:"DN"}}]};
+const timerDebug=answerAdigunQuestion({question:"Why is Motor not on?",project:timerDebugProject,state:{values:{Start:true,Motor:false},timers:{T1:{elapsed:900,done:false}}}});
+assert.match(timerDebug,/TON T1 is not done \(900\/4000 ms\)/);
 const app = readFileSync("src/app.js", "utf8"), html = readFileSync("index.html", "utf8"), sw = readFileSync("service-worker.js", "utf8");
 assert.ok(html.includes('id="adigunAiButton"'), "assistant has always-available header entry");
 assert.ok(app.includes('id="adigunAiForm"') && app.includes('id="adigunAiClear"') && app.includes('name === "adigun-ai"'), "assistant supports questions, conversation clearing, and menu dispatch");

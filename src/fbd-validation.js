@@ -1,10 +1,11 @@
 import { orderFbdBlocks } from "./engine.js";
 
-const types = new Set(["AND", "OR", "NOT", "TON", "TOF", "TP", "CTU", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"]);
+const types = new Set(["AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR", "TON", "TOF", "TP", "RTO", "CTU", "CTD", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"]);
 const numericInputs = new Set(["ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE"]);
 const numericOutputs = new Set(["ADD", "SUB", "MUL", "DIV", "SCALE"]);
-const binaryInputs = new Set(["AND", "OR", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ"]);
-const unaryInputs = new Set(["NOT", "TON", "TOF", "TP", "R_TRIG", "F_TRIG", "CTU", "SCALE"]);
+const binaryInputs = new Set(["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ"]);
+const expandableInputs = new Set(["AND", "OR"]);
+const unaryInputs = new Set(["NOT", "TON", "TOF", "TP", "RTO", "R_TRIG", "F_TRIG", "CTU", "CTD", "SCALE"]);
 export const requiredFbdInputs = (type) => binaryInputs.has(type) ? 2 : unaryInputs.has(type) ? 1 : 0;
 
 const add = (issues, blockIndex, code, message, data = {}) => issues.push({ level:"error", code, message, blockIndex, ...data });
@@ -24,8 +25,8 @@ export function validateFbdBlocks(project) {
     if (!block.outputTag) add(issues, index, "fbd-output", `FBD block ${index + 1} needs an output tag.`);
     else if (!tags.has(block.outputTag) && !(project.io?.outputs || []).includes(block.outputTag)) add(issues, index, "fbd-output-tag", `FBD block ${index + 1} uses undeclared output ${block.outputTag}.`, { tag:block.outputTag });
     const requiredInputs = requiredFbdInputs(block.type);
-    if (inputs.length < requiredInputs || (binaryInputs.has(block.type) && inputs.length !== 2)) add(issues, index, "fbd-input-count", `FBD block ${index + 1} requires ${binaryInputs.has(block.type) ? "exactly two" : `at least ${requiredInputs}`} input tag${requiredInputs === 1 ? "" : "s"}.`, { required:requiredInputs });
-    if (block.type === "CTU" && inputs.length > 2) add(issues, index, "fbd-input-count", `FBD CTU block ${index + 1} accepts a count input and an optional reset input.`, { required:2 });
+    if (inputs.length < requiredInputs || (binaryInputs.has(block.type) && !expandableInputs.has(block.type) && inputs.length !== 2)) add(issues, index, "fbd-input-count", `FBD block ${index + 1} requires ${expandableInputs.has(block.type) ? "at least two" : binaryInputs.has(block.type) ? "exactly two" : `at least ${requiredInputs}`} input tag${requiredInputs === 1 ? "" : "s"}.`, { required:requiredInputs });
+    if (["CTU", "CTD", "RTO"].includes(block.type) && inputs.length > 2) add(issues, index, "fbd-input-count", `FBD ${block.type} block ${index + 1} accepts an enable input and an optional reset input.`, { required:2 });
     if (block.countTag && !tags.has(block.countTag)) add(issues, index, "fbd-count-tag", `FBD CTU block ${index + 1} count value tag ${block.countTag} is undeclared.`, { tag:block.countTag });
     else if (block.countTag && tags.get(block.countTag).type === "BOOL") add(issues, index, "fbd-count-type", `FBD CTU count value ${block.countTag} must use a numeric type.`, { tag:block.countTag, expected:"numeric" });
     for (const name of inputs) {
@@ -37,7 +38,7 @@ export function validateFbdBlocks(project) {
       const outputType = tags.get(block.outputTag)?.type || ((project.io?.outputs || []).includes(block.outputTag) ? "BOOL" : null);
       if (outputType && (isNumericOutput ? outputType === "BOOL" : outputType !== "BOOL")) add(issues, index, "fbd-output-type", `FBD ${block.type} output ${block.outputTag} must be ${isNumericOutput ? "numeric" : "BOOL"}.`, { tag:block.outputTag, expected:isNumericOutput ? "numeric" : "BOOL" });
     }
-    if (["TON", "TOF", "TP", "CTU"].includes(block.type) && (!Number.isFinite(Number(block.preset)) || Number(block.preset) <= 0)) add(issues, index, "fbd-preset", `FBD ${block.type} preset must be greater than zero.`);
+    if (["TON", "TOF", "TP", "RTO", "CTU", "CTD"].includes(block.type) && (!Number.isFinite(Number(block.preset)) || Number(block.preset) <= 0)) add(issues, index, "fbd-preset", `FBD ${block.type} preset must be greater than zero.`);
     if (block.type === "SCALE") { const params = [block.rawMin, block.rawMax, block.scaledMin, block.scaledMax].map(Number); if (!params.every(Number.isFinite) || params[0] === params[1]) add(issues, index, "fbd-scale-range", `FBD SCALE block ${index + 1} needs finite ranges and different raw minimum/maximum values.`); }
   });
   const graphErrors = orderFbdBlocks(blocks).errors;
@@ -47,7 +48,7 @@ export function validateFbdBlocks(project) {
 
 export function connectFbdPorts(blocks, sourceIndex, targetIndex, inputIndex) {
   const source = blocks[sourceIndex], target = blocks[targetIndex];
-  const inputLimit = target?.type === "CTU" ? 2 : requiredFbdInputs(target?.type);
+  const inputLimit = ["CTU", "CTD", "RTO"].includes(target?.type) ? 2 : expandableInputs.has(target?.type) ? 8 : requiredFbdInputs(target?.type);
   if (!source?.outputTag || !target || !Number.isInteger(inputIndex) || inputIndex < 0 || inputIndex >= inputLimit) return { ok:false, code:"port" };
   const sourceNumeric = numericOutputs.has(source.type), targetNumeric = numericInputs.has(target.type);
   if (!types.has(source.type) || (sourceNumeric !== targetNumeric)) return { ok:false, code:"type", expected:targetNumeric ? "numeric" : "BOOL" };
