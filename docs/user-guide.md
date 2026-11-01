@@ -12,6 +12,12 @@ Open the project selector beside the project name. Create a blank starter projec
 
 On first use, read the educational safety notice and continue to the workspace. Choose **Start quick tour** for a four-step overview; reopen it from Help at any time.
 
+## Account access and guest work
+
+Select the profile icon in the top bar to open the account panel. When signed out it is labelled **Sign in**; after sign-in it is labelled **Account**. Enter your email, choose **Sign in** or **Create account**, then enter the emailed code or open the sign-in link.
+
+Guest access lasts four minutes. After it expires, editing pauses; temporary work remains in the current browser tab. Signed-in users can save a cloud copy from the account panel; guest work is temporary and is not uploaded.
+
 ## PLC/device profile
 
 Open **Project → PLC/device profile** to record a vendor, CPU/device model, platform, firmware version, module counts, and notes. This optional profile is user-entered and saves with the project. It does not select from a supported-device catalog, check compatibility or ratings, or connect hardware. Use **Tags & I/O** to manage logical tag roles and addresses; the generic hardware inventory remains a user-entered bill of materials.
@@ -30,7 +36,7 @@ FBD blocks execute in dependency order. Add Boolean blocks (AND/OR accept up to 
 
 Open the **I/O** panel to change simulated digital switches and numeric analog inputs, then view digital lamps and numeric outputs. Numeric inputs are available to FBD arithmetic and comparison blocks. Open **Watch** to monitor live digital values or force a simulated input on/off for this session. **Faults** inject session-only stuck-high/stuck-low faults on digital inputs and outputs, or numeric offsets on analog inputs and outputs. **Scenario** runs up to 1,000 validated JSON scan frames with optional expected-output checks in the local simulator. Trace recording stores active faults and replays them with the scan history. Tap the ○ control on an LD rung to set a breakpoint; Run pauses before that rung, then the next Run or Step passes it once. **Run** scans repeatedly, **Pause** holds the current state, **Step** performs one scan, and **Reset** clears timers, output state, and forced inputs. **Events** shows recent session scans, scan duration, breakpoints, forced values, and ST compile errors. **Record** captures scan inputs and full runtime snapshots in memory; **Replay** resets the simulator and repeats the input sequence against the same program; **Trace** compares adjacent historical states, restores a selected scan for inspection or continuation, and exports JSON. Mark historical scans as breakpoints to pause replay at those positions; markers shift with the bounded history window. History is limited to the latest 5,000 scans and remains in memory for this session. Editing the program invalidates replay for that trace. On the Ladder canvas, hold Space and drag (or use the middle mouse button) to pan; on touch, drag a blank canvas area. Each project saves its pan and zoom position. Use the clickable minimap to jump to a network; open Logic outline for keyboard/screen-reader network, contact, and output navigation. Arrow keys move through outline items. Green contacts and outputs indicate energized logic. Timer presets and task cycle settings are measured in simulated milliseconds.
 
-The Example browser contains 200 examples in ten categories. Each example provides localized learning notes, tags, I/O mapping, expected behavior, fault notes, and test cases. The Counters and sequencers category exercises CTU pulses, held inputs, preset/reset behavior, and a two-phase SET/RESET sequence with repeatable multi-scan scenarios. **Export test report CSV** saves the pass/fail results for all example scenarios with expected and actual values and fault explanations. Loading an example replaces the open project; export or duplicate first if you want to preserve it under a separate name.
+The Example browser contains 1,000 examples across six categories. Each example provides a description, **How to test** steps, localized notes, tags, I/O mapping, expected behavior, fault notes, and executable test cases. The Bot can search for examples by scenario and offer a **Load** action. The Counters and sequencers category exercises CTU pulses, held inputs, preset/reset behavior, and a two-phase SET/RESET sequence with repeatable multi-scan scenarios. **Export test report CSV** saves the pass/fail results for all example scenarios with expected and actual values and fault explanations. Loading an example replaces the open project; export or duplicate first if you want to preserve it under a separate name.
 
 ## HMI screen
 
@@ -67,3 +73,4 @@ In **Hardware inventory / BOM**, link each user-entered item to a project PLC ta
 Open the project menu to see local projects sorted by most recently opened. The last-opened time is stored with each project and opening one does not add a recovery snapshot.
 
 The HMI toolbar's **SCREEN** selector switches among project-saved screens. Use **＋ Screen** to add a screen, edit **NAME** to rename it, or **Delete screen** to remove it. A project always keeps at least one screen, and each screen retains its own widgets
+

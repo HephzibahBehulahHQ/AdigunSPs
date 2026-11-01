@@ -302,5 +302,8 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     return shorted.length?[{level:"error",code:"electrical-source-short",message:`${component.reference||component.id} source poles are shorted: ${shorted.join(", ")}. Connected loads are de-energized in this simulation.`}]:[];
   });
   if(sourceShorts.length)for(const tag of Object.keys(plcInputs))resolvedInputs[tag]=false;
-  return { energized, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, faults:sourceShorts, warnings:validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
+  const liveNodes = new Set(nets.flatMap(({nets:poles}) => Object.values(poles).flatMap((nodes) => [...nodes])));
+  const energizedWires = (diagram.wires || []).filter((wire) => wire?.from && wire?.to && (liveNodes.has(key(wire.from.componentId, wire.from.terminal)) || liveNodes.has(key(wire.to.componentId, wire.to.terminal)))).map((wire) => wire.id).filter(Boolean);
+  return { energized, energizedWires, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, faults:sourceShorts, warnings:validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
 }
+

@@ -1,5 +1,16 @@
 # Verification record
 
+## Supplemental local verification — 2026-11-01
+
+- The expanded example generator produces exactly 1,000 examples in the requested category totals, each with 10–15 rungs and localized scenario/test notes.
+- `npm run validate:examples` passed 1,000/1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. The report records 1,104 non-fatal floating-terminal warnings and 15 duplicate-address warnings; do not interpret the pass as layout, electrical, or safety certification.
+- The updated example browser has search, categories, test instructions, and 50-result progressive browsing. The Bot can search and offer to load matching examples. The Run HUD reports logical scan state; voltage, current, and RPM remain explicitly unmodeled.
+- The full `npm test` suite and production build passed for this worktree. The local preview loaded successfully, but the new interactive flows have not been manually exercised in the browser; deployment has not been verified.
+
+## Documentation maintenance
+
+When user-facing labels, options, or workflows change, update both `docs/HELP.md` (the in-app guide) and `docs/user-guide.md` in the same change. Confirm instructions against the current interface and describe backend-only changes only when they affect a user action; never present unavailable or unverified hardware controls as supported.
+
 ## Release verification — 2026-11-01
 
 - Merged PR [#33](https://github.com/HephzibahBehulahHQ/AdigunSPs/pull/33) as `8299ff9567b0bdfecdc9eee1958b06db21b87a9a`. GitHub Actions CI run `41320789744` and Pages deploy `41320789756` both completed successfully.
@@ -118,6 +129,7 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+
 
 
 

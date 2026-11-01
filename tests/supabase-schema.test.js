@@ -5,6 +5,7 @@ const sql = await readFile(new URL("../supabase/migrations/20261101075618_adigun
 const guestExpiry = await readFile(new URL("../supabase/migrations/20261101085102_enforce_guest_session_expiry.sql", import.meta.url), "utf8");
 const guestExpiryFourMinutes = await readFile(new URL("../supabase/migrations/20261101151429_adigunsps_four_minute_guest_access.sql", import.meta.url), "utf8");
 const policyPerformance = await readFile(new URL("../supabase/migrations/20261101114255_adigunsps_rls_query_performance.sql", import.meta.url), "utf8");
+const hardwareDelivery = await readFile(new URL("../supabase/migrations/20261101161849_adigunsps_hardware_command_delivery.sql", import.meta.url), "utf8");
 const tables = ["adigun_profiles", "adigun_guest_sessions", "adigun_cloud_projects", "adigun_cloud_project_versions"];
 for (const table of tables) assert.match(sql, new RegExp(`alter table public\\.${table} set schema adigunsps`, "i"));
 assert.match(sql, /alter table adigunsps\.adigun_cloud_projects rename column owner_id to user_id/i);
@@ -37,5 +38,22 @@ assert.match(guestExpiry, /security definer[\s\S]*?set search_path\s*(?:to|=)\s*
 assert.equal((policyPerformance.match(/\(select auth\.jwt\(\)\)/gi) || []).length, 6);
 assert.doesNotMatch(policyPerformance, /adigunsimulator|adigunelectrocad|\bdrop\s+table\b/i);
 
+const hardwareTables = ["hardware_devices", "hardware_client_heartbeats", "hardware_device_state", "hardware_commands", "hardware_device_events"];
+for (const table of hardwareTables) {
+  assert.match(hardwareDelivery, new RegExp(`create table if not exists adigunsps\\.${table}\\b`, "i"), `${table} is created idempotently`);
+  assert.match(hardwareDelivery, new RegExp(`alter table adigunsps\\.${table} enable row level security`, "i"), `${table} has RLS enabled`);
+}
+assert.match(hardwareDelivery, /command_type text not null check \(command_type in \('SYNC', 'SET_OUTPUTS'\)\)/i);
+assert.match(hardwareDelivery, /expires_at <= created_at \+ interval '3 seconds'/i);
+assert.match(hardwareDelivery, /THEN NOT \(\s*\(payload->>'forward'\)::boolean\s*AND \(payload->>'reverse'\)::boolean/is, "command constraint rejects simultaneous forward and reverse outputs");
+assert.match(hardwareDelivery, /hardware_commands_insert_owner[\s\S]*?status = 'queued'[\s\S]*?is_anonymous/i);
+assert.match(hardwareDelivery, /hardware_commands_update_device[\s\S]*?device_auth_user_id = \(select auth\.uid\(\)\)/i);
+assert.match(hardwareDelivery, /create index if not exists hardware_commands_device_queue_idx/i);
+assert.match(hardwareDelivery, /create index if not exists hardware_events_device_created_idx/i);
+for (const table of ["hardware_client_heartbeats", "hardware_device_state", "hardware_commands", "hardware_device_events"]) {
+  assert.match(hardwareDelivery, new RegExp(`tablename = '${table}'[\\s\\S]*?alter publication supabase_realtime\\s+add table adigunsps\\.${table}`, "i"), `${table} is included in Realtime`);
+}
+
 console.log("AdigunSPs schema, owner/admin RLS semantics, guest expiry, JWT policy caching, and index checks passed.");
+
 

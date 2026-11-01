@@ -139,7 +139,7 @@ export function orderFbdBlocks(blocks = []) {
 }
 
 export function runExampleChecks(example) {
-  return example.testCases.map((testCase) => {
+  return [...example.testCases, ...(example.additionalTestCases || [])].map((testCase) => {
     let state = {}, result;
     for (const step of testCase.sequence || [{ inputs:testCase.inputs, dt:testCase.dt }]) {
       const inputs = { ...example.initialState, ...(step.inputs || step) }, numericInputs = { ...(testCase.numericInputs || {}), ...(step.numericInputs || {}) }, dt = step.dt || testCase.dt || (example.processes?.length ? 1000 : 100);
@@ -153,14 +153,22 @@ export function runExampleChecks(example) {
     }
     const resultTag = example.logic.outputTag || example.logic.rungs[0].coil;
     const actual = example.processes?.length ? result?.processValues?.[resultTag] : example.editorType === "FBD" || example.logic.rungs.some((rung) => rung.scale) ? result?.outputs[resultTag] : Boolean(result?.outputs[resultTag]);
-    const pass = typeof testCase.expected === "number" ? Math.abs(Number(actual) - testCase.expected) < 1e-6 : actual === testCase.expected;
-    return { name: testCase.name, sequence:testCase.sequence || null, pass, expected: testCase.expected, actual };
+    const outputPass = testCase.expected === undefined || (typeof testCase.expected === "number" ? Math.abs(Number(actual) - testCase.expected) < 1e-6 : actual === testCase.expected);
+    const signalFailures = Object.entries(testCase.expectedSignals || {}).flatMap(([tag, expected]) => {
+      const value = Object.hasOwn(result?.outputs || {}, tag) ? result.outputs[tag] : result?.values?.[tag];
+      return value === expected ? [] : [{tag,expected,actual:value}];
+    });
+    const pass = outputPass && signalFailures.length === 0;
+    return { name: testCase.name, sequence:testCase.sequence || null, pass, expected: testCase.expected, actual, signalFailures };
   });
 }
 
 export function makeProjectFromExample(example) {
   const project = {
     id: crypto.randomUUID(), name: example.title.en, language: "en", updatedAt: Date.now(),
+    ...(example.description?.en ? {description:example.description.en} : {}),
+    ...(example.howToTest?.en ? {howToTest:example.howToTest.en} : {}),
+    ...(example.category?.en ? {exampleCategory:example.category.en} : {}),
     tags: structuredClone(example.tags), io: structuredClone(example.io),
     initialState: { ...example.initialState }, rungs: structuredClone(example.logic.rungs),
     ...(example.editorType ? { editorType:example.editorType } : {}),
@@ -168,7 +176,7 @@ export function makeProjectFromExample(example) {
     ...(example.processes ? { processes:structuredClone(example.processes) } : {}),
     exampleId: example.id,
   };
-  project.electrical = createExampleElectricalDiagram(project.tags, project.io, project.initialState);
+  project.electrical = createExampleElectricalDiagram(project.tags, project.io, project.initialState, example.outputLoadTypes || {});
   return project;
 }
 
@@ -200,4 +208,5 @@ export function getTaskCycleMs(project) {
   const value = Number(project?.task?.cycleMs);
   return Number.isInteger(value) && value >= 1 && value <= 60000 ? value : 100;
 }
+
 
