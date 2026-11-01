@@ -14,6 +14,7 @@ assert.match(html, /id="accountButton"[^>]*class="icon-button account-button[\s\
 assert.match(html, /id="accountAvatarImage" class="account-avatar-image"[^>]*hidden/, "top-bar account control includes an uploaded-avatar image fallback");
 assert.match(styles, /\.account-button \.account-avatar-image\{[^}]*border-radius:50%;object-fit:cover/, "uploaded profile photos are cropped to the round account control");
 assert.match(app, /async function updateAccountAvatar\(user, avatarUrl\)[\s\S]*?accountService\.getProfile\(user\)[\s\S]*?image\.onerror[\s\S]*?showAccountAvatarFallback/, "profile avatar loads from the profile row and broken URLs fall back to the default icon");
+assert.match(app, /const showAvatar = \(\) => \{[\s\S]*?icon\.hidden = true;[\s\S]*?if \(image\.complete && image\.naturalWidth > 0\) showAvatar\(\)/, "cached avatars hide the default icon immediately after a successful image load");
 assert.match(app, /void updateAccountAvatar\(state === "member" \? accountUser : null\)/, "session restoration and sign-in reload the stored profile avatar");
 assert.match(app, /const profile = await accountService\.uploadAvatar\(accountUser, file\); await updateAccountAvatar\(accountUser, profile\.avatar_url\)/, "upload immediately refreshes the top-bar avatar");
 assert.doesNotMatch(html, /id="accountButton"[^>]*>Account</, "top-bar account control does not render the Account word");
