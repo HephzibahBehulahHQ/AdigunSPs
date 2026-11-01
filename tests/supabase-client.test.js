@@ -1,3 +1,5 @@
+Warning: fs was declared with const; use let for reassignable variables.
+Warning: s was declared with const; use let for reassignable variables.
 import assert from "node:assert/strict";
 import { createAdigunSupabaseClient, ADIGUN_SUPABASE_URL, ADIGUN_SUPABASE_PROJECT_REF } from "../src/supabase-client.js";
 
@@ -29,6 +31,7 @@ assert.equal(ready.client.marker, "client");
 assert.equal(createCalls, 1);
 assert.equal(received[0], ADIGUN_SUPABASE_URL);
 assert.equal(received[1], "sb_publishable_test");
+assert.deepEqual(received[2].db, { schema:"adigunsps" });
 assert.deepEqual(received[2].auth, { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true });
 
 const noSdk = createAdigunSupabaseClient(config(), null);

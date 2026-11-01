@@ -1,3 +1,5 @@
+Warning: fs was declared with const; use let for reassignable variables.
+Warning: s was declared with const; use let for reassignable variables.
 import assert from "node:assert/strict";
 import { AccountError, createAccountService } from "../src/account.js";
 
@@ -9,18 +11,9 @@ const auth = {
   signOut: async () => ({ data:{}, error:null }),
   getSession: async () => ({ data:{ session:{ user:{ id:"g1", is_anonymous:true } } }, error:null }),
   signInAnonymously: async () => { throw new Error("An existing guest session must be reused."); },
-  updateUser: async (args) => ({ data:{ user:{ id:"u1", user_metadata:args.data } }, error:null }),
+  updateUser: async (args) => { authCalls.push(["updateUser", args]); return { data:{ user:{ id:"u1", is_anonymous:false, email:"person@example.test", email_confirmed_at:"2030-01-01T00:00:00.000Z", user_metadata:args.data } }, error:null }; },
 };
-let sessionInsert = null;
-let existingGuest = null;
-const guestQuery = {
-  select: () => guestQuery,
-  eq: () => guestQuery,
-  maybeSingle: async () => ({ data:existingGuest, error:null }),
-  insert: (row) => { sessionInsert = row; return guestQuery; },
-  single: async () => ({ data:{ expires_at:"2030-01-01T00:10:00.000Z" }, error:null }),
-};
-const client = { auth, from:(name) => { assert.equal(name, "adigun_guest_sessions"); return guestQuery; } };
+const client = { auth, from:() => { throw new Error("unexpected table query"); } };
 const service = createAccountService(client);
 assert.ok(service);
 assert.equal(createAccountService(null), null);
@@ -32,20 +25,20 @@ assert.deepEqual(authCalls[1], ["signIn", { email:"user@example.test", password:
 await service.requestPasswordReset(" user@example.test ", "https://app.example.test/reset");
 assert.deepEqual(authCalls[2], ["reset", "user@example.test", { redirectTo:"https://app.example.test/reset" }]);
 
-existingGuest = null;
 const guest = await service.ensureGuestSession({ id:"g1", is_anonymous:true });
-assert.equal(guest.serverIssued, true);
-assert.equal(guest.expiresAt, "2030-01-01T00:10:00.000Z");
-assert.deepEqual(sessionInsert, { user_id:"g1" });
-existingGuest = { expires_at:"2000-01-01T00:00:00.000Z" };
-await assert.rejects(() => service.ensureGuestSession({ id:"g1", is_anonymous:true }), (error) => error instanceof AccountError && error.code === "guest-session-expired");
-existingGuest = { expires_at:"2030-01-01T00:10:00.000Z" };
 const reusedGuest = await service.startGuestSession();
-assert.equal(reusedGuest.expiresAt, existingGuest.expires_at, "starting guest access reuses the original server expiry");
-existingGuest = { expires_at:"2000-01-01T00:00:00.000Z" };
-await assert.rejects(() => service.startGuestSession(), (error) => error instanceof AccountError && error.code === "guest-session-expired", "expired guest access cannot silently restart its ten-minute window");
+assert.equal(guest.serverIssued, false);
+assert.equal(reusedGuest.serverIssued, false, "guest access is not enforced by server expiry");
 await assert.rejects(() => service.ensureGuestSession({ id:"u1", is_anonymous:false }), (error) => error.code === "guest-session-not-anonymous");
 await assert.rejects(() => service.saveCloudProject({ id:"g1", is_anonymous:true }, { name:"Guest" }), (error) => error.code === "authentication-required");
+await service.beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, " person@example.test ");
+assert.deepEqual(authCalls.find((call) => call[0] === "updateUser")[1], { email:"person@example.test" }, "guest upgrade sends only the email in the confirmation step");
+const upgradedUser = await service.setGuestUpgradePassword({ id:"u1", is_anonymous:false, email:"person@example.test", email_confirmed_at:"2030-01-01" }, "not-recorded");
+assert.equal(upgradedUser.id, "u1", "password step returns the upgraded Supabase user");
+assert.deepEqual(authCalls.filter((call) => call[0] === "updateUser")[1][1], { password:"not-recorded" }, "password is set in a separate post-confirmation step");
+await assert.rejects(() => service.setGuestUpgradePassword({ id:"u1", is_anonymous:false, email:"person@example.test" }, "not-recorded"), (error) => error.code === "guest-upgrade-email-unverified");
+const duplicateAuth = { ...auth, updateUser:async () => ({ data:null, error:{ code:"email_exists", message:"Email already registered" } }) };
+await assert.rejects(() => createAccountService({ auth:duplicateAuth, from:client.from }).beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, "person@example.test"), (error) => error.code === "guest-upgrade-email-exists");
 assert.equal(service.isAdministrator({ is_anonymous:false, app_metadata:{ role:"admin" } }), true);
 assert.equal(service.isAdministrator({ is_anonymous:false, user_metadata:{ role:"admin" } }), false);
 
@@ -84,11 +77,11 @@ const cloudService = createAccountService(cloudClient());
 const cloudUser = { id:"member-1", is_anonymous:false };
 const saved = await cloudService.saveCloudProject(cloudUser, { name:"Pump station", version:1 });
 assert.equal(saved.title, "Pump station");
-assert.equal(cloud.projects[0].owner_id, cloudUser.id, "cloud project records bind to the authenticated owner");
+assert.equal(cloud.projects[0].user_id, cloudUser.id, "cloud project records bind to the authenticated owner");
 assert.deepEqual(cloud.versions[0].payload, { name:"Pump station", version:1 });
-assert.equal(cloud.versions[0].owner_id, cloudUser.id, "cloud project snapshots bind to the authenticated owner");
+assert.equal(cloud.versions[0].user_id, cloudUser.id, "cloud project snapshots bind to the authenticated owner");
 assert.deepEqual((await cloudService.listCloudProjects(cloudUser)).map(({ title }) => title), ["Pump station"]);
 const opened = await cloudService.openCloudProject(cloudUser, saved.id);
 assert.deepEqual(opened.payload, { name:"Pump station", version:1 }, "cloud open retrieves the newest owned project snapshot");
 
-console.log("Account auth, server-issued guest expiry and authorization boundary checks passed.");
+console.log("Account auth, two-step guest upgrade and authorization boundary checks passed.");

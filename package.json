@@ -1,3 +1,5 @@
+Warning: fs was declared with const; use let for reassignable variables.
+Warning: s was declared with const; use let for reassignable variables.
 {
   "name": "adigunsps",
   "version": "0.1.0",
@@ -8,7 +10,7 @@
     "build": "node scripts/build.js",
     "validate:examples": "node scripts/validate-examples.js",
     "branding:sync": "node scripts/sync-brand-manifests.js",
-    "test": "node scripts/sync-brand-manifests.js && node tests/run-tests.js && node tests/electrical.test.js && node tests/industrial-catalog.test.js && node tests/brand.test.js && node tests/accessibility.test.js && node tests/service-worker.test.js && node tests/hardware.test.js && node tests/adigun-ai.test.js && node tests/resources.test.js && node tests/protocol-sim.test.js && node tests/account.test.js && node tests/supabase-client.test.js && node tests/readme.test.js && node tests/io-allocator.test.js && node scripts/validate-examples.js",
+    "test": "node scripts/sync-brand-manifests.js && node tests/run-tests.js && node tests/electrical.test.js && node tests/industrial-catalog.test.js && node tests/brand.test.js && node tests/accessibility.test.js && node tests/service-worker.test.js && node tests/hardware.test.js && node tests/adigun-ai.test.js && node tests/resources.test.js && node tests/protocol-sim.test.js && node tests/account.test.js && node tests/supabase-client.test.js && node tests/supabase-schema.test.js && node tests/readme.test.js && node tests/io-allocator.test.js && node scripts/validate-examples.js",
     "test:electrical": "node tests/electrical.test.js",
     "test:industrial-catalog": "node tests/industrial-catalog.test.js",
     "test:brand": "node scripts/sync-brand-manifests.js && node tests/brand.test.js",
@@ -19,7 +21,7 @@
     "test:protocol": "node tests/protocol-sim.test.js",
     "test:accessibility": "node tests/accessibility.test.js",
     "test:service-worker": "node tests/service-worker.test.js",
-    "test:supabase": "node tests/account.test.js && node tests/supabase-client.test.js"
+    "test:supabase": "node tests/account.test.js && node tests/supabase-client.test.js && node tests/supabase-schema.test.js"
   },
   "engines": {
     "node": ">=22.0.0"

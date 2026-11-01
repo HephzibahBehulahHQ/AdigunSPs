@@ -1,3 +1,5 @@
+Warning: fs was declared with const; use let for reassignable variables.
+Warning: s was declared with const; use let for reassignable variables.
 export const ADIGUN_SUPABASE_PROJECT_REF = "fqcbfnktdvqojyezxeis";
 export const ADIGUN_SUPABASE_URL = `https://${ADIGUN_SUPABASE_PROJECT_REF}.supabase.co`;
 
@@ -34,6 +36,7 @@ export function createAdigunSupabaseClient(runtimeConfig = globalThis.ADIGUN_RUN
   }
 
   const client = sdk.createClient(url, publishableKey, {
+    db: { schema:"adigunsps" },
     auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true },
   });
   return { client, status:{ ready:true, projectRef:ADIGUN_SUPABASE_PROJECT_REF, reason:"ready" } };
