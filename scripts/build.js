@@ -30,12 +30,12 @@ await mkdir(output, { recursive:true });
 for (const file of ["index.html", "styles.css", "service-worker.js", "manifest.webmanifest", "manifest.de.webmanifest", "manifest.yo.webmanifest", "manifest.pcm.webmanifest"]) {
   await cp(join(root, file), join(output, file));
 }
-for (const directory of ["src", "assets"]) await cp(join(root, directory), join(output, directory), { recursive:true });
+for (const directory of ["src", "assets", "docs"]) await cp(join(root, directory), join(output, directory), { recursive:true });
 await mkdir(join(output, "vendor"), { recursive:true });
 await cp(join(root, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js"), join(output, "vendor", "supabase.js"));
 await writeFile(join(output, "runtime-config.js"), serializeAdigunRuntimeConfig(await loadAdigunRuntimeConfig(root)), "utf8");
 
-const required = ["index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
+const required = ["index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "docs/HELP.md", "docs/QUICKSTART.md", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
 for (const file of required) if (!(await stat(join(output, file))).isFile()) throw new Error(`Built app is missing ${file}`);
 const html = await (await import("node:fs/promises")).readFile(join(output, "index.html"), "utf8");
 if (!html.includes('src="src/app.js"') || !html.includes('href="styles.css"')) throw new Error("Built entry point is missing its application script or stylesheet.");

@@ -75,7 +75,7 @@ Open [http://127.0.0.1:8080/](http://127.0.0.1:8080/). The local development ser
 
 ## Technology and architecture
 
-AdigunSPs uses browser-native HTML, CSS, and JavaScript ES modules with a pinned Supabase JavaScript client for authentication, profiles, avatars, and owner-scoped cloud projects. Node.js runs the local development server and build/test scripts. Projects are also stored locally in IndexedDB for authenticated offline work and temporary guest recovery.
+AdigunSPs uses browser-native HTML, CSS, and JavaScript ES modules with a pinned Supabase JavaScript client for authentication, profiles, avatars, and owner-scoped cloud projects. Node.js runs the local development server and build/test scripts. Projects are stored in IndexedDB for authenticated offline work; guest drafts use tab-scoped session storage until sign-in or expiry.
 
 ```mermaid
 flowchart TD
@@ -150,7 +150,7 @@ GitHub Actions runs `npm test` and `npm run build` on pushes and pull requests t
 
 Run `npm run validate:examples` to regenerate the report from the simulator checks.
 
-Focused suites are available as `npm run test:electrical`, `npm run test:industrial-catalog`, `npm run test:brand`, `npm run test:hardware`, `npm run test:ai`, `npm run test:resources`, `npm run test:protocol`, and `npm run test:supabase`.
+Focused suites are available as `npm run test:electrical`, `npm run test:industrial-catalog`, `npm run test:brand`, `npm run test:hardware`, `npm run test:ai`, `npm run test:resources`, `npm run test:protocol`, `npm run test:supabase`, `npm run test:help-guide`, and `npm run test:guest-expiry`.
 
 ## Deployment
 
