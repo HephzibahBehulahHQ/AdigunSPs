@@ -8,7 +8,7 @@
     "build": "node scripts/build.js",
     "validate:examples": "node scripts/validate-examples.js",
     "branding:sync": "node scripts/sync-brand-manifests.js",
-    "test": "node scripts/sync-brand-manifests.js && node tests/run-tests.js && node tests/electrical.test.js && node tests/fbd-gates.test.js && node tests/industrial-components.test.js && node tests/adigun-bot-builder.test.js && node tests/adigun-bot-tools.test.js && node tests/adigun-bot-copilot.test.js && node tests/industrial-catalog.test.js && node tests/brand.test.js && node tests/accessibility.test.js && node tests/service-worker.test.js && node tests/menu-dismissal.test.js && node tests/help-guide.test.js && node tests/guest-expiry.test.js && node tests/hardware.test.js && node tests/adigun-ai.test.js && node tests/adigun-ai-remote.test.js && node tests/resources.test.js && node tests/protocol-sim.test.js && node tests/account.test.js && node tests/supabase-client.test.js && node tests/supabase-schema.test.js && node tests/readme.test.js && node tests/io-allocator.test.js && node scripts/validate-examples.js",
+    "test": "node scripts/sync-brand-manifests.js && node tests/run-tests.js && node tests/electrical.test.js && node tests/fbd-gates.test.js && node tests/industrial-components.test.js && node tests/adigun-bot-builder.test.js && node tests/adigun-bot-tools.test.js && node tests/adigun-bot-copilot.test.js && node tests/industrial-catalog.test.js && node tests/brand.test.js && node tests/accessibility.test.js && node tests/responsive-layout.test.js && node tests/service-worker.test.js && node tests/menu-dismissal.test.js && node tests/help-guide.test.js && node tests/guest-expiry.test.js && node tests/hardware.test.js && node tests/adigun-ai.test.js && node tests/adigun-ai-remote.test.js && node tests/resources.test.js && node tests/protocol-sim.test.js && node tests/account.test.js && node tests/supabase-client.test.js && node tests/supabase-schema.test.js && node tests/readme.test.js && node tests/io-allocator.test.js && node scripts/validate-examples.js",
     "test:help-guide": "node tests/help-guide.test.js",
     "test:guest-expiry": "node tests/guest-expiry.test.js",
     "test:electrical": "node tests/electrical.test.js",
@@ -25,6 +25,7 @@
     "test:resources": "node tests/resources.test.js",
     "test:protocol": "node tests/protocol-sim.test.js",
     "test:accessibility": "node tests/accessibility.test.js",
+    "test:responsive": "node tests/responsive-layout.test.js",
     "test:service-worker": "node tests/service-worker.test.js",
     "test:menu-dismissal": "node tests/menu-dismissal.test.js",
     "test:supabase": "node tests/account.test.js && node tests/supabase-client.test.js && node tests/supabase-schema.test.js"
