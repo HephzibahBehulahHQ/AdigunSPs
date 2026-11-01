@@ -76,7 +76,7 @@ let runTimer = null, scans = 0, zoom = 100, selection = null, selectedContacts =
 let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor = 0, traceInitial = null, traceInitialFaults = [], traceProjectKey = "", traceMismatches = [], traceBreakpoints = new Set();
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
 const accountService = createAccountService(supabaseClient);
-let accountUser = null, accountAccess = "checking", guestTimer = null, guestDeadline = 0, guestDraftStorageKey = null;
+let accountUser = null, accountAccess = "checking", guestTimer = null, guestDeadline = 0, guestDraftStorageKey = null, accountAvatarRequestId = 0;
 const guestUpgradePendingKey = "adigunsps-guest-upgrade-password-pending";
 function guestUpgradePasswordPending() { const expectedEmail = localStorage.getItem(guestUpgradePendingKey); return !!expectedEmail && !!accountUser && !accountUser.is_anonymous && accountUser.email?.toLowerCase() === expectedEmail; }
 const guestSessionCopy = {
@@ -1091,6 +1091,23 @@ const accountCopy = {
   pcm:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account make you keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Name wey go show",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"Ten-minute guest access go end; sign in or create account make you continue editing.",trialPrompt:"Create account make this project dey inside your account. You fit still continue as guest.",member:"You don sign in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile picture",admin:"Admin overview",verify:"Check your email make registration finish.",upgradeVerify:"Check and confirm your email, then come back here to set password. Your guest project go remain for this device.",upgradePasswordInfo:"Email don confirm. Set password to finish upgrading this guest account.",upgradePasswordSaved:"Password don save. Guest account don upgrade.",guestEmailExists:"This email already get account. Sign in to am; your current project go remain for this device.",saved:"We save new cloud copy.",config:"Account service no set for this deployment.",authDisabled:"Guest access no dey available. Sign in or create account.",error:"Account request fail",profileSaved:"Profile don save."}
 };
 function accountText(key) { const fallback = key === "upgradeEmail" ? ({ en:"Send confirmation email", de:"Bestätigungs-E-Mail senden", yo:"Fi íméèlì ìjẹ́rìí ránṣẹ́", pcm:"Send confirmation email" }[language] || "Send confirmation email") : null; return (accountCopy[language] || accountCopy.en)[key] || accountCopy.en[key] || fallback || key; }
+function showAccountAvatarFallback(image, icon) {
+  if (image) { image.hidden = true; image.removeAttribute("src"); image.onload = null; image.onerror = null; }
+  if (icon) icon.hidden = false;
+}
+async function updateAccountAvatar(user, avatarUrl) {
+  const requestId = ++accountAvatarRequestId, image = $("#accountAvatarImage"), icon = $("#accountFallbackIcon");
+  if (!user || user.is_anonymous || accountAccess !== "member" || !accountService) { showAccountAvatarFallback(image, icon); return; }
+  let url = avatarUrl;
+  if (url === undefined) {
+    try { url = (await accountService.getProfile(user)).avatar_url; } catch { url = null; }
+  }
+  if (requestId !== accountAvatarRequestId || accountUser?.id !== user.id || accountAccess !== "member") return;
+  if (!url || !image) { showAccountAvatarFallback(image, icon); return; }
+  image.onload = () => { if (requestId === accountAvatarRequestId && accountUser?.id === user.id) { image.hidden = false; if (icon) icon.hidden = true; } };
+  image.onerror = () => { if (requestId === accountAvatarRequestId) showAccountAvatarFallback(image, icon); };
+  image.src = url;
+}
 function setAccountAccess(state, guestSession = null) {
   accountAccess = state;
   const locked = !["guest", "guest-expired", "member"].includes(state);
@@ -1107,6 +1124,7 @@ function setAccountAccess(state, guestSession = null) {
     button.classList.toggle("is-guest", ["guest", "guest-expired"].includes(state));
     button.classList.toggle("is-unavailable", !["member", "guest", "guest-expired"].includes(state));
   }
+  void updateAccountAvatar(state === "member" ? accountUser : null);
   if (state === "guest" && accountUser?.id) {
     if (guestSession) startGuestTrialPrompt(guestSession);
     if (status) status.hidden = false;
@@ -1197,7 +1215,7 @@ function showAccount() {
   $("#accountRegister")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signUp($("#accountEmail").value, $("#accountPassword").value, $("#accountName").value, `${location.origin}${location.pathname}`); if (error) throw error; if (data.user && data.session) { await updateAccountAfterAuth(data.user); $("#modal").close(); } else $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
   $("#accountReset")?.addEventListener("click", async () => { try { const { error } = await accountService.requestPasswordReset($("#accountEmail").value, `${location.origin}${location.pathname}`); if (error) throw error; $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
   $("#accountStartGuest")?.addEventListener("click", async () => { try { const guestSession = await accountService.startGuestSession(); const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null; setAccountAccess(guestSession.remainingMs > 0 ? "guest" : "guest-expired", guestSession); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("authDisabled")} ${error.message}`; } });
-  $("#accountProfileSave")?.addEventListener("click", async () => { try { await accountService.updateProfile(accountUser, $("#accountName").value); const file = $("#accountAvatar").files?.[0]; if (file) await accountService.uploadAvatar(accountUser, file); toast(accountText("profileSaved")); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
+  $("#accountProfileSave")?.addEventListener("click", async () => { try { await accountService.updateProfile(accountUser, $("#accountName").value); const file = $("#accountAvatar").files?.[0]; if (file) { const profile = await accountService.uploadAvatar(accountUser, file); await updateAccountAvatar(accountUser, profile.avatar_url); } toast(accountText("profileSaved")); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountCloudSave")?.addEventListener("click", async () => { const name = prompt("Project name", project.name); if (!name?.trim()) return; try { await accountService.saveCloudProject(accountUser, { ...serializeProject(), name:name.trim() }); setUnsavedChanges(false); toast(accountText("saved")); await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountCloudRefresh")?.addEventListener("click", async () => { try { await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountAdminShow")?.addEventListener("click", async () => { try { const profiles = await accountService.listProfilesForAdministrator(accountUser); $("#accountAdminList").innerHTML = `<h3>${accountText("admin")}</h3>${profiles.map((profile) => `<div class="project-row"><span><b>${escapeHtml(profile.display_name || profile.user_id)}</b><small>${escapeHtml(profile.created_at)}</small></span></div>`).join("") || `<p class="safety-copy">0</p>`}`; } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });

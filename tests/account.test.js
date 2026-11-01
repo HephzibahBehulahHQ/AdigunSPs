@@ -92,4 +92,45 @@ assert.deepEqual((await cloudService.listCloudProjects(cloudUser)).map(({ title 
 const opened = await cloudService.openCloudProject(cloudUser, saved.id);
 assert.deepEqual(opened.payload, { name:"Pump station", version:1 }, "cloud open retrieves the newest owned project snapshot");
 
+let avatarProfile = { user_id:cloudUser.id, display_name:"", avatar_path:null };
+const avatarCalls = [];
+const avatarClient = {
+  auth,
+  from(table) {
+    assert.equal(table, "adigun_profiles");
+    const query = { action:"select", values:null };
+    const builder = {
+      select() { return builder; },
+      insert(values) { query.action = "insert"; query.values = values; return builder; },
+      update(values) { query.action = "update"; query.values = values; return builder; },
+      eq() { return builder; },
+      maybeSingle() { return Promise.resolve({ data:avatarProfile, error:null }); },
+      single() { avatarProfile = { ...avatarProfile, ...query.values }; return Promise.resolve({ data:avatarProfile, error:null }); },
+    };
+    return builder;
+  },
+  storage: { from(bucket) {
+    assert.equal(bucket, "adigun-avatars");
+    return {
+      async createSignedUrl(path, expiresIn) { avatarCalls.push(["sign", path, expiresIn]); return { data:{ signedUrl:`https://storage.example.test/${path}?token=signed` }, error:null }; },
+      async upload(path, file, options) { avatarCalls.push(["upload", path, file.type, options]); return { data:{ path }, error:null }; },
+      async remove(paths) { avatarCalls.push(["remove", paths[0]]); return { data:[], error:null }; },
+    };
+  } },
+};
+const avatarService = createAccountService(avatarClient);
+assert.equal((await avatarService.getProfile(cloudUser)).avatar_url, null, "profiles without a picture have no signed image URL");
+const uploadedAvatar = await avatarService.uploadAvatar(cloudUser, { type:"image/png", size:16 });
+assert.match(uploadedAvatar.avatar_path, new RegExp(`^${cloudUser.id}/avatar-[^/]+\\.png$`), "new uploads use a fresh per-user path to avoid stale image caches");
+assert.equal(uploadedAvatar.avatar_url, `https://storage.example.test/${uploadedAvatar.avatar_path}?token=signed`, "saved private avatar paths resolve to short-lived signed URLs");
+assert.deepEqual(avatarCalls.filter(([kind]) => kind === "sign").map(([, , expires]) => expires), [3600], "signed avatar URLs expire after one hour");
+const replacedAvatar = await avatarService.uploadAvatar(cloudUser, { type:"image/png", size:16 });
+assert.notEqual(replacedAvatar.avatar_path, uploadedAvatar.avatar_path, "replacing an avatar produces a cache-safe object path");
+assert.ok(avatarCalls.some(([kind, path]) => kind === "remove" && path === uploadedAvatar.avatar_path), "the previous avatar object is removed after replacement");
+assert.equal(avatarProfile.avatar_path, replacedAvatar.avatar_path, "the profile row stores the current avatar object path");
+assert.equal((await avatarService.getProfile({ ...cloudUser, id:"other-user" })).avatar_url, null, "avatar paths outside the signed-in user's folder are never signed");
+const failedAvatarLookup = createAccountService({ ...avatarClient, storage:{ from:() => ({ createSignedUrl:async () => { throw new Error("temporary storage error"); } }) } });
+assert.equal((await failedAvatarLookup.getProfile(cloudUser)).avatar_url, null, "temporary signed-URL errors preserve the default avatar fallback");
+
 console.log("Account auth, two-step guest upgrade and authorization boundary checks passed.");
+
