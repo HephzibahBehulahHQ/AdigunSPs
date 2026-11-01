@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import worker, { createAdigunAIWorker } from "../cloudflare/adigun-ai-worker.js";
 import { adigunAiRemoteErrorLabel, adigunAiRemoteLabels, askAdigunHostedAI, summarizeAdigunProjectForAI } from "../src/adigun-ai-remote.js";
+import { adigunAiLabels } from "../src/adigun-ai.js";
 import { loadAdigunRuntimeConfig, serializeAdigunRuntimeConfig } from "../scripts/runtime-config.js";
 
 const env = { SUPABASE_URL:"https://fqcbfnktdvqojyezxeis.supabase.co", SUPABASE_PUBLISHABLE_KEY:"sb_publishable_test", ADIGUN_AI_ALLOWED_ORIGINS:"https://hephzibahbehulahhq.github.io,http://localhost:8086", AI:{run:async () => ({response:"Reviewed PLC explanation."})} };
@@ -46,6 +47,8 @@ assert.equal(invoked,false,"consent remains opt-in before network request");
 let sentRequest;
 const call=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async(url,options)=>{sentRequest={url,options};return Response.json({answer:"offline-safe result"});}});
 assert.equal(call.answer,"offline-safe result");assert.equal(sentRequest.options.headers.authorization,"Bearer access-token");
+const guardedAnswer=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({answer:"Cloudflare Workers AI uses Gemma. Supabase endpoint: https://demo.supabase.co"})});
+assert.doesNotMatch(guardedAnswer.answer,/Cloudflare|Workers AI|Gemma|Supabase|endpoint|workers\.dev|supabase\.co/i,"hosted response cannot disclose backend provider or API details in chat");
 const rejected=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({error:"signed-in-account-required"},{status:401})});
 assert.equal(rejected.error,"signed-in-account-required","Worker authentication reason is preserved for useful guidance");
 assert.equal((await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:null},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>{throw new Error("must not call");}})).error,"authenticated-session-required");
@@ -58,6 +61,27 @@ assert.equal(adigunAiRemoteErrorLabel("model-unavailable"),"unavailable");
 assert.equal(adigunAiRemoteErrorLabel("unexpected"),"failed");
 for(const locale of ["en","de","yo","pcm"]){const copy=adigunAiRemoteLabels(locale);assert.ok(copy.accountRequired);assert.ok(copy.serviceUnavailable);}
 for(const locale of ["en","de","yo","pcm"])assert.match(adigunAiRemoteLabels(locale).consent("Cloudflare Workers AI"),/Cloudflare Workers AI/);
+
+const mainBot = readFileSync("src/adigun-ai.js", "utf8");
+const appSource = readFileSync("src/app.js", "utf8");
+const helpGuide = readFileSync("docs/HELP.md", "utf8");
+for (const locale of ["en", "de", "yo", "pcm"]) {
+  const labels = adigunAiLabels(locale);
+  assert.doesNotMatch(labels.privacy, /Cloudflare|Workers AI|Supabase|Gemma|provider|endpoint/i, `${locale} main Bot privacy line stays provider-neutral`);
+  assert.equal(labels.privacy.split(/[.!?。]/).filter(Boolean).length, 1, `${locale} main Bot uses one privacy sentence`);
+  const remoteLabels = adigunAiRemoteLabels(locale);
+  const consent = remoteLabels.consent("Cloudflare Workers AI");
+  assert.match(consent, /Cloudflare Workers AI/);
+  assert.match(consent, /question|Frage|ìbéèrè/i);
+  assert.match(consent, /summary|Projektübersicht|àkótán/i);
+  assert.match(consent, /educational|Lernantwort|ẹ̀kọ́|learning/i);
+  assert.match(consent, /engineering|safety|sicherheitstechnische|ààbò/i);
+  assert.match(consent, /token|àmì ìwọlé/i);
+  assert.doesNotMatch(remoteLabels.hosted, /Cloudflare|Workers AI|Supabase|Gemma/i, `${locale} hosted answer label stays neutral in the chat`);
+}
+assert.match(appSource, /remoteCopy\.consent\(hostedAI\.providerLabel\)/, "provider details are rendered at the consent gate");
+assert.match(appSource, /remoteCopy\.hosted/, "hosted answers use the neutral chat label");
+assert.match(helpGuide, /Cloudflare Workers AI[\s\S]*?educational reply[\s\S]*?not engineering or safety approval/i, "Help privacy guide discloses provider, purpose, and limits");
 
 const priorEnabled=process.env.ADIGUN_AI_ENABLED,priorUrl=process.env.ADIGUN_AI_WORKER_URL;
 delete process.env.ADIGUN_AI_ENABLED;delete process.env.ADIGUN_AI_WORKER_URL;

@@ -22,7 +22,7 @@ import { sortProjectsByRecent } from "./project-list.js";
 import { recordOperationsScan, calculateOperations, createOperationsReportCsv } from "./operations.js";
 import { resolveProjectLanguage } from "./project-language.js";
 import { supabaseClient, supabaseStatus } from "./supabase-client.js";
-import { accountAccessTitle, createAccountService } from "./account.js";
+import { createAccountService } from "./account.js";
 import { ensureHmiScreens, addHmiScreen, selectHmiScreen, renameHmiScreen, deleteActiveHmiScreen } from "./hmi-screens.js";
 
 let examplesPromise;
@@ -1099,12 +1099,13 @@ function setAccountAccess(state, guestSession = null) {
   for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
   const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
   if (button) {
-    button.textContent = state === "guest" || state === "guest-expired" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
-    button.title = accountAccessTitle(state, {
-      member:accountText("member"), guest:accountText("guestInfo"),
-      expired:guestSessionCopy[language]?.expired || guestSessionCopy.en.expired,
-      unavailable:accountText("authDisabled"),
-    });
+    const label = state === "member" ? accountText("account") : accountText("signIn");
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.dataset.accountState = state;
+    button.classList.toggle("is-signed-in", state === "member");
+    button.classList.toggle("is-guest", ["guest", "guest-expired"].includes(state));
+    button.classList.toggle("is-unavailable", !["member", "guest", "guest-expired"].includes(state));
   }
   if (state === "guest" && accountUser?.id) {
     if (guestSession) startGuestTrialPrompt(guestSession);
@@ -1125,7 +1126,6 @@ function setAccountAccess(state, guestSession = null) {
     if (status) status.hidden = true;
     if (notice) notice.hidden = true;
     $("#saveState").textContent = state === "member" ? "Saved locally" : accountText("authDisabled");
-    if (button && locked) button.title = accountText("authDisabled");
   }
 }
 function startGuestTrialPrompt(guestSession) {

@@ -9,7 +9,7 @@ const app = readFileSync("src/app.js", "utf8");
 const serviceWorker = readFileSync("service-worker.js", "utf8");
 const rendered = renderHelpMarkdown(guide);
 
-for (const section of ["getting-started", "navigating-the-interface", "creating-a-project", "saving-your-work", "using-commands", "building-a-project", "using-ready-made-example-projects", "the-live-co-pilot", "troubleshooting"]) {
+for (const section of ["getting-started", "navigating-the-interface", "creating-a-project", "saving-your-work", "using-commands", "building-a-project", "using-ready-made-example-projects", "hosted-ai-privacy", "the-live-co-pilot", "troubleshooting"]) {
   assert.match(rendered, new RegExp(`id="${section}"`), `guide renders ${section}`);
   assert.match(rendered, new RegExp(`href="#${section}"`), `contents links to ${section}`);
 }
@@ -21,7 +21,7 @@ assert.match(app, /dataset\.appMenu === "help"\) \{ showHelpGuideMenu/);
 assert.match(app, /data-help-action="safety"/);
 assert.match(app, /data-help-action="resources"/);
 assert.match(app, /\.\.\/docs\/HELP\.md/);
-assert.match(serviceWorker, /adigunsps-shell-v109/);
+assert.match(serviceWorker, /adigunsps-shell-v111/);
 assert.match(rendered, /id="using-the-bot-window"/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-tools\.js/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-verifier\.js/);
