@@ -1,17 +1,18 @@
 # Verification record
 
-## Supplemental local verification — 2026-11-01
+## Latest release verification — 2026-11-01
 
-- The expanded example generator produces exactly 1,000 examples in the requested category totals, each with 10–15 rungs and localized scenario/test notes.
-- `npm run validate:examples` passed 1,000/1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. The report records 1,104 non-fatal floating-terminal warnings and 15 duplicate-address warnings; do not interpret the pass as layout, electrical, or safety certification.
-- The updated example browser has search, categories, test instructions, and 50-result progressive browsing. The Bot can search and offer to load matching examples. The Run HUD reports logical scan state; voltage, current, and RPM remain explicitly unmodeled.
-- The full `npm test` suite and production build passed for this worktree. The local preview loaded successfully, but the new interactive flows have not been manually exercised in the browser; deployment has not been verified.
+- PR #39 merged to `main` as `f9cd38f76e69f85398897cff1e930428ec281afd`; GitHub Actions CI run `41330378252` and Pages deployment `41330378242` both succeeded.
+- Live reload at `https://adigunsps.hephzibahbehulah.com/` displayed the updated welcome subtitle and all six tour steps. The live browser had an expired guest session, so the example browser was not manually opened in that session.
+- `npm test` and `npm run build` passed locally before merge. `npm run validate:examples` passed 1,000/1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. The machine-readable report records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
+- The browser app can search and offer to load matching examples through Adigun BOT; automated tests cover this path. HUD voltage, current, and RPM are explicitly unmodeled. Physical-device control is not available.
+- The local branch remains `codex/adigunsps-hardening-2026-11-01` at `44dcc5d`; direct fetch could not resolve `github.com` in this environment. No exact local/remote commit-hash parity is claimed.
 
 ## Documentation maintenance
 
 When user-facing labels, options, or workflows change, update both `docs/HELP.md` (the in-app guide) and `docs/user-guide.md` in the same change. Confirm instructions against the current interface and describe backend-only changes only when they affect a user action; never present unavailable or unverified hardware controls as supported.
 
-## Release verification — 2026-11-01
+## Previous release verification — 2026-11-01 (superseded by the latest release above)
 
 - Merged PR [#33](https://github.com/HephzibahBehulahHQ/AdigunSPs/pull/33) as `8299ff9567b0bdfecdc9eee1958b06db21b87a9a`. GitHub Actions CI run `41320789744` and Pages deploy `41320789756` both completed successfully.
 - Live HTTPS requests to `https://adigunsps.hephzibahbehulah.com/`, `/src/app.js`, `/src/account.js`, and `/service-worker.js` returned 200. The served app contains the OTP form and `email_change` guest-upgrade flow, and the worker reports cache v113.
@@ -45,7 +46,7 @@ When user-facing labels, options, or workflows change, update both `docs/HELP.md
 - Live preview interaction verified the first-run screen, editor, Components catalog, symbol placement/deletion, terminal connection, four locales, and light/dark branding. Full user workflow, responsive layout, PWA install, and browser accessibility remain unverified; the preview address is `http://127.0.0.1:8080/` when the local development server is running.
 - The organization repository is accessible. `main` was updated through the connected GitHub integration after local Git credential spawning failed; the published component-library milestone is commit `5fc6c4b6712de3bfaf6902b5857c3e664dde3545`. The local branch was synchronized to that remote commit.
 
-## Automated checks run
+## Automated checks from the 200-project baseline
 
 - `npm test` — passed: exactly 200 examples and 1,317 cases, including LD pointer/touch and Shift+Arrow contact move, reorder/move safeguards; FBD SCALE range/clamp scenarios and PID disabled/setpoint/limit cases; five LD counter exercises; five LD sequencers with repeatable multi-scan scenarios; SET/RESET coil retention; LD rising/falling one-scan contacts and CTU rising-edge/count/reset; LD TON delay/reset; LD-to-FBD edge-preserving conversion bindings; deterministic input replay; digital and analog fault injection; pause-before-rung breakpoints and resume; ST Boolean/numeric execution including division-by-zero diagnostics; FBD logic; SFC transitions; validation negatives; four-locale alarm labels; and static UI selector bindings.
 - `npm run validate:examples` — passed 200/200 examples, 1,317 PLC logic cases, 903 schematic I/O checks, and 1,317 integrated PLC-to-component cases. Each documented scenario is replayed through wired Boolean/scalar analog input paths, the example scan and process model, and a connected digital load or analog indicator where applicable. The machine-readable per-example results are in `engineering-validation-report.json`. Scalar analog paths do not simulate voltage/current physics; physical wiring, manufacturer devices, standards, layout quality, and safety are not certified.

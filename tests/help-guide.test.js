@@ -18,6 +18,7 @@ assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the r
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
 assert.match(guide, /select the profile icon[\s\S]*?labelled \*\*Sign in\*\*[\s\S]*?\*\*Account\*\*/i, "Help identifies the current profile icon labels");
 assert.match(userGuide, /## Account access and guest work[\s\S]*?four minutes/i, "User Guide explains current OTP and guest access");
+assert.match(userGuide, /six-step tour covers[\s\S]*?Physical-device control is not available/i, "User Guide explains the current tour and hardware boundary");
 assert.match(labels, /Undo/);
 assert.match(labels, /Command search/);
 assert.match(app, /dataset\.appMenu === "help"\) \{ showHelpGuideMenu/);
