@@ -56,7 +56,7 @@ The application is designed for learning and early logic exploration. It does no
 - Design multiple local HMI screens with simulated tag-bound controls, values, trends, alarms, recipes, and deterministic educational process models. The 2D process mimic is schematic, not engineering geometry.
 - Export I/O schedules, user-entered hardware inventories/BOMs, trend history, and simulation reports as CSV or print-ready HTML that can be saved as PDF through the browser's print dialog. Wiring worksheets and panel references contain user-entered data; they do not determine ratings or certify a design.
 - Use the offline Modbus TCP frame tool to inspect supported request/response frames and exceptions. It does not open a network connection or communicate with a PLC.
-- Use Adigun BOT for curated PLC explanations, deterministic drafts for supported FBD gate networks, TON delayed lamps, and LD start/stop motors, plus an opt-in live co-pilot that flags selected logic and wiring issues. Co-pilot fixes are limited to adding a simulated BOOL input to an incomplete AND/OR gate and require review before import. Optional hosted answers use a deployed consent-gated Cloudflare Worker, verify a non-anonymous Supabase session, and call a pinned Workers AI model. The current public Pages release does not include this branch's hosted client; its Pages workflow defaults to the deployed Worker after publication. Authenticated inference remains unverified. BOT plans show assumptions, optional browser speech recognition is available, and guest file/cloud saves are blocked; see [`docs/BOT.md`](docs/BOT.md).
+- Use Adigun BOT for curated PLC explanations, deterministic drafts for supported FBD gate networks, TON delayed lamps, and LD start/stop motors, plus an opt-in live co-pilot that flags selected logic and wiring issues. Co-pilot fixes are limited to adding a simulated BOOL input to an incomplete AND/OR gate and require review before import. Optional hosted answers use the deployed consent-gated Cloudflare Worker, verify a non-anonymous Supabase session, and call a pinned Workers AI model. The hosted client is included in the published Pages app; authenticated inference remains unverified. BOT plans show assumptions, optional browser speech recognition is available, and guest file/cloud saves are blocked; see [`docs/BOT.md`](docs/BOT.md).
 
 ### Interface and localization
 
@@ -164,7 +164,7 @@ Run locally with `npm ci` and `npm run dev`. GitHub Pages builds do not receive 
 
 - Projects and recovery snapshots stay in the browser profile. Exported project files may contain user-created logic, tags, and project metadata; store and share them accordingly.
 - Imported projects are handled as application data, limited to 5 MiB, bounded for nesting and PLC model size, and checked for supported tags, contacts, and project structure before replacing the current project. This is input validation, not a malware scanner; do not import files from sources you do not trust.
-- Adigun BOT remains offline and deterministic. It can generate a limited LD/FBD draft with common tagged device wiring and present it for explicit import/save, but it does not modify an existing program or build arbitrary schematic wiring and does not call an AI provider.
+- Adigun BOT offers offline deterministic explanations and limited LD/FBD drafts. With explicit per-request consent and an authenticated non-guest account, hosted questions can be sent to the configured AI service; hosted answers do not edit or save projects. Draft generation remains limited to documented patterns and requires explicit review/import.
 - The simulator does not connect to physical hardware, execute real I/O, validate a safety function, or establish standards compliance.
 - Independently review and validate all engineering work using the target vendor tools and approved safety processes before any physical industrial use.
 
@@ -216,4 +216,5 @@ AdigunSPs is a product of HEPHZIBAH BEHULAH, developed under the HB Elektroniker
 - [LinkedIn personal profile](https://www.linkedin.com/in/isaacoluwoleadigun/)
 
 **AdigunSPs — a product of HEPHZIBAH BEHULAH.**
+
 
