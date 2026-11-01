@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-Latest release — 2026-11-01: PR #39 was merged to `main` as `f9cd38f76e69f85398897cff1e930428ec281afd`. GitHub Actions CI run `41330378252` and Pages deployment `41330378242` both succeeded. The live site at `https://adigunsps.hephzibahbehulah.com/` served the updated welcome copy and all six onboarding-tour steps after a fresh reload. Local `npm test`, `npm run build`, and the 1,000-project validation passed before merge. The deployed service-worker shell is v115. The live browser already had an expired guest session, so the example browser was not manually opened in that session; library search/load is covered by automated tests. The local Git branch is `codex/adigunsps-hardening-2026-11-01` at `44dcc5d`; this environment could not fetch GitHub because DNS lookup for `github.com` failed.
+Latest release — 2026-11-01: PR #40 was merged to `main` as `9fb9a4c39b401a0989a285707453728a9fa91e5a`. GitHub Actions CI run `41331078330` and Pages deployment `41331078265` both succeeded. The local branch `codex/adigunsps-hardening-2026-11-01` is synchronized to that same commit. The live custom-domain app returned HTTP 200 and loaded the editor; its existing guest session had expired, so no authenticated or example-browser workflow was manually exercised in that session. `npm test`, `npm run build`, and the 1,000-project validation passed against the synchronized source. The app runtime in this documentation-only release is the preceding app commit `f9cd38f`; its service-worker shell is v115.
 
 Follow-up on 2026-11-01: the deployed release uses email OTP sign-in/registration, a single email field, a four-minute guest window, and service-worker cache v115. Supabase migration `20261101151429_adigunsps_four_minute_guest_access` is applied. Live email delivery/OTP remains unverified until the Supabase email templates are confirmed and exercised with a real inbox.
 
@@ -29,6 +29,7 @@ Stakeholder decisions and responsible boundaries are listed in `stakeholder-inpu
 ## Branding
 
 The verified official HEPHZIBAH BEHULAH banner is the single corporate image mark in onboarding, About/Help, footer, print exports, and splash screens. AdigunSPs remains a separate text wordmark; its product-only launcher icons are used for favicon and PWA installation. HB Elektroniker appears as the division label with the official cyan accent. The footer now includes the supplied corporate/social destinations, a localized Help/docs link, the LinkedIn personal-profile label, and the current year. Central brand configuration generates the four localized PWA manifests and selects the same approved corporate artwork in light and dark themes; the product palette follows the published navy, gold, blue, ivory, and cyan tokens. The official font is not present in the design-system repository, so the interface uses a system sans-serif fallback until that font is published.
+
 
 
 
