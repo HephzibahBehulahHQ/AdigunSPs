@@ -10,7 +10,7 @@ The built-in generic PLC provides four digital inputs and outputs. Its input con
 
 Open the project selector beside the project name. Create a blank starter project, open a saved project, duplicate it, rename it, or delete it. Changes save to IndexedDB on this device. Use the restore button beside a project to select one of its latest 25 saved snapshots. Use **Save as** to make a named copy; use **Export** to keep a portable JSON file, or **File → Export PLCopen XML** for the supported TC6 LD subset. **Import** opens JSON projects or supported PLCopen TC6 XML as a new local project. XML interchange handles series NO/NC contacts, parallel OR paths, and normal coils; timers, counters, and other editor languages are rejected.
 
-On first use, read the educational safety notice and continue to the workspace. Choose **Start quick tour** for a four-step overview; reopen it from Help at any time.
+On first use, the welcome popup explains the workspace and offers **Start quick tour** or **Continue**. The six-step tour covers the ladder canvas, Components and Examples, schematic terminal wiring, Adigun BOT, Run/Step and the simulation HUD, and the hardware-model boundary. Reopen it later via **? → Safety and help → Start quick tour**; use **Back** and **Next** to navigate and **Finish** to close it. Physical-device control is not available in this build; electrical components are software models.
 
 ## Account access and guest work
 
