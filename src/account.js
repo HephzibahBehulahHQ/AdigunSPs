@@ -14,6 +14,14 @@ function requireResult(result) {
   return result?.data;
 }
 
+async function signedAvatarUrl(client, userId, path) {
+  if (!path || !path.startsWith(`${userId}/`) || !client.storage?.from) return null;
+  try {
+    const result = await client.storage.from("adigun-avatars").createSignedUrl(path, 3600);
+    return result?.error ? null : result?.data?.signedUrl || null;
+  } catch { return null; }
+}
+
 function requirePermanentUser(user) {
   if (!user?.id || user.is_anonymous) throw new AccountError("authentication-required", "Sign in with a verified account to use this feature.");
   return user;
@@ -66,7 +74,7 @@ export function createAccountService(client) {
       const member = requirePermanentUser(user);
       let profile = requireResult(await client.from("adigun_profiles").select("user_id,display_name,avatar_path,created_at,updated_at").eq("user_id", member.id).maybeSingle());
       if (!profile) profile = requireResult(await client.from("adigun_profiles").insert({ user_id:member.id, display_name:member.user_metadata?.display_name || "" }).select("user_id,display_name,avatar_path,created_at,updated_at").single());
-      return profile;
+      return { ...profile, avatar_url:await signedAvatarUrl(client, member.id, profile.avatar_path) };
     },
     async updateProfile(user, displayName) {
       const member = requirePermanentUser(user);
@@ -79,15 +87,19 @@ export function createAccountService(client) {
     },
     async uploadAvatar(user, file) {
       const member = requirePermanentUser(user);
-      await this.getProfile(member);
+      const previous = await this.getProfile(member);
       if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 3 * 1024 * 1024) {
         throw new AccountError("invalid-avatar", "Choose a JPG, PNG or WebP image smaller than 3 MB.");
       }
       const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
-      const path = `${member.id}/avatar.${ext}`;
+      const fileId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const path = `${member.id}/avatar-${fileId}.${ext}`;
       requireResult(await client.storage.from("adigun-avatars").upload(path, file, { upsert:true, contentType:file.type }));
       const profile = requireResult(await client.from("adigun_profiles").update({ avatar_path:path, updated_at:new Date().toISOString() }).eq("user_id", member.id).select("user_id,avatar_path,updated_at").single());
-      return profile;
+      if (previous.avatar_path?.startsWith(`${member.id}/`)) {
+        try { await client.storage.from("adigun-avatars").remove([previous.avatar_path]); } catch {}
+      }
+      return { ...profile, avatar_url:await signedAvatarUrl(client, member.id, path) };
     },
     async listCloudProjects(user) {
       const member = requirePermanentUser(user);
@@ -118,3 +130,4 @@ export function createAccountService(client) {
     },
   };
 }
+
