@@ -17,7 +17,10 @@ for (const section of ["getting-started", "taking-the-onboarding-tour", "navigat
 assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the requested word limit");
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
 assert.match(guide, /select the profile icon[\s\S]*?labelled \*\*Sign in\*\*[\s\S]*?\*\*Account\*\*/i, "Help identifies the current profile icon labels");
+assert.match(guide, /current email sends a link, not a code[\s\S]*?`\{\{ \.Token \}\}`/i, "Help explains the current email-link flow and OTP-template requirement");
+assert.doesNotMatch(guide, /check the email and password/i, "Help does not describe the removed password login");
 assert.match(userGuide, /## Account access and guest work[\s\S]*?four minutes/i, "User Guide explains current OTP and guest access");
+assert.match(userGuide, /current email template sends a sign-in link[\s\S]*?`\{\{ \.Token \}\}`/i, "User Guide discloses the current email-link flow and OTP-template requirement");
 assert.match(userGuide, /six-step tour covers[\s\S]*?Physical-device control is not available/i, "User Guide explains the current tour and hardware boundary");
 assert.match(labels, /Undo/);
 assert.match(labels, /Command search/);
@@ -48,6 +51,7 @@ assert.match(rendered, /id="taking-the-onboarding-tour"/);
 assert.match(guide, /Physical control unavailable/);
 assert.match(renderHelpMarkdown("## Safe\n\n<script>alert(1)</script>"), /&lt;script&gt;/, "Markdown rendering escapes HTML");
 console.log("PASS: Help guide, localized six-step tour, popup copy, safe rendering, and offline cache");
+
 
 
 
