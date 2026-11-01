@@ -9,7 +9,7 @@ The application includes a deterministic scan engine, editable LD, FBD, ST, and 
 ## Assumptions
 
 - The supplied phone screenshots define a compact, touch-friendly ladder editing workflow and rung/timer visual language.
-- The official source repository is `HephzibahBehulahHQ/AdigunSPs`; GitHub `main` was `e73be01d4cbb71f144cea900b9219fe2b43768d0` at the 2026-11-01 audit. GitHub Pages serves the public app. The local audit checkout is a separate, dirty working copy and is not authoritative for the published tree.
+- The official source repository is `HephzibahBehulahHQ/AdigunSPs`; GitHub `main` was `63c7cb8f8aebe84c947b6d209bf89c7486dde750` at the 2026-11-01 audit. GitHub Pages serves the public app. The local audit checkout is a separate, dirty working copy and is not authoritative for the published tree.
 - The dedicated AdigunSPs Supabase project is `fqcbfnktdvqojyezxeis`; VoltPro uses a separate Supabase project. The AdigunSPs project migrations and browser client configuration are documented in `supabase-integration.md`. GitHub Pages hosts the app; Cloudflare hosts the consent-gated AI Worker. The published Pages build includes the hosted-AI client and default Worker URL. Optional Actions variables can override or disable hosted AI.
 - Local project data is stored in the browser. Cloud copies are owner-scoped and each save creates a new version; team collaboration, encrypted backup, disaster recovery, and live cross-user verification are not implemented.
 - Yoruba and Nigerian Pidgin strings in this release are starter translations and need review by technical-language reviewers before production use.
