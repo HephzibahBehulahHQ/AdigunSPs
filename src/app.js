@@ -32,6 +32,7 @@ import { fbdBlockPosition, moveFbdBlocks, fbdCanvasSize, fbdVisibleBlockIndices,
 import { validateFbdBlocks, connectFbdPorts, requiredFbdInputs } from "./fbd-validation.js";
 import { convertLadderToFbd } from "./logic-conversion.js";
 import { formatLocaleDateTime, formatLocaleNumber, formatLocaleTime } from "./formatting.js";
+import { bindMenuDismissal } from "./menu-dismissal.js";
 
 import { ui, eventLogUi } from "./locale-ui.js";
 import { buildLocalizationReport} from "./localization.js";
@@ -217,14 +218,16 @@ const operationsCopy = {
   yo:{ button:"⌁ Iṣẹ́ ẹ̀rọ", title:"Ìṣírò iṣẹ́ ẹ̀rọ", note:"Àkókò iṣẹ́ ìṣàfarawé fún ìgbà yìí nìkan. Ìṣírò agbára àti owó dá lórí iye tí ìwọ tẹ̀ sí i; owó náà lo ẹyọ owó kan náà bí owó kWh rẹ. Kì í ṣe ìwọ̀n gidi tàbí àyẹ̀wò ààbò/ìtọ́jú.", tariff:"Owó rẹ fún kWh", threshold:"Ààlà ìṣàyẹ̀wò duty cycle (àṣàyàn, %)", output:"Àbájáde", load:"Agbára tí o tẹ̀ sí i (kW)", average:"Agbára àárín tí a fojú díwọ̀n (kW)", runtime:"Àkókò iṣẹ́ ìgbà yìí (wákàtí)", duty:"Duty cycle (%)", energy:"Agbára tí a fojú díwọ̀n (kWh)", cost:"Owó tí a fojú díwọ̀n", advisory:"Ó kọjá ààlà ìṣàyẹ̀wò", elapsed:"Àkókò ìṣàfarawé (wákàtí)", save:"Fipamọ́ àwọn iye wọ̀nyí", refresh:"Tún ìṣírò ṣe", export:"Gbé CSV jáde", none:"Kò sí tag àbájáde tí a ṣètò.", invalid:"Lo nọ́ńbà tí kò kéré sí odo; duty threshold kò gbọ́dọ̀ ju 100 lọ.", unentered:"Tẹ iye kan láti ṣírò" },
   pcm:{ button:"⌁ Operations", title:"Operations estimate", note:"This session simulation runtime only. Energy and cost na estimate from load and tariff wey you enter, and cost dey use the same currency unit as the tariff. E no be meter or maintenance/safety check.", tariff:"Your tariff per kWh", threshold:"Optional duty-cycle review limit (%)", output:"Output", load:"Load wey you enter (kW)", average:"Estimated average power (kW)", runtime:"Runtime this session (h)", duty:"Duty cycle (%)", energy:"Estimated energy (kWh)", cost:"Estimated cost", advisory:"E pass review limit", elapsed:"Simulated time (h)", save:"Save the inputs", refresh:"Refresh numbers", export:"Export CSV", none:"No output tags dey configured.", invalid:"Enter numbers wey no be below zero; duty limit no fit pass 100.", unentered:"Enter value to calculate" },
 };
+let contextMenuDismiss = null;
 function showContextMenu(event, entries, menuLabel = (contextCopy[language] || contextCopy.en).menu) {
-  event.preventDefault(); const menu = $("#contextMenu"); menu.setAttribute("aria-label", menuLabel); menu.innerHTML = entries.map((entry, index) => `${entry.separator ? `<div class="menu-separator" role="separator"></div>` : `<button type="button" role="menuitem" tabindex="-1" class="${entry.danger ? "danger" : ""}" data-context-index="${index}">${escapeHtml(entry.label)}</button>`}`).join("");
+  event.preventDefault(); hideContextMenu(); const menu = $("#contextMenu"); menu.setAttribute("aria-label", menuLabel); menu.innerHTML = entries.map((entry, index) => `${entry.separator ? `<div class="menu-separator" role="separator"></div>` : `<button type="button" role="menuitem" tabindex="-1" class="${entry.danger ? "danger" : ""}" data-context-index="${index}">${escapeHtml(entry.label)}</button>`}`).join("");
   menu.hidden = false; const width = menu.offsetWidth, height = menu.offsetHeight; menu.style.left = `${Math.max(8, Math.min(event.clientX, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, Math.min(event.clientY, innerHeight - height - 8))}px`;
+  contextMenuDismiss = bindMenuDismissal(event.currentTarget, menu, hideContextMenu);
   menu.querySelectorAll("[data-context-index]").forEach((button) => button.addEventListener("click", () => { const entry = entries[Number(button.dataset.contextIndex)]; hideContextMenu(); entry.action(); }));
   menu.onkeydown = (keyEvent) => { const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement); if (keyEvent.key === "Escape") { keyEvent.preventDefault(); hideContextMenu(); } else if (["ArrowDown", "ArrowUp"].includes(keyEvent.key)) { keyEvent.preventDefault(); buttons[(index + (keyEvent.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus(); } };
   requestAnimationFrame(() => menu.querySelector("[role=menuitem]")?.focus());
 }
-function hideContextMenu() { const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; }
+function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; }
 function rungLayoutInfo(rung, index) {
   const branches = rungPaths(rung), signature = JSON.stringify([rung.comment || "", branches.map((branch) => branch.length), Boolean(rung.timer), Boolean(rung.counter), Boolean(rung.scale)]), key = rung.id || `rung-${index}`;
   const cached = ladderRungHeights.get(key);
