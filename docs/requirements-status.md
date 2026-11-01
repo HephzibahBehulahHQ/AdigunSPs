@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `64138617`; CI and GitHub Pages deployment passed after PR #14. A fresh `?release=64138617` smoke verified the editor, 200-example browser with corrected input summaries, and Help menu behavior. End-to-end account, cloud-write, and authenticated AI flows remain unverified; full accessibility, security, performance, and installation audits are incomplete.
+This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `787d932c`; CI run `41307667603` and GitHub Pages deployment run `41307667492` passed after PR #15. A fresh `?release=787d932c` smoke verified the editor, corrected 200-example browser, and Help menu behavior. End-to-end account, cloud-write, and authenticated AI flows remain unverified; full accessibility, security, performance, and installation audits are incomplete.
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|
