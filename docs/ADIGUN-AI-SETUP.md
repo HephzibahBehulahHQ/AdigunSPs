@@ -4,7 +4,7 @@ The local Adigun BOT remains the default and works offline. Hosted answers use C
 
 ## Current deployment status
 
-The production Worker `https://adigunsps-ai.hephzibah-behulah.workers.dev` was deployed on 2026-11-01 from the local audit branch. Wrangler reported `env.AI` and the AdigunSPs Supabase URL/origin bindings; `SUPABASE_PUBLISHABLE_KEY` is configured as a Worker secret. GET returns the expected `405 method-not-allowed`; no-token POST returns `401 authentication-required`, and a consented invalid token returns `401 invalid-session`, all without invoking the model. Live authenticated inference and Neuron usage remain unverified. GitHub Pages still serves published `main` (`bcee0065`); publish this local hosted-AI client and workflow change before it is available on the site. The Pages build supplies the Worker URL by default; repository variables are optional overrides.
+The production Worker `https://adigunsps-ai.hephzibah-behulah.workers.dev` was deployed on 2026-11-01 with the `AI` binding and AdigunSPs Supabase settings; `SUPABASE_PUBLISHABLE_KEY` is configured as a Worker secret. The current browser smoke confirmed GET returns `405 method-not-allowed`. Earlier deployment checks recorded no-token POST `401 authentication-required` and consented invalid-token POST `401 invalid-session`; those do not verify inference. GitHub Pages now serves `main` commit `242d4c8f`, and the hosted-AI client plus default Worker URL are included in the deployed build. Authenticated inference and Neuron usage remain unverified.
 
 ## Deploy the Worker
 
