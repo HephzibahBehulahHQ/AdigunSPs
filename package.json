@@ -25,6 +25,7 @@
     "test:resources": "node tests/resources.test.js",
     "test:protocol": "node tests/protocol-sim.test.js",
     "test:accessibility": "node tests/accessibility.test.js",
+    "test:responsive": "node tests/responsive-layout.test.js",
     "test:service-worker": "node tests/service-worker.test.js",
     "test:menu-dismissal": "node tests/menu-dismissal.test.js",
     "test:supabase": "node tests/account.test.js && node tests/supabase-client.test.js && node tests/supabase-schema.test.js"
