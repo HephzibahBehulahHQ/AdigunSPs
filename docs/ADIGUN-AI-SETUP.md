@@ -4,7 +4,7 @@ The local Adigun BOT remains the default and works offline. Hosted answers use C
 
 ## Current deployment status
 
-The production Worker `https://adigunsps-ai.hephzibah-behulah.workers.dev` was deployed on 2026-11-01 with the `AI` binding and AdigunSPs Supabase settings; `SUPABASE_PUBLISHABLE_KEY` is configured as a Worker secret. The current browser smoke confirmed GET returns `405 method-not-allowed`. Earlier deployment checks recorded no-token POST `401 authentication-required` and consented invalid-token POST `401 invalid-session`; those do not verify inference. GitHub Pages now serves `main` commit `242d4c8f`, and the hosted-AI client plus default Worker URL are included in the deployed build. Authenticated inference and Neuron usage remain unverified.
+The production Worker `https://adigunsps-ai.hephzibah-behulah.workers.dev` is deployed with the `AI` binding and AdigunSPs Supabase settings; `SUPABASE_PUBLISHABLE_KEY` is configured as a Worker secret. Recorded route checks returned `405 method-not-allowed` for GET, `401 authentication-required` for a POST without a bearer token, and `401 invalid-session` for an invalid token. These checks verify the method and authentication guards, not model inference. The published Pages build includes the consent-gated hosted-AI client and default Worker URL. Signed-in inference, Neuron usage, retention, and request-limit behavior remain unverified.
 
 ## Deploy the Worker
 
@@ -63,9 +63,9 @@ To verify plan and usage:
 
 ## Enable hosted AI on GitHub Pages
 
-The GitHub Pages build uses the verified Worker URL and enables the hosted option by default after these source changes are published. No GitHub Actions variable is required; repository variables can override the endpoint or set `ADIGUN_AI_ENABLED=false`. In the app, a signed-in user must still opt in for each hosted request. The local development build remains disabled unless its environment variables are set.
+The current GitHub Pages build includes the hosted client and verified default Worker URL. No GitHub Actions variable is required; repository variables can override the endpoint or set `ADIGUN_AI_ENABLED=false`. A signed-in user must opt in for each hosted request. The local development build remains disabled unless its environment variables are set.
 
-Publish the local hosted-AI client changes, then run **Actions → Deploy AdigunSPs to GitHub Pages → Run workflow**. The deploy workflow builds the static runtime configuration from its defaults or the optional repository variables. If hosted AI is disabled or its URL is not HTTPS, the hosted option stays hidden and the local offline assistant remains available.
+To redeploy after changing the Pages client or runtime configuration, run **Actions → Deploy AdigunSPs to GitHub Pages → Run workflow**. The workflow builds the static runtime configuration from its defaults or the optional repository variables. If hosted AI is disabled or its URL is not HTTPS, the hosted option stays hidden and the local offline assistant remains available.
 
 ## Verification and limits
 
