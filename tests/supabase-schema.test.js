@@ -30,7 +30,7 @@ assert.match(policyPerformance, /Users delete their own profile[\s\S]*?for delet
 assert.equal((policyPerformance.match(/create policy "Only permanent users can insert"/gi) || []).length, 5);
 assert.equal((policyPerformance.match(/create policy "Only permanent users can insert"\s+on adigunsps\.[a-z_]+ as restrictive for insert to authenticated/gi) || []).length, 5, "permanent-only insertion must be restrictive so owner-wide policies cannot OR around the guest check");
 assert.match(sql, /create policy "Project version insert requires owned project"\s+on adigunsps\.adigun_cloud_project_versions as restrictive for insert to authenticated/i, "project version inserts must be restricted to rows linked to an owned project");
-assert.match(guestExpiry, /security definer[\s\S]*?set search_path\\s*(?:to|=)\\s*''[\s\S]*?request_user uuid := auth\.uid\(\)[\s\S]*?request_is_anonymous boolean := coalesce\(\(auth\.jwt\(\) ->> 'is_anonymous'\)::boolean, false\)/i, "guest RPC must pin its search path and require a verified anonymous identity");
+assert.match(guestExpiry, /security definer[\s\S]*?set search_path\s*(?:to|=)\s*''[\s\S]*?request_user uuid := auth\.uid\(\)[\s\S]*?request_is_anonymous boolean := coalesce\(\(auth\.jwt\(\) ->> 'is_anonymous'\)::boolean, false\)/i, "guest RPC must pin its search path and require a verified anonymous identity");
 assert.equal((policyPerformance.match(/\(select auth\.jwt\(\)\)/gi) || []).length, 6);
 assert.doesNotMatch(policyPerformance, /adigunsimulator|adigunelectrocad|\bdrop\s+table\b/i);
 
