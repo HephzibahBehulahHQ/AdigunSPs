@@ -75,6 +75,14 @@ assert.equal(simulateElectricalDiagram(tripCircuit,{}).energized[lamp.id],true,"
 assert.equal(simulateElectricalDiagram(tripCircuit,{Trip:true}).energized[lamp.id],false,"overload trip opens its associated NC control path");
 const mappedPlc=createElectricalComponent("genericPlc24v4di4do",1);mappedPlc.ioMap.I1={tag:"Start",address:"I0.0"};
 assert.ok(validateElectricalDiagram({components:[mappedPlc],wires:[]},[{name:"Start",role:"output",type:"BOOL"}]).some((issue)=>issue.code==="electrical-io-role"),"PLC address mappings enforce input/output roles");
+const floatingPlcIssues=validateElectricalDiagram({components:[mappedPlc],wires:[]},[{name:"Start",role:"input",type:"BOOL"}]).filter((issue)=>issue.code==="electrical-floating-terminal");
+assert.ok(floatingPlcIssues.some((issue)=>issue.message.includes("terminal I1 ")),"a mapped PLC channel without a wire remains a visible warning");
+assert.ok(floatingPlcIssues.some((issue)=>issue.message.includes("terminal PE ")),"an unconnected PLC protective-earth terminal remains a visible warning");
+assert.equal(floatingPlcIssues.some((issue)=>issue.message.includes("terminal I3 ")||issue.message.includes("terminal Q4 ")),false,"unmapped spare PLC channels do not appear as wiring warnings");
+const railOnly=createElectricalComponent("dcPowerRail",1);
+assert.equal(validateElectricalDiagram({components:[railOnly],wires:[]}).some((issue)=>issue.code==="electrical-floating-terminal"),false,"unused distribution rail taps are not reported as floating device terminals");
+const generatedElectrical=createExampleElectricalDiagram([{name:"Start",type:"BOOL",role:"input",address:"I0.0"},{name:"Lamp",type:"BOOL",role:"output",address:"Q0.0"}],{inputs:["Start"],outputs:["Lamp"]});
+assert.equal(validateElectricalDiagram(generatedElectrical,[{name:"Start",type:"BOOL",role:"input"},{name:"Lamp",type:"BOOL",role:"output"}]).some((issue)=>issue.code==="electrical-floating-terminal"),false,"generated example schematics connect the PLC earth and omit warnings for unused channels and rail taps");
 const logicExample={title:{en:"Circuit integration"},tags:[{name:"Start",role:"input",type:"BOOL",address:"I0.0"},{name:"Lamp",role:"output",type:"BOOL",address:"Q0.0"}],io:{inputs:["Start"],outputs:["Lamp"]},initialState:{Start:false},logic:{rungs:[{contacts:[{tag:"Start",mode:"NO"}],coil:"Lamp"}]}};
 const logicProject=makeProjectFromExample(logicExample),plcOff=scan(logicProject,{Start:false},{}),circuitOff=simulateElectricalDiagram(logicProject.electrical,{Start:false},plcOff.outputs),plcOn=scan(logicProject,{Start:true},{}),circuitOn=simulateElectricalDiagram(logicProject.electrical,{Start:true},plcOn.outputs),mappedLamp=logicProject.electrical.components.find((item)=>item.tag==="Lamp");
 assert.equal(circuitOff.energized[mappedLamp.id],false,"PLC ladder output off leaves its electrically connected lamp off");
