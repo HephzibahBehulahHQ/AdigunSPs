@@ -42,7 +42,7 @@ import { calculateRungWindow } from "./ladder-virtualization.js";
 import { createPlcopenXml, parsePlcopenXml } from "./plcopen.js";
 import { assertProjectFileSize, normalizeImportedProject } from "./project-import.js";
 import { adigunAiLabels, answerAdigunQuestion } from "./adigun-ai.js";
-import { adigunAiRemoteLabels, askAdigunHostedAI } from "./adigun-ai-remote.js";
+import { adigunAiRemoteErrorLabel, adigunAiRemoteLabels, askAdigunHostedAI } from "./adigun-ai-remote.js";
 import { adigunBotCanSave, planAdigunBotBuild, planAdigunBotCopilotFix } from "./adigun-bot-builder.js";
 import { adigunBotLadderSketch, verifyAdigunBotDraft } from "./adigun-bot-verifier.js";
 import { createAdigunBotCanvasPreview, resolveAdigunBotCanvasPreview } from "./adigun-bot-preview.js";
@@ -1258,7 +1258,7 @@ function showAdigunAI() {
     if (copilotGoalPending) { copilotGoal=question.trim();copilotGoalPending=false;adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:`I’ll use “${question.trim()}” as this project’s goal for live suggestions in this session.`});showAdigunAI();return; }
     if (document.querySelector("#adigunRemoteConsent")?.checked) {
       const result = await askAdigunHostedAI({ client:supabaseClient, question, project, diagnostics:validateProject(project), consent:true, workerUrl:hostedAI.workerUrl });
-      const answer = result.answer ? `${remoteCopy.hosted}: ${result.answer}` : remoteCopy[result.error === "hosted-ai-unavailable" ? "unavailable" : "failed"];
+      const answer = result.answer ? `${remoteCopy.hosted}: ${result.answer}` : remoteCopy[adigunAiRemoteErrorLabel(result.error)];
       adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:answer});
       showAdigunAI();return;
     }
