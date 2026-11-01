@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const sql = await readFile(new URL("../supabase/migrations/20261101075618_adigunsps_schema_and_guest_upgrade.sql", import.meta.url), "utf8");
 const guestExpiry = await readFile(new URL("../supabase/migrations/20261101085102_enforce_guest_session_expiry.sql", import.meta.url), "utf8");
+const policyPerformance = await readFile(new URL("../supabase/migrations/20261101114255_adigunsps_rls_query_performance.sql", import.meta.url), "utf8");
 const tables = ["adigun_profiles", "adigun_guest_sessions", "adigun_cloud_projects", "adigun_cloud_project_versions"];
 for (const table of tables) assert.match(sql, new RegExp(`alter table public\\.${table} set schema adigunsps`, "i"));
 assert.match(sql, /alter table adigunsps\.adigun_cloud_projects rename column owner_id to user_id/i);
@@ -21,4 +22,13 @@ assert.match(guestExpiry, /revoke insert, update, delete[\s\S]*adigun_guest_sess
 assert.match(guestExpiry, /grant execute on function adigunsps\.adigun_ensure_guest_session\(\) to authenticated/i);
 assert.doesNotMatch(guestExpiry, /drop\s+table/i);
 
-console.log("AdigunSPs schema migration isolation and RLS policy checks passed.");
+assert.match(policyPerformance, /create index if not exists adigunsps_my_data_user_id_idx\s+on adigunsps\.my_data\s*\(user_id\)/i);
+assert.match(policyPerformance, /Users read own profile or admins[\s\S]*?for select[\s\S]*?auth\.uid\(\)[\s\S]*?auth\.jwt\(\)/i);
+assert.match(policyPerformance, /Users create their own profile[\s\S]*?for insert[\s\S]*?auth\.uid\(\)/i);
+assert.match(policyPerformance, /Users update their own profile[\s\S]*?for update[\s\S]*?using[\s\S]*?with check/i);
+assert.match(policyPerformance, /Users delete their own profile[\s\S]*?for delete/i);
+assert.equal((policyPerformance.match(/create policy "Only permanent users can insert"/gi) || []).length, 5);
+assert.equal((policyPerformance.match(/\(select auth\.jwt\(\)\)/gi) || []).length, 6);
+assert.doesNotMatch(policyPerformance, /adigunsimulator|adigunelectrocad|\bdrop\s+table\b/i);
+
+console.log("AdigunSPs schema, owner/admin RLS semantics, JWT policy caching, and index checks passed.");
