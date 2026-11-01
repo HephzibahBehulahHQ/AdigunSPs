@@ -1097,7 +1097,14 @@ function setAccountAccess(state, guestSession = null) {
   if (state !== "guest" && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
   for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
   const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
-  if (button) button.textContent = state === "guest" || state === "guest-expired" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
+  if (button) {
+    button.textContent = state === "guest" || state === "guest-expired" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
+    button.title = accountAccessTitle(state, {
+      member:accountText("member"), guest:accountText("guestInfo"),
+      expired:guestSessionCopy[language]?.expired || guestSessionCopy.en.expired,
+      unavailable:accountText("authDisabled"),
+    });
+  }
   if (state === "guest" && accountUser?.id) {
     if (guestSession) startGuestTrialPrompt(guestSession);
     if (status) status.hidden = false;
