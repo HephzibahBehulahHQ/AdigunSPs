@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { AccountError, createAccountService } from "../src/account.js";
 
 const authCalls = [];
+const rpcCalls = [];
 const auth = {
   signUp: async (args) => { authCalls.push(["signUp", args]); return { data:{ user:{ id:"u1" } }, error:null }; },
   signInWithPassword: async (args) => { authCalls.push(["signIn", args]); return { data:{ user:{ id:"u1", is_anonymous:false } }, error:null }; },
@@ -11,7 +12,7 @@ const auth = {
   signInAnonymously: async () => { throw new Error("An existing guest session must be reused."); },
   updateUser: async (args) => { authCalls.push(["updateUser", args]); return { data:{ user:{ id:"u1", is_anonymous:false, email:"person@example.test", email_confirmed_at:"2030-01-01T00:00:00.000Z", user_metadata:args.data } }, error:null }; },
 };
-const client = { auth, from:() => { throw new Error("unexpected table query"); } };
+const client = { auth, rpc:async (name) => { rpcCalls.push(name); return { data:[{ started_at:"2030-01-01T00:00:00.000Z", expires_at:"2030-01-01T00:10:00.000Z", server_now:"2030-01-01T00:00:00.000Z" }], error:null }; }, from:() => { throw new Error("unexpected table query"); } };
 const service = createAccountService(client);
 assert.ok(service);
 assert.equal(createAccountService(null), null);
@@ -25,9 +26,13 @@ assert.deepEqual(authCalls[2], ["reset", "user@example.test", { redirectTo:"http
 
 const guest = await service.ensureGuestSession({ id:"g1", is_anonymous:true });
 const reusedGuest = await service.startGuestSession();
-assert.equal(guest.serverIssued, false);
-assert.equal(reusedGuest.serverIssued, false, "guest access is not enforced by server expiry");
+assert.equal(guest.serverIssued, true);
+assert.equal(guest.remainingMs, 10 * 60_000);
+assert.equal(reusedGuest.serverIssued, true, "reused guest sessions get their original server expiry");
+assert.deepEqual(rpcCalls, ["adigun_ensure_guest_session", "adigun_ensure_guest_session"]);
 await assert.rejects(() => service.ensureGuestSession({ id:"u1", is_anonymous:false }), (error) => error.code === "guest-session-not-anonymous");
+const expiredService = createAccountService({ ...client, rpc:async () => ({ data:[{ started_at:"2030-01-01T00:00:00.000Z", expires_at:"2030-01-01T00:10:00.000Z", server_now:"2030-01-01T00:10:00.000Z" }], error:null }) });
+assert.equal((await expiredService.ensureGuestSession({ id:"g2", is_anonymous:true })).remainingMs, 0, "expired server sessions are not restarted");
 await assert.rejects(() => service.saveCloudProject({ id:"g1", is_anonymous:true }, { name:"Guest" }), (error) => error.code === "authentication-required");
 await service.beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, " person@example.test ");
 assert.deepEqual(authCalls.find((call) => call[0] === "updateUser")[1], { email:"person@example.test" }, "guest upgrade sends only the email in the confirmation step");

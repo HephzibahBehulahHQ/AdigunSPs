@@ -33,6 +33,7 @@ import { validateFbdBlocks, connectFbdPorts, requiredFbdInputs } from "./fbd-val
 import { convertLadderToFbd } from "./logic-conversion.js";
 import { formatLocaleDateTime, formatLocaleNumber, formatLocaleTime } from "./formatting.js";
 import { bindMenuDismissal } from "./menu-dismissal.js";
+import { renderHelpMarkdown } from "./help-markdown.js";
 
 import { ui, eventLogUi } from "./locale-ui.js";
 import { buildLocalizationReport} from "./localization.js";
@@ -66,9 +67,15 @@ let runTimer = null, scans = 0, zoom = 100, selection = null, selectedContacts =
 let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor = 0, traceInitial = null, traceInitialFaults = [], traceProjectKey = "", traceMismatches = [], traceBreakpoints = new Set();
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
 const accountService = createAccountService(supabaseClient);
-let accountUser = null, accountAccess = "checking", guestTimer = null;
+let accountUser = null, accountAccess = "checking", guestTimer = null, guestDeadline = 0, guestDraftStorageKey = null;
 const guestUpgradePendingKey = "adigunsps-guest-upgrade-password-pending";
 function guestUpgradePasswordPending() { const expectedEmail = localStorage.getItem(guestUpgradePendingKey); return !!expectedEmail && !!accountUser && !accountUser.is_anonymous && accountUser.email?.toLowerCase() === expectedEmail; }
+const guestSessionCopy = {
+  en:{remaining:"Guest access · {time} left",expired:"Your 10-minute guest session has ended. Sign in or create an account to continue editing. Your temporary work is kept in this tab." ,temporary:"Temporary guest work saved in this tab."},
+  de:{remaining:"Gastzugang · noch {time}",expired:"Deine zehnminütige Gastsitzung ist beendet. Melde dich an oder erstelle ein Konto, um weiterzubearbeiten. Deine Arbeit bleibt vorübergehend in diesem Tab.",temporary:"Temporärer Gastentwurf in diesem Tab gespeichert."},
+  yo:{remaining:"Àǹfààní àlejò · {time} ló kù",expired:"Àkókò àlejò ìṣẹ́jú mẹ́wàá ti parí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀ láti tẹ̀síwájú. Iṣẹ́ rẹ ṣì wà fún ìgbà díẹ̀ nínú taabu yìí.",temporary:"A ti fi iṣẹ́ àlejò pamọ́ fún ìgbà díẹ̀ nínú taabu yìí."},
+  pcm:{remaining:"Guest access · {time} remain",expired:"Your 10-minute guest session don end. Sign in or create account to continue editing. Your temporary work dey inside this tab.",temporary:"Temporary guest work don save for this tab."},
+};
 const forcedInputs = {};
 const ladderRungHeights = new Map();
 const fbdBlockHeights = new Map();
@@ -82,7 +89,7 @@ const hmiHistory = {};
 const t = (key) => ui[language]?.[key] || ui.en[key] || key;
 
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1900); }
-function setUnsavedChanges(value) { hasUnsavedChanges = Boolean(value); const status = $("#saveState"); if (!status) return; status.textContent = hasUnsavedChanges ? "Unsaved changes" : accountAccess === "guest" || accountAccess === "member" ? "Saved locally" : t("saved"); }
+function setUnsavedChanges(value) { hasUnsavedChanges = Boolean(value); const status = $("#saveState"); if (!status) return; status.textContent = hasUnsavedChanges ? "Unsaved changes" : accountAccess === "guest" ? (guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary) : accountAccess === "guest-expired" ? "Account required" : accountAccess === "member" ? "Saved locally" : t("saved"); }
 window.addEventListener("beforeunload", (event) => { if (!hasUnsavedChanges) return; event.preventDefault(); event.returnValue = ""; });
 function logEvent(type, message, detail = {}) { eventLog.unshift({ time:new Date().toISOString(), scan:scans, type, message, ...detail }); if (eventLog.length > 500) eventLog.length = 500; }
 function projectRungs(p) { return p.rungs.map((r) => ({ ...r, branches: r.branches?.length ? r.branches : [r.contacts || []] })); }
@@ -109,7 +116,26 @@ function compileSTSource(source, tags) {
   });
 }
 function pushHistory() { history.push(structuredClone(project)); if (history.length > 60) history.shift(); future = []; }
-async function persist(show = false, force = false, options = {}) { if (!project) return false; if (options.markDirty !== false) setUnsavedChanges(true); if (!preferences.autosave && !force) { $("#saveState").textContent = language === "de" ? "Nicht gespeichert" : "Unsaved changes"; return false; } project.updatedAt = Date.now(); $("#saveState").textContent = t("saving"); try { const storedProject = serializeProject(); await store.save(storedProject); if (options.markSaved) setUnsavedChanges(false); else $("#saveState").textContent = t("saved"); if (show) toast(t("savedToast")); return true; } catch { $("#saveState").textContent = "Storage unavailable"; toast("Browser storage unavailable"); return false; } }
+async function persist(show = false, force = false, options = {}) {
+  if (!project) return false;
+  if (options.markDirty !== false) setUnsavedChanges(true);
+  if (!preferences.autosave && !force) { $("#saveState").textContent = language === "de" ? "Nicht gespeichert" : "Unsaved changes"; return false; }
+  project.updatedAt = Date.now(); $("#saveState").textContent = t("saving");
+  try {
+    const storedProject = serializeProject();
+    if (accountAccess === "guest") {
+      if (!guestDraftStorageKey) throw new Error("Guest session storage is unavailable.");
+      sessionStorage.setItem(guestDraftStorageKey, JSON.stringify(storedProject));
+      if (options.markSaved) setUnsavedChanges(false); else $("#saveState").textContent = guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary;
+      if (show) toast(guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary);
+      return true;
+    }
+    await store.save(storedProject);
+    if (options.markSaved) setUnsavedChanges(false); else $("#saveState").textContent = t("saved");
+    if (show) toast(t("savedToast"));
+    return true;
+  } catch { $("#saveState").textContent = "Storage unavailable"; toast("Project storage unavailable"); return false; }
+}
 function inferTags() {
   const roles = new Map((project.tags || []).map((tag) => [tag.name, tag.role]));
   const inputs = new Set((project.io?.inputs || []).filter((name) => roles.get(name) !== "internal" && roles.get(name) !== "output"));
@@ -227,7 +253,23 @@ function showContextMenu(event, entries, menuLabel = (contextCopy[language] || c
   menu.onkeydown = (keyEvent) => { const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement); if (keyEvent.key === "Escape") { keyEvent.preventDefault(); hideContextMenu(); } else if (["ArrowDown", "ArrowUp"].includes(keyEvent.key)) { keyEvent.preventDefault(); buttons[(index + (keyEvent.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus(); } };
   requestAnimationFrame(() => menu.querySelector("[role=menuitem]")?.focus());
 }
-function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; }
+function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
+let helpMarkdownPromise;
+function showHelpGuideMenu(event) {
+  event.preventDefault(); hideContextMenu();
+  const menu = $("#contextMenu"), trigger = event.currentTarget;
+  menu.classList.add("help-guide-menu"); menu.setAttribute("aria-label", "AdigunSPs Help Guide"); menu.innerHTML = `<div class="help-guide-loading" role="status">Loading Help Guide…</div>`; menu.hidden = false;
+  const rect = trigger.getBoundingClientRect(), width = Math.min(760, innerWidth - 16), top = Math.min(rect.bottom + 4, innerHeight - 120);
+  menu.style.width = `${width}px`; menu.style.maxHeight = `${Math.max(120, innerHeight - top - 8)}px`; menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, top)}px`;
+  contextMenuDismiss = bindMenuDismissal(trigger, menu, hideContextMenu);
+  helpMarkdownPromise ||= fetch(new URL("../docs/HELP.md", import.meta.url)).then((response) => { if (!response.ok) throw new Error(`Help guide request failed (${response.status})`); return response.text(); });
+  helpMarkdownPromise.then((markdown) => {
+    if (menu.hidden || !menu.classList.contains("help-guide-menu")) return;
+    menu.innerHTML = `<section class="help-guide-content" role="region" aria-label="AdigunSPs Help Guide">${renderHelpMarkdown(markdown)}<div class="help-guide-actions"><button type="button" data-help-action="safety">Safety and help</button><button type="button" data-help-action="resources">External resources</button></div></section>`;
+    menu.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener("click", (click) => { click.preventDefault(); menu.querySelector(link.getAttribute("href"))?.scrollIntoView({ behavior:"smooth", block:"start" }); }));
+    menu.querySelectorAll("[data-help-action]").forEach((button) => button.addEventListener("click", () => { const next = button.dataset.helpAction; hideContextMenu(); if (next === "safety") showHelp(); else showResources(); }));
+  }).catch(() => { helpMarkdownPromise = undefined; if (!menu.hidden) menu.innerHTML = `<div class="help-guide-loading" role="alert">Help Guide could not be loaded. Check that the docs/HELP.md file is available, then reload the page.</div>`; });
+}
 function rungLayoutInfo(rung, index) {
   const branches = rungPaths(rung), signature = JSON.stringify([rung.comment || "", branches.map((branch) => branch.length), Boolean(rung.timer), Boolean(rung.counter), Boolean(rung.scale)]), key = rung.id || `rung-${index}`;
   const cached = ladderRungHeights.get(key);
@@ -866,6 +908,7 @@ async function exportExampleTestReport() {
   const link = document.createElement("a"); link.href = URL.createObjectURL(file); link.download = "adigunsps-example-test-report.csv"; link.click(); URL.revokeObjectURL(link.href); toast(t("exported"));
 }
 async function showProjects() {
+  if (accountAccess !== "member") { showAccount(); return; }
   const projects = sortProjectsByRecent(await store.all()), recentLabel = ({en:"Recent projects · last opened",de:"Zuletzt geöffnete Projekte",yo:"Àwọn iṣẹ́ tí a ṣí kẹ́yìn",pcm:"Projects wey person open last"})[language];
   modal(t("titleProjects"), `<div class="modal-body"><p class="safety-copy">${recentLabel}</p><div class="project-list">${projects.map((p) => `<div class="project-row"><button class="project-open" data-open="${p.id}"><b>${escapeHtml(p.name)}</b><small>${formatLocaleDateTime(p.lastOpenedAt || p.updatedAt,language)}</small></button><button data-properties="${p.id}" title="${({en:"Project properties",de:"Projekteigenschaften",yo:"Àwọn ànímọ́ iṣẹ́",pcm:"Project properties"})[language]}">⚙</button><button data-recover="${p.id}" title="Recover an earlier snapshot">↶</button><button data-duplicate="${p.id}" title="${t("duplicate")}">⧉</button><button data-rename="${p.id}" title="${t("rename")}">✎</button><button data-delete="${p.id}" title="${t("delete")}">×</button></div>`).join("")}</div><div class="modal-actions"><button class="primary" id="newProject">＋ ${t("new")}</button></div></div>`);
   document.querySelectorAll("[data-open]").forEach((b) => b.onclick = async () => { if (!(await confirmProjectChange())) return; const next = await store.get(b.dataset.open); if (!next) return; project = next; project.lastOpenedAt = Date.now(); await store.touch(project); setUnsavedChanges(false); selection = null; stopSimulation(); $("#modal").close(); render(); });
@@ -889,8 +932,8 @@ async function showRecovery(projectId) {
   modal("Recover project snapshot", `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version) => `<div class="project-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · local snapshot</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs.length,language,0)} rungs</span></div>`).join("")}</div></div>`);
   document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = async () => { if (!(await confirmProjectChange())) return; const version = versions.find((item) => item.id === button.dataset.restore); if (!version) return; project = structuredClone(version.project); await store.save(project); setUnsavedChanges(false); stopSimulation(); $("#modal").close(); render(); toast("Project snapshot restored"); });
 }
-function exportProject(projectToExport = serializeProject()) { const identity = brandPresentation(language, currentBrandTheme()); const data = new Blob([JSON.stringify({ ...projectToExport, branding:{ product:identity.productName, company:identity.companyName, attribution:identity.attribution } }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = `${projectToExport.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.adigun.json`; a.click(); URL.revokeObjectURL(a.href); setUnsavedChanges(false); toast(t("exported")); }
-async function saveProject() { const name = prompt("Project name", project.name); if (!name?.trim()) return false; const projectToSave = { ...serializeProject(), name:name.trim() }; if (accountAccess === "member") { try { await accountService.saveCloudProject(accountUser, projectToSave); setUnsavedChanges(false); toast(accountText("saved")); return true; } catch (error) { toast(`${accountText("error")}: ${error.message}`); return false; } } exportProject(projectToSave); return true; }
+function exportProject(projectToExport = serializeProject()) { if (accountAccess !== "member") { showAccount(); return false; } const identity = brandPresentation(language, currentBrandTheme()); const data = new Blob([JSON.stringify({ ...projectToExport, branding:{ product:identity.productName, company:identity.companyName, attribution:identity.attribution } }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = `${projectToExport.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.adigun.json`; a.click(); URL.revokeObjectURL(a.href); setUnsavedChanges(false); toast(t("exported")); return true; }
+async function saveProject() { if (accountAccess !== "member") { showAccount(); return false; } const name = prompt("Project name", project.name); if (!name?.trim()) return false; const projectToSave = { ...serializeProject(), name:name.trim() }; try { await accountService.saveCloudProject(accountUser, projectToSave); setUnsavedChanges(false); toast(accountText("saved")); return true; } catch (error) { toast(`${accountText("error")}: ${error.message}`); return false; } }
 function exportPlcopenProject() { try { const data = new Blob([createPlcopenXml(serializeProject())], { type:"application/xml;charset=utf-8" }), link = document.createElement("a"); link.href = URL.createObjectURL(data); link.download = `${project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.plcopen.xml`; link.click(); URL.revokeObjectURL(link.href); toast(t("exported")); } catch (error) { toast(error.message); } }
 function importProject() { $("#fileInput").click(); }
 $("#fileInput").addEventListener("change", async (event) => { const file = event.target.files[0]; event.target.value = ""; if (!file) return; try { assertProjectFileSize(file.size); const source = await file.text(), parsed = /\.xml$/i.test(file.name) || source.trimStart().startsWith("<") ? parsePlcopenXml(source) : JSON.parse(source), p = normalizeImportedProject(parsed); if (!(await confirmProjectChange())) return; p.id = crypto.randomUUID(); p.lastOpenedAt = Date.now(); pushHistory(); project = p; sim = { outputs: {}, timers: {}, energized: {}, values: { ...(p.initialState || {}) } }; await persist(false, true, { markDirty:false, markSaved:true }); render(); toast(t("imported")); } catch (error) { toast(error.message || t("invalidFile")); } });
@@ -1025,55 +1068,83 @@ function renameTag(oldName, newName) {
   if (project.initialState && Object.hasOwn(project.initialState, oldName)) { project.initialState[newName] = project.initialState[oldName]; delete project.initialState[oldName]; }
 }
 const accountCopy = {
-  en:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account to keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Display name",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"After 5 minutes, we’ll invite you to create an account. You can keep working as a guest.",trialPrompt:"Create an account to keep this project in your account. You can continue working as a guest.",member:"Signed in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile image",admin:"Admin overview",verify:"Check your email to finish registration.",upgradeVerify:"Check your email and confirm it. Return here to set your password; your guest project stays on this device.",upgradePasswordInfo:"Email confirmed. Set a password to finish upgrading this guest account.",upgradePasswordSaved:"Password saved. Your guest account is upgraded.",guestEmailExists:"That email already has an account. Sign in to it; your current project remains on this device.",saved:"Cloud project saved as a new copy.",config:"Account service is not configured for this deployment.",authDisabled:"Guest access is unavailable. Sign in or create an account.",error:"Account request failed",profileSaved:"Profile saved."},
-  de:{account:"Konto",guest:"Gast",signIn:"Anmelden",register:"Konto erstellen",upgrade:"Konto erstellen und Projekt behalten",setPassword:"Passwort festlegen",email:"E-Mail",password:"Passwort",name:"Anzeigename",reset:"Passwort zurücksetzen",guestStart:"Als Gast fortfahren",guestInfo:"Nach 5 Minuten schlagen wir ein Konto vor. Du kannst als Gast weiterarbeiten.",trialPrompt:"Erstelle ein Konto, um dieses Projekt dort zu speichern. Du kannst als Gast weiterarbeiten.",member:"Angemeldet",saveProfile:"Profil speichern",saveCloud:"In der Cloud speichern",refresh:"Cloud-Projekte laden",open:"Öffnen",signOut:"Abmelden",cloud:"Deine Cloud-Projekte",avatar:"Profilbild",admin:"Admin-Übersicht",verify:"Prüfe deine E-Mail, um die Registrierung abzuschließen.",upgradeVerify:"Bestätige deine E-Mail und kehre hierher zurück, um ein Passwort festzulegen. Dein Gastprojekt bleibt auf diesem Gerät.",upgradePasswordInfo:"E-Mail bestätigt. Lege ein Passwort fest, um das Gastkonto umzuwandeln.",upgradePasswordSaved:"Passwort gespeichert. Dein Gastkonto wurde umgewandelt.",guestEmailExists:"Für diese E-Mail gibt es bereits ein Konto. Melde dich dort an; dein aktuelles Projekt bleibt auf diesem Gerät.",saved:"Cloud-Projekt als neue Kopie gespeichert.",config:"Der Kontodienst ist für diese Bereitstellung nicht konfiguriert.",authDisabled:"Gastzugriff ist nicht verfügbar. Melde dich an oder erstelle ein Konto.",error:"Kontoanfrage fehlgeschlagen",profileSaved:"Profil gespeichert."},
-  yo:{account:"Àkọọ́lẹ̀",guest:"Àlejò",signIn:"Wọlé",register:"Ṣẹ̀dá àkọọ́lẹ̀",upgrade:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà lọ́wọ́ rẹ",setPassword:"Yan ọ̀rọ̀ aṣínà",email:"Íméèlì",password:"Ọ̀rọ̀ aṣínà",name:"Orúkọ ìfihàn",reset:"Tún ọ̀rọ̀ aṣínà ṣe",guestStart:"Tẹ̀síwájú gẹ́gẹ́ bí àlejò",guestInfo:"Lẹ́yìn ìṣẹ́jú márùn-ún, a ó dábàá kí o ṣẹ̀dá àkọọ́lẹ̀. O lè máa ṣiṣẹ́ gẹ́gẹ́ bí àlejò.",trialPrompt:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà nínú àkọọ́lẹ̀ rẹ. O lè máa ṣiṣẹ́ gẹ́gẹ́ bí àlejò.",member:"O ti wọlé",saveProfile:"Fipamọ́ profaili",saveCloud:"Fipamọ́ sínú Cloud",refresh:"Tún àwọn iṣẹ́ Cloud ṣe",open:"Ṣí i",signOut:"Jáde",cloud:"Àwọn iṣẹ́ Cloud rẹ",avatar:"Àwòrán profaili",admin:"Àkótán admin",verify:"Ṣàyẹ̀wò íméèlì rẹ láti parí ìforúkọsílẹ̀.",upgradeVerify:"Jẹ́rìí íméèlì rẹ, kí o sì padà síbí láti yan ọ̀rọ̀ aṣínà. Iṣẹ́ àlejò rẹ ṣì wà lórí ẹ̀rọ yìí.",upgradePasswordInfo:"A ti jẹ́rìí íméèlì. Yan ọ̀rọ̀ aṣínà láti parí ìmú àkọọ́lẹ̀ àlejò gòkè.",upgradePasswordSaved:"A ti fipamọ́ ọ̀rọ̀ aṣínà; àkọọ́lẹ̀ àlejò rẹ ti yí padà.",guestEmailExists:"Àkọọ́lẹ̀ kan ti wà fún íméèlì yìí. Wọlé sí i; iṣẹ́ rẹ ṣì wà lórí ẹ̀rọ yìí.",saved:"A ti fipamọ́ ẹ̀dà tuntun sí Cloud.",config:"A kò tíì ṣètò iṣẹ́ àkọọ́lẹ̀ fún ìfisílẹ̀ yìí.",authDisabled:"Àlejò kò sí báyìí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀.",error:"Ìbéèrè àkọọ́lẹ̀ kò ṣiṣẹ́",profileSaved:"A ti fipamọ́ profaili."},
-  pcm:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account make you keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Name wey go show",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"After 5 minutes, we go invite you to create account. You fit continue to work as guest.",trialPrompt:"Create account make this project dey inside your account. You fit still continue as guest.",member:"You don sign in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile picture",admin:"Admin overview",verify:"Check your email make registration finish.",upgradeVerify:"Check and confirm your email, then come back here to set password. Your guest project go remain for this device.",upgradePasswordInfo:"Email don confirm. Set password to finish upgrading this guest account.",upgradePasswordSaved:"Password don save. Guest account don upgrade.",guestEmailExists:"This email already get account. Sign in to am; your current project go remain for this device.",saved:"We save new cloud copy.",config:"Account service no set for this deployment.",authDisabled:"Guest access no dey available. Sign in or create account.",error:"Account request fail",profileSaved:"Profile don save."}
+  en:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account to keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Display name",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"10-minute guest access expires; sign in or create an account to continue editing.",trialPrompt:"Create an account to keep this project in your account. You can continue working as a guest.",member:"Signed in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile image",admin:"Admin overview",verify:"Check your email to finish registration.",upgradeVerify:"Check your email and confirm it. Return here to set your password; your guest project stays on this device.",upgradePasswordInfo:"Email confirmed. Set a password to finish upgrading this guest account.",upgradePasswordSaved:"Password saved. Your guest account is upgraded.",guestEmailExists:"That email already has an account. Sign in to it; your current project remains on this device.",saved:"Cloud project saved as a new copy.",config:"Account service is not configured for this deployment.",authDisabled:"Guest access is unavailable. Sign in or create an account.",error:"Account request failed",profileSaved:"Profile saved."},
+  de:{account:"Konto",guest:"Gast",signIn:"Anmelden",register:"Konto erstellen",upgrade:"Konto erstellen und Projekt behalten",setPassword:"Passwort festlegen",email:"E-Mail",password:"Passwort",name:"Anzeigename",reset:"Passwort zurücksetzen",guestStart:"Als Gast fortfahren",guestInfo:"Der zehnminütige Gastzugang endet; melde dich an oder erstelle ein Konto, um weiterzubearbeiten.",trialPrompt:"Erstelle ein Konto, um dieses Projekt dort zu speichern. Du kannst als Gast weiterarbeiten.",member:"Angemeldet",saveProfile:"Profil speichern",saveCloud:"In der Cloud speichern",refresh:"Cloud-Projekte laden",open:"Öffnen",signOut:"Abmelden",cloud:"Deine Cloud-Projekte",avatar:"Profilbild",admin:"Admin-Übersicht",verify:"Prüfe deine E-Mail, um die Registrierung abzuschließen.",upgradeVerify:"Bestätige deine E-Mail und kehre hierher zurück, um ein Passwort festzulegen. Dein Gastprojekt bleibt auf diesem Gerät.",upgradePasswordInfo:"E-Mail bestätigt. Lege ein Passwort fest, um das Gastkonto umzuwandeln.",upgradePasswordSaved:"Passwort gespeichert. Dein Gastkonto wurde umgewandelt.",guestEmailExists:"Für diese E-Mail gibt es bereits ein Konto. Melde dich dort an; dein aktuelles Projekt bleibt auf diesem Gerät.",saved:"Cloud-Projekt als neue Kopie gespeichert.",config:"Der Kontodienst ist für diese Bereitstellung nicht konfiguriert.",authDisabled:"Gastzugriff ist nicht verfügbar. Melde dich an oder erstelle ein Konto.",error:"Kontoanfrage fehlgeschlagen",profileSaved:"Profil gespeichert."},
+  yo:{account:"Àkọọ́lẹ̀",guest:"Àlejò",signIn:"Wọlé",register:"Ṣẹ̀dá àkọọ́lẹ̀",upgrade:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà lọ́wọ́ rẹ",setPassword:"Yan ọ̀rọ̀ aṣínà",email:"Íméèlì",password:"Ọ̀rọ̀ aṣínà",name:"Orúkọ ìfihàn",reset:"Tún ọ̀rọ̀ aṣínà ṣe",guestStart:"Tẹ̀síwájú gẹ́gẹ́ bí àlejò",guestInfo:"Àǹfààní àlejò ìṣẹ́jú mẹ́wàá parí; wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀ láti tẹ̀síwájú.",trialPrompt:"Ṣẹ̀dá àkọọ́lẹ̀ kí iṣẹ́ yìí lè wà nínú àkọọ́lẹ̀ rẹ. O lè máa ṣiṣẹ́ gẹ́gẹ́ bí àlejò.",member:"O ti wọlé",saveProfile:"Fipamọ́ profaili",saveCloud:"Fipamọ́ sínú Cloud",refresh:"Tún àwọn iṣẹ́ Cloud ṣe",open:"Ṣí i",signOut:"Jáde",cloud:"Àwọn iṣẹ́ Cloud rẹ",avatar:"Àwòrán profaili",admin:"Àkótán admin",verify:"Ṣàyẹ̀wò íméèlì rẹ láti parí ìforúkọsílẹ̀.",upgradeVerify:"Jẹ́rìí íméèlì rẹ, kí o sì padà síbí láti yan ọ̀rọ̀ aṣínà. Iṣẹ́ àlejò rẹ ṣì wà lórí ẹ̀rọ yìí.",upgradePasswordInfo:"A ti jẹ́rìí íméèlì. Yan ọ̀rọ̀ aṣínà láti parí ìmú àkọọ́lẹ̀ àlejò gòkè.",upgradePasswordSaved:"A ti fipamọ́ ọ̀rọ̀ aṣínà; àkọọ́lẹ̀ àlejò rẹ ti yí padà.",guestEmailExists:"Àkọọ́lẹ̀ kan ti wà fún íméèlì yìí. Wọlé sí i; iṣẹ́ rẹ ṣì wà lórí ẹ̀rọ yìí.",saved:"A ti fipamọ́ ẹ̀dà tuntun sí Cloud.",config:"A kò tíì ṣètò iṣẹ́ àkọọ́lẹ̀ fún ìfisílẹ̀ yìí.",authDisabled:"Àlejò kò sí báyìí. Wọlé tàbí ṣẹ̀dá àkọọ́lẹ̀.",error:"Ìbéèrè àkọọ́lẹ̀ kò ṣiṣẹ́",profileSaved:"A ti fipamọ́ profaili."},
+  pcm:{account:"Account",guest:"Guest",signIn:"Sign in",register:"Create account",upgrade:"Create account make you keep this project",setPassword:"Set password",email:"Email",password:"Password",name:"Name wey go show",reset:"Reset password",guestStart:"Continue as guest",guestInfo:"Ten-minute guest access go end; sign in or create account make you continue editing.",trialPrompt:"Create account make this project dey inside your account. You fit still continue as guest.",member:"You don sign in",saveProfile:"Save profile",saveCloud:"Save to Cloud",refresh:"Refresh cloud projects",open:"Open",signOut:"Sign out",cloud:"Your cloud projects",avatar:"Profile picture",admin:"Admin overview",verify:"Check your email make registration finish.",upgradeVerify:"Check and confirm your email, then come back here to set password. Your guest project go remain for this device.",upgradePasswordInfo:"Email don confirm. Set password to finish upgrading this guest account.",upgradePasswordSaved:"Password don save. Guest account don upgrade.",guestEmailExists:"This email already get account. Sign in to am; your current project go remain for this device.",saved:"We save new cloud copy.",config:"Account service no set for this deployment.",authDisabled:"Guest access no dey available. Sign in or create account.",error:"Account request fail",profileSaved:"Profile don save."}
 };
 function accountText(key) { const fallback = key === "upgradeEmail" ? ({ en:"Send confirmation email", de:"Bestätigungs-E-Mail senden", yo:"Fi íméèlì ìjẹ́rìí ránṣẹ́", pcm:"Send confirmation email" }[language] || "Send confirmation email") : null; return (accountCopy[language] || accountCopy.en)[key] || accountCopy.en[key] || fallback || key; }
-function setAccountAccess(state) {
+function setAccountAccess(state, guestSession = null) {
   accountAccess = state;
-  const locked = !["guest", "member"].includes(state);
-  if (locked && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
+  const locked = !["guest", "guest-expired", "member"].includes(state);
+  if (["guest", "guest-expired"].includes(state) && accountUser?.id) guestDraftStorageKey ||= `adigunsps-guest-draft-${accountUser.id}`;
+  if (state !== "guest" && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
   for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
-  const button = $("#accountButton");
-  if (button) button.textContent = state === "guest" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
-  if (state === "guest") { $("#saveState").textContent = "Saved locally"; startGuestTrialPrompt(); }
-  else { clearInterval(guestTimer); $("#saveState").textContent = state === "member" ? "Saved locally" : accountText("authDisabled"); if (button && locked) button.title = accountText("authDisabled"); }
+  const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
+  if (button) button.textContent = state === "guest" || state === "guest-expired" ? accountText("guest") : state === "member" ? accountText("account") : accountText("signIn");
+  if (state === "guest" && accountUser?.id) {
+    if (guestSession) startGuestTrialPrompt(guestSession);
+    if (status) status.hidden = false;
+    if (notice) notice.hidden = true;
+    $("#saveState").textContent = guestSessionCopy[language]?.temporary || guestSessionCopy.en.temporary;
+  } else if (state === "guest-expired") {
+    clearInterval(guestTimer); guestDeadline = 0;
+    if (status) status.hidden = true;
+    if (notice) notice.hidden = false;
+    const message = $("#guestExpiryMessage"); if (message) message.textContent = guestSessionCopy[language]?.expired || guestSessionCopy.en.expired;
+    const signIn = $("#guestExpirySignIn"), register = $("#guestExpiryRegister");
+    if (signIn) signIn.textContent = accountCopy[language]?.signIn || accountCopy.en.signIn;
+    if (register) register.textContent = accountCopy[language]?.register || accountCopy.en.register;
+    $("#saveState").textContent = "Account required";
+  } else {
+    clearInterval(guestTimer); guestDeadline = 0;
+    if (status) status.hidden = true;
+    if (notice) notice.hidden = true;
+    $("#saveState").textContent = state === "member" ? "Saved locally" : accountText("authDisabled");
+    if (button && locked) button.title = accountText("authDisabled");
+  }
 }
-function startGuestTrialPrompt() {
-  if (!accountUser?.id) return;
+function startGuestTrialPrompt(guestSession) {
+  if (!accountUser?.id || !guestSession?.serverIssued) { setAccountAccess("account-required"); return; }
   clearInterval(guestTimer);
-  const startedKey = `adigunsps-guest-started-${accountUser.id}`;
-  const promptedKey = `adigunsps-guest-prompted-${accountUser.id}`;
-  let startedAt = Number(localStorage.getItem(startedKey));
-  if (!Number.isFinite(startedAt) || startedAt <= 0) { startedAt = Date.now(); localStorage.setItem(startedKey, String(startedAt)); }
+  guestDeadline = performance.now() + Math.max(0, guestSession.remainingMs);
   const tick = () => {
-    if (Date.now() - startedAt < 5 * 60_000 || localStorage.getItem(promptedKey) === "1") return;
-    localStorage.setItem(promptedKey, "1");
-    clearInterval(guestTimer);
-    toast(accountText("trialPrompt"));
+    const remainingMs = Math.max(0, guestDeadline - performance.now());
+    if (remainingMs <= 0) { setAccountAccess("guest-expired"); return; }
+    const totalSeconds = Math.ceil(remainingMs / 1000), time = `${String(Math.floor(totalSeconds / 60)).padStart(2,"0")}:${String(totalSeconds % 60).padStart(2,"0")}`;
+    const status = $("#guestSessionStatus"); if (status) status.textContent = (guestSessionCopy[language]?.remaining || guestSessionCopy.en.remaining).replace("{time}", time);
   };
-  tick(); guestTimer = setInterval(tick, 5000);
+  tick(); guestTimer = setInterval(tick, 1000);
+}
+function restoreGuestDraft() {
+  if (!guestDraftStorageKey) return false;
+  try {
+    const stored = sessionStorage.getItem(guestDraftStorageKey);
+    if (!stored) return false;
+    project = normalizeImportedProject(JSON.parse(stored));
+    sim = { outputs:{}, timers:{}, energized:{}, values:{ ...(project.initialState || {}) } };
+    scans = 0; selection = null;
+    return true;
+  } catch { sessionStorage.removeItem(guestDraftStorageKey); return false; }
 }
 async function initializeAccountAccess() {
   if (!accountService) { setAccountAccess("unconfigured"); return; }
   try {
     const { data, error } = await supabaseClient.auth.getSession(); if (error) throw error;
     const user = data?.session?.user;
-    if (user?.is_anonymous) { accountUser = user; await accountService.ensureGuestSession(user); setAccountAccess("guest"); delete project.__adigunGuestExpiresAt; return; }
+    if (user?.is_anonymous) { accountUser = user; const session = await accountService.ensureGuestSession(user); setAccountAccess(session.remainingMs > 0 ? "guest" : "guest-expired", session); delete project.__adigunGuestExpiresAt; return; }
     if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; return; }
-    await accountService.startGuestSession();
+    const session = await accountService.startGuestSession();
     const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null;
-    setAccountAccess(accountUser?.is_anonymous ? "guest" : accountUser ? "member" : "account-required");
+    setAccountAccess(accountUser?.is_anonymous ? session.remainingMs > 0 ? "guest" : "guest-expired" : accountUser ? "member" : "account-required", session);
   } catch (error) {
     accountUser = null;
     setAccountAccess("account-required");
   }
 }
 async function updateAccountAfterAuth(user) {
-  if (user?.is_anonymous) { await accountService.ensureGuestSession(user); accountUser = user; setAccountAccess("guest"); }
-  else if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; await persist(true, true); if (guestUpgradePasswordPending()) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+  if (user?.is_anonymous) { const session = await accountService.ensureGuestSession(user); accountUser = user; setAccountAccess(session.remainingMs > 0 ? "guest" : "guest-expired", session); }
+  else if (user) { const draftKey = guestDraftStorageKey; accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; const saved = await persist(true, true); if (saved && draftKey) { sessionStorage.removeItem(draftKey); guestDraftStorageKey = null; } if (guestUpgradePasswordPending()) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
 }
 async function loadCloudProjectList() {
   const rows = await accountService.listCloudProjects(accountUser);
@@ -1090,10 +1161,10 @@ function showAccount() {
   const lockedText = accountService ? accountText("authDisabled") : accountText("config");
   const authForm = `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountText("password")}<span class="password-input-wrap"><input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required><button class="secondary password-visibility" id="accountPasswordVisibility" type="button" aria-label="Show password" aria-pressed="false">Show</button></span></label><label class="field">${accountText("name")}<input id="accountName" maxlength="120" autocomplete="name"></label><div class="modal-actions"><button class="primary" id="accountSignIn" type="button">${accountText("signIn")}</button><button class="secondary" id="accountRegister" type="button">${accountText("register")}</button><button class="secondary" id="accountReset" type="button">${accountText("reset")}</button></div></form>`;
   const upgradePending = guestUpgradePasswordPending();
-  const guestEmailPending = accountAccess === "guest" && !!localStorage.getItem(guestUpgradePendingKey);
+  const guestEmailPending = ["guest", "guest-expired"].includes(accountAccess) && !!localStorage.getItem(guestUpgradePendingKey);
   const memberContent = signedIn ? `<p class="safety-copy">${accountText("member")}: ${escapeHtml(accountUser.email || "")}</p>${upgradePending ? `<p id="accountFeedback" class="safety-copy" role="status">${accountText("upgradePasswordInfo")}</p><label class="field">${accountText("password")}<input id="guestUpgradePassword" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary" id="accountUpgradePassword">${accountText("setPassword")}</button>` : `<label class="field">${accountText("name")}<input id="accountName" maxlength="120" value="${escapeAttr(accountUser.user_metadata?.display_name || "")}"></label><label class="field">${accountText("avatar")}<input id="accountAvatar" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="modal-actions"><button class="secondary" id="accountProfileSave">${accountText("saveProfile")}</button><button class="primary" id="accountCloudSave">${accountText("saveCloud")}</button><button class="secondary" id="accountCloudRefresh">${accountText("refresh")}</button>${accountService.isAdministrator(accountUser) ? `<button class="secondary" id="accountAdminShow">${accountText("admin")}</button>` : ""}<button class="secondary" id="accountSignOut">${accountText("signOut")}</button></div><div id="cloudProjectList" class="project-list"></div><div id="accountAdminList" class="project-list"></div>`}` : authForm;
-  const guestUpgrade = accountAccess === "guest" ? `<p class="safety-copy">${accountText("guestInfo")}</p><label class="field">${accountText("email")}<input id="guestUpgradeEmail" type="email" autocomplete="email" required></label><button class="secondary" id="accountUpgradeEmail">${accountText("upgradeEmail")}</button>` : "";
-  modal(`${presentation.productName} · ${accountText("account")}`, `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section>${accountService ? "" : `<p class="safety-copy" role="alert">${lockedText}</p>`}${memberContent}${guestUpgrade}${!signedIn && accountService ? `<p class="safety-copy" id="accountFeedback" role="status">${guestEmailPending ? accountText("upgradeVerify") : accountAccess === "guest" ? accountText("guest") : lockedText}</p><button class="secondary" id="accountStartGuest">${accountText("guestStart")}</button>` : ""}<div class="modal-actions"><button class="primary" id="accountClose">${accountCopy[language]?.close || (language === "de" ? "Schließen" : language === "yo" ? "Pade" : "Close")}</button></div></div>`);
+  const guestUpgrade = ["guest", "guest-expired"].includes(accountAccess) ? `<p class="safety-copy">${accountText("guestInfo")}</p><label class="field">${accountText("email")}<input id="guestUpgradeEmail" type="email" autocomplete="email" required></label><button class="secondary" id="accountUpgradeEmail">${accountText("upgradeEmail")}</button>` : "";
+  modal(`${presentation.productName} · ${accountText("account")}`, `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section>${accountService ? "" : `<p class="safety-copy" role="alert">${lockedText}</p>`}${memberContent}${guestUpgrade}${!signedIn && accountService && accountAccess !== "guest-expired" ? `<p class="safety-copy" id="accountFeedback" role="status">${guestEmailPending ? accountText("upgradeVerify") : accountAccess === "guest-expired" ? (guestSessionCopy[language]?.expired || guestSessionCopy.en.expired) : accountAccess === "guest" ? accountText("guest") : lockedText}</p><button class="secondary" id="accountStartGuest">${accountText("guestStart")}</button>` : ""}<div class="modal-actions"><button class="primary" id="accountClose">${accountCopy[language]?.close || (language === "de" ? "Schließen" : language === "yo" ? "Pade" : "Close")}</button></div></div>`);
   $("#accountClose").onclick = () => $("#modal").close();
   $("#accountPasswordVisibility")?.addEventListener("click", () => { const input = $("#accountPassword"), button = $("#accountPasswordVisibility"), visible = input.type === "password"; input.type = visible ? "text" : "password"; button.textContent = visible ? "Hide" : "Show"; button.setAttribute("aria-label", visible ? "Hide password" : "Show password"); button.setAttribute("aria-pressed", String(visible)); input.focus({ preventScroll:true }); });
   $("#accountSignIn")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signIn($("#accountEmail").value, $("#accountPassword").value); if (error) throw error; await updateAccountAfterAuth(data.user); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
@@ -1101,7 +1172,7 @@ function showAccount() {
   $("#accountUpgradePassword")?.addEventListener("click", async () => { try { accountUser = await accountService.setGuestUpgradePassword(accountUser, $("#guestUpgradePassword").value); localStorage.removeItem(guestUpgradePendingKey); setAccountAccess("member"); await persist(true, true); toast(accountText("upgradePasswordSaved")); showAccount(); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
   $("#accountRegister")?.addEventListener("click", async () => { try { const { data, error } = await accountService.signUp($("#accountEmail").value, $("#accountPassword").value, $("#accountName").value, `${location.origin}${location.pathname}`); if (error) throw error; if (data.user && data.session) { await updateAccountAfterAuth(data.user); $("#modal").close(); } else $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
   $("#accountReset")?.addEventListener("click", async () => { try { const { error } = await accountService.requestPasswordReset($("#accountEmail").value, `${location.origin}${location.pathname}`); if (error) throw error; $("#accountFeedback").textContent = accountText("verify"); } catch (error) { $("#accountFeedback").textContent = `${accountText("error")}: ${error.message}`; } });
-  $("#accountStartGuest")?.addEventListener("click", async () => { try { await accountService.startGuestSession(); const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null; setAccountAccess("guest"); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("authDisabled")} ${error.message}`; } });
+  $("#accountStartGuest")?.addEventListener("click", async () => { try { const guestSession = await accountService.startGuestSession(); const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null; setAccountAccess(guestSession.remainingMs > 0 ? "guest" : "guest-expired", guestSession); $("#modal").close(); } catch (error) { $("#accountFeedback").textContent = `${accountText("authDisabled")} ${error.message}`; } });
   $("#accountProfileSave")?.addEventListener("click", async () => { try { await accountService.updateProfile(accountUser, $("#accountName").value); const file = $("#accountAvatar").files?.[0]; if (file) await accountService.uploadAvatar(accountUser, file); toast(accountText("profileSaved")); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountCloudSave")?.addEventListener("click", async () => { const name = prompt("Project name", project.name); if (!name?.trim()) return; try { await accountService.saveCloudProject(accountUser, { ...serializeProject(), name:name.trim() }); setUnsavedChanges(false); toast(accountText("saved")); await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   $("#accountCloudRefresh")?.addEventListener("click", async () => { try { await loadCloudProjectList(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
@@ -1109,7 +1180,11 @@ function showAccount() {
   $("#accountSignOut")?.addEventListener("click", async () => { try { const { error } = await accountService.signOut(); if (error) throw error; accountUser = null; await initializeAccountAccess(); showAccount(); } catch (error) { toast(`${accountText("error")}: ${error.message}`); } });
   if (signedIn) loadCloudProjectList().catch((error) => { const list = $("#cloudProjectList"); if (list) list.textContent = `${accountText("error")}: ${error.message}`; });
 }
-document.addEventListener("keydown", (event) => { if (accountAccess !== "guest" && accountAccess !== "member" && !event.target.closest?.("dialog")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
+document.addEventListener("keydown", (event) => {
+  if (event.target.closest?.("dialog")) return;
+  if (accountAccess === "guest-expired") { event.preventDefault(); event.stopImmediatePropagation(); showAccount(); return; }
+  if (accountAccess !== "guest" && accountAccess !== "member") { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
 function showWelcome() { const presentation = brandPresentation(language, currentBrandTheme()); modal(presentation.productName, `<div class="modal-body"><div class="welcome-brand-lockup"><img class="welcome-company-logo" src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="welcome-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p><p class="safety-copy">${tour[language].welcome}</p><p class="safety-copy"><strong>${t("safety")}</strong></p><div class="modal-actions"><button class="secondary" id="welcomeTour">${tour[language].start}</button><button class="primary" id="welcomeContinue">${tour[language].continue}</button></div></div>`); $("#welcomeContinue").onclick = () => { localStorage.setItem("adigun-safety-seen", "yes"); $("#modal").close(); }; $("#welcomeTour").onclick = () => { localStorage.setItem("adigun-safety-seen", "yes"); showTutorial(0); }; }
 function showTutorial(stepIndex = 0) { const steps = tour[language].steps, step = steps[stepIndex]; modal(`${tour[language].title} · ${stepIndex + 1}/${steps.length}`, `<div class="modal-body"><h3 class="tour-step-title">${step[0]}</h3><p class="safety-copy">${step[1]}</p><div class="modal-actions">${stepIndex ? `<button class="secondary" id="tourBack">${tour[language].previous}</button>` : ""}${stepIndex < steps.length - 1 ? `<button class="primary" id="tourNext">${tour[language].next}</button>` : `<button class="primary" id="tourFinish">${tour[language].finish}</button>`}</div></div>`); $("#tourBack")?.addEventListener("click", () => showTutorial(stepIndex - 1)); $("#tourNext")?.addEventListener("click", () => showTutorial(stepIndex + 1)); $("#tourFinish")?.addEventListener("click", () => $("#modal").close()); }
 function showFindReplace() {
@@ -1200,6 +1275,7 @@ function showResources() {
 }
 function showHelp() { const repo = resources.find((resource) => resource.id === "source-repository"), presentation = brandPresentation(language, currentBrandTheme()); modal(t("titleHelp"), `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section><p class="safety-copy"><strong>${t("safety")}</strong></p><p class="safety-copy">Use the input switches to test the ladder. Run scans continuously, Step for one scan, and Reset to clear timers and outputs. Projects and recovery snapshots stay in this browser. Export a JSON file for a portable copy.</p><p class="safety-copy">Keyboard: Ctrl/⌘+K command search · Ctrl/⌘+F find · Ctrl/⌘+C/X/V copy/cut/paste rung · Ctrl/⌘+Z/Y undo/redo · Delete removes the selected contact.</p><p><button class="secondary" id="sourceRepository">${escapeHtml(repo.description[language])} ↗</button></p><div class="modal-actions"><button class="primary" id="helpTour">${tour[language].start}</button></div></div>`); $("#helpTour").onclick = () => showTutorial(0); $("#sourceRepository").onclick = () => { if (isApprovedExternalUrl(repo.url) && confirm(`Open ${repo.host} in a new tab?`)) appendResourceAudit({ resourceId:repo.id, host:repo.host, action:"open" }); window.open(repo.url, "_blank", "noopener,noreferrer"); }; }
 function showApplicationMenu(event) {
+  if (event.currentTarget.dataset.appMenu === "help") { showHelpGuideMenu(event); return; }
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
@@ -1237,7 +1313,7 @@ function action(name) {
   if (name === "save") { void saveProject(); return; }
   if (name === "save-local") { exportProject(); return; }
   if (name === "open-local") { importProject(); return; }
-  if (name === "save-as") { const copyName = prompt(t("saveAs"), `${project.name} copy`); if (copyName?.trim()) { project = { ...structuredClone(project), id: crypto.randomUUID(), name: copyName.trim(), lastOpenedAt:Date.now() }; void persist(true, true, { markDirty:false, markSaved:true }).then(() => render()); } return; }
+  if (name === "save-as") { if (accountAccess !== "member") { showAccount(); return; } const copyName = prompt(t("saveAs"), `${project.name} copy`); if (copyName?.trim()) { project = { ...structuredClone(project), id: crypto.randomUUID(), name: copyName.trim(), lastOpenedAt:Date.now() }; void persist(true, true, { markDirty:false, markSaved:true }).then(() => render()); } return; }
   if (name === "new") { void (async () => { if (!(await confirmProjectChange())) return; project = defaultProject(); project.lastOpenedAt = Date.now(); stopSimulation(); await persist(false, true, { markDirty:false, markSaved:true }); render(); })(); } else if (name === "examples") showExamples(); else if (name === "import") importProject(); else if (name === "export") exportProject(); else if (name === "add-rung") addRung(); else if (name === "add-contact") { if (selection?.rung != null) rungAction("add", selection.rung); else addRung(); } else if (name === "undo") undo(); else if (name === "redo") redo(); else if (name === "run") runSimulation(); else if (name === "pause") { if (runTimer) { clearInterval(runTimer); runTimer = null; logEvent("pause", "Simulation paused"); window.adigunPaused = true; updateStatus(); } } else if (name === "step") { if (runTimer) return; doScan(); } else if (name === "stop") { stopSimulation(); toast(t("resetDone")); } else if (name === "zoom-in") setZoom(zoom + 10); else if (name === "zoom-out") setZoom(zoom - 10); else if (name === "grid") { grid = !grid; $("#canvasWrap").classList.toggle("no-grid", !grid); $("#gridToggle").classList.toggle("active", grid); } else if (name === "projects") showProjects(); else if (name === "tags") showTags(); else if (name === "help") showHelp();
 }
 function applyLocale() {
@@ -1333,9 +1409,38 @@ document.addEventListener("keydown", (event) => {
   else if (key === "delete" && project.editorType === "FBD" && fbdSelection.size) { event.preventDefault(); deleteFbdSelection(); }
   else if (key === "delete" && selection?.kind === "contact") { event.preventDefault(); if (selectedContacts.size > 1) deleteSelectedContacts(); else $("#removeContact")?.click(); }
 });
+document.addEventListener("click", (event) => {
+  if (accountAccess !== "guest-expired" || event.target.closest?.("dialog,#guestExpiryNotice,#accountButton,#languageButton,#helpButton,#footerHelpLink,[data-app-menu='help'],#contextMenu.help-guide-menu")) return;
+  if (!event.target.closest?.("#projectMenu,.toolbar,.app-menus,.workspace,#contextMenu")) return;
+  event.preventDefault(); event.stopImmediatePropagation(); showAccount();
+}, true);
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible" || accountAccess !== "guest" || !accountUser?.id) return;
+  try {
+    const guestSession = await accountService.ensureGuestSession(accountUser);
+    setAccountAccess(guestSession.remainingMs > 0 ? "guest" : "guest-expired", guestSession);
+  } catch {
+    if (guestDeadline && performance.now() >= guestDeadline) setAccountAccess("guest-expired");
+  }
+});
 document.addEventListener("pointerdown", (event) => { const menu = $("#contextMenu"); if (!menu.hidden && !menu.contains(event.target)) hideContextMenu(); });
-async function init() { document.documentElement.dataset.supabaseStatus = supabaseStatus.ready && supabaseClient ? "ready" : supabaseStatus.reason; try { await store.all(); } catch {} project = defaultProject(); project.name = "Untitled project"; project.tags = []; project.io = { inputs:[], outputs:[] }; project.initialState = {}; project.rungs = []; project.lastOpenedAt = Date.now(); language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale(); sim.values = { ...(project.initialState || {}) }; render(); await initializeAccountAccess(); if (accountAccess === "guest") await persist(false, true, { markDirty:false, markSaved:true }); setUnsavedChanges(false); if (["unconfigured", "account-required", "expired"].includes(accountAccess)) showAccount(); else if (!localStorage.getItem("adigun-safety-seen")) showWelcome(); }
+async function init() {
+  document.documentElement.dataset.supabaseStatus = supabaseStatus.ready && supabaseClient ? "ready" : supabaseStatus.reason;
+  setAccountAccess("checking");
+  try { await store.all(); } catch {}
+  project = defaultProject(); project.name = "Untitled project"; project.tags = []; project.io = { inputs:[], outputs:[] }; project.initialState = {}; project.rungs = []; project.lastOpenedAt = Date.now();
+  language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale();
+  await initializeAccountAccess();
+  if (["guest", "guest-expired"].includes(accountAccess)) restoreGuestDraft();
+  sim.values = { ...(project.initialState || {}) }; render();
+  if (accountAccess === "guest") await persist(false, true, { markDirty:false, markSaved:true });
+  setUnsavedChanges(false);
+  if (["unconfigured", "account-required"].includes(accountAccess)) showAccount();
+  else if (!localStorage.getItem("adigun-safety-seen")) showWelcome();
+}
 $("#accountButton").addEventListener("click", showAccount);
+$("#guestExpirySignIn").addEventListener("click", () => { showAccount(); $("#accountEmail")?.focus(); });
+$("#guestExpiryRegister").addEventListener("click", () => { showAccount(); $("#guestUpgradeEmail")?.focus(); });
 applyPreferences(); $("#settingsButton").addEventListener("click", showSettings); document.querySelectorAll("[data-app-menu]").forEach((button) => button.addEventListener("click", showApplicationMenu)); $("#logicTab").addEventListener("click", () => { workspaceView = "logic"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#electricalTab").addEventListener("click", () => { workspaceView = "electrical"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#hmiTab").addEventListener("click", () => { workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#processesButton").addEventListener("click", showProcessManager); $("#addAlarmButton").addEventListener("click", showAlarmSetup); $("#manageAlarmsButton").addEventListener("click", showAlarmManager); $("#recipesButton").addEventListener("click", showRecipes); $("#alarmHistoryButton").addEventListener("click", showAlarmHistory); $("#exportTrendHistoryButton").addEventListener("click", exportTrendHistory);
 $("#adigunAiButton").addEventListener("click", showAdigunAI);
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
