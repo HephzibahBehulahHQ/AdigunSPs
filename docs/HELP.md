@@ -24,7 +24,7 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 
 1. Open the AdigunSPs website in your browser.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
-3. To register or sign in, select **Account**, enter your email, then choose **Create account** or **Sign in**. Enter the email code or open the sign-in link. Save locally or to Cloud after signing in.
+3. To register or sign in, select the profile icon. It is labelled **Sign in** when signed out and **Account** after sign-in. Enter your email, choose **Create account** or **Sign in**, then enter the email code or open the sign-in link.
 
 The first screen has the product bar, menus, and toolbar above the editor. The project tree and simulated inputs are on the left; the canvas is centered; Properties, Watch, and Diagnostics sit on the right. Run, storage, language, and help status appear in the footer.
 
@@ -49,7 +49,7 @@ The first screen has the product bar, menus, and toolbar above the editor. The p
 | Tools | Examples, ST compile, scenarios, estimates, Modbus simulator, Adigun BOT | Top menu bar |
 | Window / Settings | Panel layout, preferences, language | Top menu bar |
 | Help | Safety/help and external resources | Top menu bar |
-| Account, EN, ⚙, ⌕, ? | Account, language, settings, command search, safety/help | Top-right product bar |
+| Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
 | New, Examples, Save, Run, Step, Reset | Common project and simulation actions | Toolbar below menus |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
@@ -187,4 +187,5 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 | Scan | One cycle in which the simulator reads inputs and evaluates logic. |
 | Snapshot | A previously saved local project version available for recovery. |
 | HMI | Human-machine interface screen designed in the app. |
+
 

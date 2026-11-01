@@ -12,6 +12,12 @@ Open the project selector beside the project name. Create a blank starter projec
 
 On first use, read the educational safety notice and continue to the workspace. Choose **Start quick tour** for a four-step overview; reopen it from Help at any time.
 
+## Account access and guest work
+
+Select the profile icon in the top bar to open the account panel. When signed out it is labelled **Sign in**; after sign-in it is labelled **Account**. Enter your email, choose **Sign in** or **Create account**, then enter the emailed code or open the sign-in link.
+
+Guest access lasts four minutes. After it expires, editing pauses; temporary work remains in the current browser tab. Signed-in users can save a cloud copy from the account panel; guest work is temporary and is not uploaded.
+
 ## PLC/device profile
 
 Open **Project → PLC/device profile** to record a vendor, CPU/device model, platform, firmware version, module counts, and notes. This optional profile is user-entered and saves with the project. It does not select from a supported-device catalog, check compatibility or ratings, or connect hardware. Use **Tags & I/O** to manage logical tag roles and addresses; the generic hardware inventory remains a user-entered bill of materials.
@@ -67,3 +73,4 @@ In **Hardware inventory / BOM**, link each user-entered item to a project PLC ta
 Open the project menu to see local projects sorted by most recently opened. The last-opened time is stored with each project and opening one does not add a recovery snapshot.
 
 The HMI toolbar's **SCREEN** selector switches among project-saved screens. Use **＋ Screen** to add a screen, edit **NAME** to rename it, or **Delete screen** to remove it. A project always keeps at least one screen, and each screen retains its own widgets
+

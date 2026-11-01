@@ -4,6 +4,7 @@ import { renderHelpMarkdown } from "../src/help-markdown.js";
 
 const guide = readFileSync("docs/HELP.md", "utf8");
 const quickstart = readFileSync("docs/QUICKSTART.md", "utf8");
+const userGuide = readFileSync("docs/user-guide.md", "utf8");
 const labels = readFileSync("docs/HELP-UI-LABELS.md", "utf8");
 const app = readFileSync("src/app.js", "utf8");
 const serviceWorker = readFileSync("service-worker.js", "utf8");
@@ -15,6 +16,8 @@ for (const section of ["getting-started", "navigating-the-interface", "creating-
 }
 assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the requested word limit");
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
+assert.match(guide, /select the profile icon[\s\S]*?labelled \*\*Sign in\*\*[\s\S]*?\*\*Account\*\*/i, "Help identifies the current profile icon labels");
+assert.match(userGuide, /## Account access and guest work[\s\S]*?four minutes/i, "User Guide explains current OTP and guest access");
 assert.match(labels, /Undo/);
 assert.match(labels, /Command search/);
 assert.match(app, /dataset\.appMenu === "help"\) \{ showHelpGuideMenu/);
@@ -31,5 +34,6 @@ assert.match(serviceWorker, /\.\/src\/help-markdown\.js/);
 assert.match(serviceWorker, /\.\/docs\/HELP\.md/);
 assert.match(renderHelpMarkdown("## Safe\n\n<script>alert(1)</script>"), /&lt;script&gt;/, "Markdown rendering escapes HTML");
 console.log("PASS: Help guide sections, in-menu route, safe rendering, docs, and offline cache");
+
 
 
