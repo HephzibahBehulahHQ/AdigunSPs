@@ -24,7 +24,7 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 
 1. Open the AdigunSPs website in your browser.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
-3. To register or sign in, select **Account** in the top bar, enter your email, and choose **Create account** or **Sign in**. Enter the six-digit code sent to your email to finish. Guest drafts are temporary; after authentication, use **Save** or **Save to Cloud** for permanent storage.
+3. To register or sign in, select **Account**, enter your email, then choose **Create account** or **Sign in**. Enter the email code or open the sign-in link. Save locally or to Cloud after signing in.
 
 The first screen has the product bar, menus, and toolbar above the editor. The project tree and simulated inputs are on the left; the canvas is centered; Properties, Watch, and Diagnostics sit on the right. Run, storage, language, and help status appear in the footer.
 
