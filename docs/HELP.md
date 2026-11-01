@@ -179,24 +179,8 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 
 **What you'll see:** The profile icon shows account status; errors appear in **Diagnostics**.
 
-1. **I can't sign in:** Select the profile icon (**Sign in**), enter your email, and choose **Sign in** or **Create account**. The current email sends a link, not a code; open it. Six-digit codes need `{{ .Token }}` in the email template. If no email arrives, check spam or contact the administrator.
-2. **My project disappeared:** Check **Project manager** on the browser/device used. Local projects stay there; check **Account → Your cloud projects** or import your JSON backup.
-3. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
-4. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
-
-## Glossary
-
-| Term | Meaning |
-| --- | --- |
-| LD | Ladder Diagram, a relay-style PLC logic editor. |
-| FBD | Function Block Diagram, logic built from connected blocks. |
-| ST | Structured Text, a text-based PLC language subset. |
-| SFC | Sequential Function Chart, a step-and-transition program. |
-| Rung | One horizontal logic network in a ladder program. |
-| Tag | A named value used by logic or simulated I/O. |
-| Scan | One cycle in which the simulator reads inputs and evaluates logic. |
-| Snapshot | A previously saved local project version available for recovery. |
-| HMI | Human-machine interface screen designed in the app. |
-
-
-
+1. **I can't sign in:** Select the profile icon, enter your email and password, then choose **Sign in**. For a new account, choose **Create account** and confirm the email before signing in. If no message arrives, check spam or ask the site administrator to review email delivery.
+2. **I forgot my password:** Select **Forgot password?** below the password field and enter your account email. Open the recovery email, use the **Reset password** page at `/reset-password` to set and confirm a new password, then sign in again. If the link expired, request another reset email.
+3. **My project disappeared:** Check **Project manager** on the browser/device used. Local projects stay there; check **Account → Your cloud projects** or import your JSON backup.
+4. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
+5. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.

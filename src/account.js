@@ -31,16 +31,26 @@ export function createAccountService(client) {
   if (!client?.auth || typeof client.from !== "function") return null;
 
   return {
-    requestEmailOtp(email, shouldCreateUser = false, displayName = "", emailRedirectTo) {
-      return client.auth.signInWithOtp({ email:email.trim(), options:{ shouldCreateUser, ...(displayName.trim() ? { data:{ display_name:displayName.trim().slice(0, 120) } } : {}), ...(emailRedirectTo ? { emailRedirectTo } : {}) } });
+    signInWithPassword(email, password) {
+      return client.auth.signInWithPassword({ email:email.trim(), password });
     },
-    verifyEmailOtp(email, token, type = "email") {
-      return client.auth.verifyOtp({ email:email.trim(), token:String(token).trim(), type });
+    signUpWithPassword(email, password, displayName = "", emailRedirectTo) {
+      return client.auth.signUp({ email:email.trim(), password, options:{ ...(displayName.trim() ? { data:{ display_name:displayName.trim().slice(0, 120) } } : {}), ...(emailRedirectTo ? { emailRedirectTo } : {}) } });
+    },
+    resendSignupConfirmation(email, emailRedirectTo) {
+      return client.auth.resend({ type:"signup", email:email.trim(), ...(emailRedirectTo ? { options:{ emailRedirectTo } } : {}) });
+    },
+    sendPasswordReset(email, redirectTo) {
+      return client.auth.resetPasswordForEmail(email.trim(), redirectTo ? { redirectTo } : undefined);
+    },
+    async setPassword(user, password) {
+      requirePermanentUser(user);
+      return client.auth.updateUser({ password });
     },
     signOut() { return client.auth.signOut(); },
-    async beginGuestUpgradeEmail(user, email) {
+    async beginGuestUpgradeEmail(user, email, emailRedirectTo) {
       if (!user?.id || !user.is_anonymous) throw new AccountError("guest-upgrade-not-guest", "Only a guest session can be upgraded.");
-      const result = await client.auth.updateUser({ email:email.trim() });
+      const result = await client.auth.updateUser({ email:email.trim(), ...(emailRedirectTo ? { options:{ emailRedirectTo } } : {}) });
       if (result.error) {
         if (["email_exists", "user_already_exists", "identity_already_exists"].includes(result.error.code) || /already (?:registered|in use)|email.*already/i.test(result.error.message || "")) {
           throw new AccountError("guest-upgrade-email-exists", "That email already has an account. Sign in to that account instead.");
@@ -48,6 +58,18 @@ export function createAccountService(client) {
         throw result.error;
       }
       return result.data;
+    },
+    resendGuestUpgradeEmail(email, emailRedirectTo) {
+      return client.auth.resend({ type:"email_change", email:email.trim(), ...(emailRedirectTo ? { options:{ emailRedirectTo } } : {}) });
+    },
+    async finishGuestUpgrade(user, password) {
+      if (!user?.id || !user.is_anonymous || !user.email || !(user.email_confirmed_at || user.confirmed_at)) {
+        throw new AccountError("guest-upgrade-email-unverified", "Confirm the email address before setting a password.");
+      }
+      const updated = requireResult(await client.auth.updateUser({ password }));
+      const signedIn = await client.auth.signInWithPassword({ email:user.email, password });
+      if (signedIn?.error) throw signedIn.error;
+      return signedIn?.data || updated;
     },
     async ensureGuestSession(user) {
       if (!user?.id || !user.is_anonymous) throw new AccountError("guest-session-not-anonymous", "Guest access requires a valid temporary guest account.");

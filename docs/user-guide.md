@@ -14,7 +14,7 @@ On first use, the welcome popup explains the workspace and offers **Start quick 
 
 ## Account access and guest work
 
-Select the profile icon in the top bar to open the account panel. When signed out it is labelled **Sign in**; after sign-in it is labelled **Account**. Enter your email and choose **Sign in** or **Create account**. The current email template sends a sign-in link rather than a six-digit code; open the link to finish signing in. Six-digit code entry requires `{{ .Token }}` in the sign-in email template. If no message arrives, check spam or ask the site administrator to check email delivery and template setup.
+Select the profile icon in the top bar to open the account panel. Enter your email and password, then choose **Sign in**. To register, enter your details and choose **Create account**; confirm your address using the email before signing in. Select **Forgot password?** below the password field to request a recovery email; open it, set and confirm your new password on the **Reset password** page at `/reset-password`, and return to sign in. Expired recovery links can be replaced by requesting another email.
 
 Guest access lasts four minutes. After it expires, editing pauses; temporary work remains in the current browser tab. Signed-in users can save a cloud copy from the account panel; guest work is temporary and is not uploaded.
 
@@ -73,5 +73,3 @@ In **Hardware inventory / BOM**, link each user-entered item to a project PLC ta
 Open the project menu to see local projects sorted by most recently opened. The last-opened time is stored with each project and opening one does not add a recovery snapshot.
 
 The HMI toolbar's **SCREEN** selector switches among project-saved screens. Use **＋ Screen** to add a screen, edit **NAME** to rename it, or **Delete screen** to remove it. A project always keeps at least one screen, and each screen retains its own widgets
-
-

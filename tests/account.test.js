@@ -9,8 +9,10 @@ assert.equal(accountAccessTitle("account-required", { unavailable:"Sign in requi
 const authCalls = [];
 const rpcCalls = [];
 const auth = {
-  signInWithOtp: async (args) => { authCalls.push(["otp", args]); return { data:{}, error:null }; },
-  verifyOtp: async (args) => { authCalls.push(["verifyOtp", args]); return { data:{ user:{ id:"u1", is_anonymous:false } }, error:null }; },
+  signInWithPassword: async (args) => { authCalls.push(["signInWithPassword", args]); return { data:{ user:{ id:"u1", is_anonymous:false, email:args.email } }, error:null }; },
+  signUp: async (args) => { authCalls.push(["signUp", args]); return { data:{ user:{ id:"u2", is_anonymous:false } }, error:null }; },
+  resend: async (args) => { authCalls.push(["resend", args]); return { data:{}, error:null }; },
+  resetPasswordForEmail: async (...args) => { authCalls.push(["resetPasswordForEmail", ...args]); return { data:{}, error:null }; },
   signOut: async () => ({ data:{}, error:null }),
   getSession: async () => ({ data:{ session:{ user:{ id:"g1", is_anonymous:true } } }, error:null }),
   signInAnonymously: async () => { throw new Error("An existing guest session must be reused."); },
@@ -21,12 +23,14 @@ const service = createAccountService(client);
 assert.ok(service);
 assert.equal(createAccountService(null), null);
 
-await service.requestEmailOtp(" user@example.test ", true, "Tester", "https://app.example.test/");
-assert.deepEqual(authCalls[0], ["otp", { email:"user@example.test", options:{ shouldCreateUser:true, data:{ display_name:"Tester" }, emailRedirectTo:"https://app.example.test/" } }]);
-await service.requestEmailOtp(" person@example.test ", false);
-assert.deepEqual(authCalls[1], ["otp", { email:"person@example.test", options:{ shouldCreateUser:false } }]);
-await service.verifyEmailOtp(" person@example.test ", "123456", "email");
-assert.deepEqual(authCalls[2], ["verifyOtp", { email:"person@example.test", token:"123456", type:"email" }]);
+await service.signInWithPassword(" user@example.test ", "secret123");
+assert.deepEqual(authCalls[0], ["signInWithPassword", { email:"user@example.test", password:"secret123" }]);
+await service.signUpWithPassword(" person@example.test ", "secret123", "Tester", "https://app.example.test/");
+assert.deepEqual(authCalls[1], ["signUp", { email:"person@example.test", password:"secret123", options:{ data:{ display_name:"Tester" }, emailRedirectTo:"https://app.example.test/" } }]);
+await service.resendSignupConfirmation(" person@example.test ", "https://app.example.test/");
+assert.deepEqual(authCalls[2], ["resend", { type:"signup", email:"person@example.test", options:{ emailRedirectTo:"https://app.example.test/" } }]);
+await service.sendPasswordReset(" person@example.test ", "https://adigunsps.hephzibahbehulah.com/reset-password");
+assert.deepEqual(authCalls[3], ["resetPasswordForEmail", "person@example.test", { redirectTo:"https://adigunsps.hephzibahbehulah.com/reset-password" }]);
 
 const guest = await service.ensureGuestSession({ id:"g1", is_anonymous:true });
 const reusedGuest = await service.startGuestSession();
@@ -38,10 +42,8 @@ await assert.rejects(() => service.ensureGuestSession({ id:"u1", is_anonymous:fa
 const expiredService = createAccountService({ ...client, rpc:async () => ({ data:[{ started_at:"2030-01-01T00:00:00.000Z", expires_at:"2030-01-01T00:04:00.000Z", server_now:"2030-01-01T00:04:00.000Z" }], error:null }) });
 assert.equal((await expiredService.ensureGuestSession({ id:"g2", is_anonymous:true })).remainingMs, 0, "expired server sessions are not restarted");
 await assert.rejects(() => service.saveCloudProject({ id:"g1", is_anonymous:true }, { name:"Guest" }), (error) => error.code === "authentication-required");
-await service.beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, " person@example.test ");
-assert.deepEqual(authCalls.find((call) => call[0] === "updateUser")[1], { email:"person@example.test" }, "guest upgrade sends only the email in the confirmation step");
-await service.verifyEmailOtp("person@example.test", "654321", "email_change");
-assert.deepEqual(authCalls.filter((call) => call[0] === "verifyOtp")[1][1], { email:"person@example.test", token:"654321", type:"email_change" }, "guest upgrade verifies email OTP on the existing anonymous identity");
+await service.beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, " person@example.test ", "https://app.example.test/");
+assert.deepEqual(authCalls.find((call) => call[0] === "updateUser")[1], { email:"person@example.test", options:{ emailRedirectTo:"https://app.example.test/" } }, "guest upgrade sends an email-confirmation link to the app");
 const duplicateAuth = { ...auth, updateUser:async () => ({ data:null, error:{ code:"email_exists", message:"Email already registered" } }) };
 await assert.rejects(() => createAccountService({ auth:duplicateAuth, from:client.from }).beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, "person@example.test"), (error) => error.code === "guest-upgrade-email-exists");
 assert.equal(service.isAdministrator({ is_anonymous:false, app_metadata:{ role:"admin" } }), true);
@@ -129,6 +131,6 @@ assert.equal((await avatarService.getProfile({ ...cloudUser, id:"other-user" }))
 const failedAvatarLookup = createAccountService({ ...avatarClient, storage:{ from:() => ({ createSignedUrl:async () => { throw new Error("temporary storage error"); } }) } });
 assert.equal((await failedAvatarLookup.getProfile(cloudUser)).avatar_url, null, "temporary signed-URL errors preserve the default avatar fallback");
 
-console.log("Account OTP auth, guest identity upgrade and authorization boundary checks passed.");
+console.log("Password auth, recovery email, guest identity upgrade and authorization boundary checks passed.");
 
 

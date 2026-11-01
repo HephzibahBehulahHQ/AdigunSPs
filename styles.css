@@ -138,3 +138,7 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
 @media(prefers-reduced-motion:reduce){.simulation-hud *, .rung.energized-rung .rung-wire,.contact.energized,.electrical-component.energized .electrical-symbol svg{animation:none!important;transition:none!important}}
 .simulation-hud{padding:0}.simulation-hud summary{display:flex;align-items:center;gap:12px;min-height:31px;padding:5px 12px;cursor:pointer;list-style:none;font:10px 'DM Mono',monospace;color:#8ff7f1}.simulation-hud summary::-webkit-details-marker{display:none}.simulation-hud summary::before{content:"▸";color:#f172dc}.simulation-hud[open] summary::before{content:"▾"}.simulation-hud summary b{color:#a9ffe0}.simulation-hud summary small{margin-left:auto;color:#78a9b5}.simulation-hud[open] .hud-metrics,.simulation-hud[open] .hud-log{margin:0 10px 7px}.hud-metrics{grid-template-columns:repeat(6,minmax(70px,1fr))}.simulation-hud [data-state="fault"]{color:#ff687f!important;text-shadow:0 0 10px #ff3355}.simulation-hud:has([data-state="fault"]){animation:fault-flash .55s steps(2,end) infinite}
 
+
+/* Account recovery link sits directly beneath the password field. */
+.account-form .text-link{display:block;margin:-7px 0 12px;padding:0;border:0;background:transparent;color:var(--blue);text-align:left;text-decoration:underline;text-underline-offset:2px}
+
