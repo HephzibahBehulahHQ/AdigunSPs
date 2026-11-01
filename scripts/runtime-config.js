@@ -32,6 +32,11 @@ export async function loadAdigunRuntimeConfig(root) {
       url: process.env.ADIGUN_SUPABASE_URL || local.ADIGUN_SUPABASE_URL || ADIGUN_SUPABASE_URL,
       publishableKey: process.env.ADIGUN_SUPABASE_PUBLISHABLE_KEY || local.ADIGUN_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_kUwuugYcMSOUVfSicQE1TQ_2j_B6P8o",
     },
+    ai: {
+      enabled: process.env.ADIGUN_AI_ENABLED === "true" && /^https:\/\//i.test(process.env.ADIGUN_AI_WORKER_URL || ""),
+      workerUrl: /^https:\/\//i.test(process.env.ADIGUN_AI_WORKER_URL || "") ? process.env.ADIGUN_AI_WORKER_URL.trim() : "",
+      providerLabel: "Cloudflare Workers AI · Gemma 4 26B A4B",
+    },
   };
 }
 

@@ -10,7 +10,7 @@ Run `npm ci` and `npm run build` to syntax-check the JavaScript modules, regener
 
 ## On-premises
 
-The application is a static client with Supabase-hosted identity, profiles, private avatars, and owner-scoped cloud project copies. An organization can host the static bundle on an internal HTTPS web server while keeping the separate AdigunSPs Supabase project as its account backend. Local project data remains in each browser's IndexedDB; cloud copies are user-controlled project saves, not a managed backup or disaster-recovery service. Team sharing, encryption/key-management design, centralized backup, and recovery require further security review.
+The application is a static client with Supabase-hosted identity, profiles, private avatars, and owner-scoped cloud project copies. An organization can host the static bundle on an internal HTTPS web server while keeping the separate AdigunSPs Supabase project as its account backend. Local project data remains in each browser's IndexedDB without application-layer encryption; JSON exports are unsigned. Cloud copies are user-controlled project saves, not a managed backup or disaster-recovery service. Team sharing, encryption/key management, project signing, centralized backup, and recovery require stakeholder/security review.
 
 ## Backups and recovery
 

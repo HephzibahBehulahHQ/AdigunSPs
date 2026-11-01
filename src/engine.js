@@ -11,6 +11,7 @@ export function scan(project, inputs, state = {}, dt = 100, breakpoints = []) {
   const values = { ...(state.values || {}), ...inputs, ...outputs };
   let breakpointSkip = breakpoints.includes(state.breakpointSkip) ? state.breakpointSkip : null;
 
+  let mcrEnabled = true;
   for (const [rungIndex, rung] of (project.rungs || []).entries()) {
     if (breakpoints.includes(rung.id)) {
       if (breakpointSkip === rung.id) breakpointSkip = null;
@@ -30,10 +31,13 @@ export function scan(project, inputs, state = {}, dt = 100, breakpoints = []) {
       return power;
     });
     let power = pathResults.some(Boolean);
+    if (rung.mcr === "start") mcrEnabled = power;
+    else power = power && mcrEnabled;
     if (rung.timer) {
       const type = rung.timer.type || "TON", preset = Math.max(1, Number(rung.timer.preset) || 1), timer = timers[rung.timer.tag] || { elapsed:0, done:false, prior:false, active:false };
       if (type === "TOF") { if (power) { timer.elapsed = 0; timer.done = true; } else if (timer.done) { timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed < preset; } else timer.elapsed = 0; }
       else if (type === "TP") { if (power && !timer.prior) { timer.elapsed = 0; timer.active = true; } else if (timer.active) { timer.elapsed = Math.min(preset, timer.elapsed + dt); if (timer.elapsed >= preset) timer.active = false; } timer.prior = power; timer.done = timer.active; }
+      else if (type === "RTO") { if (rung.timer.resetTag && Boolean(values[rung.timer.resetTag])) timer.elapsed = 0; else if (power) timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed >= preset; }
       else { timer.elapsed = power ? Math.min(preset, timer.elapsed + dt) : 0; timer.done = timer.elapsed >= preset; }
       timers[rung.timer.tag] = timer;
       values[`${rung.timer.tag}.DN`] = timer.done;
@@ -42,16 +46,21 @@ export function scan(project, inputs, state = {}, dt = 100, breakpoints = []) {
       power = rung.timer.output === "DN" ? timer.done : power;
     }
     if (rung.counter) {
-      const counter = counters[rung.counter.tag] || { count:0, prior:false };
-      if (rung.counter.resetTag && Boolean(values[rung.counter.resetTag])) counter.count = 0;
-      else if (power && !counter.prior) counter.count = Math.min(Number(rung.counter.maxCount) || Number.MAX_SAFE_INTEGER, counter.count + 1);
+      const down = rung.counter.type === "CTD", initial = Math.max(0, Number(rung.counter.initialCount ?? rung.counter.preset) || 0);
+      const counter = counters[rung.counter.tag] || { count:down ? initial : 0, prior:false };
+      if (rung.counter.resetTag && Boolean(values[rung.counter.resetTag])) counter.count = down ? initial : 0;
+      else if (power && !counter.prior) counter.count = down ? Math.max(0, counter.count - 1) : Math.min(Number(rung.counter.maxCount) || Number.MAX_SAFE_INTEGER, counter.count + 1);
       counter.prior = power;
-      counter.done = counter.count >= Math.max(1, Number(rung.counter.preset) || 1);
+      counter.done = down ? counter.count <= 0 : counter.count >= Math.max(1, Number(rung.counter.preset) || 1);
       counters[rung.counter.tag] = counter;
       values[`${rung.counter.tag}.CV`] = counter.count;
       values[`${rung.counter.tag}.DN`] = counter.done;
       if (rung.counter.countTag) values[rung.counter.countTag] = counter.count;
       power = counter.done;
+    }
+    if (rung.res && power) {
+      const target = rung.res.counterTag, definition = (project.rungs || []).find((item) => item.counter?.tag === target)?.counter;
+      if (target && definition) { const down = definition.type === "CTD", preset = Math.max(1, Number(definition.preset) || 1), counter = counters[target] || { count:down ? preset : 0, prior:false }; counter.count = down ? preset : 0; counter.done = false; counters[target] = counter; values[`${target}.CV`] = counter.count; values[`${target}.DN`] = false; if (definition.countTag) { values[definition.countTag] = counter.count; if ((project.io?.outputs || []).includes(definition.countTag)) outputs[definition.countTag] = counter.count; } }
     }
     if (rung.scale) {
       const instruction = rung.scale, raw = Number(values[instruction.inputTag]), rawMin = Number(instruction.rawMin ?? 0), rawMax = Number(instruction.rawMax ?? 1), scaledMin = Number(instruction.scaledMin ?? 0), scaledMax = Number(instruction.scaledMax ?? 100);
@@ -65,6 +74,7 @@ export function scan(project, inputs, state = {}, dt = 100, breakpoints = []) {
       if (instruction.outputTag) { values[instruction.outputTag] = scaled; outputs[instruction.outputTag] = scaled; }
     }
     if (rung.coil) { const mode = rung.coilMode || "normal", retained = Boolean(outputs[rung.coil]); outputs[rung.coil] = mode === "set" ? retained || power : mode === "reset" ? retained && !power : power; values[rung.coil] = outputs[rung.coil]; }
+    if (rung.mcr === "end") mcrEnabled = true;
   }
   return { outputs, timers, counters, edges, energized, values: { ...values, ...outputs }, scanMs: dt, breakpointHit: null, breakpointSkip };
 }
@@ -76,13 +86,17 @@ export function scanFBD(blocks, inputs, state = {}, outputNames = [], dt = 100, 
   for (const block of plan.blocks) {
     const tags = block.inputs || [], source = tags.map((tag) => Boolean(values[tag])), numeric = tags.map((tag) => Number(values[tag])); let value = false;
     if (block.type === "AND") value = source.length > 0 && source.every(Boolean);
+    if (block.type === "NAND") value = !(source.length > 0 && source.every(Boolean));
     if (block.type === "OR") value = source.some(Boolean);
+    if (block.type === "NOR") value = !source.some(Boolean);
+    if (block.type === "XOR") value = source.filter(Boolean).length % 2 === 1;
+    if (block.type === "XNOR") value = source.filter(Boolean).length % 2 === 0;
     if (block.type === "NOT") value = !Boolean(values[tags[0]]);
     if (block.type === "TRUE") value = true;
     if (block.type === "FALSE") value = false;
-    if (["TON", "TOF", "TP"].includes(block.type)) { const preset = Math.max(1, Number(block.preset) || 1), timer = timers[block.id] || { elapsed:0, done:false, prior:false, active:false }; if (block.type === "TOF") { if (source[0]) { timer.elapsed = 0; timer.done = true; } else if (timer.done) { timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed < preset; } else timer.elapsed = 0; } else if (block.type === "TP") { if (source[0] && !timer.prior) { timer.elapsed = 0; timer.active = true; } else if (timer.active) { timer.elapsed = Math.min(preset, timer.elapsed + dt); if (timer.elapsed >= preset) timer.active = false; } timer.prior = source[0]; timer.done = timer.active; } else { timer.elapsed = source[0] ? Math.min(preset, timer.elapsed + dt) : 0; timer.done = timer.elapsed >= preset; } timers[block.id] = timer; value = timer.done; values[`${block.outputTag}.EN`] = source[0]; values[`${block.outputTag}.ET`] = timer.elapsed; }
+    if (["TON", "TOF", "TP", "RTO"].includes(block.type)) { const preset = Math.max(1, Number(block.preset) || 1), timer = timers[block.id] || { elapsed:0, done:false, prior:false, active:false }; if (block.type === "TOF") { if (source[0]) { timer.elapsed = 0; timer.done = true; } else if (timer.done) { timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed < preset; } else timer.elapsed = 0; } else if (block.type === "TP") { if (source[0] && !timer.prior) { timer.elapsed = 0; timer.active = true; } else if (timer.active) { timer.elapsed = Math.min(preset, timer.elapsed + dt); if (timer.elapsed >= preset) timer.active = false; } timer.prior = source[0]; timer.done = timer.active; } else if (block.type === "RTO") { if (source[1]) timer.elapsed = 0; else if (source[0]) timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed >= preset; } else { timer.elapsed = source[0] ? Math.min(preset, timer.elapsed + dt) : 0; timer.done = timer.elapsed >= preset; } timers[block.id] = timer; value = timer.done; values[`${block.outputTag}.EN`] = source[0]; values[`${block.outputTag}.ET`] = timer.elapsed; }
     if (block.type === "R_TRIG" || block.type === "F_TRIG") { const prior = Boolean(edges[block.id]?.prior), current = source[0] || false; value = block.type === "R_TRIG" ? !prior && current : prior && !current; edges[block.id] = { prior:current }; }
-    if (block.type === "CTU") { const counter = counters[block.id] || { count:0, prior:false }; if (source[1]) counter.count = 0; else if (source[0] && !counter.prior) counter.count = Math.min(Number(block.maxCount) || Number.MAX_SAFE_INTEGER, counter.count + 1); counter.prior = source[0]; value = counter.count >= Math.max(1, Number(block.preset) || 1); counters[block.id] = counter; if (block.outputTag) values[`${block.outputTag}.CV`] = counter.count; if (block.countTag) { values[block.countTag] = counter.count; if (outputSet.has(block.countTag)) outputs[block.countTag] = counter.count; } }
+    if (["CTU", "CTD"].includes(block.type)) { const down = block.type === "CTD", initial = Math.max(0, Number(block.initialCount ?? block.preset) || 0), counter = counters[block.id] || { count:down ? initial : 0, prior:false }; if (source[1]) counter.count = down ? initial : 0; else if (source[0] && !counter.prior) counter.count = down ? Math.max(0, counter.count - 1) : Math.min(Number(block.maxCount) || Number.MAX_SAFE_INTEGER, counter.count + 1); counter.prior = source[0]; value = down ? counter.count <= 0 : counter.count >= Math.max(1, Number(block.preset) || 1); counters[block.id] = counter; if (block.outputTag) values[`${block.outputTag}.CV`] = counter.count; if (block.countTag) { values[block.countTag] = counter.count; if (outputSet.has(block.countTag)) outputs[block.countTag] = counter.count; } }
     if (["ADD", "SUB", "MUL", "DIV"].includes(block.type)) { const left = numeric[0] || 0, right = numeric[1] || 0; value = block.type === "ADD" ? left + right : block.type === "SUB" ? left - right : block.type === "MUL" ? left * right : right === 0 ? 0 : left / right; }
     if (["GT", "LT", "EQ"].includes(block.type)) value = block.type === "GT" ? numeric[0] > numeric[1] : block.type === "LT" ? numeric[0] < numeric[1] : numeric[0] === numeric[1];
     if (block.type === "SCALE") { const [raw] = numeric, rawMin = Number(block.rawMin ?? 0), rawMax = Number(block.rawMax ?? 1), scaledMin = Number(block.scaledMin ?? 0), scaledMax = Number(block.scaledMax ?? 100); if (![raw, rawMin, rawMax, scaledMin, scaledMax].every(Number.isFinite) || rawMax === rawMin) { value = 0; errors.push(`SCALE ${block.id} needs finite values and a nonzero raw range.`); } else { let fraction = (raw - rawMin) / (rawMax - rawMin); if (block.clamp !== false) fraction = Math.min(1, Math.max(0, fraction)); value = scaledMin + fraction * (scaledMax - scaledMin); } }
@@ -169,6 +183,17 @@ export function defaultProject() {
       { id: crypto.randomUUID(), comment: "Sensor on-delay", branches: [[{ tag: "Sensor", mode: "NO" }]], timer: { tag: "T0.0", preset: 1500, output: "DN" }, coil: "Lamp" },
     ],
   };
+}
+
+export function emptyProject() {
+  const project = defaultProject();
+  project.name = "Untitled project";
+  project.tags = [];
+  project.io = { inputs:[], outputs:[] };
+  project.initialState = {};
+  project.rungs = [];
+  project.electrical = { components:[], wires:[], inputStates:{} };
+  return project;
 }
 
 export function getTaskCycleMs(project) {

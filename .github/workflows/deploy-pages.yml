@@ -40,6 +40,8 @@ jobs:
       - name: Build static application
         env:
           ADIGUN_SUPABASE_PUBLISHABLE_KEY: sb_publishable_kUwuugYcMSOUVfSicQE1TQ_2j_B6P8o
+          ADIGUN_AI_ENABLED: ${{ vars.ADIGUN_AI_ENABLED || 'true' }}
+          ADIGUN_AI_WORKER_URL: ${{ vars.ADIGUN_AI_WORKER_URL || 'https://adigunsps-ai.hephzibah-behulah.workers.dev' }}
         run: npm run build
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

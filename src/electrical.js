@@ -1,38 +1,49 @@
 export const electricalComponentCatalog = Object.freeze({
-  supply24vdc: { name:"Generic 24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
-  supply3phase: { name:"Generic three-phase supply (educational)", category:"Power supplies", prefix:"G", terminals:["L1","L2","L3","PE"], kind:"three-phase-source", nominalVoltageV:400 },
-  genericPlc24v4di4do: { name:"Generic 24 V DC PLC · 4 DI / 4 DO", category:"PLC controllers", prefix:"PLC", terminals:["L+","M","PE","I1","I2","I3","I4","Q1","Q2","Q3","Q4"], kind:"plc", channels:{inputs:["I1","I2","I3","I4"],outputs:["Q1","Q2","Q3","Q4"]} },
-  digitalInputModule4: { name:"Generic digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
-  digitalOutputModule4: { name:"Generic digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
-  analogInputModule2: { name:"Generic analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
-  analogOutputModule2: { name:"Generic analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
-  pushbuttonNO: { name:"Generic normally-open start push button", category:"Control devices", prefix:"S", terminals:["13","14"], kind:"contact", normallyClosed:false },
-  pushbuttonNC: { name:"Generic normally-closed stop push button", category:"Control devices", prefix:"S", terminals:["21","22"], kind:"contact", normallyClosed:true },
-  emergencyStopNC: { name:"Generic emergency-stop device · NC simulation", category:"Control devices", prefix:"ES", terminals:["11","12"], kind:"contact", normallyClosed:true },
-  selectorSwitch: { name:"Generic two-position selector switch", category:"Control devices", prefix:"SA", terminals:["13","14"], kind:"contact", normallyClosed:false },
-  limitSwitchNO: { name:"Generic normally-open limit switch", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
-  limitSwitchNC: { name:"Generic normally-closed limit switch", category:"Sensors", prefix:"B", terminals:["21","22"], kind:"contact", normallyClosed:true },
-  proximityNO: { name:"Generic proximity sensor · NO simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:false },
-  proximityNC: { name:"Generic proximity sensor · NC simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:true },
-  photoelectricNO: { name:"Generic photoelectric sensor · NO simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:false },
-  photoelectricNC: { name:"Generic photoelectric sensor · NC simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:true },
-  analogSignalSource: { name:"Generic analog signal source · scalar simulation", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"tag-scaled scalar; no voltage physics" },
-  analogSignalIndicator: { name:"Generic analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
-  contactor3P: { name:"Generic three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
-  relayCoil: { name:"Generic control relay coil · 24 V DC simulation", category:"Contactors and relays", prefix:"K", terminals:["A1","A2"], kind:"load" },
-  auxiliaryNO: { name:"Generic normally-open auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["13","14"], kind:"contact", normallyClosed:false },
-  auxiliaryNC: { name:"Generic normally-closed auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["21","22"], kind:"contact", normallyClosed:true },
-  overloadNC: { name:"Generic overload relay · NC trip contact simulation", category:"Protection", prefix:"F", terminals:["95","96"], kind:"overload-contact", normallyClosed:true },
-  circuitBreaker: { name:"Generic manually-reset circuit breaker", category:"Protection", prefix:"QF", terminals:["1","2"], kind:"manual-switch", normallyClosed:false },
-  fuse: { name:"Generic fuse · replace-after-open simulation", category:"Protection", prefix:"FU", terminals:["1","2"], kind:"manual-switch", normallyClosed:false },
-  pilotLamp: { name:"Generic pilot lamp", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load" },
-  solenoidValve: { name:"Generic solenoid valve coil · 24 V DC simulation", category:"Actuators and indicators", prefix:"Y", terminals:["A1","A2"], kind:"load" },
-  singlePhaseMotor: { name:"Generic single-phase motor · on/off model", category:"Motors", prefix:"M", terminals:["U1","U2","PE"], kind:"motor", phasePairs:[["U1","U2"]] },
-  threePhaseMotor: { name:"Generic three-phase motor · on/off model", category:"Motors", prefix:"M", terminals:["U1","V1","W1","PE"], kind:"motor", phasePairs:[["U1","V1"],["V1","W1"],["W1","U1"]] },
-  terminal: { name:"Generic feed-through terminal block", category:"Terminals and wiring", prefix:"X", terminals:["1","2"], kind:"pass-through" },
-  dcPowerRail: { name:"Generic 24 V DC distribution rail", category:"Terminals and wiring", prefix:"XR", terminals:["1","2","3","4","5","6","7","8"], kind:"junction" },
-  junction: { name:"Generic electrical junction", category:"Terminals and wiring", prefix:"J", terminals:["1","2","3","4"], kind:"junction" },
+  supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
+  singlePhaseSupply: { name:"Single-phase AC supply · L/N/PE model", category:"Power supplies", prefix:"G", terminals:["L","N","PE"], kind:"single-phase-source", nominalVoltageV:230 },
+  supply3phase: { name:"three-phase supply (educational)", category:"Power supplies", prefix:"G", terminals:["L1","L2","L3","PE"], kind:"three-phase-source", nominalVoltageV:400 },
+  genericPlc24v4di4do: { name:"24 V DC PLC · 4 DI / 4 DO", category:"PLC controllers", prefix:"PLC", terminals:["L+","M","PE","I1","I2","I3","I4","Q1","Q2","Q3","Q4"], kind:"plc", channels:{inputs:["I1","I2","I3","I4"],outputs:["Q1","Q2","Q3","Q4"]} },
+  digitalInputModule4: { name:"digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
+  digitalOutputModule4: { name:"digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
+  analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
+  analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
+  pushbuttonNO: { name:"normally-open start push button", category:"Control devices", prefix:"S", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  pushbuttonNC: { name:"normally-closed stop push button", category:"Control devices", prefix:"S", terminals:["21","22"], kind:"contact", normallyClosed:true },
+  emergencyStopNC: { name:"Emergency-stop switch · latching NC model", category:"Control devices", prefix:"ES", terminals:["11","12"], kind:"manual-switch", normallyClosed:true },
+  toggleSwitchNO: { name:"Maintained toggle switch · NO", category:"Control devices", prefix:"SA", terminals:["13","14"], kind:"manual-switch", normallyClosed:false },
+  toggleSwitchNC: { name:"Maintained toggle switch · NC", category:"Control devices", prefix:"SA", terminals:["21","22"], kind:"manual-switch", normallyClosed:true },
+  selectorSwitch: { name:"two-position selector switch", category:"Control devices", prefix:"SA", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  limitSwitchNO: { name:"normally-open limit switch", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  limitSwitchNC: { name:"normally-closed limit switch", category:"Sensors", prefix:"B", terminals:["21","22"], kind:"contact", normallyClosed:true },
+  proximityNO: { name:"proximity sensor · NO simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:false },
+  proximityNC: { name:"proximity sensor · NC simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:true },
+  photoelectricNO: { name:"photoelectric sensor · NO simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:false },
+  photoelectricNC: { name:"photoelectric sensor · NC simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:true },
+  pressureSwitchNO: { name:"Pressure switch · NO simulation", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  temperatureSwitchNO: { name:"Temperature switch · NO simulation", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  temperatureSwitchNC: { name:"Temperature switch · NC simulation", category:"Sensors", prefix:"B", terminals:["21","22"], kind:"contact", normallyClosed:true },
+  floatSwitchNO: { name:"Float switch · NO simulation", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  analogSignalSource: { name:"analog signal source · scalar simulation", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"tag-scaled scalar; no voltage physics" },
+  analogSignalIndicator: { name:"analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
+  contactor3P: { name:"three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
+  relayCoil: { name:"control relay coil · 24 V DC simulation", category:"Contactors and relays", prefix:"K", terminals:["A1","A2"], kind:"load" },
+  auxiliaryNO: { name:"normally-open auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  auxiliaryNC: { name:"normally-closed auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["21","22"], kind:"contact", normallyClosed:true },
+  overloadNC: { name:"overload relay · NC trip contact simulation", category:"Protection", prefix:"F", terminals:["95","96"], kind:"overload-contact", normallyClosed:true },
+  circuitBreaker: { name:"manually-reset circuit breaker", category:"Protection", prefix:"QF", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true },
+  fuse: { name:"fuse · replace-after-open simulation", category:"Protection", prefix:"FU", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true },
+  pilotLamp: { name:"pilot lamp", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load" },
+  solenoidValve: { name:"solenoid valve coil · 24 V DC simulation", category:"Actuators and indicators", prefix:"Y", terminals:["A1","A2"], kind:"load" },
+  buzzer: { name:"Audible buzzer · on/off simulation", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load" },
+  heaterElement: { name:"Heater element · on/off simulation", category:"Actuators and indicators", prefix:"E", terminals:["1","2"], kind:"load" },
+  singlePhaseMotor: { name:"single-phase motor · on/off model", category:"Motors", prefix:"M", terminals:["U1","U2","PE"], kind:"motor", phasePairs:[["U1","U2"]] },
+  threePhaseMotor: { name:"three-phase motor · on/off model", category:"Motors", prefix:"M", terminals:["U1","V1","W1","PE"], kind:"motor", phasePairs:[["U1","V1"],["V1","W1"],["W1","U1"]] },
+  terminal: { name:"feed-through terminal block", category:"Terminals and wiring", prefix:"X", terminals:["1","2"], kind:"pass-through" },
+  dcPowerRail: { name:"24 V DC distribution rail", category:"Terminals and wiring", prefix:"XR", terminals:["1","2","3","4","5","6","7","8"], kind:"junction" },
+  neutralRail: { name:"Neutral distribution rail · N", category:"Terminals and wiring", prefix:"XN", terminals:["N1","N2","N3","N4","N5","N6","N7","N8"], kind:"junction" },
+  junction: { name:"electrical junction", category:"Terminals and wiring", prefix:"J", terminals:["1","2","3","4"], kind:"junction" },
   protectiveEarth: { name:"Protective-earth terminal", category:"Terminals and wiring", prefix:"PE", terminals:["PE"], kind:"earth" },
+  groundCommon: { name:"Ground / common node · simulated equipotential", category:"Terminals and wiring", prefix:"COM", terminals:["COM1","COM2","COM3","COM4"], kind:"junction" },
 });
 
 const safeNumber = (value) => value === null || value === "" || value === undefined ? null : Number(value);
@@ -56,7 +67,7 @@ export function createElectricalComponent(type, sequence, x = 120, y = 120) {
     terminals:[...spec.terminals], tag:"", normallyClosed:Boolean(spec.normallyClosed),
     nominalVoltageV:spec.nominalVoltageV ?? null, ratedVoltageV:null, ratedCurrentA:null,
     manufacturer:"", partNumber:"", simulationOnly:true, ioMap,
-    coilTag:"", closed:spec.kind === "manual-switch" || spec.kind === "junction", tripped:false,
+    coilTag:"", closed:spec.kind === "manual-switch" ? Boolean(spec.initialClosed ?? (spec.normallyClosed ?? true)) : spec.kind === "junction", tripped:false,
     ...(spec.signalModel ? { signalModel:spec.signalModel, signalValue:null } : {}),
   };
 }
@@ -87,7 +98,7 @@ export function duplicateElectricalComponent(component, reference, offset = 40) 
   return { ...structuredClone(component), id:crypto.randomUUID(), reference, x:component.x + offset, y:component.y + offset };
 }
 
-export function createExampleElectricalDiagram(tags, io, initialState = {}) {
+export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}) {
   const components = [], wires = [];
   const add = (type, x, y, tag = "") => {
     const sequence = Number(nextElectricalReference(type,components).replace(electricalComponentCatalog[type].prefix,""));
@@ -104,8 +115,13 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}) {
   });
   const boolOutputs = (tags || []).filter((tag) => tag.role === "output" && tag.type === "BOOL");
   boolOutputs.slice(0, 4).forEach((tag, index) => {
-    const lamp = add("pilotLamp", 560, 240 + index * 120, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
-    wire(plc, `Q${index + 1}`, lamp, "X1"); wire(lamp, "X2", returnRail, String(index+3));
+    const type=electricalComponentCatalog[outputLoadTypes[tag.name]]?.kind ? outputLoadTypes[tag.name] : "pilotLamp", load = add(type, 560, 240 + index * 120, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
+    if (type === "threePhaseMotor") {
+      const contactor=add("contactor3P",720,240+index*180), phaseSource=add("supply3phase",80,900+index*220);
+      wire(plc,`Q${index+1}`,contactor,"A1"); wire(contactor,"A2",returnRail,String(index+3));
+      for(const [phase,mainIn,mainOut,motorPin] of [["L1","1L1","2T1","U1"],["L2","3L2","4T2","V1"],["L3","5L3","6T3","W1"]]) { wire(phaseSource,phase,contactor,mainIn); wire(contactor,mainOut,load,motorPin); }
+      wire(phaseSource,"PE",load,"PE");
+    } else { wire(plc,`Q${index+1}`,load,electricalComponentCatalog[type].terminals[0]); wire(load,electricalComponentCatalog[type].terminals[1],returnRail,String(index+3)); }
   });
   const analogInputs = (tags || []).filter((tag) => tag.role === "input" && ["INT", "REAL"].includes(tag.type));
   if (analogInputs.length) {

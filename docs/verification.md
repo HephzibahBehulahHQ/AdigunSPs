@@ -3,11 +3,12 @@
 ## Current verification — 2026-11-01
 
 - `npm test` passed: all 200 example projects, 1,317 logic cases, 903 schematic checks, and 1,317 integrated PLC-to-component cases, plus focused branding, accessibility, Supabase account/schema, hardware, AI, resource, protocol, and allocator checks.
-- `npm run build` passed and syntax-checked 45 source modules. `git diff --check` found trailing whitespace in the edited account status row; corrected before commit.
-- GitHub CI run 41241827147 and GitHub Pages deployment run 41241827187 both completed successfully for documentation commit `669b063` on 2026-10-31; the application implementation remains the previously verified `e29a5c7` build.
-- A live local preview of the edited build is running at `http://127.0.0.1:8081/`. The public Pages smoke from 2026-10-31 verified the editor and authenticated cloud-project refresh (empty list); it did not verify signup or writes.
+- `npm run build` passed and syntax-checked 53 source modules. `git -c core.whitespace=cr-at-eol diff --check` passed; the plain check reports carriage returns from the Windows checkout.
+- GitHub `main` is `bcee00658baf59115257c31788c41c1062fe6478`; CI run 41289192398 and GitHub Pages deployment run 41289192420 completed successfully. PR #3 CI run 41291497544 also passed at `6a7af040`.
+- The current local checkout is dirty branch `codex/adigunsps-completion` at `cae2a1d`, 32 commits ahead of `origin/main`; these changes are not committed or deployed. Port 8081 has no local preview listener. The public Pages smoke from 2026-10-31 verified the editor and authenticated cloud-project refresh (empty list); it did not verify signup or writes.
 - Supabase project `fqcbfnktdvqojyezxeis` is `ACTIVE_HEALTHY`. Email confirmation and anonymous sign-ins are enabled; manual linking was enabled and the dashboard confirmed the save on 2026-11-01. Migration `20261101075618_adigunsps_schema_and_guest_upgrade` moved the four AdigunSPs tables to `adigunsps`, preserved all 7 guest-session rows, and verified owner `USING`/`WITH CHECK` and restrictive INSERT policies. Live signup/upgrade/cloud data flows remain pending.
 - Remaining limits are listed in `requirements-status.md` and `stakeholder-inputs.md`; deployment does not make this educational simulator a certified safety PLC or validate physical hardware.
+- Cloudflare Worker `https://adigunsps-ai.hephzibah-behulah.workers.dev` deployed successfully on 2026-11-01. Wrangler listed the `env.AI` binding; GET returned 405, no-token POST returned 401, and a consented invalid token returned 401 `invalid-session`. No authenticated inference or live Neuron usage was verified. GitHub Pages still serves `main` (`bcee0065`); the local hosted-AI client is not published.
 ## Historical checks — 2026-10-30
 
 - `npm run build` passed: syntax checks passed across 40 source modules, localized manifests were generated from the central brand configuration, and a self-contained static bundle was written to ignored `dist/`.
@@ -77,10 +78,10 @@
 - Live browser smoke check — on a clean localhost origin, confirmed first-run branding/safety notice, LD-to-FBD switching, valid generated blocks with declared intermediates, keyboard port connection feedback, and Motor = TRUE after Start plus Run. Find reports three matches for an internal FBD tag. Menu contents, settings/theme switching, install flow, responsive layouts, and pointer wiring remain unverified.
 - Browser refresh check — refreshed the current workspace `index.html` in Chrome; the UI showed the official `AdigunSPs` product name without the former unsupplied tagline and retained company attribution. Project-language selection and document export were not manually exercised.
 - Cross-browser behavior, mobile screen-reader behavior, full four-language layout and wording review, security assessment, and large-project performance.
-- Automated checks do not cover every menu action, branch editing interaction, settings persistence, watch/force interaction, alarm/recipe UI, event-log UI, trace export UI, or complete UI workflow.
+- Static regression checks confirm every localized top-menu action and static toolbar/project-tree `data-action` has a dispatch route. They do not execute every menu flow; branch editing interaction, settings persistence, watch/force interaction, alarm/recipe UI, event-log UI, trace export UI, and complete workflows remain without end-to-end coverage.
 - No test here verifies a physical PLC or certifies any safety behavior.
 
-The AI design and stakeholder-dependent decisions are documented in `adigun-ai-design.md` and `stakeholder-inputs.md`. The AI service itself and the broader platform requirements remain unimplemented.
+The AI design and stakeholder-dependent decisions are documented in `adigun-ai-design.md` and `stakeholder-inputs.md`. The consent-gated Cloudflare Worker is deployed with a Supabase publishable-key secret and `env.AI` binding; GET returned 405, no-token POST returned 401, and consented invalid-token POST returned 401 `invalid-session`. These responses verify reachability and auth-gate behavior, not authenticated inference. GitHub Pages still serves `main` (`bcee0065`); publish the local client and workflow change before hosted AI can be used on the site. The Pages workflow now defaults to the deployed Worker URL and accepts optional repository overrides. No live Neuron usage or model quality was verified. The broader platform requirements remain incomplete.
 
 ## Release gate
 

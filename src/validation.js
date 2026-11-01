@@ -28,8 +28,14 @@ export function validateProject(project) {
       else if (tag?.role === "output") issues.push({ level: "warning", code: "output-contact", message: `Output ${contact.tag} is used as a contact.` });
       if (!["NO", "NC", "R_TRIG", "F_TRIG"].includes(contact.mode)) issues.push({ level: "error", code: "contact-mode", message: `Contact ${contact.tag} has an unknown contact mode.` });
     }
-    if (rung.timer && rung.timer.type && !["TON", "TOF", "TP"].includes(rung.timer.type)) issues.push({ level:"error", code:"timer-type", message:`Timer ${rung.timer.tag} has an unsupported type ${rung.timer.type}.` });
+    if (rung.timer && rung.timer.type && !["TON", "TOF", "TP", "RTO"].includes(rung.timer.type)) issues.push({ level:"error", code:"timer-type", message:`Timer ${rung.timer.tag} has an unsupported type ${rung.timer.type}.` });
     if (rung.timer && (!Number.isFinite(Number(rung.timer.preset)) || Number(rung.timer.preset) <= 0)) issues.push({ level: "error", code: "timer-preset", message: `Timer ${rung.timer.tag} needs a preset greater than zero.` });
+    if (rung.timer?.type === "RTO" && rung.timer.resetTag && tags.get(rung.timer.resetTag)?.type !== "BOOL") issues.push({ level:"error", code:"timer-reset-tag", message:`RTO reset tag ${rung.timer.resetTag} must be a declared BOOL tag.` });
+    if (rung.counter && rung.counter.type && !["CTU", "CTD"].includes(rung.counter.type)) issues.push({level:"error",code:"counter-type",message:`Counter ${rung.counter.tag} has an unsupported type ${rung.counter.type}.`});
+    if (rung.counter && (!Number.isFinite(Number(rung.counter.preset)) || Number(rung.counter.preset) <= 0)) issues.push({level:"error",code:"counter-preset",message:`Counter ${rung.counter.tag} needs a preset greater than zero.`});
+    if (rung.counter?.resetTag && tags.get(rung.counter.resetTag)?.type !== "BOOL") issues.push({level:"error",code:"counter-reset-tag",message:`Counter reset tag ${rung.counter.resetTag} must be a declared BOOL tag.`});
+    if (rung.res && !(project.rungs || []).some((item) => item.counter?.tag === rung.res.counterTag)) issues.push({level:"error",code:"res-target",message:`RES target ${rung.res.counterTag || "(missing)"} must match a declared ladder counter.`});
+    if (rung.mcr && !["start", "end"].includes(rung.mcr)) issues.push({level:"error",code:"mcr-type",message:`Rung ${index + 1} has an unsupported MCR instruction.`});
     if (rung.scale) {
       const input = tags.get(rung.scale.inputTag), output = tags.get(rung.scale.outputTag), range = [rung.scale.rawMin, rung.scale.rawMax, rung.scale.scaledMin, rung.scale.scaledMax].map(Number);
       if (!input || !["INT", "REAL"].includes(input.type)) issues.push({ level:"error", code:"ld-scale-input", message:`LD SCALE input ${rung.scale.inputTag || "(missing)"} must be a declared numeric tag.` });
@@ -37,6 +43,12 @@ export function validateProject(project) {
       if (!range.every(Number.isFinite) || range[0] === range[1]) issues.push({ level:"error", code:"ld-scale-range", message:"LD SCALE needs finite limits and a nonzero raw range." });
     }
   }
+  let mcrOpen = false;
+  for (const [index, rung] of (project.rungs || []).entries()) {
+    if (rung.mcr === "start") { if (mcrOpen) issues.push({level:"error",code:"mcr-nested",message:`MCR at rung ${index + 1} is nested; only one MCR section may be active.`}); mcrOpen = true; }
+    if (rung.mcr === "end") { if (!mcrOpen) issues.push({level:"error",code:"mcr-unmatched-end",message:`MCR end at rung ${index + 1} has no preceding start.`}); mcrOpen = false; }
+  }
+  if (mcrOpen) issues.push({level:"error",code:"mcr-unclosed",message:"MCR start instruction has no matching end instruction."});
   issues.push(...validateFbdBlocks(project));
   if (project.electrical) issues.push(...validateElectricalDiagram(project.electrical, project.tags || []));
   const hmi = project.hmi;
