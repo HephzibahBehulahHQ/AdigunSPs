@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import worker, { createAdigunAIWorker } from "../cloudflare/adigun-ai-worker.js";
-import { adigunAiRemoteLabels, askAdigunHostedAI, summarizeAdigunProjectForAI } from "../src/adigun-ai-remote.js";
+import { adigunAiRemoteErrorLabel, adigunAiRemoteLabels, askAdigunHostedAI, summarizeAdigunProjectForAI } from "../src/adigun-ai-remote.js";
 import { loadAdigunRuntimeConfig, serializeAdigunRuntimeConfig } from "../scripts/runtime-config.js";
 
 const env = { SUPABASE_URL:"https://fqcbfnktdvqojyezxeis.supabase.co", SUPABASE_PUBLISHABLE_KEY:"sb_publishable_test", ADIGUN_AI_ALLOWED_ORIGINS:"https://hephzibahbehulahhq.github.io,http://localhost:8086", AI:{run:async () => ({response:"Reviewed PLC explanation."})} };
@@ -46,9 +46,17 @@ assert.equal(invoked,false,"consent remains opt-in before network request");
 let sentRequest;
 const call=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async(url,options)=>{sentRequest={url,options};return Response.json({answer:"offline-safe result"});}});
 assert.equal(call.answer,"offline-safe result");assert.equal(sentRequest.options.headers.authorization,"Bearer access-token");
+const rejected=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({error:"signed-in-account-required"},{status:401})});
+assert.equal(rejected.error,"signed-in-account-required","Worker authentication reason is preserved for useful guidance");
 assert.equal((await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:null},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>{throw new Error("must not call");}})).error,"authenticated-session-required");
 assert.equal((await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"x"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>{throw new Error("offline");}})).error,"hosted-ai-unavailable","network failure preserves local fallback");
-assert.deepEqual(Object.keys(adigunAiRemoteLabels("en")).sort(),["consent","failed","hosted","unavailable"]);
+assert.deepEqual(Object.keys(adigunAiRemoteLabels("en")).sort(),["accountRequired","consent","failed","hosted","serviceUnavailable","unavailable"]);
+assert.equal(adigunAiRemoteErrorLabel("signed-in-account-required"),"accountRequired");
+assert.equal(adigunAiRemoteErrorLabel("invalid-session"),"accountRequired");
+assert.equal(adigunAiRemoteErrorLabel("worker-not-configured"),"serviceUnavailable");
+assert.equal(adigunAiRemoteErrorLabel("model-unavailable"),"unavailable");
+assert.equal(adigunAiRemoteErrorLabel("unexpected"),"failed");
+for(const locale of ["en","de","yo","pcm"]){const copy=adigunAiRemoteLabels(locale);assert.ok(copy.accountRequired);assert.ok(copy.serviceUnavailable);}
 for(const locale of ["en","de","yo","pcm"])assert.match(adigunAiRemoteLabels(locale).consent("Cloudflare Workers AI"),/Cloudflare Workers AI/);
 
 const priorEnabled=process.env.ADIGUN_AI_ENABLED,priorUrl=process.env.ADIGUN_AI_WORKER_URL;
