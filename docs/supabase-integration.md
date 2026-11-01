@@ -1,5 +1,3 @@
-Warning: fs was declared with const; use let for reassignable variables.
-Warning: s was declared with const; use let for reassignable variables.
 # AdigunSPs Supabase Integration
 
 The app uses the dedicated `HephzibahBehulahHQ` project `fqcbfnktdvqojyezxeis` at `https://fqcbfnktdvqojyezxeis.supabase.co`. VoltPro is a separate project (`vnckoocsookbaqalybje`) and must not receive AdigunSPs migrations or runtime requests.

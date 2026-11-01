@@ -1,5 +1,3 @@
-Warning: fs was declared with const; use let for reassignable variables.
-Warning: s was declared with const; use let for reassignable variables.
 -- Keep the existing AdigunSPs rows and move only this application's tables.
 drop trigger if exists adigun_guest_session_expiry on public.adigun_guest_sessions;
 drop function if exists public.adigun_set_guest_expiry();

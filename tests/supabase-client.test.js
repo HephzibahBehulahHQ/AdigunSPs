@@ -1,5 +1,3 @@
-Warning: fs was declared with const; use let for reassignable variables.
-Warning: s was declared with const; use let for reassignable variables.
 import assert from "node:assert/strict";
 import { createAdigunSupabaseClient, ADIGUN_SUPABASE_URL, ADIGUN_SUPABASE_PROJECT_REF } from "../src/supabase-client.js";
 

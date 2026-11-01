@@ -1,5 +1,3 @@
-Warning: fs was declared with const; use let for reassignable variables.
-Warning: s was declared with const; use let for reassignable variables.
 # Master prompt coverage
 
 This is a current implementation audit, not a production-readiness claim. The full automated suite and build passed on 2026-10-31. A production browser smoke on 2026-10-31 confirmed the deployed editor loads; authentication, cloud-storage, full interaction, accessibility, security, performance, and installation paths were not comprehensively exercised.

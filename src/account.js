@@ -1,5 +1,3 @@
-Warning: fs was declared with const; use let for reassignable variables.
-Warning: s was declared with const; use let for reassignable variables.
 export class AccountError extends Error {
   constructor(code, message) { super(message); this.name = "AccountError"; this.code = code; }
 }
