@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, organization `main` is `24c9507d`; its CI and GitHub Pages deployment passed after PR #4 merged. The latest local full test/build and fresh Pages smoke passed on 2026-11-01. These do not amount to full E2E, accessibility, security, performance, or installation verification.
+This is a current implementation audit, not a production-readiness claim. As of 2026-11-01, PR #5 is merged into organization `main` and GitHub CI run `41303286632` passed. A fresh GitHub Pages smoke opened the editor, Help guide, component library, and signed-in account screen at `?release=9106ef1c`; that confirms those UI surfaces loaded but not account, cloud-save, or AI end-to-end behavior. Full accessibility, security, performance, and installation audits remain incomplete.
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|
