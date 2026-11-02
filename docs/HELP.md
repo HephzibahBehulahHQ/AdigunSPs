@@ -186,8 +186,8 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 5. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
 6. **Old interface:** Open [Update application](https://adigunsps.hephzibahbehulah.com/update/), select **Update application**, then return to AdigunSPs. Saved projects and sign-in remain.
 
-Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms: threshold and clearing hysteresis. Opening projects clears simulation/forces/replay.
+Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms: threshold/hysteresis. Opening projects clears simulation/forces/replay.
 
 Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
 
-**Alarm history:** 100/500/2000 events; export first. AI errors: project unchanged.
+**Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Phone tabs scroll.

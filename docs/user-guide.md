@@ -110,3 +110,5 @@ In **Alarm history**, choose **Event history limit**: 100, 500 (default), or 200
 If hosted AI cannot return an answer, your project remains unchanged. A request may already have reached the service; an unavailable-answer message does not prove that nothing was sent. Keep consent off to use only the offline helper.
 
 On narrow phones the header uses two rows: company/product identity above, project menu and account/language/settings/search/help controls below. All five controls remain available without horizontal scrolling.
+
+On phones, scroll the editor tabs and its control row sideways to reach extra controls; the page itself stays within the screen.

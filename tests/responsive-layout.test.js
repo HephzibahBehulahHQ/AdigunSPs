@@ -52,3 +52,5 @@ const brandStyles=readFileSync("assets/brand/brand-overrides.css","utf8");
 assert.match(brandStyles,/\.topbar \{ display: grid; grid-template-columns: minmax\(0, 1fr\) auto; grid-template-rows: 32px 30px;/,"mobile branding uses two rows instead of overflowing controls");
 assert.match(brandStyles,/\.topbar > \.top-actions \{ grid-column: 2; grid-row: 2;/);
 assert.match(brandStyles,/\.topbar > \.project-name \{ grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden;/);
+
+assert.match(styles,/@media\(max-width:760px\)\{\.editor-tabs,\.editor-subbar\{overflow-x:auto;overflow-y:hidden;flex-shrink:0\}/,"mobile editor controls scroll within their rows instead of widening the page");
