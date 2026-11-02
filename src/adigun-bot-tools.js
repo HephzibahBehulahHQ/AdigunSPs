@@ -95,12 +95,12 @@ function executeOne(project, call, context, effects) {
         return { rungId:rung.id, key:input.key, value:rung[input.key] };
       }
       const component = findComponent(project, input.componentId);
-      const allowed = new Set(["label","tag","coilTag","normallyClosed","closed","tripped","nominalVoltageV","ratedVoltageV","ratedCurrentA","x","y","rotation","ioMap"]);
+      const allowed = new Set(["label","tag","coilTag","coilRef","normallyClosed","closed","tripped","nominalVoltageV","ratedVoltageV","ratedCurrentA","x","y","rotation","ioMap"]);
       if (!component || !allowed.has(input.key)) throw new Error("Unknown component or unsupported editable property.");
       if (["x","y","nominalVoltageV","ratedVoltageV","ratedCurrentA"].includes(input.key) && input.value !== null && !Number.isFinite(Number(input.value))) throw new Error(`${input.key} must be a finite number or null.`);
       if (input.key === "rotation" && ![0,90,180,270].includes(Number(input.value))) throw new Error("Rotation must be 0, 90, 180, or 270 degrees.");
       if (["normallyClosed","closed","tripped"].includes(input.key) && typeof input.value !== "boolean") throw new Error(`${input.key} must be true or false.`);
-      if (["label","tag","coilTag"].includes(input.key) && typeof input.value !== "string") throw new Error(`${input.key} must be text.`);
+      if (["label","tag","coilTag","coilRef"].includes(input.key) && typeof input.value !== "string") throw new Error(`${input.key} must be text.`);
       if (input.key === "ioMap" && (!input.value || typeof input.value !== "object" || Array.isArray(input.value) || Object.entries(input.value).some(([channel,mapping]) => !Object.hasOwn(component.ioMap || {},channel) || !mapping || typeof mapping.tag !== "string" || typeof mapping.address !== "string" || !mapping.address.trim()))) throw new Error("I/O mapping must use defined device channels with text tags and non-empty addresses.");
       component[input.key] = ["x","y"].includes(input.key) ? Math.round(Number(input.value) / 20) * 20 : ["nominalVoltageV","ratedVoltageV","ratedCurrentA"].includes(input.key) && input.value !== null ? Number(input.value) : input.value;
       return { componentId:component.id, key:input.key, value:component[input.key] };

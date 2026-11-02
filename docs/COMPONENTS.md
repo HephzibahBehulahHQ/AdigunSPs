@@ -17,7 +17,7 @@ The **Components** tab is an editable schematic workspace with terminal-level wi
 | NO / NC pushbutton | Momentary simulated Boolean contact | Start or stop a logic path |
 | NO / NC maintained toggle | Editable held-open/held-closed contact | Select a simulated operating mode |
 | NC emergency stop | Latching simulated contact that needs reset | Interrupt a simulated control path |
-| Two-position selector | Selects one of two simulated states | Choose Hand or Auto |
+| Two-position selector | SPDT terminal model: position I joins 11–12; position II joins 11–14 | Route a control supply to Hand or Auto logic |
 | NO / NC limit switch | Simulated end-position contact | Detect a travel endpoint |
 | NO / NC proximity sensor | Simulated object-present contact | Detect a nearby target |
 | NO / NC photoelectric sensor | Simulated beam/object contact | Count items on a conveyor |

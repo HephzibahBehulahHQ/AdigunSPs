@@ -9,6 +9,9 @@ const placed=await executeAdigunBotTools(base,[
 ]);
 assert.equal(placed.ok,true); assert.equal(placed.project.electrical.components[0].reference,"S1");
 assert.deepEqual([placed.project.electrical.components[0].x,placed.project.electrical.components[0].y],[100,100],"component positions snap to the electrical grid");
+const coilDraft=await executeAdigunBotTools(base,[{name:"place_component",arguments:{type:"relayCoil"}},{name:"place_component",arguments:{type:"auxiliaryNO"}}]),coilComponent=coilDraft.project.electrical.components[0],auxiliaryComponent=coilDraft.project.electrical.components[1];
+const linkedByBot=await executeAdigunBotTools(coilDraft.project,[{name:"set_property",arguments:{componentId:auxiliaryComponent.id,key:"coilRef",value:coilComponent.reference}}]);
+assert.equal(linkedByBot.ok,true,linkedByBot.error);assert.equal(linkedByBot.project.electrical.components[1].coilRef,coilComponent.reference,"Adigun BOT can set a validated coil reference for an auxiliary contact");
 const incompleteGate={...emptyProject(),editorType:"FBD",tags:[{name:"A",type:"BOOL",role:"input",address:""},{name:"Run",type:"BOOL",role:"output",address:""}],io:{inputs:["A"],outputs:["Run"]},initialState:{A:false,Run:false},fbdBlocks:[{id:"and-1",type:"AND",inputs:["A"],outputTag:"Run"}]};
 const completedGate=await executeAdigunBotTools(incompleteGate,[{name:"add_fbd_input",arguments:{blockId:"and-1"}}]);
 assert.equal(completedGate.ok,true,completedGate.error); assert.equal(completedGate.project.fbdBlocks[0].inputs.length,2); assert.equal(completedGate.project.io.inputs.length,2); assert.equal(completedGate.project.initialState.Switch2,false);

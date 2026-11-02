@@ -12,7 +12,7 @@ export const electricalComponentCatalog = Object.freeze({
   emergencyStopNC: { name:"Emergency-stop switch · latching NC model", category:"Control devices", prefix:"ES", terminals:["11","12"], kind:"manual-switch", normallyClosed:true },
   toggleSwitchNO: { name:"Maintained toggle switch · NO", category:"Control devices", prefix:"SA", terminals:["13","14"], kind:"manual-switch", normallyClosed:false },
   toggleSwitchNC: { name:"Maintained toggle switch · NC", category:"Control devices", prefix:"SA", terminals:["21","22"], kind:"manual-switch", normallyClosed:true },
-  selectorSwitch: { name:"two-position selector switch", category:"Control devices", prefix:"SA", terminals:["13","14"], kind:"contact", normallyClosed:false },
+  selectorSwitch: { name:"two-position selector switch · SPDT model", category:"Control devices", prefix:"SA", terminals:["11","12","14"], kind:"selector-switch", positionPairs:{I:["11","12"],II:["11","14"]} },
   limitSwitchNO: { name:"normally-open limit switch", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
   limitSwitchNC: { name:"normally-closed limit switch", category:"Sensors", prefix:"B", terminals:["21","22"], kind:"contact", normallyClosed:true },
   proximityNO: { name:"proximity sensor · NO simulation", category:"Sensors", prefix:"B", terminals:["1","2"], kind:"contact", normallyClosed:false },
@@ -26,7 +26,7 @@ export const electricalComponentCatalog = Object.freeze({
   analogSignalSource: { name:"analog signal source · scalar simulation", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"tag-scaled scalar; no voltage physics" },
   analogSignalIndicator: { name:"analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
   contactor3P: { name:"three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
-  relayCoil: { name:"control relay coil · 24 V DC simulation", category:"Contactors and relays", prefix:"K", terminals:["A1","A2"], kind:"load" },
+  relayCoil: { name:"control relay coil · 24 V DC simulation", category:"Contactors and relays", prefix:"K", terminals:["A1","A2"], coil:["A1","A2"], kind:"load" },
   auxiliaryNO: { name:"normally-open auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["13","14"], kind:"contact", normallyClosed:false },
   auxiliaryNC: { name:"normally-closed auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["21","22"], kind:"contact", normallyClosed:true },
   overloadNC: { name:"overload relay · NC trip contact simulation", category:"Protection", prefix:"F", terminals:["95","96"], kind:"overload-contact", normallyClosed:true },
@@ -67,7 +67,8 @@ export function createElectricalComponent(type, sequence, x = 120, y = 120) {
     terminals:[...spec.terminals], tag:"", normallyClosed:Boolean(spec.normallyClosed),
     nominalVoltageV:spec.nominalVoltageV ?? null, ratedVoltageV:null, ratedCurrentA:null,
     manufacturer:"", partNumber:"", simulationOnly:true, ioMap,
-    coilTag:"", closed:spec.kind === "manual-switch" ? Boolean(spec.initialClosed ?? (spec.normallyClosed ?? true)) : spec.kind === "junction", tripped:false,
+    coilRef:"", closed:spec.kind === "manual-switch" ? Boolean(spec.initialClosed ?? (spec.normallyClosed ?? true)) : spec.kind === "junction", tripped:false,
+    ...(spec.kind === "selector-switch" ? { selectorPosition:"I" } : {}),
     ...(spec.signalModel ? { signalModel:spec.signalModel, signalValue:null } : {}),
   };
 }
@@ -159,6 +160,11 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
     if (!Number.isFinite(Number(component.x)) || !Number.isFinite(Number(component.y)) || ![0,90,180,270].includes(Number(component.rotation || 0))) issues.push({level:"error",code:"electrical-layout",message:`${reference} needs finite grid coordinates and a right-angle rotation.`});
     for (const field of ["ratedVoltageV","ratedCurrentA"]) { const value = safeNumber(component[field]); if (value !== null && (!Number.isFinite(value) || value <= 0)) issues.push({level:"error",code:"electrical-rating",message:`${reference} ${field} must be blank or a positive number.`}); }
     if (component.manufacturer || component.partNumber) issues.push({level:"warning",code:"electrical-unverified-device",message:`${reference} contains user-entered manufacturer data; AdigunSPs does not verify it.`});
+    if (spec.kind === "selector-switch" && !Object.hasOwn(spec.positionPairs,component.selectorPosition)) issues.push({level:"error",code:"electrical-selector-position",message:`${reference} selector position must be I or II.`});
+    if (["auxiliaryNO","auxiliaryNC"].includes(component.type) && component.coilRef) {
+      const linked = components.find((item) => String(item.reference || "").trim().toUpperCase() === String(component.coilRef).trim().toUpperCase() && (electricalComponentCatalog[item.type]?.kind === "contactor" || item.type === "relayCoil"));
+      if (!linked) issues.push({level:"error",code:"electrical-coil-reference",message:`${reference} links to missing or unsupported coil ${component.coilRef}.`});
+    }
     const tagMap = new Map(projectTags.map((tag) => [tag.name,tag]));
     for (const [channel,mapping] of Object.entries(component.ioMap || {})) {
       if (!mapping.address?.trim()) issues.push({level:"error",code:"electrical-io-address",message:`${reference} channel ${channel} needs an address.`});
@@ -209,7 +215,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   const all = diagram.components || [], byId = new Map(all.map((component) => [component.id, component]));
   const key = (id, pin) => `${id}:${pin}`;
   const supplies = all.filter((component) => ["source", "three-phase-source", "single-phase-source"].includes(electricalComponentCatalog[component.type]?.kind));
-  let contactorEnergized = new Set();
+  let coilEnergized = new Set();
   const makeGraph = () => {
     const nodes = new Map();
     const addEdge = (a, b) => { if (!nodes.has(a)) nodes.set(a, new Set()); if (!nodes.has(b)) nodes.set(b, new Set()); nodes.get(a).add(b); nodes.get(b).add(a); };
@@ -222,12 +228,15 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       const signal = Boolean(inputStates[component.tag || component.reference]);
       if (spec.kind === "junction") for (let i = 0; i < spec.terminals.length; i++) for (let j = i + 1; j < spec.terminals.length; j++) addEdge(key(component.id, spec.terminals[i]), key(component.id, spec.terminals[j]));
       else if (spec.kind === "pass-through") addEdge(key(component.id,spec.terminals[0]),key(component.id,spec.terminals[1]));
+      else if (spec.kind === "selector-switch") for (const terminal of spec.positionPairs[component.selectorPosition]?.slice(1)||[]) addEdge(key(component.id,spec.positionPairs[component.selectorPosition][0]),key(component.id,terminal));
       else if (spec.kind === "contact" || spec.kind === "overload-contact") {
-        const closed = spec.kind === "overload-contact" ? !(component.tripped || signal) : component.normallyClosed ? !signal : signal;
+        const linkedCoil = component.coilRef ? all.find((item) => String(item.reference || "").trim().toUpperCase() === String(component.coilRef).trim().toUpperCase() && (electricalComponentCatalog[item.type]?.kind === "contactor" || item.type === "relayCoil")) : null;
+        const actuated = component.coilRef ? Boolean(linkedCoil && coilEnergized.has(linkedCoil.id)) : signal;
+        const closed = spec.kind === "overload-contact" ? !(component.tripped || signal) : component.normallyClosed ? !actuated : actuated;
         if (closed) addEdge(key(component.id, spec.terminals[0]), key(component.id, spec.terminals[1]));
       } else if (spec.kind === "manual-switch" && component.closed && !component.tripped && !signal) addEdge(key(component.id, spec.terminals[0]), key(component.id, spec.terminals[1]));
       else if (spec.kind === "contactor") {
-        const on = contactorEnergized.has(component.id);
+        const on = coilEnergized.has(component.id);
         if (on) { for (const pair of spec.mainPairs || []) addEdge(key(component.id, pair[0]), key(component.id, pair[1])); if (spec.auxNOPair) addEdge(key(component.id, spec.auxNOPair[0]), key(component.id, spec.auxNOPair[1])); }
         else if (spec.auxNCPair) addEdge(key(component.id, spec.auxNCPair[0]), key(component.id, spec.auxNCPair[1]));
       }
@@ -251,13 +260,20 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     return !sourceHasShort(poles) && positive && negative && positive.has(key(component.id,a)) && negative.has(key(component.id,b));
   });
   // Coil power is derived from terminal voltage paths, never from the output tag alone.
-  for (let pass = 0; pass < 2; pass++) {
+  const coilComponents = all.filter((component) => electricalComponentCatalog[component.type]?.kind === "contactor" || component.type === "relayCoil");
+  let coilStatesStable = coilComponents.length === 0;
+  for (let pass = 0; pass <= coilComponents.length + 1; pass++) {
     const nodes = makeGraph(), nets = sourceNets(nodes);
-    for (const component of all) if (electricalComponentCatalog[component.type]?.kind === "contactor") {
-      const [[a, b]] = [electricalComponentCatalog[component.type].coil || ["A1", "A2"]];
-      if (poweredPair(nets, component, a, b)) contactorEnergized.add(component.id); else contactorEnergized.delete(component.id);
+    const nextEnergized = new Set();
+    for (const component of coilComponents) {
+      const [a, b] = electricalComponentCatalog[component.type].coil || ["A1", "A2"];
+      if (poweredPair(nets, component, a, b)) nextEnergized.add(component.id);
     }
+    coilStatesStable = nextEnergized.size === coilEnergized.size && [...nextEnergized].every((id) => coilEnergized.has(id));
+    coilEnergized = nextEnergized;
+    if (coilStatesStable) break;
   }
+  if (!coilStatesStable) coilEnergized.clear();
   const nodes = makeGraph(), nets = sourceNets(nodes), plcInputs = {}, analogInputs = {}, analogOutputs = {}, componentStates = {};
   const pairedConnected=(a,aPositive,aNegative,b,bPositive,bNegative)=>{const positive=reachable(nodes,key(a.id,aPositive)),negative=reachable(nodes,key(a.id,aNegative));return positive.has(key(b.id,bPositive))&&negative.has(key(b.id,bNegative))&&![...positive].some((node)=>negative.has(node));};
   for (const controller of all) {
@@ -292,7 +308,15 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         : poweredPair(nets, load, spec.terminals[0], spec.terminals[1]);
     return [load.id, Boolean(powered)];
   }));
-  Object.assign(componentStates,Object.fromEntries([...loads.map((item) => [item.id, { energized: energized[item.id], ...(electricalComponentCatalog[item.type].kind === "motor" ? { running: energized[item.id], speedModel: "on/off educational state; no validated torque or speed model" } : {}) }]), ...[...contactorEnergized].map((id) => [id, { coilEnergized: true, mainContactsClosed: true }])]));
+  Object.assign(componentStates,Object.fromEntries([
+    ...loads.map((item) => { const spec=electricalComponentCatalog[item.type],on=coilEnergized.has(item.id); return [item.id, { energized:energized[item.id], ...(spec.kind === "motor" ? { running:energized[item.id], speedModel:"on/off educational state; no validated torque or speed model" } : {}), ...(spec.kind === "contactor" || item.type === "relayCoil" ? { coilEnergized:on, ...(spec.kind === "contactor" ? { mainContactsClosed:on, auxNOPairClosed:on, auxNCPairClosed:!on } : {}) } : {}) }]; }),
+    ...coilComponents.filter((item) => !loads.some((load) => load.id === item.id)).map((item) => { const on=coilEnergized.has(item.id); return [item.id, { coilEnergized:on, mainContactsClosed:on, auxNOPairClosed:on, auxNCPairClosed:!on }]; }),
+    ...all.filter((item) => ["contact","overload-contact"].includes(electricalComponentCatalog[item.type]?.kind)).map((item) => {
+      const spec=electricalComponentCatalog[item.type],signal=Boolean(inputStates[item.tag||item.reference]),linked=coilComponents.find((coil)=>String(coil.reference||"").trim().toUpperCase()===String(item.coilRef||"").trim().toUpperCase()),actuated=item.coilRef?Boolean(linked&&coilEnergized.has(linked.id)):signal,closed=spec.kind === "overload-contact"?!(item.tripped||signal):item.normallyClosed?!actuated:actuated;
+      return [item.id,{contactClosed:closed,contactActuated:actuated}];
+    }),
+    ...all.filter((item) => electricalComponentCatalog[item.type]?.kind === "selector-switch").map((item) => [item.id,{selectorPosition:item.selectorPosition}]),
+  ]));
   const resolvedInputs={...inputStates,...plcInputs};
   for (const controller of all) for(const channel of electricalComponentCatalog[controller.type]?.channels?.analogInputs||[]){const tag=controller.ioMap?.[channel]?.tag;if(tag)resolvedInputs[tag]=analogInputs[tag]??0;}
   Object.assign(resolvedInputs,analogInputs);
@@ -304,6 +328,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   if(sourceShorts.length)for(const tag of Object.keys(plcInputs))resolvedInputs[tag]=false;
   const liveNodes = new Set(nets.flatMap(({nets:poles}) => Object.values(poles).flatMap((nodes) => [...nodes])));
   const energizedWires = (diagram.wires || []).filter((wire) => wire?.from && wire?.to && (liveNodes.has(key(wire.from.componentId, wire.from.terminal)) || liveNodes.has(key(wire.to.componentId, wire.to.terminal)))).map((wire) => wire.id).filter(Boolean);
-  return { energized, energizedWires, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, faults:sourceShorts, warnings:validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
+  const coilStateFault = coilStatesStable ? [] : [{level:"error",code:"electrical-coil-state-unstable",message:"Contactor/relay coil state did not settle; all coils were de-energized in this simulation."}];
+  return { energized, energizedWires, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, faults:[...sourceShorts,...coilStateFault], warnings:validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
 }
 

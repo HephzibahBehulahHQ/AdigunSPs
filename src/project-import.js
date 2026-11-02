@@ -154,7 +154,7 @@ function validateOptionalProjectData(project) {
       const terminals = component.terminals || definition.terminals;
       if (terminals.length !== definition.terminals.length || terminals.some((terminal, terminalIndex) => terminal !== definition.terminals[terminalIndex])) fail(`electrical component ${index + 1} terminals do not match the supported component definition.`);
       componentTerminals.set(component.id, new Set(terminals));
-      for (const field of ["tag", "coilTag"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true });
+      for (const field of ["tag", "coilTag", "coilRef"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true });
       for (const field of ["closed", "tripped", "normallyClosed"]) if (component[field] !== undefined && typeof component[field] !== "boolean") fail(`electrical component ${index + 1} has an invalid ${field} value.`);
       for (const field of ["ratedVoltageV", "ratedCurrentA", "nominalVoltageV", "signalValue"]) if (component[field] !== undefined && component[field] !== null && !Number.isFinite(component[field])) fail(`electrical component ${index + 1} has an invalid ${field} value.`);
       for (const field of ["manufacturer", "partNumber", "label"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true, max: 256 });
@@ -164,6 +164,10 @@ function validateOptionalProjectData(project) {
         requireString(mapping.tag, `electrical component ${index + 1} has an invalid I/O tag.`, { optional: true });
         requireString(mapping.address, `electrical component ${index + 1} has an invalid I/O address.`, { optional: true });
       }
+    }
+    for (const [index, component] of diagram.components.entries()) if (["auxiliaryNO", "auxiliaryNC"].includes(component.type) && component.coilRef) {
+      const linked = diagram.components.find((candidate) => candidate.reference.toLocaleUpperCase() === component.coilRef.trim().toLocaleUpperCase() && (electricalComponentCatalog[candidate.type]?.kind === "contactor" || candidate.type === "relayCoil"));
+      if (!linked) fail(`electrical component ${index + 1} references a missing or unsupported coil.`);
     }
     for (const [index, wire] of diagram.wires.entries()) {
       if (!isRecord(wire) || !isRecord(wire.from) || !isRecord(wire.to)) fail(`electrical wire ${index + 1} has invalid endpoints.`);
@@ -193,8 +197,6 @@ export function normalizeImportedProject(value) {
   if (value.tags !== undefined && (!Array.isArray(value.tags) || value.tags.length > MAX_TAGS)) fail(`the tag list must contain at most ${MAX_TAGS} entries.`);
   if (value.io !== undefined && !isRecord(value.io)) fail("I/O configuration must be an object.");
   if (value.initialState !== undefined && !isRecord(value.initialState)) fail("initial values must be an object.");
-  validateOptionalProjectData(value);
-
   const project = structuredClone(value);
   project.tags ||= [];
   project.io ||= { inputs: [], outputs: [] };
@@ -203,6 +205,8 @@ export function normalizeImportedProject(value) {
     if (!Array.isArray(project.io[key]) || project.io[key].length > MAX_TAGS || project.io[key].some((name) => typeof name !== "string" || name.length > 128)) fail(`I/O ${key} must be a list of tag names.`);
   }
   project.initialState ||= {};
+  migrateLegacySelectorSwitches(project);
+  validateOptionalProjectData(project);
 
   for (const [index, tag] of project.tags.entries()) {
     if (!isRecord(tag) || typeof tag.name !== "string" || !tag.name.trim() || tag.name.length > 128) fail(`tag ${index + 1} has an invalid name.`);
@@ -232,6 +236,18 @@ export function normalizeImportedProject(value) {
     rung.branches = branches;
   }
   return project;
+}
+
+function migrateLegacySelectorSwitches(project) {
+  const diagram=project.electrical;
+  if(!isRecord(diagram)||!Array.isArray(diagram.components)||!Array.isArray(diagram.wires))return;
+  for(const component of diagram.components){
+    if(component?.type!=="selectorSwitch"||!Array.isArray(component.terminals)||component.terminals.length!==2||component.terminals[0]!=="13"||component.terminals[1]!=="14")continue;
+    const active=Boolean(diagram.inputStates?.[component.tag||component.reference]);
+    component.terminals=[...electricalComponentCatalog.selectorSwitch.terminals];
+    component.selectorPosition=active?"II":"I";
+    for(const wire of diagram.wires)for(const endpoint of [wire?.from,wire?.to])if(endpoint?.componentId===component.id&&endpoint.terminal==="13")endpoint.terminal="11";
+  }
 }
 
 export function assertProjectFileSize(size) {

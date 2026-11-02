@@ -119,8 +119,8 @@ The HUD is educational: voltage, current, and motor RPM are not calculated. This
 
 1. Open **Tags and I/O** and create BOOL inputs `Start` and `Stop`, plus a BOOL output `Motor`.
 2. In **Program / Main**, add a rung with Start NO and Stop NC contacts in series. Add a parallel branch with Motor NO and Stop NC, then use Motor as the output coil.
-3. Open **Components** and place a PLC, contactor, and motor schematic model. Wire the educational power path and assign the Motor output tag to the simulated load in its properties.
-4. Set Start true and Stop false in **Simulated inputs**, then select **Run**. Set Stop true to stop the simulated Boolean output; this does not verify real motor or safety wiring. See [COMPONENTS.md](COMPONENTS.md) for the model boundaries.
+3. Open **Components** and place a PLC, contactor, and motor schematic model. Wire the educational power path and assign the Motor output tag to the simulated load in its properties. To make a separate NO/NC auxiliary contact follow a relay coil, select the contact and choose the coil under **Associated coil**. A two-position selector uses 11 as common: Position I closes 11–12, and Position II closes 11–14; set it in the component properties.
+4. Set Start true and Stop false in **Simulated inputs**, then select **Run**. Relay/contactor coils glow when energized, and linked auxiliary symbols show their computed open/closed positions. Set Stop true to stop the simulated Boolean output; this does not verify real motor or safety wiring. See [COMPONENTS.md](COMPONENTS.md) for the model boundaries.
 
 ## Using Adigun BOT
 
