@@ -151,3 +151,7 @@ Do not describe this milestone as production-ready. Complete the later phases in
 
 - Executed `tests/sql/cloud-rls-rollback.sql` on the AdigunSPs project. The authenticated owner read QA cloud metadata and snapshots; an unrelated synthetic identity saw no cloud projects, snapshots, or profiles. Anonymous claims were denied a cloud-project insert. Assertions completed without errors and the transaction rolled back. This tests database role/claim enforcement, not two real browser accounts or token validation.
 - Confirmed permanent-user INSERT and snapshot-parent ownership policies are RESTRICTIVE. The guest-session definer function checks anonymous identity, fixes its search path, and keeps the first server-issued expiry. Advisor warnings remain for intentional guest access and leaked-password protection being disabled. Other products share this database; their policies were not changed.
+
+## Live project-switch verification — 2026-11-02
+
+- On release `77c9cf4`, started Run, opened the QA cloud copy, and observed STOPPED with Cycle 0 and its saved PS1 component. Browser error capture was empty. A stale RUNNING label remained in the HUD/status area; the follow-up reset path now refreshes HUD and status immediately. The follow-up needs deployment and a repeated live check.
