@@ -71,6 +71,7 @@ export function validateProject(project) {
       if (widget.type === "switch" && !inputNames.has(widget.tag)) issues.push({ level: "error", code: "hmi-switch-role", message: `HMI switch ${widget.label || widget.id} must use an input tag.` });
       if (widget.type === "lamp" && !outputNames.has(widget.tag)) issues.push({ level: "warning", code: "hmi-lamp-role", message: `HMI lamp ${widget.label || widget.id} is not bound to a declared output.` });
     }
+    if (hmi.alarmHistoryLimit !== undefined && ![100,500,2000].includes(hmi.alarmHistoryLimit)) issues.push({ level:"error",code:"alarm-history-limit",message:"Alarm history limit must be 100, 500, or 2000 events." });
     for (const alarm of hmi.alarms || []) {
       if (!alarm.tag || !tags.has(alarm.tag)) issues.push({ level: "warning", code: "alarm-tag-undefined", message: `HMI alarm ${alarm.message || alarm.id} uses an undeclared tag.` });
       else if (alarm.condition?.kind === "threshold") {

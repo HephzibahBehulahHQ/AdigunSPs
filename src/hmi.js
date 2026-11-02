@@ -59,3 +59,8 @@ export function captureRecipeInputs(inputNames, tags, values) {
 export function recipeInputChanges(model, recipeId, currentValues = {}) {
   return Object.entries(applyRecipe(model, recipeId)).map(([tag, after]) => ({ tag, before:currentValues[tag], after, changed:!Object.is(currentValues[tag], after) }));
 }
+
+export function normalizeAlarmHistoryLimit(value) { return [100,500,2000].includes(Number(value)) ? Number(value) : 500; }
+export function retainAlarmEvents(history = [], additions = [], limit = 500) {
+  return [...(Array.isArray(additions) ? additions : []), ...(Array.isArray(history) ? history : [])].slice(0, normalizeAlarmHistoryLimit(limit));
+}

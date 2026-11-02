@@ -1,6 +1,6 @@
 # AdigunSPs Help and User Guide
 
-AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect to a physical PLC.
+AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 
 ## Table of contents
 
@@ -189,3 +189,5 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms default high; enter a finite threshold. Opening projects stops simulation and clears forces/replay.
 
 Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
+
+**Alarm history:** 100/500/2000 events; export first.
