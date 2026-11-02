@@ -7,6 +7,21 @@ import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+{
+  const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},boardEvents={},card={style:{}};
+  const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>headEvents[name]=handler,setPointerCapture(){}};
+  const board={getBoundingClientRect:()=>({left:-300,top:-200}),addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:()=>card};
+  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:[]};
+  const previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
+  try{
+    renderElectricalWorkspace(root,{tags:[],electrical:{components:[component],wires:[]}});
+    headEvents.pointerdown({button:0,clientX:-80,clientY:10,pointerId:1,preventDefault(){}});
+    boardEvents.pointermove({clientX:-80,clientY:10});
+    assert.deepEqual([component.x,component.y],[200,200],"drag starts without jumping on a scrolled canvas");
+    boardEvents.pointermove({clientX:-40,clientY:70});
+    assert.deepEqual([component.x,component.y],[240,260],"drag follows pointer delta without double-counting canvas scroll");
+  }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
