@@ -1,4 +1,5 @@
-import { cp, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,6 +35,21 @@ for (const directory of ["src", "assets", "docs", "reset-password"]) await cp(jo
 await mkdir(join(output, "vendor"), { recursive:true });
 await cp(join(root, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js"), join(output, "vendor", "supabase.js"));
 await writeFile(join(output, "runtime-config.js"), serializeAdigunRuntimeConfig(await loadAdigunRuntimeConfig(root)), "utf8");
+
+const releaseHash=createHash("sha256");
+async function hashAssets(directory, prefix="") {
+  const entries=(await readdir(directory,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name));
+  for(const entry of entries){
+    const relative=prefix+entry.name,path=join(directory,entry.name);
+    if(entry.isDirectory())await hashAssets(path,relative+"/");
+    else if(relative!=="service-worker.js")releaseHash.update(relative+"\0").update(await readFile(path)).update("\0");
+  }
+}
+await hashAssets(output);
+const cacheName=`adigunsps-shell-${releaseHash.digest("hex").slice(0,20)}`;
+const workerPath=join(output,"service-worker.js"),workerSource=await readFile(workerPath,"utf8");
+if(!/^const CACHE = "[^"]+";/m.test(workerSource))throw new Error("Service worker cache declaration is missing.");
+await writeFile(workerPath,workerSource.replace(/^const CACHE = "[^"]+";/m,`const CACHE = "${cacheName}";`),"utf8");
 
 const required = ["index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "docs/HELP.md", "docs/QUICKSTART.md", "reset-password/index.html", "reset-password/reset-password.css", "reset-password/reset-password.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
 for (const file of required) if (!(await stat(join(output, file))).isFile()) throw new Error(`Built app is missing ${file}`);
