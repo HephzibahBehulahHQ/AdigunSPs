@@ -179,9 +179,10 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 
 **What you'll see:** The profile icon shows account status; errors appear in **Diagnostics**.
 
-1. **I can't sign in:** Select the profile icon, enter your email and password, then choose **Sign in**. For a new account, choose **Create account** and confirm the email before signing in. If no message arrives, check spam or ask the site administrator to review email delivery.
+1. **I can't sign in:** Enter your email/password via the profile icon. New accounts need email confirmation. Check spam or ask the administrator about missing emails.
 2. **I forgot my password:** Select **Forgot password?** below the password field and enter your account email. Open the recovery email, use the **Reset password** page at `/reset-password` to set and confirm a new password, then sign in again. If the link expired, request another reset email.
 3. **My project disappeared:** Check **Project manager** on the browser/device used. Local projects stay there; check **Account → Your cloud projects** or import your JSON backup.
 4. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
 5. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
+6. **Old interface:** Open [Update application](https://adigunsps.hephzibahbehulah.com/update/), select **Update application**, then return to AdigunSPs. Saved projects and sign-in remain.
 

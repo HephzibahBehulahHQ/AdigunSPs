@@ -19,7 +19,7 @@ async function collectJavaScript(directory) {
   return files;
 }
 
-for (const file of [...await collectJavaScript(join(root, "src")), ...await collectJavaScript(join(root, "scripts")), ...await collectJavaScript(join(root, "reset-password"))]) {
+for (const file of [...await collectJavaScript(join(root, "src")), ...await collectJavaScript(join(root, "scripts")), ...await collectJavaScript(join(root, "reset-password")), ...await collectJavaScript(join(root, "update"))]) {
   const result = spawnSync(process.execPath, ["--check", file], { encoding:"utf8" });
   if (result.status !== 0) throw new Error(`JavaScript syntax check failed for ${file}:\n${result.stderr || result.stdout}`);
 }
@@ -31,7 +31,7 @@ await mkdir(output, { recursive:true });
 for (const file of ["index.html", "styles.css", "service-worker.js", "manifest.webmanifest", "manifest.de.webmanifest", "manifest.yo.webmanifest", "manifest.pcm.webmanifest"]) {
   await cp(join(root, file), join(output, file));
 }
-for (const directory of ["src", "assets", "docs", "reset-password"]) await cp(join(root, directory), join(output, directory), { recursive:true });
+for (const directory of ["src", "assets", "docs", "reset-password", "update"]) await cp(join(root, directory), join(output, directory), { recursive:true });
 await mkdir(join(output, "vendor"), { recursive:true });
 await cp(join(root, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js"), join(output, "vendor", "supabase.js"));
 await writeFile(join(output, "runtime-config.js"), serializeAdigunRuntimeConfig(await loadAdigunRuntimeConfig(root)), "utf8");
@@ -51,7 +51,7 @@ const workerPath=join(output,"service-worker.js"),workerSource=await readFile(wo
 if(!/^const CACHE = "[^"]+";/m.test(workerSource))throw new Error("Service worker cache declaration is missing.");
 await writeFile(workerPath,workerSource.replace(/^const CACHE = "[^"]+";/m,`const CACHE = "${cacheName}";`),"utf8");
 
-const required = ["index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "docs/HELP.md", "docs/QUICKSTART.md", "reset-password/index.html", "reset-password/reset-password.css", "reset-password/reset-password.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
+const required = ["update/index.html", "update/update.js","index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "docs/HELP.md", "docs/QUICKSTART.md", "reset-password/index.html", "reset-password/reset-password.css", "reset-password/reset-password.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
 for (const file of required) if (!(await stat(join(output, file))).isFile()) throw new Error(`Built app is missing ${file}`);
 const html = await (await import("node:fs/promises")).readFile(join(output, "index.html"), "utf8");
 if (!html.includes('src="src/app.js"') || !html.includes('href="styles.css"')) throw new Error("Built entry point is missing its application script or stylesheet.");

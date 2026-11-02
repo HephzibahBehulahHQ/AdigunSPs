@@ -1,5 +1,9 @@
 # User guide
 
+## Refresh an older application version
+
+Open `update/` under the application URL, select **Update application**, and wait for **Update ready**. Select **Return to AdigunSPs**. This reinstalls application files without clearing saved projects or your account session; a failed download can be retried.
+
 ## Electrical components
 
 Focus a component header and use the arrow keys to move it one grid step. Hold Shift for five steps. Connected wires follow its terminals.

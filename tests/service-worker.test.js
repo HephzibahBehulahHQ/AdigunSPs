@@ -2,6 +2,20 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+for(const language of ["en","de","yo","pcm"])for(const fail of [false,true]){
+  const elements=Object.fromEntries(["#update","#status","#return","#description"].map(id=>[id,{hidden:true,addEventListener(type,handler){this.handler=handler;}}]));
+  let registrationRequest;
+  const page={documentElement:{},querySelector:id=>elements[id]};
+  const recovery={document:page,navigator:{language,serviceWorker:{register:async(url,options)=>{registrationRequest={url,options};if(fail)throw Error("offline");return {installing:{state:"installing",addEventListener(type,handler){queueMicrotask(()=>{this.state="activated";handler();});},removeEventListener(){}}};}}},location:{href:"https://adigun.test/AdigunSPs/update/",search:"?lang="+language},URL,URLSearchParams,Date,setTimeout,clearTimeout};
+  vm.runInNewContext(readFileSync("update/update.js","utf8"),recovery);
+  await elements["#update"].handler();
+  assert.equal(registrationRequest.options.scope,"/AdigunSPs/","recovery preserves a repository deployment base path");
+  assert.equal(registrationRequest.options.updateViaCache,"none","recovery bypasses cached worker scripts");
+  assert.equal(elements["#return"].hidden,fail,`${language} only offers return after successful activation`);
+  if(fail)assert.equal(elements["#update"].disabled,false,"network failures permit retry");
+  else assert.equal(elements["#return"].href,"https://adigun.test/AdigunSPs/");
+}
+
 const handlers = new Map();
 const writes = [];
 let networkCalls = 0;
