@@ -148,3 +148,5 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
 @media(max-width:760px){.editor-tabs,.editor-subbar{overflow-x:auto;overflow-y:hidden;flex-shrink:0}.editor-tabs>*,.editor-subbar>*{flex-shrink:0}}
 
 .ai-request-status[hidden],.ai-form button[hidden]{display:none}
+
+.st-function-list{padding-left:20px}.st-function-list li{min-width:0}.st-function-list strong{overflow-wrap:anywhere}

@@ -2,6 +2,7 @@ import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromEx
 import { store } from "./store.js";
 import { validateProject } from "./validation.js";
 import { compileStructuredText, executeStructuredText, renameStructuredTextIdentifier, countStructuredTextReferences } from "./structured-text.js";
+import { structuredTextFunctionLibrary, structuredTextLineOffset } from "./st-function-library.js";
 import { runStandardsChecks } from "./standards.js";
 import { appendResourceAudit, checkResourceLink, isApprovedExternalUrl, readResourceAudit, readResourceRegistry, removeResource, resources, saveResource } from "./resources.js";
 import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe, captureRecipeInputs, recipeInputChanges, normalizeAlarmHistoryLimit, retainAlarmEvents } from "./hmi.js";
@@ -1059,6 +1060,7 @@ $("#fileInput").addEventListener("change", async (event) => { const file = event
 async function showPalette() {
   const commands = [{label:t("new"),action:"new"},{label:t("titleProjects"),action:"projects"},{label:t("titleExamples"),action:"examples"},{label:t("import"),action:"import"},{label:t("export"),action:"export"},{label:t("addRung"),action:"add-rung"},{label:t("addContact"),action:"add-contact"},{label:t("run"),action:"run"},{label:t("step"),action:"step"},{label:t("reset"),action:"stop"},{label:t("titleTags"),action:"tags"},{label:({ en:"Fault injection", de:"Fehlerinjektion", yo:"Fifi àṣìṣe", pcm:"Fault injection" })[language],action:"faults"},{label:"Find / Replace",action:"find"},{label:"Copy rung",action:"copy"},{label:"Paste rung",action:"paste"},{label:t("titleHelp"),action:"help"}];
   commands.push({ label:({ en:"Run scripted scenario", de:"Szenario ausführen", yo:"Ṣe ìtẹ̀lé ìdánwò", pcm:"Run scripted scenario" })[language], action:"scenario" });
+  for (const entry of Object.values(createApplicationMenuEntries(language)).flat()) if (!commands.some(command => command.action === entry.action)) commands.push(entry);
   const projects = await store.all(), prefixes = { en:{project:"Project",tag:"Tag",example:"Example"}, de:{project:"Projekt",tag:"Tag",example:"Beispiel"}, yo:{project:"Iṣẹ́ akanṣe",tag:"Àmì",example:"Àpẹẹrẹ"}, pcm:{project:"Project",tag:"Tag",example:"Example"} }[language] || {project:"Project",tag:"Tag",example:"Example"};
   modal(t("titlePalette"), `<div class="modal-body"><input id="paletteSearch" class="palette-input" placeholder="${t("search")}" autofocus><div class="palette-commands" id="paletteResults"></div></div>`);
   const score = (query, candidate) => { let cursor = -1, gaps = 0; for (const char of query) { const found = candidate.indexOf(char, cursor + 1); if (found < 0) return Infinity; gaps += found - cursor - 1; cursor = found; } return gaps; };
@@ -1650,7 +1652,22 @@ function showApplicationMenu(event) {
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
+function showStructuredTextFunctions() {
+  const view = structuredTextFunctionLibrary(project,language);
+  modal(view.title,view.html);
+  const openSource = (line = 1) => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
+    $("#modal").close();
+    if (project.editorType !== "ST") setEditorMode("ST");
+    workspaceView = "logic"; applyWorkspaceView();
+    const editor = $("#stSource"), offset = structuredTextLineOffset(project.stSource || "",line);
+    editor.focus(); editor.setSelectionRange(offset,offset);
+  };
+  $("#openFunctionSource").onclick = () => openSource();
+  $("#modalContent").querySelectorAll("[data-st-function-line]").forEach(button => { button.onclick = () => openSource(Number(button.dataset.stFunctionLine)); });
+}
 function action(name) {
+  if (name === "st-functions") { showStructuredTextFunctions(); return; }
   if (name === "adigun-ai") { showAdigunAI(); return; }
   if (name === "resources") { showResources(); return; }
   if (name === "protocol-simulator") { showProtocolSimulator(); return; }

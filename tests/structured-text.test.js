@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { compileStructuredText, executeStructuredText, renameStructuredTextIdentifier, countStructuredTextReferences } from "../src/structured-text.js";
 import { compileWorkerRequest } from "../src/st-compiler-worker.js";
+import { createApplicationMenuEntries } from "../src/app-menus.js";
+import { structuredTextFunctionLibrary, structuredTextLineOffset } from "../src/st-function-library.js";
 import { validateProject } from "../src/validation.js";
 import { defaultProject } from "../src/engine.js";
 
@@ -155,4 +157,26 @@ const guideFunction=[...readFileSync("docs/user-guide.md","utf8").matchAll(/```i
 const savedGuideProject=JSON.parse(JSON.stringify({editorType:"ST",stSource:guideFunction,tags:[{name:"Raw",type:"REAL"},{name:"Result",type:"REAL"}],io:{inputs:["Raw"],outputs:["Result"]}}));
 const guideAst=compileStructuredText(savedGuideProject.stSource,savedGuideProject.tags.map(tag=>tag.name));assert.equal(guideAst.ok,true,guideAst.errors.join("; "));
 for(const [Raw,Result] of [[-2,0],[0.4,0.4],[3,1]])assert.equal(executeStructuredText(guideAst,{Raw},{Result:0},savedGuideProject.io.outputs,{Result:"REAL"}).outputs.Result,Result);
+for(const locale of ["en","de","yo","pcm"]){
+ const library=structuredTextFunctionLibrary({stSource:functionSource,tags:fnTags.map(name=>({name}))},locale);
+ assert.ok(library.title);assert.match(library.html,/Bounded\(Value: REAL, Low: REAL, High: REAL\) : REAL/);assert.match(library.html,/data-st-function-line="1"/);assert.match(library.html,/aria-label="[^"]+: Bounded"/);assert.match(library.html,/id="openFunctionSource"/);
+ assert.ok(structuredTextFunctionLibrary({stSource:"",tags:[]},locale).html.includes("END_FUNCTION"));
+ const malicious=structuredTextFunctionLibrary({stSource:"Output := <script>;",tags:[{name:"Output"}]},locale);assert.ok(!malicious.html.includes("<script>"));
+}
+assert.equal(structuredTextLineOffset("first\r\nsecond\nthird",2),7);assert.equal(structuredTextLineOffset("first\nsecond",100),12);assert.equal(structuredTextLineOffset("abc",0),0);
+const functionPanelStart=app.indexOf("function showStructuredTextFunctions()");
+const functionPanelCode=app.slice(functionPanelStart,app.indexOf("function action(name)",functionPanelStart));
+for(const access of ["member","guest","guest-expired"]){
+ const sourceEditor={focus(){this.focused=true;},setSelectionRange(start,end){this.selection=[start,end];}};
+ const definitionButton={dataset:{stFunctionLine:"3"}},openButton={},panel={querySelectorAll:()=>[definitionButton]},dialog={close(){this.closed=true;}};
+ const fixture={project:{editorType:"ST",stSource:functionSource},language:"en",accountAccess:access,workspaceView:"hmi",structuredTextFunctionLibrary,structuredTextLineOffset,modal(){},showAccount(){fixture.needsAccount=true;},applyWorkspaceView(){fixture.applied=true;},setEditorMode(){throw Error("already ST");},$:selector=>({"#modal":dialog,"#modalContent":panel,"#stSource":sourceEditor,"#openFunctionSource":openButton})[selector]};
+ runInNewContext(functionPanelCode,fixture);fixture.showStructuredTextFunctions();definitionButton.onclick();
+ if(access==="guest-expired"){assert.equal(fixture.needsAccount,true);assert.equal(dialog.closed,undefined);assert.equal(sourceEditor.selection,undefined);}
+ else{assert.equal(fixture.workspaceView,"logic");assert.equal(fixture.applied,true);assert.equal(sourceEditor.focused,true);assert.deepEqual(sourceEditor.selection,[structuredTextLineOffset(functionSource,3),structuredTextLineOffset(functionSource,3)]);}
+}
+const paletteStart=app.indexOf("  for (const entry of Object.values(createApplicationMenuEntries(language)).flat())");assert.ok(paletteStart>0);
+for(const language of ["en","de","yo","pcm"]){
+ const commands=[{label:"Existing save",action:"save"}],fixture={commands,language,createApplicationMenuEntries};runInNewContext(app.slice(paletteStart,app.indexOf("\n",paletteStart)),fixture);
+ const entries=Object.values(createApplicationMenuEntries(language)).flat();assert.ok(entries.every(entry=>commands.some(command=>command.action===entry.action)));assert.equal(new Set(commands.map(command=>command.action)).size,commands.length);assert.equal(commands.find(command=>command.action==="save").label,"Existing save");assert.ok(commands.find(command=>command.action==="st-functions").label);
+}
 console.log("PASS: ST canonical case binding, typed outputs, state continuity, worker parity, ambiguity rejection, unique tag editing, layout-independent statements, source locations and isolated scalar functions");

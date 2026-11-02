@@ -49,7 +49,7 @@ IF/ELSIF/ELSE blocks may also share lines; nested block comments and line commen
 **What you'll see:** The existing ST editor accepts function declarations and calls in the same source. Functions have positional inputs passed by value, private local variables initialized on every call, and a BOOL, INT, REAL, or TIME result.
 
 1. In **Project → Tags and I/O**, add `Raw` as a REAL input and `Result` as a REAL output.
-2. Choose **Programs → Structured Text (ST)** and enter this source:
+2. Choose **Programs → Functions**, then **Open ST editor**, and enter this source:
 
 ```iecst
 FUNCTION Clamp01 : REAL
@@ -66,6 +66,8 @@ Result := Clamp01(Raw);
 
 3. Select **Compile**. In I/O, set Raw to -2, 0.4, then 3 and select **Step** after each change; Result becomes 0, 0.4, then 1.
 4. Save normally; declarations remain part of the project's ST source and JSON export.
+
+**Programs → Functions** lists declared signatures, local-variable counts and source lines, with compile errors in an expandable section. Select **Edit source** beside a function to focus its declaration in ST; declarations remain editable in the existing editor. The panel lists source definitions even when another part of the program has errors. Command search includes Functions and all other registered menu actions.
 
 Put each `FUNCTION Name : Type` header on its own line and close it with `END_FUNCTION`. Declare inputs in `VAR_INPUT ... END_VAR` and locals in `VAR ... END_VAR`, using `Name : Type;`; assign the result to the function's own name. Calls and declarations ignore letter case; function names must differ from global tag names.
 

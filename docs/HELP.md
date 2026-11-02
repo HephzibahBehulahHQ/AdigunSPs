@@ -111,7 +111,7 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 1. Add logic in **Program / Main** or choose **Programs** to open FBD, ST, or SFC.
 2. For ladder logic, set simulated inputs in the **Simulated inputs** panel and select **Run** to scan continuously, or **Step** for one scan. Select **Pause** to pause; **Reset** stops and clears simulation state.
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
-ST also supports scalar `FUNCTION` declarations with `VAR_INPUT` and private `VAR` storage; see the User Guide for syntax and limits.
+ST scalar functions appear in **Programs → Functions**; select **Edit source** to navigate. See User Guide for syntax and limits.
 
 4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
 
