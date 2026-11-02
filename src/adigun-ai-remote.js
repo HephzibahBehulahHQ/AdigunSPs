@@ -39,6 +39,8 @@ export async function askAdigunHostedAI({ client, question, project, diagnostics
     });
     if (!response.ok) {
       const failure = await response.json().catch(() => null);
+      const knownErrors = new Set(["authentication-required", "invalid-session", "signed-in-account-required", "worker-not-configured", "authentication-service-unavailable", "model-unavailable", "empty-model-response", "model-token-limit", "invalid-question", "invalid-project-summary", "explicit-consent-required"]);
+      console.warn("Hosted AI request failed", response.status, knownErrors.has(failure?.error) ? failure.error : "unclassified-error");
       return { error: typeof failure?.error === "string" ? failure.error : "hosted-ai-unavailable" };
     }
     const data = await response.json();

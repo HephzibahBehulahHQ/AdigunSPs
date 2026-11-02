@@ -119,3 +119,11 @@ for(const malformed of [{choices:[]},{choices:[{message:{content:null}}]},{choic
  assert.equal((await result.json()).error,"empty-model-response");
 }
 for(const locale of ["en","de","yo","pcm"]) assert.ok(!/not sent|nicht gesendet|no send/.test(adigunAiRemoteLabels(locale).unavailable),"network/model failure must not claim no transmission");
+
+const warningLines=[];const originalWarn=console.warn;
+try {
+ console.warn=(...args)=>warningLines.push(args);
+ await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"private-token"}}})}},question:"private-question",project:sourceProject,consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({error:"private-provider-detail"},{status:502})});
+ assert.deepEqual(warningLines,[["Hosted AI request failed",502,"unclassified-error"]]);
+ assert.ok(!JSON.stringify(warningLines).includes("private-"));
+} finally { console.warn=originalWarn; }
