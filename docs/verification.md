@@ -155,3 +155,5 @@ Do not describe this milestone as production-ready. Complete the later phases in
 ## Live project-switch verification — 2026-11-02
 
 - On release `77c9cf4`, started Run, opened the QA cloud copy, and observed STOPPED with Cycle 0 and its saved PS1 component. Browser error capture was empty. A stale RUNNING label remained in the HUD/status area; the follow-up reset path now refreshes HUD and status immediately. The follow-up needs deployment and a repeated live check.
+
+- Follow-up `69bcffe` passed CI and Pages. Repeated the live Run-to-cloud-open flow after refreshing application files: QA project loaded, STOPPED and Ready were visible, Cycle was 0, and no RUNNING text remained in the accessibility tree. Captured browser errors were empty. Physical hardware and other project-loading paths were not exercised by this browser check.

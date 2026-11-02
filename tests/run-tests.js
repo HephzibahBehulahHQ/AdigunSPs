@@ -707,3 +707,17 @@ assert.equal(runtimeContext.sessionOperations.elapsedMs,0,"cloud reopening clear
 
 assert.equal(runtimeContext.hudRefreshes,2,"runtime reset refreshes HUD for load and manual reset");
 assert.equal(runtimeContext.statusRefreshes,2,"runtime reset refreshes visible status immediately");
+
+const thresholdProject=structuredClone(project); thresholdProject.tags.push({name:"TemperaturePV",type:"REAL",role:"input"}); thresholdProject.io.inputs.push("TemperaturePV");
+thresholdProject.hmi=createAlarm({}, {tag:"TemperaturePV",condition:{kind:"threshold",operator:"gte",threshold:75}},2000);
+assert.equal(validateProject(thresholdProject).some(issue=>issue.code.startsWith("alarm-")),false,"numeric threshold alarm validates in a full project");
+const persistedThreshold=JSON.parse(JSON.stringify(thresholdProject));
+assert.equal(evaluateAlarms(persistedThreshold.hmi,{TemperaturePV:75}).alarms[0].active,true,"threshold equality activates after JSON reload");
+for (const invalid of [null,true,"80",undefined,NaN,Infinity]) assert.equal(evaluateAlarms(persistedThreshold.hmi,{TemperaturePV:invalid}).alarms[0].active,false,"invalid numeric readings do not become threshold matches");
+for (const badCondition of [{kind:"threshold",operator:"invalid",threshold:75},{kind:"threshold",operator:"gte",threshold:"75"},{kind:"threshold",operator:"gte",threshold:Infinity},{kind:"unknown"}]) {
+ const bad=structuredClone(thresholdProject); bad.hmi.alarms[0].condition=badCondition;
+ assert.ok(validateProject(bad).some(issue=>["alarm-threshold","alarm-condition"].includes(issue.code)),"bad threshold configuration is rejected");
+ assert.equal(evaluateAlarms(bad.hmi,{TemperaturePV:80}).alarms[0].active,false);
+}
+thresholdProject.hmi.alarms[0].tag="Start";
+assert.ok(validateProject(thresholdProject).some(issue=>issue.code==="alarm-tag-type"),"numeric thresholds cannot bind BOOL tags");

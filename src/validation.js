@@ -73,7 +73,11 @@ export function validateProject(project) {
     }
     for (const alarm of hmi.alarms || []) {
       if (!alarm.tag || !tags.has(alarm.tag)) issues.push({ level: "warning", code: "alarm-tag-undefined", message: `HMI alarm ${alarm.message || alarm.id} uses an undeclared tag.` });
-      else if (tags.get(alarm.tag).type !== "BOOL") issues.push({ level: "error", code: "alarm-tag-type", message: `HMI alarm ${alarm.message || alarm.id} requires a BOOL tag.` });
+      else if (alarm.condition?.kind === "threshold") {
+        if (!["INT", "REAL", "TIME"].includes(tags.get(alarm.tag).type)) issues.push({ level:"error", code:"alarm-tag-type", message:`HMI threshold alarm ${alarm.message || alarm.id} requires a numeric tag.` });
+      } else if (tags.get(alarm.tag).type !== "BOOL") issues.push({ level: "error", code: "alarm-tag-type", message: `HMI alarm ${alarm.message || alarm.id} requires a BOOL tag.` });
+      if (alarm.condition && !["bool", "threshold"].includes(alarm.condition.kind)) issues.push({ level:"error", code:"alarm-condition", message:`HMI alarm ${alarm.message || alarm.id} has an unsupported condition.` });
+      if (alarm.condition?.kind === "threshold" && (!["gte", "lte"].includes(alarm.condition.operator) || typeof alarm.condition.threshold !== "number" || !Number.isFinite(alarm.condition.threshold))) issues.push({ level:"error", code:"alarm-threshold", message:`HMI alarm ${alarm.message || alarm.id} requires a finite threshold and a supported comparison.` });
       if (!["high", "medium", "low"].includes(alarm.priority)) issues.push({ level: "error", code: "alarm-priority", message: `HMI alarm ${alarm.message || alarm.id} has an invalid priority.` });
     }
     for (const recipe of hmi.recipes || []) {

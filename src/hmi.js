@@ -4,9 +4,9 @@ export function evaluateAlarms(model, values, timestamp = Date.now()) {
     const value = values[alarm.tag];
     let active;
     if (alarm.condition?.kind === "threshold") {
-      const numeric = Number(value), threshold = Number(alarm.condition.threshold);
-      active = Number.isFinite(numeric) && Number.isFinite(threshold) && (alarm.condition.operator === "lte" ? numeric <= threshold : numeric >= threshold);
-    } else active = Boolean(value);
+      const numeric = value, threshold = alarm.condition.threshold;
+      active = typeof numeric === "number" && typeof threshold === "number" && Number.isFinite(numeric) && Number.isFinite(threshold) && ["gte", "lte"].includes(alarm.condition.operator) && (alarm.condition.operator === "lte" ? numeric <= threshold : numeric >= threshold);
+    } else active = (!alarm.condition || alarm.condition.kind === "bool") && Boolean(value);
     if (active !== Boolean(alarm.active)) {
       alarm.active = active;
       if (active) alarm.acknowledged = false;
