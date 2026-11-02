@@ -25,7 +25,7 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 
 1. Open the AdigunSPs website in your browser.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
-3. To register or sign in, select the profile icon. It is labelled **Sign in** when signed out and **Account** after sign-in. Enter your email and password, then choose **Create account** or **Sign in**. New accounts must confirm their email; use **Forgot password?** below the password field if you need a recovery email.
+3. Select the profile icon labelled **Sign in** or **Account**, enter email and password, then **Create account** or **Sign in**. Confirm registration by email. Use **Forgot password?** for recovery.
 
 The project tree and inputs are left; the canvas is centered; Properties, Watch, and Diagnostics are right. The footer shows run, storage, language, and help status.
 
@@ -187,3 +187,5 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 6. **Old interface:** Open [Update application](https://adigunsps.hephzibahbehulah.com/update/), select **Update application**, then return to AdigunSPs. Saved projects and sign-in remain.
 
 Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms default high; enter a finite threshold. Opening projects stops simulation and clears forces/replay.
+
+Recipes: **Submit for review** sends a snapshot. **Cloud recipe reviews** supports independent admin decisions. **Import approved copy** adds an unapplied local recipe. No safety certification.

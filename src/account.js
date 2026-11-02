@@ -140,6 +140,28 @@ export function createAccountService(client) {
       const version = requireResult(await client.from("adigun_cloud_project_versions").select("version,payload,created_at").eq("user_id", member.id).eq("project_id", projectId).order("version", { ascending:false }).limit(1).single());
       return { ...row, ...version };
     },
+    async submitRecipeApproval(user, projectName, recipe) {
+      requirePermanentUser(user);
+      if (!recipe?.name?.trim() || !Number.isInteger(recipe.version) || recipe.version < 1 || !recipe.values || typeof recipe.values !== "object" || Array.isArray(recipe.values) || !Object.keys(recipe.values).length || Object.values(recipe.values).some(value => typeof value !== "boolean" && (typeof value !== "number" || !Number.isFinite(value)))) throw new AccountError("invalid-recipe", "A named, versioned recipe with typed input values is required.");
+      return requireResult(await client.from("adigun_recipe_submissions").insert({ project_name:String(projectName || "").trim().slice(0,160), recipe_name:recipe.name.trim().slice(0,120), recipe_version:recipe.version, recipe_values:structuredClone(recipe.values) }).select("id,recipe_name,recipe_version,submitted_at").single());
+    },
+    async listRecipeApprovals(user) {
+      requirePermanentUser(user);
+      return requireResult(await client.from("adigun_recipe_submissions").select("id,user_id,project_name,recipe_name,recipe_version,recipe_values,submitted_at,adigun_recipe_decisions(reviewer_id,decision,comment,decided_at)").order("submitted_at", { ascending:false }).limit(100));
+    },
+    async decideRecipeApproval(user, submissionId, decision, comment = "") {
+      requirePermanentUser(user);
+      if (!this.isAdministrator(user)) throw new AccountError("administrator-required", "Administrator review is required.");
+      if (!["approved","rejected"].includes(decision)) throw new AccountError("invalid-decision", "Choose approved or rejected.");
+      return requireResult(await client.from("adigun_recipe_decisions").insert({ submission_id:submissionId,decision,comment:String(comment).trim().slice(0,1000) }).select("submission_id,reviewer_id,decision,decided_at").single());
+    },
+    async getApprovedRecipe(user, submissionId) {
+      requirePermanentUser(user);
+      const row = requireResult(await client.from("adigun_recipe_submissions").select("id,recipe_name,recipe_version,recipe_values,adigun_recipe_decisions(decision,reviewer_id,decided_at)").eq("id",submissionId).single());
+      const decision = Array.isArray(row.adigun_recipe_decisions) ? row.adigun_recipe_decisions[0] : row.adigun_recipe_decisions;
+      if (decision?.decision !== "approved") throw new AccountError("approval-required", "This recipe has not been approved.");
+      return { id:row.id,name:row.recipe_name,version:row.recipe_version,values:structuredClone(row.recipe_values),approval:{reviewerId:decision.reviewer_id,decidedAt:decision.decided_at} };
+    },
     isAdministrator(user) { return !!user && !user.is_anonymous && user.app_metadata?.role === "admin"; },
     async listProfilesForAdministrator(user) {
       if (!this.isAdministrator(user)) throw new AccountError("administrator-required", "Administrator access is not available for this account.");

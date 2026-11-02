@@ -91,3 +91,12 @@ Opening a different project, importing a project, or reopening a cloud copy stop
 In **Add simulated alarm**, numeric tags default to the high-threshold trigger. Select the low-threshold trigger if needed and enter a numeric threshold; empty thresholds are rejected. BOOL tags use the true/false trigger.
 
 Recipe application: select **Review inputs** to compare current and saved values, then **Apply inputs** to commit or **Back to recipes** to cancel. The project retains the latest 200 application records with time, signed-in user ID when available, and before/after values. This browser-local history is editable project data, not a trusted approval/signature service; independent reviewer approval remains unimplemented. Removed or mistyped input tags are rejected before application.
+
+### Independent cloud recipe review
+
+1. Sign in, open **Recipes**, and select **Submit for review** beside a saved recipe. This sends its name, version, input values, and project name to account storage as a fixed snapshot.
+2. Open **Cloud recipe reviews** to see the latest 100 visible submissions. Owners see their own submissions; administrators can review all.
+3. An administrator other than the submitter chooses **Approve** or **Reject**, reviews the submitted inputs, optionally enters a comment, and selects **Confirm decision**. One final decision is allowed; resubmit a changed recipe as a new snapshot.
+4. For an approved snapshot, select **Import approved copy**. Matching input tags and types are required. The imported copy does not change running inputs; use **Review inputs** and **Apply inputs** separately.
+
+Server rules prevent self-approval, anonymous submissions, changes to submitted values, and edits to decisions by application users. Reviewer roles must be provisioned by a trusted administrator through server-controlled account metadata. A local imported copy remains editable and is not an approval of later changes. This workflow is optional and does not certify machinery, engineering suitability, legal signatures, or local recipes. Account deletion by a trusted administrator can remove associated records. Real independent-reviewer browser testing remains pending.

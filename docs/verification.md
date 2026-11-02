@@ -168,3 +168,14 @@ Do not describe this milestone as production-ready. Complete the later phases in
 
 - Release `f0a7074`: set a REAL input to 42.5 and saved QA decimal 42.5 v1 using the inline name field. Changed the input to 5, selected Apply, accepted its confirmation, and observed 42.5 restored with validation Ready and no captured browser errors.
 - Reloaded the application, reopened the local QA project, and confirmed the same recipe version remained. Changing the input to 5 and applying the persisted recipe restored 42.5 again. This covers one REAL recipe and local persistence; approval workflows, role enforcement, and full multilingual recipe UI remain incomplete.
+
+## Live recipe-review verification — 2026-11-02
+
+- Release `866449b`: review displayed Current 6.000000 and Recipe 42.500000. Back to recipes and closing the panel preserved input 6. Reopening review and selecting Apply inputs restored 42.5. Captured browser errors were empty.
+- A fill-only browser edit previously changed the displayed field without committing its change event; the before/after review supplied stronger evidence of the actual runtime value. The explicit 6-to-42.5 check above is the authoritative live application check. Formal independent approvals and signed audit records are not implemented.
+
+## Server recipe-approval foundation — 2026-11-02
+
+- Applied remote migration adigunsps_recipe_approval_snapshots: immutable submissions, owner/admin visibility, separate append-only decisions, server-issued owner/reviewer/time, one decision per submission, and independent permanent-admin review. No UPDATE or DELETE grants are provided to browser users.
+- Rollback-only SQL tests passed before and after applying the schema: guest submission, outsider access, non-admin decisions, self-approval, snapshot modification, and duplicate decisions were denied; independent admin decision succeeded. Claims were transaction-local test fixtures, not live JWT/browser identities.
+- Security advisor reports an anonymous-access heuristic for decision reads, whose access depends on the permanent-user-filtered parent policy. Existing unrelated advisories remain. Client integration is tested; Recipes UI integration and real independent reviewer accounts are pending. This is optional recipe review, not a safety or legal signature service.

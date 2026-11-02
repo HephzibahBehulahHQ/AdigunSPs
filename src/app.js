@@ -742,11 +742,58 @@ function recipeUiCopy() { return ({
   pcm:{title:"Input recipes",note:"Recipes dey save typed simulation inputs. Check changes before you apply.",name:"Recipe name",save:"Save current inputs as recipe",empty:"No saved recipe yet.",review:"Check inputs",remove:"Delete recipe version",confirmDelete:"Delete this recipe version?",reviewTitle:"Check recipe inputs",tag:"Tag",before:"Current",after:"Recipe",apply:"Apply inputs",cancel:"Back to recipes",unchanged:"No change",invalid:"Recipe inputs no match this project again.",saved:"Recipe don save",applied:"Recipe inputs don apply"}
 })[language]; }
 function showRecipes() {
-  const model = hmiModel(), copy = recipeUiCopy();
-  modal(copy.title, `<div class="modal-body"><p class="safety-copy">${copy.note}</p><div class="project-list">${model.recipes.map(recipe => `<div class="project-row"><span class="project-open"><b>${escapeHtml(recipe.name)} · v${formatLocaleNumber(recipe.version,language,0)}</b><small>${formatLocaleDateTime(recipe.createdAt,language)}</small></span><button data-recipe-apply="${escapeAttr(recipe.id)}">${copy.review}</button><button data-recipe-delete="${escapeAttr(recipe.id)}" title="${copy.remove}">×</button></div>`).join("") || `<p class="safety-copy">${copy.empty}</p>`}</div><div class="modal-actions"><label class="field">${copy.name}<input id="recipeName" maxlength="120" required></label><button class="primary" id="saveRecipeButton">${copy.save}</button></div></div>`);
+  const model = hmiModel(), copy = recipeUiCopy(), approvalCopy = recipeApprovalCopy(), member = accountAccess === "member";
+  modal(copy.title, `<div class="modal-body"><p class="safety-copy">${copy.note}</p><div class="project-list">${model.recipes.map(recipe => `<div class="project-row"><span class="project-open"><b>${escapeHtml(recipe.name)} · v${formatLocaleNumber(recipe.version,language,0)}</b><small>${formatLocaleDateTime(recipe.createdAt,language)}</small></span><button data-recipe-apply="${escapeAttr(recipe.id)}">${copy.review}</button><button data-recipe-submit="${escapeAttr(recipe.id)}" ${member ? "" : "disabled"}>${approvalCopy.submit}</button><button data-recipe-delete="${escapeAttr(recipe.id)}" title="${copy.remove}">×</button></div>`).join("") || `<p class="safety-copy">${copy.empty}</p>`}</div><div class="modal-actions"><label class="field">${copy.name}<input id="recipeName" maxlength="120" required></label><button class="primary" id="saveRecipeButton">${copy.save}</button><button class="secondary" id="recipeCloudReview" ${member ? "" : "disabled"}>${approvalCopy.title}</button></div></div>`);
   $("#saveRecipeButton").onclick = () => { const field = $("#recipeName"); if (!field.value.trim()) field.value = ""; if (!field.reportValidity()) return; if (saveHmiRecipe(field.value)) showRecipes(); };
   document.querySelectorAll("[data-recipe-apply]").forEach(button => button.onclick = () => showRecipeReview(button.dataset.recipeApply));
+  $("#recipeCloudReview").onclick = showRecipeApprovals;
+  document.querySelectorAll("[data-recipe-submit]").forEach(button => button.onclick = async () => { const recipe = model.recipes.find(item => item.id === button.dataset.recipeSubmit); if (!recipe || accountAccess !== "member") return; button.disabled = true; try { await accountService.submitRecipeApproval(accountUser, project.name, recipe); toast(approvalCopy.submitted); } catch (error) { toast(`${approvalCopy.error}: ${error.message}`); } finally { button.disabled = false; } });
+
   document.querySelectorAll("[data-recipe-delete]").forEach(button => button.onclick = () => { if (!confirm(copy.confirmDelete)) return; pushHistory(); project.hmi.recipes = model.recipes.filter(item => item.id !== button.dataset.recipeDelete); persist(); showRecipes(); });
+}
+function recipeApprovalCopy() { return ({
+ en:{title:"Cloud recipe reviews",submit:"Submit for review",submitted:"Recipe snapshot submitted",loading:"Loading reviews…",empty:"No recipe submissions.",pending:"Pending",approved:"Approved",rejected:"Rejected",approve:"Approve",reject:"Reject",snapshot:"Submitted inputs",comment:"Review comment",confirm:"Confirm decision",back:"Back",importCopy:"Import approved copy",imported:"Approved snapshot imported as a local copy",error:"Recipe review request failed",scope:"Independent admin review of a fixed recipe snapshot. This is not engineering or safety certification.",mismatch:"The recipe requires matching typed input tags in this project."},
+ de:{title:"Cloud-Rezeptprüfungen",submit:"Zur Prüfung einreichen",submitted:"Rezeptstand eingereicht",loading:"Prüfungen werden geladen…",empty:"Keine eingereichten Rezepte.",pending:"Ausstehend",approved:"Genehmigt",rejected:"Abgelehnt",approve:"Genehmigen",reject:"Ablehnen",snapshot:"Eingereichte Eingänge",comment:"Prüfkommentar",confirm:"Entscheidung bestätigen",back:"Zurück",importCopy:"Genehmigte Kopie importieren",imported:"Genehmigter Stand als lokale Kopie importiert",error:"Rezeptprüfung fehlgeschlagen",scope:"Unabhängige Adminprüfung eines festen Rezeptstands. Keine technische oder Sicherheitszertifizierung.",mismatch:"Das Rezept benötigt passende typisierte Eingangsvariablen in diesem Projekt."},
+ yo:{title:"Àyẹ̀wò ètò ìwọlé lórí awọsánmà",submit:"Firanṣẹ́ fún àyẹ̀wò",submitted:"A ti fi ẹ̀dà ètò ránṣẹ́",loading:"A ń gba àwọn àyẹ̀wò…",empty:"Kò sí ètò tí a fi ránṣẹ́.",pending:"Ó ń dúró",approved:"A fọwọ́ sí i",rejected:"A kọ̀ ọ́",approve:"Fọwọ́ sí i",reject:"Kọ̀ ọ́",snapshot:"Àwọn ìwọlé tí a fi ránṣẹ́",comment:"Ọ̀rọ̀ àyẹ̀wò",confirm:"Jẹ́rìí ìpinnu",back:"Padà",importCopy:"Gba ẹ̀dà tí a fọwọ́ sí",imported:"A ti gba ẹ̀dà tí a fọwọ́ sí gẹ́gẹ́ bí ẹ̀dà agbègbè",error:"Ìbéèrè àyẹ̀wò ètò kùnà",scope:"Alábòójútó mìíràn ń ṣàyẹ̀wò ẹ̀dà ètò tó dúró ṣinṣin. Kì í ṣe ìwé ẹ̀rí ẹ̀rọ tàbí ààbò.",mismatch:"Ètò náà nílò àwọn àmì ìwọlé tí irú wọn bá mu nínú iṣẹ́ yìí."},
+ pcm:{title:"Cloud recipe reviews",submit:"Send for review",submitted:"Recipe snapshot don submit",loading:"Reviews dey load…",empty:"No recipe submission yet.",pending:"Dey wait",approved:"Approved",rejected:"Rejected",approve:"Approve",reject:"Reject",snapshot:"Inputs wey person submit",comment:"Review comment",confirm:"Confirm decision",back:"Back",importCopy:"Import approved copy",imported:"Approved snapshot don enter as local copy",error:"Recipe review request fail",scope:"Another admin dey review fixed recipe snapshot. E no be engineering or safety certificate.",mismatch:"Recipe need matching typed input tags for this project."}
+ })[language]; }
+function recipeSnapshotTable(values) { const copy = recipeApprovalCopy(); return `<div style="overflow:auto"><table><caption>${copy.snapshot}</caption><thead><tr><th>${recipeUiCopy().tag}</th><th>${recipeUiCopy().after}</th></tr></thead><tbody>${Object.entries(values || {}).map(([tag,value]) => `<tr><td>${escapeHtml(tag)}</td><td>${escapeHtml(String(value))}</td></tr>`).join("")}</tbody></table></div>`; }
+async function showRecipeApprovals() {
+ if (accountAccess !== "member" || !accountService) return showAccount();
+ const copy = recipeApprovalCopy(), requestedUser = accountUser.id;
+ modal(copy.title, `<div class="modal-body"><p>${copy.loading}</p></div>`); $("#modal").dataset.view = "recipe-approvals";
+ try {
+  const rows = await accountService.listRecipeApprovals(accountUser);
+  if (!$("#modal").open || $("#modal").dataset.view !== "recipe-approvals" || accountUser?.id !== requestedUser) return;
+  const admin = accountService.isAdministrator(accountUser);
+  const content = rows.map(row => { const decision = Array.isArray(row.adigun_recipe_decisions) ? row.adigun_recipe_decisions[0] : row.adigun_recipe_decisions, status = decision?.decision || "pending"; return `<div class="project-row"><div class="project-open"><b>${escapeHtml(row.project_name)} · ${escapeHtml(row.recipe_name)} · v${row.recipe_version}</b><small>${copy[status]} · ${formatLocaleDateTime(row.submitted_at,language)}</small><details><summary>${copy.snapshot}</summary>${recipeSnapshotTable(row.recipe_values)}</details>${decision?.comment ? `<p>${escapeHtml(decision.comment)}</p>` : ""}</div>${!decision && admin && row.user_id !== requestedUser ? `<button data-recipe-decision="approved" data-submission="${escapeAttr(row.id)}">${copy.approve}</button><button data-recipe-decision="rejected" data-submission="${escapeAttr(row.id)}">${copy.reject}</button>` : ""}${status === "approved" ? `<button data-recipe-import="${escapeAttr(row.id)}">${copy.importCopy}</button>` : ""}</div>`; }).join("");
+  modal(copy.title, `<div class="modal-body"><p class="safety-copy">${copy.scope}</p><div class="project-list">${content || `<p>${copy.empty}</p>`}</div></div>`); $("#modal").dataset.view = "recipe-approvals";
+  document.querySelectorAll("[data-recipe-decision]").forEach(button => button.onclick = () => showRecipeDecision(rows.find(row => row.id === button.dataset.submission),button.dataset.recipeDecision));
+  document.querySelectorAll("[data-recipe-import]").forEach(button => button.onclick = async () => {
+   const targetProject = project; button.disabled = true;
+   try {
+    const approved = await accountService.getApprovedRecipe(accountUser,button.dataset.recipeImport);
+    if (project !== targetProject || accountUser?.id !== requestedUser || !$("#modal").open || $("#modal").dataset.view !== "recipe-approvals") return;
+    const inputs = new Set(inferTags().inputs); if (Object.keys(approved.values).some(tag => !inputs.has(tag))) throw Error(copy.mismatch);
+    captureRecipeInputs(Object.keys(approved.values),project.tags,approved.values);
+    pushHistory(); project.hmi = saveRecipe(hmiModel(),approved.name,approved.values); project.hmi.recipes.at(-1).sourceApproval = { submissionId:approved.id,...approved.approval };
+    persist(); toast(copy.imported); showRecipes();
+   } catch(error) { toast(`${copy.error}: ${error.message}`); button.disabled = false; }
+  });
+ } catch(error) { if ($("#modal").dataset.view === "recipe-approvals") modal(copy.title, `<div class="modal-body"><p>${copy.error}: ${escapeHtml(error.message)}</p></div>`); }
+}
+function showRecipeDecision(row, decision) {
+ if (!row || !accountService?.isAdministrator(accountUser) || row.user_id === accountUser.id) return;
+ const copy = recipeApprovalCopy(), reviewer = accountUser.id;
+ modal(`${copy.title} · ${copy[decision]}`, `<div class="modal-body"><p>${escapeHtml(row.project_name)} · ${escapeHtml(row.recipe_name)} · v${row.recipe_version}</p>${recipeSnapshotTable(row.recipe_values)}<p class="safety-copy">${copy.scope}</p><label class="field">${copy.comment}<textarea id="recipeDecisionComment" maxlength="1000"></textarea></label><div class="modal-actions"><button class="secondary" id="recipeDecisionCancel">${copy.back}</button><button class="primary" id="recipeDecisionSubmit">${copy.confirm}</button></div></div>`);
+ $("#modal").dataset.view = "recipe-decision";
+ $("#recipeDecisionCancel").onclick = showRecipeApprovals;
+ $("#recipeDecisionSubmit").onclick = async () => {
+  if (accountUser?.id !== reviewer) return;
+  const button = $("#recipeDecisionSubmit"); button.disabled = true;
+  try { await accountService.decideRecipeApproval(accountUser,row.id,decision,$("#recipeDecisionComment").value); if ($("#modal").open && $("#modal").dataset.view === "recipe-decision" && accountUser?.id === reviewer) showRecipeApprovals(); }
+  catch(error) { toast(`${copy.error}: ${error.message}`); button.disabled = false; }
+ };
 }
 function showRecipeReview(recipeId) {
   const model = hmiModel(), recipe = model.recipes.find(item => item.id === recipeId), copy = recipeUiCopy(), reviewedProject = project;
