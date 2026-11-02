@@ -164,7 +164,7 @@ for(const locale of ["en","de","yo","pcm"]){
  const malicious=structuredTextFunctionLibrary({stSource:"Output := <script>;",tags:[{name:"Output"}]},locale);assert.ok(!malicious.html.includes("<script>"));
 }
 assert.equal(structuredTextLineOffset("first\r\nsecond\nthird",2),7);assert.equal(structuredTextLineOffset("first\nsecond",100),12);assert.equal(structuredTextLineOffset("abc",0),0);
-const functionPanelStart=app.indexOf("function showStructuredTextFunctions()");
+const functionPanelStart=app.indexOf("function showStructuredTextFunctions(");
 const functionPanelCode=app.slice(functionPanelStart,app.indexOf("function action(name)",functionPanelStart));
 for(const access of ["member","guest","guest-expired"]){
  const sourceEditor={focus(){this.focused=true;},setSelectionRange(start,end){this.selection=[start,end];}};

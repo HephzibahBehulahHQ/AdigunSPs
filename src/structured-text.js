@@ -29,22 +29,28 @@ function* sourceSpans(source) {
     yield { text:source.slice(start,offset), kind, closed, start, end:offset };
   }
 }
+function privateProgramSpan(span, programs, key) {
+  const scope = programs.find(program=>span.start>=program.start && span.start<program.end);
+  return scope && (span.start < scope.headerEnd || scope.declarations.some(range=>span.start>=range.start && span.start<range.end) || scope.locals.some(local=>local.name.toLowerCase()===key));
+}
 export function renameStructuredTextIdentifier(source, oldName, newName) {
   const key = oldName.toLowerCase();
+  const programs = /\bPROGRAM\b/i.test(source || "") ? compileStructuredText(source).programs : [];
   let result = "", inFunction = false;
   for (const span of sourceSpans(String(source || ""))) {
     if (span.kind === "identifier" && /^FUNCTION$/i.test(span.text)) inFunction = true;
-    result += !inFunction && span.kind === "identifier" && span.text.toLowerCase() === key ? newName : span.text;
+    result += !inFunction && !privateProgramSpan(span,programs,key) && span.kind === "identifier" && span.text.toLowerCase() === key ? newName : span.text;
     if (span.kind === "identifier" && /^END_FUNCTION$/i.test(span.text)) inFunction = false;
   }
   return result;
 }
 export function countStructuredTextReferences(source, name) {
   const key = name.toLowerCase(); let count = 0;
+  const programs = /\bPROGRAM\b/i.test(source || "") ? compileStructuredText(source).programs : [];
   let inFunction = false;
   for (const span of sourceSpans(String(source || ""))) {
     if (span.kind === "identifier" && /^FUNCTION$/i.test(span.text)) inFunction = true;
-    if (!inFunction && span.kind === "identifier" && span.text.toLowerCase() === key) count++;
+    if (!inFunction && !privateProgramSpan(span,programs,key) && span.kind === "identifier" && span.text.toLowerCase() === key) count++;
     if (span.kind === "identifier" && /^END_FUNCTION$/i.test(span.text)) inFunction = false;
   }
   return count;
@@ -107,7 +113,7 @@ function parseExpression(tokens, line) {
   const tree = parseOr(); if (cursor !== tokens.length) throw new Error(`Line ${line}: unexpected “${tokens[cursor]}”.`); return tree;
 }
 
-function compileProgram(source, variableNames = [], signatures = new Map()) {
+function compileProgram(source, variableNames = [], signatures = new Map(), allowEmpty = false) {
   const statements = [], errors = [], allowed = new Map(), stack = [];
   for (const name of variableNames) { const key = name.toLowerCase(); if (allowed.has(key)) errors.push(`Tag "${name}" is declared more than once (ignoring case).`); else allowed.set(key,name); }
   const append = (statement) => { const parent = stack.at(-1); if (!parent) statements.push(statement); else if (parent.branch === "then") parent.node.consequent.push(statement); else if (parent.branch === "else") parent.node.alternate.push(statement); else parent.node.elseIf[parent.index].statements.push(statement); };
@@ -145,7 +151,7 @@ function compileProgram(source, variableNames = [], signatures = new Map()) {
   });
   for (const open of stack) errors.push(`Line ${open.node.line}: IF block is missing END_IF.`);
   const hasAssignment = (items) => items.some((item) => item.kind === "assignment" || hasAssignment(item.consequent || []) || (item.elseIf || []).some((branch) => hasAssignment(branch.statements)) || hasAssignment(item.alternate || []));
-  if (!hasAssignment(statements) && !errors.length) errors.push("Enter at least one assignment.");
+  if (!allowEmpty && !hasAssignment(statements) && !errors.length) errors.push("Enter at least one assignment.");
   return { ok:errors.length === 0, statements, errors, variables:[...allowed.values()] };
 }
 
@@ -195,9 +201,57 @@ export function compileStructuredText(source, variableNames = []) {
     if (signatures.has(key)) errors.push(`Line ${definition.line}: function "${definition.name}" is declared more than once (ignoring case).`);
     else signatures.set(key,definition);
   }
+  const programs = [], programRanges = []; let openProgram;
+  for (const span of sourceSpans(source)) {
+    if (span.kind !== "identifier") continue;
+    if (/^PROGRAM$/i.test(span.text)) {
+      if (openProgram) errors.push(`Line ${sourceLine(source,span.start)}: nested PROGRAM declarations are not supported.`);
+      else openProgram = span;
+    } else if (/^END_PROGRAM$/i.test(span.text)) {
+      if (!openProgram) errors.push(`Line ${sourceLine(source,span.start)}: END_PROGRAM has no matching PROGRAM.`);
+      else { programRanges.push({start:openProgram.start,end:span.end,bodyEnd:span.start}); openProgram = null; }
+    }
+  }
+  if (openProgram) errors.push(`Line ${sourceLine(source,openProgram.start)}: PROGRAM is missing END_PROGRAM.`);
+  if (programRanges.length > 32) errors.push("A task supports at most 32 ST programs.");
+  const pouNames = new Set(signatures.keys());
+  for (const range of programRanges.slice(0,32)) {
+    const text = masked.slice(range.start,range.bodyEnd), header = text.match(/^PROGRAM\s+([A-Za-z_][A-Za-z0-9_]*)[ \t]*(?:\r?\n|$)/i), line = sourceLine(source,range.start);
+    if (!header) { errors.push(`Line ${line}: use PROGRAM Name on its own line.`); continue; }
+    const name = header[1], key = name.toLowerCase();
+    if (pouNames.has(key) || variableNames.some(tag=>tag.toLowerCase()===key)) errors.push(`Line ${line}: program, function and global tag names must be distinct.`);
+    pouNames.add(key);
+    const definition = {name,line,start:range.start,end:range.end,headerEnd:range.start+header[0].length,locals:[],declarations:[]};
+    let body = text.slice(header[0].length), bodyOffset = definition.headerEnd;
+    body = body.replace(/\bVAR\b([\s\S]*?)\bEND_VAR\b/gi,(section,entries,offset) => {
+      definition.declarations.push({start:bodyOffset+offset,end:bodyOffset+offset+section.length});
+      if (entries.trim() && !entries.trim().endsWith(";")) errors.push(`Line ${sourceLine(source,bodyOffset+offset)}: program declarations require a semicolon.`);
+      for (const entry of entries.split(";")) {
+        if (!entry.trim()) continue;
+        const match = entry.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(BOOL|INT|REAL|TIME)$/i);
+        if (!match) errors.push(`Line ${sourceLine(source,bodyOffset+offset)}: program locals require Name : BOOL, INT, REAL, or TIME followed by a semicolon.`);
+        else definition.locals.push({name:match[1],type:match[2].toUpperCase(),key:`${name}.${match[1]}`});
+      }
+      return maskSource(section);
+    });
+    if (definition.locals.length > 128) errors.push(`Line ${line}: a program supports at most 128 local variables.`);
+    const bindings = new Map(definition.locals.map(local=>[local.name.toLowerCase(),local.key]));
+    for (const local of definition.locals) if (variableNames.some(tag=>tag.toLowerCase()===local.key.toLowerCase())) errors.push(`Line ${line}: private program storage collides with global tag "${local.key}".`);
+    const scope = [...variableNames.filter(tag=>!bindings.has(tag.toLowerCase())),...definition.locals.map(local=>local.name)];
+    const compiled = compileProgram("\n".repeat(sourceLine(source,bodyOffset)-1)+body,scope,signatures);
+    const qualify = (value) => {
+      if (!value || typeof value !== "object") return;
+      if (value.op === "tag" && bindings.has(value.name.toLowerCase())) value.name = bindings.get(value.name.toLowerCase());
+      if (value.kind === "assignment" && bindings.has(value.target.toLowerCase())) value.target = bindings.get(value.target.toLowerCase());
+      Object.values(value).forEach(qualify);
+    };
+    qualify(compiled.statements); definition.statements = compiled.statements;
+    errors.push(...compiled.errors.map(error=>`${name}: ${error}`)); programs.push(definition);
+  }
+  for (const functionRange of ranges) for (const programRange of programRanges) if (functionRange.start < programRange.end && programRange.start < functionRange.end) errors.push("PROGRAM and FUNCTION declarations cannot be nested.");
   let main = source;
-  for (const range of [...ranges].reverse()) main = main.slice(0,range.start) + maskSource(main.slice(range.start,range.end)) + main.slice(range.end);
-  const program = compileProgram(main,variableNames,signatures);
+  for (const range of [...ranges,...programRanges].sort((a,b)=>b.start-a.start)) main = main.slice(0,range.start) + maskSource(main.slice(range.start,range.end)) + main.slice(range.end);
+  const program = compileProgram(main,variableNames,signatures,programs.length > 0);
   const calls = (value, result = new Set()) => {
     if (!value || typeof value !== "object") return result;
     if (value.op === "call") result.add(value.name.toLowerCase());
@@ -220,7 +274,7 @@ export function compileStructuredText(source, variableNames = []) {
     visiting.delete(name); visited.add(name);
   };
   definitions.forEach(definition=>visit(definition.name.toLowerCase()));
-  return {...program,ok:program.ok && !errors.length,errors:[...program.errors,...errors],functions:definitions};
+  return {...program,ok:program.ok && !errors.length,errors:[...program.errors,...errors],functions:definitions,programs,variables:[...program.variables,...programs.flatMap(definition=>definition.locals.map(local=>local.key))]};
 }
 
 function lookup(values, name) { if (Object.hasOwn(values, name)) return values[name]; const key = Object.keys(values).find((item) => item.toLowerCase() === name.toLowerCase()); return key ? values[key] : false; }
@@ -246,17 +300,28 @@ function evaluate(node, values, callFunction) {
   return false;
 }
 
-export function executeStructuredText(compiled, inputs, previousOutputs = {}, outputNames = [], tagTypes = {}) {
-  if (!compiled.ok) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, errors:compiled.errors };
+export function executeStructuredText(compiled, inputs, previousOutputs = {}, outputNames = [], tagTypes = {}, previousProgramState = {}) {
+  if (!compiled.ok) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, errors:compiled.errors };
   const errors = [], names = new Map(), outputSet = new Set(outputNames.map((name) => name.toLowerCase()));
   const canonical = (name) => { const key = name.toLowerCase(); if (!names.has(key)) names.set(key,name); return names.get(key); };
   [...outputNames,...(compiled.variables || []),...Object.keys(tagTypes),...Object.keys(inputs),...Object.keys(previousOutputs)].forEach(canonical);
   for (const [label,record] of [["Inputs",inputs],["Previous outputs",previousOutputs],["Tag types",tagTypes]]) {
     const seen = new Map(); for (const name of Object.keys(record)) { const key = name.toLowerCase(); if (seen.has(key)) errors.push(`${label} contain ambiguous identifiers: ${seen.get(key)} / ${name}.`); else seen.set(key,name); }
   }
-  if (errors.length) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, errors };
+  if (errors.length) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, errors };
   const values = Object.create(null), outputs = Object.create(null), types = new Map(Object.entries(tagTypes).map(([name,type]) => [name.toLowerCase(),type]));
   for (const source of [inputs,previousOutputs]) for (const [name,value] of Object.entries(source)) values[canonical(name)] = value;
+  const programState = Object.create(null);
+  for (const definition of compiled.programs || []) {
+    const key = definition.name.toLowerCase(), schema = JSON.stringify(definition.locals.map(local=>[local.name.toLowerCase(),local.type]));
+    const prior = Object.hasOwn(previousProgramState || {},key) ? previousProgramState[key] : null;
+    const state = programState[key] = {schema,values:Object.create(null)};
+    for (const local of definition.locals) {
+      const localKey = local.name.toLowerCase(), value = prior?.schema === schema && Object.hasOwn(prior.values || {},localKey) ? prior.values[localKey] : undefined;
+      types.set(local.key.toLowerCase(),local.type);
+      values[canonical(local.key)] = local.type === "BOOL" ? value === true : typeof value === "number" && Number.isFinite(value) ? (local.type === "REAL" ? value : Math.trunc(value)) : 0;
+    }
+  }
   for (const [name,value] of Object.entries(previousOutputs)) outputs[canonical(name)] = value;
   const functions = new Map((compiled.functions || []).map(definition=>[definition.name.toLowerCase(),definition]));
   let callDepth = 0, callCount = 0;
@@ -283,11 +348,16 @@ export function executeStructuredText(compiled, inputs, previousOutputs = {}, ou
     } };
     callDepth++; try { run(definition.statements); return scope[definition.name]; } finally { callDepth--; }
   };
-  const executeList = (statements) => { for (const statement of statements) {
-    if (statement.kind === "if") { try { if (Boolean(evaluate(statement.condition, values, callFunction))) executeList(statement.consequent); else { const branch = statement.elseIf.find((item) => Boolean(evaluate(item.condition, values, callFunction))); executeList(branch?.statements || statement.alternate); } } catch (error) { errors.push(`Line ${statement.line}: ${error.message}`); } continue; }
+  const executeList = (statements, programName = "") => { for (const statement of statements) {
+    if (statement.kind === "if") { try { if (Boolean(evaluate(statement.condition, values, callFunction))) executeList(statement.consequent,programName); else { const branch = statement.elseIf.find((item) => Boolean(evaluate(item.condition, values, callFunction))); executeList(branch?.statements || statement.alternate,programName); } } catch (error) { errors.push(`${programName ? programName + ": " : ""}Line ${statement.line}: ${error.message}`); } continue; }
     try { const target = canonical(statement.target); let value = evaluate(statement.expression, values, callFunction), type = types.get(target.toLowerCase()); if (type === "BOOL") value = Boolean(value); else if (["INT", "REAL", "TIME"].includes(type)) { value = numeric(value, "assignment"); if (type !== "REAL") value = Math.trunc(value); } values[target] = value; if (outputSet.has(target.toLowerCase())) outputs[target] = value; }
-    catch (error) { errors.push(`Line ${statement.line}: ${error.message}`); }
+    catch (error) { errors.push(`${programName ? programName + ": " : ""}Line ${statement.line}: ${error.message}`); }
   } };
   executeList(compiled.statements);
-  return { values:{...values}, outputs:{...outputs}, errors };
+  for (const definition of compiled.programs || []) {
+    executeList(definition.statements,definition.name);
+    const state = programState[definition.name.toLowerCase()];
+    for (const local of definition.locals) { state.values[local.name.toLowerCase()] = values[canonical(local.key)]; delete values[canonical(local.key)]; }
+  }
+  return { values:{...values}, outputs:{...outputs}, errors, programState:{...programState} };
 }

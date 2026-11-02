@@ -44,6 +44,38 @@ Structured Text identifiers ignore letter case: `motor` and `Motor` refer to the
 
 IF/ELSIF/ELSE blocks may also share lines; nested block comments and line comments preserve diagnostic line numbers. A missing semicolon, unfinished comment, or incomplete IF block prevents compilation.
 
+### Named ST programs and cyclic execution
+
+**What you'll see:** **Programs → ST programs** lists named PROGRAM declarations and their source lines. The project still has one cyclic task, configured through **Project → Project task and preferences**.
+
+1. In **Project → Tags and I/O**, add `CountView` as an INT output and `Complete` as a BOOL output.
+2. Choose **Programs → ST programs**, then **Open ST editor**, and enter:
+
+```iecst
+PROGRAM CounterStage
+VAR
+ Cycles : INT;
+END_VAR
+Cycles := Cycles + 1;
+CountView := Cycles;
+END_PROGRAM
+PROGRAM Indicate
+Complete := CountView >= 3;
+END_PROGRAM
+```
+
+3. Select **Compile**, then **Reset**, then **Step** three times. CountView becomes 1, 2, then 3; Complete becomes true on the third scan.
+4. Open **Programs → ST programs** and select **Edit source** beside a definition to focus it. Move whole PROGRAM blocks in ST to change execution order, then compile again.
+5. Use **Record**, advance with **Step**, and open **Trace** to inspect **Program locals** in historical state changes. **Restore selected scan** restores those locals along with the rest of the recorded simulation state.
+
+Statements outside declarations execute first; named programs then execute once in source order on every scan. Later assignments to the same global output determine its final value for that scan. Programs may call declared scalar functions; they are not themselves callable as functions.
+
+Declare BOOL, INT, REAL or TIME locals inside `VAR ... END_VAR`, using `Name : Type;`. Locals persist across scans, are separate between programs and shadow equally named global tags within their program. Changing a program's local declarations reinitializes that program's locals; renaming or removing a program drops its old state after the next scan.
+
+**Reset**, opening another project, and browser reload start execution state again; normal project saving stores source, not live local values. Trace snapshots preserve local state for replay and restoration. Keep global tag names distinct from program/function names and from qualified private names such as `CounterStage.Cycles`.
+
+This subset supports at most 32 named ST programs with 128 scalar locals each. Program headers must be on their own line and end with `END_PROGRAM`; initializers, program input/output parameter blocks, independent tasks, interrupts and LD/FBD/SFC program POUs are not implemented. It is not complete IEC configuration or vendor interchange support.
+
 ### Reusable ST scalar functions
 
 **What you'll see:** The existing ST editor accepts function declarations and calls in the same source. Functions have positional inputs passed by value, private local variables initialized on every call, and a BOOL, INT, REAL, or TIME result.
@@ -75,7 +107,7 @@ Functions can call other declared functions, including ones below them, but cann
 
 Limits are 32 functions, 16 inputs and 128 locals per function, a call depth of 32 and 10,000 calls per scan. Recursive calls, unknown functions, wrong argument counts and duplicate names are rejected; runtime faults preserve the affected output and appear in Diagnostics. Named arguments, initializers, arrays, VAR_IN_OUT, stateful function blocks and complete POU/task organization remain unsupported.
 
-FBD blocks execute in dependency order. Add Boolean blocks (AND/OR accept up to eight inputs; NAND/NOR/XOR/XNOR have two), TON/TOF/TP/RTO, CTU/CTD, R_TRIG/F_TRIG, arithmetic (ADD, SUB, MUL, DIV), or comparisons (GT, LT, EQ); enter comma-separated tag names for inputs and an output tag. Arithmetic and comparison inputs must use numeric tags. Counter and RTO blocks accept a second reset input. ST supports semicolon-terminated assignments across lines or on the same line, BOOL logic, numeric literals, `+`, `-`, `*`, `/`, comparisons, and parentheses; numeric assignments use the declared INT, REAL, or TIME tag type. Division by zero appears as a runtime diagnostic. The supported local subset does not implement multiple program POUs, stateful function blocks, arrays, or the full IEC language. SFC steps list active output tags; transitions use an input tag with NO or NC behavior.
+FBD blocks execute in dependency order. Add Boolean blocks (AND/OR accept up to eight inputs; NAND/NOR/XOR/XNOR have two), TON/TOF/TP/RTO, CTU/CTD, R_TRIG/F_TRIG, arithmetic (ADD, SUB, MUL, DIV), or comparisons (GT, LT, EQ); enter comma-separated tag names for inputs and an output tag. Arithmetic and comparison inputs must use numeric tags. Counter and RTO blocks accept a second reset input. ST supports semicolon-terminated assignments across lines or on the same line, BOOL logic, numeric literals, `+`, `-`, `*`, `/`, comparisons, and parentheses; numeric assignments use the declared INT, REAL, or TIME tag type. Division by zero appears as a runtime diagnostic. The supported local subset does not implement multiple LD/FBD/SFC programs, stateful function blocks, arrays, or the full IEC language. SFC steps list active output tags; transitions use an input tag with NO or NC behavior.
 
 ## Simulate
 
@@ -87,7 +119,7 @@ The Example browser contains 1,000 examples across six categories. Each example 
 
 For the thermal process model, choose a heater input and an optional cooler input. Set heater and cooler rates; passive temperature loss moves the value toward ambient when both inputs are off. If both are on, the configured rates combine. These controls are educational model parameters, not validated operating ranges.
 
-Choose **HMI** beside the logic tab to add tag-bound simulated switches, output lamps, value displays, and short trends. Reposition a widget by dragging its title or using the arrow controls. **Processes** adds tank, conveyor, motor inertia, thermal, pump-curve, and PID educational models; each model writes a numeric value to its output tag after each scan. The live 2D process mimic binds each drawn element to that tag and shows its current value. Select BOOL run inputs for enabled models and a numeric process-variable tag for PID. Tank supports an optional digital drain input. Numeric values work in basic FBD and ST arithmetic/comparison expressions and HMI displays; LD and SFC still evaluate Boolean logic only. ST supports semicolon-terminated assignments across lines or on the same line, BOOL operators, numeric literals, arithmetic, and numeric comparisons; it does not yet support multiple program POUs, stateful function blocks, arrays, or the full IEC language. Create or manage BOOL alarms or numeric high/low threshold alarms from the toolbar; alarm thresholds require numeric tags, finite numeric limits, and supported high/low comparisons; invalid readings do not trigger matches. For numeric alarms, Hysteresis is a non-negative clearing margin (default 0). A high alarm at 75 with hysteresis 5 raises at 75 and clears at 70; a low alarm at 10 with hysteresis 2 clears at 12. Values inside that band retain the active state, preventing repeated events near the threshold. This does not filter invalid sensor readings or provide a safety function. Active alarms support acknowledgement, shelving, suppression, event history, and JSON export. In **Recipes**, enter **Recipe name** and select **Save current inputs as recipe** to save BOOL and numeric inputs; saving the same name creates a new version. The screen, alarms, recipes, and process models save with the project. The Tags & I/O panel can print a generic wiring-reference worksheet from configured I/O addresses; it leaves field terminals and wire numbers for the verified hardware design. Trend values stay in session memory up to the selected limit and **Export trend CSV** downloads branded timestamps and values. The buffer resets on reload; it is not durable historian storage. The process view remains a schematic educational simulation with no validated engineering ranges, 3D geometry, or physical hardware.
+Choose **HMI** beside the logic tab to add tag-bound simulated switches, output lamps, value displays, and short trends. Reposition a widget by dragging its title or using the arrow controls. **Processes** adds tank, conveyor, motor inertia, thermal, pump-curve, and PID educational models; each model writes a numeric value to its output tag after each scan. The live 2D process mimic binds each drawn element to that tag and shows its current value. Select BOOL run inputs for enabled models and a numeric process-variable tag for PID. Tank supports an optional digital drain input. Numeric values work in basic FBD and ST arithmetic/comparison expressions and HMI displays; LD and SFC still evaluate Boolean logic only. ST supports semicolon-terminated assignments across lines or on the same line, BOOL operators, numeric literals, arithmetic, and numeric comparisons; it does not yet support multiple LD/FBD/SFC programs, stateful function blocks, arrays, or the full IEC language. Create or manage BOOL alarms or numeric high/low threshold alarms from the toolbar; alarm thresholds require numeric tags, finite numeric limits, and supported high/low comparisons; invalid readings do not trigger matches. For numeric alarms, Hysteresis is a non-negative clearing margin (default 0). A high alarm at 75 with hysteresis 5 raises at 75 and clears at 70; a low alarm at 10 with hysteresis 2 clears at 12. Values inside that band retain the active state, preventing repeated events near the threshold. This does not filter invalid sensor readings or provide a safety function. Active alarms support acknowledgement, shelving, suppression, event history, and JSON export. In **Recipes**, enter **Recipe name** and select **Save current inputs as recipe** to save BOOL and numeric inputs; saving the same name creates a new version. The screen, alarms, recipes, and process models save with the project. The Tags & I/O panel can print a generic wiring-reference worksheet from configured I/O addresses; it leaves field terminals and wire numbers for the verified hardware design. Trend values stay in session memory up to the selected limit and **Export trend CSV** downloads branded timestamps and values. The buffer resets on reload; it is not durable historian storage. The process view remains a schematic educational simulation with no validated engineering ranges, 3D geometry, or physical hardware.
 
 Open **Operations** to see session-only simulated runtime for Boolean outputs. Enter a load in kW for each output and a tariff per kWh to estimate average power, energy, and cost; cost uses the same currency unit as the tariff, and these values are assumptions, not meter readings. An optional duty-cycle threshold flags outputs for review. Runtime resets when you switch projects or reload; export the branded CSV to keep the current estimate.
 

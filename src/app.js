@@ -2,7 +2,7 @@ import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromEx
 import { store } from "./store.js";
 import { validateProject } from "./validation.js";
 import { compileStructuredText, executeStructuredText, renameStructuredTextIdentifier, countStructuredTextReferences } from "./structured-text.js";
-import { structuredTextFunctionLibrary, structuredTextLineOffset } from "./st-function-library.js";
+import { structuredTextFunctionLibrary, structuredTextProgramLibrary, structuredTextLineOffset } from "./st-function-library.js";
 import { runStandardsChecks } from "./standards.js";
 import { appendResourceAudit, checkResourceLink, isApprovedExternalUrl, readResourceAudit, readResourceRegistry, removeResource, resources, saveResource } from "./resources.js";
 import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe, captureRecipeInputs, recipeInputChanges, normalizeAlarmHistoryLimit, retainAlarmEvents } from "./hmi.js";
@@ -516,7 +516,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
     if (!compiledST || compiledSTSignature !== signature) { compiledST = compileStructuredText(stSource, stTags); compiledSTSignature = signature; }
     if (!compiledST.ok) logEvent("compile-error", compiledST.errors.join("; "));
     const tagTypes = Object.fromEntries((project.tags || []).map((tag) => [tag.name, tag.type || "BOOL"]));
-    const stInputs = { ...sim.values, ...inputs, ...connectedAnalogInputs }, execution = executeStructuredText(compiledST, stInputs, sim.outputs, tags.outputs, tagTypes), runtimeError = compiledST.ok ? execution.errors.join("; ") : "";
+    const stInputs = { ...sim.values, ...inputs, ...connectedAnalogInputs }, execution = executeStructuredText(compiledST, stInputs, sim.outputs, tags.outputs, tagTypes, sim.programState), runtimeError = compiledST.ok ? execution.errors.join("; ") : "";
     if (runtimeError && runtimeError !== sim.stRuntimeError) logEvent("runtime-error", runtimeError);
     sim = { ...sim, ...execution, stRuntimeError:runtimeError, energized:{} };
   }
@@ -549,7 +549,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   if (!traceReplay && inputOverride === null) sessionOperations = recordOperationsScan(sessionOperations, sim.outputs, dt, tags.outputs);
   lastScanMs = Math.round((performance.now() - started) * 100) / 100; scans++; sampleHmiHistory(); logEvent("scan", `Scan completed in ${lastScanMs} ms`, { durationMs:lastScanMs, outputs:{ ...sim.outputs } });
   if (traceRecording) { traceFrames.push({ dt, inputs:{ ...inputs }, numericInputs:traceNumericInputs(), faults:structuredClone(simulationFaults), outputs:{ ...sim.outputs }, timers:structuredClone(sim.timers || {}), processValues:{ ...sim.processValues }, state:structuredClone(sim) }); if (traceFrames.length > 5000) { const discarded = traceFrames.shift(); traceInitial = discarded.state || traceInitial; traceInitialFaults = structuredClone(discarded.faults || []); traceBreakpoints = shiftHistoricalBreakpoints(traceBreakpoints); } }
-  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues }); }
+  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {}) || JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues, expectedProgramState:structuredClone(expected.state?.programState || {}), actualProgramState:structuredClone(sim.programState || {}) }); }
   renderLadder(); updateSimulationHud(); if (sim.breakpointHit) { logEvent("breakpoint", `Paused before network ${sim.rungIndex + 1}`, { rungId:sim.breakpointHit }); if (runTimer) { clearInterval(runTimer); runTimer = null; toast(`Breakpoint · network ${sim.rungIndex + 1}`); updateStatus(); } } if (traceReplay && isHistoricalBreakpoint(traceBreakpoints, traceCursor, traceFrames.length) && runTimer) { clearInterval(runTimer); runTimer = null; window.adigunPaused = true; logEvent("historical-breakpoint", `Replay paused at historical scan ${traceCursor}`, { scan:traceCursor }); toast(`Historical breakpoint · scan ${traceCursor}`); showTrace(); updateStatus(); } if (traceReplay && traceCursor >= traceFrames.length) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); }
 }
 function ladderToStructuredText() { return project.rungs.filter((rung) => rung.coil).map((rung) => { const paths = rungPaths(rung).map((path) => path.length ? path.map((contact) => `${contact.mode === "NC" ? "NOT " : ""}${contact.tag}`).join(" AND ") : "TRUE"); return `${rung.coil} := ${paths.length > 1 ? `(${paths.join(") OR (")})` : paths[0]};`; }).join("\n"); }
@@ -923,11 +923,11 @@ function showTrace() {
   const paintHistory = () => {
     const index = Number($("#traceScrubber").value), current = snapshot(index), previous = index ? snapshot(index - 1) : null;
     $("#traceScanLabel").textContent = index === 0 ? "Initial state" : `Scan ${index}`;
-    const sections = ["values", "outputs", "timers", "processValues"];
+    const sections = ["values", "outputs", "timers", "processValues", "programState"];
     const rows = sections.flatMap((section) => {
       const now = current?.[section] || {}, before = previous?.[section] || {};
       const keys = new Set([...Object.keys(now), ...Object.keys(before)]);
-      return [...keys].filter((key) => JSON.stringify(now[key]) !== JSON.stringify(before[key])).map((key) => `<div class="validation-item"><b>${escapeHtml(section)} · ${escapeHtml(key)}</b>: ${escapeHtml(JSON.stringify(before[key] ?? "—"))} → ${escapeHtml(JSON.stringify(now[key] ?? "—"))}</div>`);
+      return [...keys].filter((key) => JSON.stringify(now[key]) !== JSON.stringify(before[key])).map((key) => `<div class="validation-item"><b>${escapeHtml(section === "programState" ? ({en:"Program locals",de:"Lokale Programmvariablen",yo:"Oníyípadà inú ètò",pcm:"Program locals"})[language] : section)} · ${escapeHtml(key)}</b>: ${escapeHtml(JSON.stringify(before[key] ?? "—"))} → ${escapeHtml(JSON.stringify(now[key] ?? "—"))}</div>`);
     });
     $("#traceStatePreview").innerHTML = index === 0 ? '<div class="validation-item ok">Initial recorded state.</div>' : rows.join("") || '<div class="validation-item ok">No state changes since the preceding scan.</div>';
     const toggle = $("#traceBreakpointToggle"); toggle.disabled = index === 0; toggle.textContent = traceBreakpoints.has(index) ? copy.remove : copy.mark;
@@ -1652,8 +1652,8 @@ function showApplicationMenu(event) {
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
-function showStructuredTextFunctions() {
-  const view = structuredTextFunctionLibrary(project,language);
+function showStructuredTextFunctions(kind = "functions") {
+  const view = (kind === "programs" ? structuredTextProgramLibrary : structuredTextFunctionLibrary)(project,language);
   modal(view.title,view.html);
   const openSource = (line = 1) => {
     if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
@@ -1667,6 +1667,7 @@ function showStructuredTextFunctions() {
   $("#modalContent").querySelectorAll("[data-st-function-line]").forEach(button => { button.onclick = () => openSource(Number(button.dataset.stFunctionLine)); });
 }
 function action(name) {
+  if (name === "st-programs") { showStructuredTextFunctions("programs"); return; }
   if (name === "st-functions") { showStructuredTextFunctions(); return; }
   if (name === "adigun-ai") { showAdigunAI(); return; }
   if (name === "resources") { showResources(); return; }
