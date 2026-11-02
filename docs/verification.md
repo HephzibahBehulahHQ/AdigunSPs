@@ -1,18 +1,18 @@
 # Verification record
 
-## Latest release verification — 2026-11-01
+## Latest release verification — 2026-11-01 (password recovery)
 
-- PR #40 merged to `main` as `9fb9a4c39b401a0989a285707453728a9fa91e5a`; GitHub Actions CI run `41331078330` and Pages deployment `41331078265` both succeeded. This was a documentation/test-only follow-up to app release `f9cd38f`.
-- Local Git was fetched and synchronized to the same `main` commit. The live custom-domain app returned HTTP 200 and its editor loaded; the existing guest session had expired, so account-only and example-browser interactions were not manually exercised.
-- `npm test`, `npm run build`, and `npm run validate:examples` passed against the synchronized source. Validation passed 1,000/1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. The report records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
+- Commit `706a1295fcc8ef9a5946f2614b64f38dc7d0e764` was published to `main`; GitHub Actions CI run `41348421690` and Pages deployment `41348421697` both succeeded.
+- Live HTTP probes returned 200 for the custom-domain root and `/reset-password/`. This verifies published route availability, not actual email delivery or password recovery redemption.
+- `npm test` and `npm run build` passed on the tested source before publication; account and Help guide focused tests passed after merge. The available example-validation report records 1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. It also records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
 - The browser app can search and offer to load matching examples through Adigun BOT; automated tests cover this path. HUD voltage, current, and RPM are explicitly unmodeled. Physical-device control is not available.
-- The local branch `codex/adigunsps-hardening-2026-11-01` and `origin/main` both point to `9fb9a4c39b401a0989a285707453728a9fa91e5a`.
+- Supabase Auth Site URL and redirect allowlist were already correct on read-only dashboard inspection. The main sign-in flow uses email/password, and the reset route is published; signup confirmation, password-recovery email redemption, guest upgrade, cloud save/reload, avatar upload and multi-user RLS behavior still need approved live test accounts.
 
 ## Documentation maintenance
 
 When user-facing labels, options, or workflows change, update both `docs/HELP.md` (the in-app guide) and `docs/user-guide.md` in the same change. Confirm instructions against the current interface and describe backend-only changes only when they affect a user action; never present unavailable or unverified hardware controls as supported.
 
-## Previous release verification — 2026-11-01 (superseded by the latest release above)
+## Previous release verification — 2026-11-01 (historical OTP release; superseded)
 
 - Merged PR [#33](https://github.com/HephzibahBehulahHQ/AdigunSPs/pull/33) as `8299ff9567b0bdfecdc9eee1958b06db21b87a9a`. GitHub Actions CI run `41320789744` and Pages deploy `41320789756` both completed successfully.
 - Live HTTPS requests to `https://adigunsps.hephzibahbehulah.com/`, `/src/app.js`, `/src/account.js`, and `/service-worker.js` returned 200. The served app contains the OTP form and `email_change` guest-upgrade flow, and the worker reports cache v113.
@@ -130,3 +130,4 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - LD-to-FBD conversion checks — verify generated intermediate BOOL tags are declared uniquely, converted timer/coil inputs pass FBD validation, and normally-closed interlocks produce the expected output.
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
+

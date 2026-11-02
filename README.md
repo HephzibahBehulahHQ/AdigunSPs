@@ -156,7 +156,7 @@ Focused suites are available as `npm run test:electrical`, `npm run test:industr
 
 ## Deployment
 
-The public application is available at [AdigunSPs on GitHub Pages](https://hephzibahbehulahhq.github.io/AdigunSPs/). Every push to `main` runs `.github/workflows/deploy-pages.yml`, which runs the validation suite, builds the static bundle into `dist/`, and publishes it to GitHub Pages. The first deployment completed successfully on 2026-10-30. Keep asset, manifest, and service-worker URLs relative so they work under the repository path `/AdigunSPs/`; increment the service-worker cache version when releasing shell changes.
+The public application is available at [AdigunSPs](https://adigunsps.hephzibahbehulah.com/) and [its GitHub Pages fallback](https://hephzibahbehulahhq.github.io/AdigunSPs/). Every push to `main` runs `.github/workflows/deploy-pages.yml`, which runs the validation suite, builds the static bundle into `dist/`, and publishes it to GitHub Pages. The first deployment completed successfully on 2026-10-30. Keep asset, manifest, and service-worker URLs relative so they work under the repository path `/AdigunSPs/`; increment the service-worker cache version when releasing shell changes.
 
 Run locally with `npm ci` and `npm run dev`. GitHub Pages builds do not receive local `.env` files: browser-local design and project storage work, while account and cloud-save features require the public Supabase publishable key and Auth configuration to be supplied to the deployment.
 
@@ -176,7 +176,7 @@ The following areas are incomplete or require stakeholder decisions before they 
 
 - Full IEC conformance, complete POU/task interchange, schema validation, vendor import compatibility, an expanded device catalog beyond the 220 sourced references, downloads, and hardware-in-the-loop require target vendors, CPUs, dialects, authoritative manufacturer data, and test equipment.
 - Physical connectivity and OPC UA, Modbus RTU, MQTT, REST/WebSocket, SQL, or historian services require approved endpoints, protocols, and security requirements. The current Modbus tool is a local frame simulator only.
-- The production Pages app loads and its account surface recognizes an existing session. New signup/reset callbacks, guest access, cloud save/reload, and multi-user RLS behavior still need live tests with approved test accounts and owner-side Auth settings. Collaboration, SSO, centralized backup, licensing, and disaster recovery remain unimplemented and need further security/hosting/data-retention decisions.
+- The production app root and `/reset-password/` route return HTTP 200, and Auth Site URL plus redirect allowlisting are configured. Signup confirmation and password-recovery email redemption, guest upgrade, cloud save/reload, and multi-user RLS behavior still need live tests with approved test accounts. Collaboration, SSO, centralized backup, licensing, and disaster recovery remain unimplemented and need further security/hosting/data-retention decisions.
 - General model-backed AI, multilingual intent handling, broad voice command support, screenshot input, arbitrary project editing, and AI policy controls remain unimplemented. Browser speech recognition is optional and depends on browser support; build intent recognition currently targets a small English prompt set.
 - Classroom assignments, grading, certificates, sharing, e-signatures, and formal approval records require education and legal/quality policies.
 - Complete human translation review, larger-project browser performance, keyboard/screen-reader audits, security review, and cross-browser/PWA installation QA remain to be completed.
@@ -216,6 +216,7 @@ AdigunSPs is a product of HEPHZIBAH BEHULAH, developed under the HB Elektroniker
 - [LinkedIn personal profile](https://www.linkedin.com/in/isaacoluwoleadigun/)
 
 **AdigunSPs — a product of HEPHZIBAH BEHULAH.**
+
 
 
 

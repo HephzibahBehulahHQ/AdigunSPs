@@ -25,7 +25,7 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 
 1. Open the AdigunSPs website in your browser.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
-3. To register or sign in, select the profile icon. It is labelled **Sign in** when signed out and **Account** after sign-in. Enter your email, choose **Create account** or **Sign in**, then enter the email code or open the sign-in link.
+3. To register or sign in, select the profile icon. It is labelled **Sign in** when signed out and **Account** after sign-in. Enter your email and password, then choose **Create account** or **Sign in**. New accounts must confirm their email; use **Forgot password?** below the password field if you need a recovery email.
 
 The first screen has the product bar, menus, and toolbar above the editor. The project tree and simulated inputs are on the left; the canvas is centered; Properties, Watch, and Diagnostics sit on the right. Run, storage, language, and help status appear in the footer.
 
@@ -184,3 +184,4 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 3. **My project disappeared:** Check **Project manager** on the browser/device used. Local projects stay there; check **Account → Your cloud projects** or import your JSON backup.
 4. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
 5. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
+
