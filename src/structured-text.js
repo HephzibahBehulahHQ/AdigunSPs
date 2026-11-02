@@ -1,13 +1,62 @@
-// Preserve comments and quoted text while locating complete ST identifiers.
-const identifierPattern = () => /(\(\*[\s\S]*?(?:\*\)|$)|\/\/[^\r\n]*|'(?:''|[^'])*(?:'|$))|([A-Za-z_][A-Za-z0-9_.]*)/g;
+// Keep source spans intact so comments, strings and diagnostics share one lexer.
+function* sourceSpans(source) {
+  let offset = 0;
+  while (offset < source.length) {
+    const start = offset;
+    let kind = "text", closed = true;
+    if (source.startsWith("(*", offset)) {
+      kind = "comment"; let depth = 1; offset += 2;
+      while (offset < source.length && depth) {
+        if (source.startsWith("(*", offset)) { depth++; offset += 2; }
+        else if (source.startsWith("*)", offset)) { depth--; offset += 2; }
+        else offset++;
+      }
+      closed = depth === 0;
+    } else if (source.startsWith("//", offset)) {
+      kind = "comment"; while (offset < source.length && !/[\r\n]/.test(source[offset])) offset++;
+    } else if (source[offset] === "'") {
+      kind = "string"; closed = false; offset++;
+      while (offset < source.length) {
+        if (source[offset++] !== "'") continue;
+        if (source[offset] === "'") { offset++; continue; }
+        closed = true; break;
+      }
+    } else {
+      const identifier = source.slice(offset).match(/^[A-Za-z_][A-Za-z0-9_.]*/);
+      if (identifier) { kind = "identifier"; offset += identifier[0].length; }
+      else offset++;
+    }
+    yield { text:source.slice(start,offset), kind, closed };
+  }
+}
 export function renameStructuredTextIdentifier(source, oldName, newName) {
   const key = oldName.toLowerCase();
-  return String(source || "").replace(identifierPattern(), (token, protectedText, identifier) => identifier?.toLowerCase() === key ? newName : token);
+  return [...sourceSpans(String(source || ""))].map(span => span.kind === "identifier" && span.text.toLowerCase() === key ? newName : span.text).join("");
 }
 export function countStructuredTextReferences(source, name) {
   const key = name.toLowerCase(); let count = 0;
-  for (const match of String(source || "").matchAll(identifierPattern())) if (match[2]?.toLowerCase() === key) count++;
+  for (const span of sourceSpans(String(source || ""))) if (span.kind === "identifier" && span.text.toLowerCase() === key) count++;
   return count;
+}
+function splitStatements(source, errors) {
+  const statements = []; let text = "", startLine = 1, line = 1, header = false;
+  const flush = () => { if (text.trim()) statements.push({ text:text.trim(), line:startLine }); text = ""; header = false; };
+  const append = (value) => { if (!text.trim() && value.trim()) startLine = line; text += value; };
+  for (const span of sourceSpans(String(source || ""))) {
+    if (span.kind === "comment") {
+      if (!span.closed) errors.push(`Line ${line}: block comment is missing *).`);
+      append(span.text.replace(/[^\r\n]/g," "));
+    } else if (span.kind === "identifier" && /^(IF|ELSIF|ELSE|END_IF)$/i.test(span.text)) {
+      flush(); append(span.text);
+      if (/^(IF|ELSIF)$/i.test(span.text)) header = true; else flush();
+    } else if (span.kind === "identifier" && /^THEN$/i.test(span.text) && header) {
+      append(span.text); flush();
+    } else if (span.kind === "text" && span.text === ";") {
+      if (text.trim()) { append(";"); flush(); }
+    } else append(span.text);
+    line += (span.text.match(/\n/g) || []).length;
+  }
+  flush(); return statements;
 }
 
 function tokenize(source, line) {
@@ -51,20 +100,18 @@ export function compileStructuredText(source, variableNames = []) {
       visit(node.left); visit(node.right); if (typeof node.value === "object") visit(node.value);
     }; visit(expression);
   };
-  const cleaned = String(source || "").replace(/\(\*[\s\S]*?\*\)/g, "").split("\n");
-  cleaned.forEach((raw, index) => {
-    const line = raw.replace(/\/\/.*$/, "").trim(); if (!line) return;
-    const lineNumber = index + 1, ifMatch = line.match(/^IF\s+(.+)\s+THEN$/i);
+  splitStatements(source, errors).forEach(({ text:line, line:lineNumber }) => {
+    const ifMatch = line.match(/^IF\s+([\s\S]+)\s+THEN$/i);
     if (ifMatch) {
       try { const condition = parseExpression(tokenize(ifMatch[1], lineNumber), lineNumber); validateNames(condition, lineNumber); const node = { kind:"if", condition, consequent:[], elseIf:[], alternate:[], line:lineNumber }; append(node); stack.push({ node, branch:"then" }); }
       catch (error) { errors.push(error.message); }
       return;
     }
-    const elseIfMatch = line.match(/^ELSIF\s+(.+)\s+THEN$/i);
+    const elseIfMatch = line.match(/^ELSIF\s+([\s\S]+)\s+THEN$/i);
     if (elseIfMatch) { const current = stack.at(-1); if (!current || current.branch === "else") { errors.push(`Line ${lineNumber}: ELSIF must precede ELSE in an IF block.`); return; } try { const condition = parseExpression(tokenize(elseIfMatch[1], lineNumber), lineNumber); validateNames(condition, lineNumber); current.node.elseIf.push({ condition, statements:[], line:lineNumber }); current.branch = "elseIf"; current.index = current.node.elseIf.length - 1; } catch (error) { errors.push(error.message); } return; }
     if (/^ELSE$/i.test(line)) { const current = stack.at(-1); if (!current) errors.push(`Line ${lineNumber}: ELSE has no matching IF.`); else if (current.branch === "else") errors.push(`Line ${lineNumber}: duplicate ELSE branch.`); else current.branch = "else"; return; }
     if (/^END_IF\s*;?$/i.test(line)) { if (!stack.length) errors.push(`Line ${lineNumber}: END_IF has no matching IF.`); else stack.pop(); return; }
-    const assignment = line.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s*:=\s*(.+);$/);
+    const assignment = line.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s*:=\s*([\s\S]+);$/);
     if (!assignment) { errors.push(`Line ${lineNumber}: use “Tag := expression;”, IF … THEN, ELSE, or END_IF.`); return; }
     const target = allowed.get(assignment[1].toLowerCase()) || assignment[1];
     if (allowed.size && !allowed.has(target.toLowerCase())) errors.push(`Line ${lineNumber}: “${target}” is not declared in the tag table.`);

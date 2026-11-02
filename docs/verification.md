@@ -256,3 +256,9 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - Full npm test and production build passed: 1,000/1,000 examples and JSON round-trips, 4,717 logic cases, 8,913 schematic checks, and 4,517 integrated cases. Service-worker checks also passed after the v118 increment.
 
 - CI run 41544385940 exposed a stale duplicate v117 assertion in the Help test after the v118 cache change. The Help test now checks for a versioned shell; the dedicated service-worker test retains the exact current-version assertion.
+
+## Structured Text statement parsing - 2026-11-03
+
+- Reproduced multiline block comments shifting diagnostic lines and valid compact/multiline assignments being rejected. The shared source lexer now preserves source spans, handles nested block comments, and splits semicolon-terminated statements and IF branches independently of line layout. Rename/reference checks use the same comment/string boundaries.
+- Regression tests exercise 24 input combinations across formatted, compact and CRLF source, module-worker parity, JSON AST round-trips, original error lines, missing terminators, unterminated comments, incomplete IF blocks and nested-comment rename protection. Full POU/function/function-block support remains incomplete; this change does not claim full IEC conformance.
+- Validation: full npm test and production build passed, including 1,000 example/model round-trips, 4,717 logic cases, 8,913 schematic checks and 4,517 integrated cases. Browser execution of this parser change is not yet verified. Cache v119 refreshes compiler and guide assets; no merge or deployment performed.

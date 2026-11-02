@@ -56,4 +56,36 @@ assert.equal(renameProject.stSource,"Drive := START;");assert.deepEqual(renamePr
 assert.equal(executeStructuredText(compileStructuredText(renameProject.stSource,renameProject.tags.map(t=>t.name)),{Start:true},{Drive:false},renameProject.io.outputs,{Drive:"BOOL"}).outputs.Drive,true);
 const usedStart=app.indexOf("    const used = countStructuredTextReferences(");const usedEnd=app.indexOf("\n",usedStart);
 for(const [source,expected] of [["MOTOR := TRUE;",true],["(* Motor *)",false]]){const fixture={project:{rungs:[],stSource:source},tag:{name:"Motor"},countStructuredTextReferences};runInNewContext(app.slice(usedStart,usedEnd)+"this.used=used;",fixture);assert.equal(Boolean(fixture.used),expected);}
-console.log("PASS: ST canonical case binding, typed outputs, state continuity, worker parity, ambiguity rejection, and unique tag editing");
+// Statement layout must not change execution or diagnostic source locations.
+const formatted = `IF Start THEN
+  Motor := Start AND
+    NOT Stop;
+ELSIF Permit THEN
+  Motor := FALSE;
+ELSE
+  Motor := TRUE;
+END_IF;
+Lamp := Motor;`;
+const compact = "IF Start THEN Motor := Start AND NOT Stop; ELSIF Permit THEN Motor := FALSE; ELSE Motor := TRUE; END_IF; Lamp := Motor;";
+for (const source of [formatted, compact, compact.replace(/; /g, ";\r\n")]) {
+ const ast=compileStructuredText(source,["Start","Stop","Permit","Motor","Lamp"]);assert.equal(ast.ok,true,ast.errors.join("; "));
+ for(const Start of [false,true])for(const Stop of [false,true])for(const Permit of [false,true]){
+  const expected=Start?!Stop:!Permit;
+  const result=executeStructuredText(JSON.parse(JSON.stringify(ast)),{Start,Stop,Permit},{Motor:false,Lamp:false},["Motor","Lamp"],{Motor:"BOOL",Lamp:"BOOL"});
+  assert.deepEqual(result.outputs,{Motor:expected,Lamp:expected});assert.deepEqual(result.errors,[]);
+ }
+ assert.deepEqual(compileWorkerRequest({id:7,source,tags:["Start","Stop","Permit","Motor","Lamp"]}).result,ast);
+}
+const commented="(* heading\n (* nested note *)\n end *)\nMotor := TRUE; // retained line\nMissing := FALSE;";
+const badName=compileStructuredText(commented,["Motor"]);assert.match(badName.errors.join("; "),/Line 5:.*Missing/);
+const badMath=compileStructuredText("(* heading\n comment *)\nMotor := 1 /\n 0;",["Motor"]);
+assert.equal(badMath.ok,true);assert.match(executeStructuredText(badMath,{}, {Motor:7},["Motor"]).errors.join("; "),/Line 3: Division by zero/);
+assert.equal(compileStructuredText("Motor := TRUE (* incomplete",["Motor"]).ok,false);
+assert.match(compileStructuredText("Motor := TRUE;\n(* incomplete",["Motor"]).errors.join("; "),/Line 2: block comment/);
+assert.equal(compileStructuredText("Motor := TRUE\nLamp := FALSE;",["Motor","Lamp"]).ok,false,"missing terminator cannot merge two assignments");
+assert.equal(compileStructuredText("IF Start THEN Motor := TRUE;",["Start","Motor"]).ok,false);
+assert.equal(compileStructuredText("IF Start THEN Motor := TRUE ELSE Motor := FALSE; END_IF;",["Start","Motor"]).ok,false);
+assert.equal(compileStructuredText("Motor := (* outer (* inner *) end *) TRUE;",["Motor"]).ok,true);
+assert.equal(renameStructuredTextIdentifier("(* Motor (* Motor *) Motor *) MOTOR := TRUE;", "Motor","Drive"),"(* Motor (* Motor *) Motor *) Drive := TRUE;");
+assert.equal(countStructuredTextReferences("(* Motor (* Motor *) Motor *) MOTOR := TRUE;","Motor"),1);
+console.log("PASS: ST canonical case binding, typed outputs, state continuity, worker parity, ambiguity rejection, unique tag editing, layout-independent statements and source locations");
