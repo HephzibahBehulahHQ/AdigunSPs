@@ -2,11 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
-import { electricalSimulationStatus, electricalSymbolSvg } from "../src/electrical-ui.js";
+import { electricalSimulationStatus, electricalSymbolSvg, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+for (const language of ["en","de","yo","pcm"]) for (const tripped of [false,true]) {
+  const fuse={...createElectricalComponent("fuse",1),tripped};
+  const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[],electrical:{components:[fuse],wires:[]}},{language});
+  assert.ok(root.innerHTML.includes('name="tripped"'),`${language} fuse properties render`);
+  assert.equal(root.innerHTML.includes("checked disabled"),tripped,`${language} blown fuse cannot be reset`);
+}
 const helpGuide=readFileSync(new URL("../docs/HELP.md",import.meta.url),"utf8");
 const userGuide=readFileSync(new URL("../docs/user-guide.md",import.meta.url),"utf8");
 assert.match(electricalUiSource,/name="coilRef"/u,"auxiliary-contact properties expose a coil association control");
