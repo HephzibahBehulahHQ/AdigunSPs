@@ -110,7 +110,7 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 
 1. Add logic in **Program / Main** or choose **Programs** to open FBD, ST, or SFC.
 2. For ladder logic, set simulated inputs in the **Simulated inputs** panel and select **Run** to scan continuously, or **Step** for one scan. Select **Pause** to pause; **Reset** stops and clears simulation state.
-3. For Structured Text, open the ST editor and select **Compile**. The editor shows the compile result; inspect errors there and in **Diagnostics** before running.
+3. For Structured Text, select **Compile**; check errors there and in **Diagnostics** before running. Names ignore case (`motor` = `Motor`); case-only duplicate tags are rejected.
 4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
 
 The HUD is educational: voltage, current, and motor RPM are not calculated. This simulator does not certify a design or operate physical hardware.
@@ -192,4 +192,4 @@ Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms:
 
 Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
 
-**Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Phone tabs scroll.
+**Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.

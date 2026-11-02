@@ -35,7 +35,7 @@ let installation;
 handlers.get("install")({waitUntil:promise=>{installation=promise;}});
 await installation;
 assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
-assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v117";/, "development cache version advances for this runtime release");
+assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v118";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/example-search\.js"/, "Bot example search module must be included in the offline app shell");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/menu-dismissal\.js"/, "menu dismissal module must be included in the offline app shell");

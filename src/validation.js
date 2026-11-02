@@ -3,11 +3,11 @@ import { validateElectricalDiagram } from "./electrical.js";
 
 export function validateProject(project) {
   const issues = [];
-  const tags = new Map();
+  const tags = new Map(), foldedTagNames = new Set();
   for (const tag of project.tags || []) {
     if (!tag.name?.trim()) issues.push({ level: "error", code: "tag-name", message: "Every tag needs a name." });
-    else if (tags.has(tag.name)) issues.push({ level: "error", code: "tag-duplicate", message: `Tag ${tag.name} is defined more than once.` });
-    else tags.set(tag.name, tag);
+    else if (foldedTagNames.has(tag.name.toLowerCase())) issues.push({ level: "error", code: "tag-duplicate", message: `Tag ${tag.name} is defined more than once (ignoring case).` });
+    else { tags.set(tag.name, tag); foldedTagNames.add(tag.name.toLowerCase()); }
   }
   const addresses = new Map();
   for (const tag of project.tags || []) {
