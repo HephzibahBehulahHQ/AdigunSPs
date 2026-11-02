@@ -16,7 +16,7 @@ const testWorker=createAdigunAIWorker({fetchImpl:async(url,options)=>{
   if(options.headers.authorization!=="Bearer signed-in-token")return Response.json({message:"Invalid token"},{status:401});
   return Response.json({id:"user-1",is_anonymous:false});
 }});
-const aiEnv={...env,AI:{run:async(model,options)=>{modelCalls++;selectedModel=model;assert.equal(options.messages.length,2);return {response:"Reviewed PLC explanation."};}}};
+const aiEnv={...env,AI:{run:async(model,options)=>{modelCalls++;selectedModel=model;assert.equal(options.messages.length,2);assert.equal(options.max_completion_tokens,1024);assert.deepEqual(options.chat_template_kwargs,{enable_thinking:false});assert.equal(options.stream,false);return {response:"Reviewed PLC explanation."};}}};
 
 assert.equal((await testWorker.fetch(makeRequest(payload,{token:null}),aiEnv)).status,401,"missing Supabase session is rejected");
 assert.equal((await testWorker.fetch(makeRequest(payload,{token:"bad-token"}),aiEnv)).status,401,"invalid Supabase JWT is rejected");

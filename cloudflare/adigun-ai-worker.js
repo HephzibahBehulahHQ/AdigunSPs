@@ -67,7 +67,9 @@ export function createAdigunAIWorker({ fetchImpl = fetch } = {}) {
             { role: "system", content: "You are Adigun BOT, an educational PLC programming copilot. Explain only the supplied project summary and question. Do not claim physical validation or safety certification. Give concise, reviewable guidance. Never claim you changed or saved the project." },
             { role: "user", content: `Project summary (counts and diagnostic codes only): ${body.projectSummary}\n\nQuestion: ${body.question}` },
           ],
-          max_tokens: 512,
+          max_completion_tokens: 1024,
+          chat_template_kwargs: { enable_thinking: false },
+          stream: false,
           temperature: 0.2,
         });
         const answer = typeof result === "string" ? result : result?.choices?.[0]?.message?.content ?? result?.response;

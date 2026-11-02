@@ -209,3 +209,10 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - Subsequent request reached the next failure path. The selected model documents a chat-completion `choices` response, while the Worker only read legacy `response`. Added both response shapes and regression tests for malformed/missing content, production preflight/POST, disallowed origins, and missing-token rejection. Authenticated successful inference remains pending the parser deployment.
 
 - Follow-up: fixed the coverage-document wording that CI rejected; runs `41530862052`/`41530862159` and `41531029510`/`41531029755` passed CI/Pages. Release `455db2b` logged only `502 empty-model-response` for a consented synthetic one-word request from the existing member session. A Llama trial returned `503 model-unavailable`; the original model pin is restored while fixed-enum response diagnostics distinguish output limits, empty content, and unsupported wrappers without logging private data. Successful inference remains unverified.
+
+## Successful hosted Bot recovery - 2026-11-02
+
+- Client release `b283220` passed CI `41532307992` and Pages `41532307987`. Its safe diagnostic identified `502 empty-model-response output-limit` with the existing member session.
+- Worker version `661bc66c` uses non-streaming, optional thinking disabled, and max_completion_tokens 1024. It returned READY for a one-word probe and explained that a PLC copies inputs into a consistent memory snapshot before evaluating logic. Provider identity was absent from the displayed answer.
+- Consent reset after each hosted answer. With consent off, Explain scan cycle returned the existing local scan explanation. A direct POST from the production custom origin without a bearer token returned 401 authentication-required. No project was edited by these questions, and no private prompt, token, answer, or project content is included in diagnostics.
+- AI guard/format/budget tests, Help checks, and production build passed locally. Broad answer quality, daily Neuron accounting, request quotas, and new-user authentication remain unverified.

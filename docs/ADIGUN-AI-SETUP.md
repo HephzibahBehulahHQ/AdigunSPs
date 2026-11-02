@@ -80,3 +80,11 @@ The Worker accepts both chat-completion text at `choices[0].message.content` and
 ## Current inference diagnostics
 
 After successful account verification, Gemma returned `empty-model-response`, including a one-word test after adding chat-completion parsing. A live Llama 3.1 8B trial returned `model-unavailable`; it was not accepted as a working replacement. Gemma remains pinned while bounded diagnostics identify its returned format. The client console records only status, a known error code, and a fixed format category: no question, token, project data, answer, or arbitrary upstream message. The consent label names the provider rather than hardcoding a model name. No account billing plan was changed; usage and successful inference remain unverified.
+
+## Output-budget configuration
+
+Live fixed-enum diagnostics identified `output-limit`: the 512-token budget ended before a visible answer. The Worker requests non-streaming replies, a bounded `max_completion_tokens: 1024`, and `chat_template_kwargs: { enable_thinking: false }`. The completion parameter is documented in the [Cloudflare model schema](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/); the template flag follows [Google thinking-mode guidance](https://ai.google.dev/gemma/docs/capabilities/thinking). These settings require live verification with the deployed provider. No automatic retry or unlimited token budget is enabled.
+
+## Verified live recovery - 2026-11-02
+
+Worker version `661bc66c` returned READY and a two-sentence explanation of consistent PLC input snapshots through the deployed client using an existing permanent-user session. Consent was explicitly checked for each request; afterward the consent-off scan-cycle helper returned its local explanation. A direct custom-origin POST without a bearer token still returned 401 `authentication-required`. These checks verify two bounded inferences and the selected guards, not general answer quality or actual daily Neuron consumption. No billing-plan change was made.
