@@ -47,8 +47,8 @@ assert.equal(invoked,false,"consent remains opt-in before network request");
 let sentRequest;
 const call=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async(url,options)=>{sentRequest={url,options};return Response.json({answer:"offline-safe result"});}});
 assert.equal(call.answer,"offline-safe result");assert.equal(sentRequest.options.headers.authorization,"Bearer access-token");
-const guardedAnswer=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({answer:"Cloudflare Workers AI uses Gemma. Supabase endpoint: https://demo.supabase.co"})});
-assert.doesNotMatch(guardedAnswer.answer,/Cloudflare|Workers AI|Gemma|Supabase|endpoint|workers\.dev|supabase\.co/i,"hosted response cannot disclose backend provider or API details in chat");
+const guardedAnswer=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({answer:"Cloudflare Workers AI uses Gemma and Llama 3.1 8B. Supabase endpoint: https://demo.supabase.co"})});
+assert.doesNotMatch(guardedAnswer.answer,/Cloudflare|Workers AI|Gemma|Llama|Supabase|endpoint|workers\.dev|supabase\.co/i,"hosted response cannot disclose backend provider or API details in chat");
 const rejected=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"access-token"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({error:"signed-in-account-required"},{status:401})});
 assert.equal(rejected.error,"signed-in-account-required","Worker authentication reason is preserved for useful guidance");
 assert.equal((await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:null},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>{throw new Error("must not call");}})).error,"authenticated-session-required");
@@ -85,7 +85,7 @@ assert.match(helpGuide, /Cloudflare Workers AI[\s\S]*?educational reply[\s\S]*?n
 
 const priorEnabled=process.env.ADIGUN_AI_ENABLED,priorUrl=process.env.ADIGUN_AI_WORKER_URL;
 delete process.env.ADIGUN_AI_ENABLED;delete process.env.ADIGUN_AI_WORKER_URL;
-assert.deepEqual((await loadAdigunRuntimeConfig(process.cwd())).ai,{enabled:false,workerUrl:"",providerLabel:"Cloudflare Workers AI · Gemma 4 26B A4B"});
+assert.deepEqual((await loadAdigunRuntimeConfig(process.cwd())).ai,{enabled:false,workerUrl:"",providerLabel:"Cloudflare Workers AI"});
 process.env.ADIGUN_AI_ENABLED="true";process.env.ADIGUN_AI_WORKER_URL="https://adigunsps-ai.example.workers.dev";
 const enabled=await loadAdigunRuntimeConfig(process.cwd());assert.equal(enabled.ai.enabled,true);assert.equal(enabled.ai.workerUrl,process.env.ADIGUN_AI_WORKER_URL);
 assert.equal(serializeAdigunRuntimeConfig(enabled).includes("SUPABASE_PUBLISHABLE_KEY"),false);
@@ -123,7 +123,13 @@ for(const locale of ["en","de","yo","pcm"]) assert.ok(!/not sent|nicht gesendet|
 const warningLines=[];const originalWarn=console.warn;
 try {
  console.warn=(...args)=>warningLines.push(args);
- await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"private-token"}}})}},question:"private-question",project:sourceProject,consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({error:"private-provider-detail"},{status:502})});
- assert.deepEqual(warningLines,[["Hosted AI request failed",502,"unclassified-error"]]);
+ await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"private-token"}}})}},question:"private-question",project:sourceProject,consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>Response.json({error:"private-provider-detail",diagnostic:"private-diagnostic"},{status:502})});
+ assert.deepEqual(warningLines,[["Hosted AI request failed",502,"unclassified-error","no-diagnostic"]]);
  assert.ok(!JSON.stringify(warningLines).includes("private-"));
 } finally { console.warn=originalWarn; }
+
+for (const [modelResult,diagnostic] of [[{choices:[{finish_reason:"length",message:{content:""}}]},"output-limit"],[{choices:[{message:{content:""}}]},"empty-content"],[{response:null},"legacy-content"],[Response.json({choices:[]}),"response-object"],[{result:{}},"wrapped-result"],[{},"unexpected-shape"]]) {
+ const res=await testWorker.fetch(makeRequest(payload),{...aiEnv,AI:{run:async()=>modelResult}});
+ assert.equal(res.status,502);const body=await res.json();assert.equal(body.diagnostic,diagnostic);
+ assert.deepEqual(Object.keys(body).sort(),["diagnostic","error"]);
+}

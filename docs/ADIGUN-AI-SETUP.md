@@ -52,7 +52,7 @@ The repository's Wrangler config declares:
 binding = "AI"
 ```
 
-That binding is available as `env.AI`. The Worker hardcodes `@cf/google/gemma-4-26b-a4b-it` and never accepts a model from the request. Cloudflare's [Gemma 4 model page](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/) lists it for Workers AI, and the current [pricing page](https://developers.cloudflare.com/workers-ai/platform/pricing/) does not classify it as paid-only. Workers Free includes 10,000 Neurons per day; requests beyond that limit fail on Free. Workers Paid charges $0.011 per 1,000 Neurons above the daily free allocation. Some other models require paid billing regardless of remaining free Neurons; check the live list before changing the pinned model.
+That binding is available as `env.AI`. The Worker hardcodes `@cf/google/gemma-4-26b-a4b-it` and never accepts a model from the request. The current [pricing page](https://developers.cloudflare.com/workers-ai/platform/pricing/) does not classify it as paid-only. Workers Free includes 10,000 Neurons per day; requests beyond that limit fail on Free. Workers Paid charges $0.011 per 1,000 Neurons above the daily free allocation. Some other models require paid billing regardless of remaining free Neurons; check the live list before changing the pinned model.
 
 To verify plan and usage:
 
@@ -75,4 +75,8 @@ To redeploy after changing the Pages client or runtime configuration, run **Acti
 
 `ADIGUN_AI_ALLOWED_ORIGINS` must include the exact browser origin `https://adigunsps.hephzibahbehulah.com` (no path or trailing slash). Preserve the old Pages origin while it is supported. A custom-domain preflight returning 403 blocks the browser before account verification or model inference. Keep the checked-in Wrangler value and deployed variable synchronized. Origin permission does not bypass the token, permanent-user, or per-request consent gates.
 
-The pinned model returns chat-completion text at `choices[0].message.content`; the Worker also accepts the legacy `response` shape. See [the model response schema](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/). Reject missing/non-text answers rather than showing a fabricated success.
+The Worker accepts both chat-completion text at `choices[0].message.content` and the legacy `response` shape. See [the model response schema](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/). Reject missing/non-text answers rather than showing a fabricated success.
+
+## Current inference diagnostics
+
+After successful account verification, Gemma returned `empty-model-response`, including a one-word test after adding chat-completion parsing. A live Llama 3.1 8B trial returned `model-unavailable`; it was not accepted as a working replacement. Gemma remains pinned while bounded diagnostics identify its returned format. The client console records only status, a known error code, and a fixed format category: no question, token, project data, answer, or arbitrary upstream message. The consent label names the provider rather than hardcoding a model name. No account billing plan was changed; usage and successful inference remain unverified.

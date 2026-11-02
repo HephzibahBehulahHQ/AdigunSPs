@@ -35,7 +35,7 @@ export async function loadAdigunRuntimeConfig(root) {
     ai: {
       enabled: process.env.ADIGUN_AI_ENABLED === "true" && /^https:\/\//i.test(process.env.ADIGUN_AI_WORKER_URL || ""),
       workerUrl: /^https:\/\//i.test(process.env.ADIGUN_AI_WORKER_URL || "") ? process.env.ADIGUN_AI_WORKER_URL.trim() : "",
-      providerLabel: "Cloudflare Workers AI · Gemma 4 26B A4B",
+      providerLabel: "Cloudflare Workers AI",
     },
   };
 }

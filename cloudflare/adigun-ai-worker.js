@@ -71,7 +71,7 @@ export function createAdigunAIWorker({ fetchImpl = fetch } = {}) {
           temperature: 0.2,
         });
         const answer = typeof result === "string" ? result : result?.choices?.[0]?.message?.content ?? result?.response;
-        if (typeof answer !== "string" || !answer.trim()) return response({ error: "empty-model-response" }, 502, origin);
+        if (typeof answer !== "string" || !answer.trim()) return response({ error: "empty-model-response", diagnostic: result?.choices?.[0]?.finish_reason === "length" ? "output-limit" : result?.choices?.length ? "empty-content" : result?.response !== undefined ? "legacy-content" : result instanceof Response ? "response-object" : result?.result !== undefined ? "wrapped-result" : "unexpected-shape" }, 502, origin);
         return response({ answer: answer.trim(), source: "Cloudflare Workers AI · review before use" }, 200, origin);
       } catch {
         return response({ error: "model-unavailable" }, 503, origin);
