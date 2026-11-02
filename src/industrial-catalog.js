@@ -408,13 +408,171 @@ const siemensKnownIdentifiers = new Set([
 const siemensEt200spProducts = siemensEt200spRows
   .map(([identifier,category,officialDescription])=>({
     manufacturer:"Siemens",identifier,family:"SIMATIC ET 200SP",category,attributes:{officialDescription},
-    source:{url:siemensEt200spCatalog,title:"Siemens product overview for SIMATIC ET 200SP (export 2025-09-26)",retrievedOn:"2026-11-02",exportDate:"2025-09-26"},
+    source:{url:siemensEt200spCatalog,title:"Siemens product overview for SIMATIC ET 200SP (export 2025-10-14)",retrievedOn:"2026-11-02",exportDate:"2025-10-14"},
     simulation:{status:"reference-only",model:null,limitations:"The Siemens export provides this product name and order code only; this application does not simulate or verify its terminal layout, electrical ratings, environmental grade, compatibility, or behavior."},
   }))
   .filter((item)=>{
     const key=`${item.manufacturer}|${item.identifier}`;
     if(siemensKnownIdentifiers.has(key))return false;
     siemensKnownIdentifiers.add(key);
+    return true;
+  });
+const siemensLogo8Catalog = "https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=LOGO8&lang=en";
+const siemensLogo8Rows = [
+  ["6ED1052-1MD08-0BA2","PLC controllers","LOGO! 12/24RCE, 8DI (4AI)/4DO, 400 Blocks"],
+  ["6ED1052-2MD08-0BA2","PLC controllers","LOGO! 12/24RCEO, 8DI (4AI)/4DO, 400 Blocks"],
+  ["6ED1052-1FB08-0BA2","PLC controllers","LOGO! 230RCE, 8DI/4DO, 400 Blocks"],
+  ["6ED1052-2FB08-0BA2","PLC controllers","LOGO! 230RCEO, 8DI/4DO, 400 Blocks"],
+  ["6ED1052-1HB08-0BA2","PLC controllers","LOGO! 24RCE, 8DI/4DO, 400 Blocks"],
+  ["6ED1052-2HB08-0BA2","PLC controllers","LOGO! 24RCEO, 8DI/4DO, 400 Blocks"],
+  ["6ED1052-1CC08-0BA2","PLC controllers","LOGO! 24CE, 8DI (4AI)/4DO, 400 Blocks"],
+  ["6ED1052-2CC08-0BA2","PLC controllers","LOGO! 24CEo, 8DI (4AI)/4DO, 400 Blocks"],
+  ["6AG1052-1MD08-7BA1","PLC controllers","SIPLUS LOGO! 12/24RCE"],
+  ["6AG1052-2MD08-7BA1","PLC controllers","SIPLUS LOGO! 12/24RCEO"],
+  ["6AG1052-1FB08-7BA1","PLC controllers","SIPLUS LOGO! 230RCE"],
+  ["6AG1052-2FB08-7BA1","PLC controllers","SIPLUS LOGO! 230RCEO"],
+  ["6AG1052-1CC08-7BA1","PLC controllers","SIPLUS LOGO! 24CE"],
+  ["6AG1052-2CC08-7BA1","PLC controllers","SIPLUS LOGO! 24CEO"],
+  ["6AG1052-1HB08-7BA1","PLC controllers","SIPLUS LOGO! 24RCE"],
+  ["6AG1052-2HB08-7BA1","PLC controllers","SIPLUS LOGO! 24RCEO (AC)"],
+  ["6ED1055-1CB00-0BA2","Digital I/O modules","LOGO! DM8 24 expansion module, 4DI/4DO"],
+  ["6ED1055-1CB10-0BA2","Digital I/O modules","LOGO! DM16 24 expansion module, 8DI/8DO"],
+  ["6ED1055-1FB00-0BA2","Digital I/O modules","LOGO! DM8 230R expansion module, 4DI/4DO"],
+  ["6ED1055-1FB10-0BA2","Digital I/O modules","LOGO! DM16 230R expansion module, 8DI/8DO"],
+  ["6ED1055-1HB00-0BA2","Digital I/O modules","LOGO! DM8 24R expansion module, 4DI/4DO"],
+  ["6ED1055-1MB00-0BA2","Digital I/O modules","LOGO! DM8 12/24R expansion module, 4DI/DO"],
+  ["6ED1055-1NB10-0BA2","Digital I/O modules","LOGO! DM16 24R expansion module, 8DI/8DO"],
+  ["6AG1055-1CB00-7BA2","Digital I/O modules","SIPLUS LOGO! DM8 24 V8"],
+  ["6AG1055-1FB00-7BA2","Digital I/O modules","SIPLUS LOGO! DM8 230R V8"],
+  ["6AG1055-1HB00-7BA2","Digital I/O modules","SIPLUS LOGO! DM8 24R V8"],
+  ["6AG1055-1MB00-7BA2","Digital I/O modules","SIPLUS LOGO! DM8 12/24R V8"],
+  ["6AG1055-1NB10-7BA2","Digital I/O modules","SIPLUS LOGO! DM16 24R V8"],
+  ["6ED1055-1MA00-0BA2","Analog I/O modules","LOGO! AM2 expansion module, 12/24V, 2AI"],
+  ["6ED1055-1MD00-0BA2","Analog I/O modules","LOGO! AM2 RTD, 2AI, -50..+200°C"],
+  ["6ED1055-1MM00-0BA2","Analog I/O modules","LOGO! AM2 AQ, 2AQ, 0-10V, 0/4-20mA"],
+  ["6AG1055-1MA00-7BA2","Analog I/O modules","SIPLUS LOGO! AM2 V8"],
+  ["6AG1055-1MD00-7BA2","Analog I/O modules","SIPLUS LOGO! AM2 RTD"],
+  ["6AG1055-1MM00-7BA2","Analog I/O modules","SIPLUS LOGO! AM2 AQ V8"],
+  ["6GK7177-1MA20-0AA0","Communications modules","LOGO! CSM12/24"],
+  ["6GK7142-7BX00-0AX0","Communications modules","Communication module LOGO! CMR2020"],
+  ["6GK7142-7EX00-0AX0","Communications modules","Communication module LOGO! CMR2040"],
+  ["6BK1700-0BA20-0AA0","Communications modules","LOGO! CMK2000"],
+  ["6ED1055-5MC08-0BA2","Communications modules","LOGO! CIM"],
+  ["6ED1055-4MH08-0BA1","HMI devices","LOGO! TD text display, 6 lines"],
+  ["6EP3320-6SB00-0AY0","Power supplies","LOGO!Power 1AC/12VDC/0.9A"],
+  ["6EP3321-6SB00-0AY0","Power supplies","LOGO!Power 1AC/12VDC/1.9A"],
+  ["6EP3322-6SB00-0AY0","Power supplies","LOGO!Power 1AC/12VDC/4.5A"],
+  ["6EP3330-6SB00-0AY0","Power supplies","LOGO!Power 1AC/24VDC/0.6A"],
+  ["6EP3331-6SB00-0AY0","Power supplies","LOGO!Power 1AC/24VDC/1.3A"],
+  ["6EP3332-6SB00-0AY0","Power supplies","LOGO!Power 1AC/24VDC/2.5A"],
+  ["6EP3333-6SB00-0AY0","Power supplies","LOGO!Power 1AC/24VDC/4A"],
+  ["6EP3333-6SC00-0AY0","Power supplies","LOGO!Power 1AC/24VDC/4A/EX"],
+  ["6AG1331-6SB00-7AY0","Power supplies","SIPLUS LOGO!Power 24V 1.3A"],
+  ["6AG1333-6SB00-7AY0","Power supplies","SIPLUS LOGO!Power 24V 4A"],
+  ["6ED1058-0BA08-0YA1","Programming software","LOGO! Soft Comfort V8"],
+  ["6AG1057-1AA00-0AA2","Mounting accessories","LOGO! 8 TE M button mounting kit"],
+  ["6AG1057-1AA00-0AA3","Mounting accessories","LOGO! 4 TE button mounting kit"],
+  ["6ED1057-1DA00-0BA0","Mounting accessories","LOGO! TD mounting accessories"],
+  ["6EP4683-6LB00-0AY0","Power modules","LOGO! ICL230/1AC100-240V/5A"],
+  ["6ED1057-3BA01-0AA8","Starter kits","LOGO! Starter Kit 12/24RCE V8.3"],
+  ["6ED1057-3BA03-0AA8","Starter kits","LOGO! Starter Kit 230RCE V8.3"],
+  ["6ED1057-3BA11-0AA8","Starter kits","LOGO! TD Starter Kit 12/24 V8.3"],
+];
+const siemensEt200spExpansionRows = [
+  ["6ES7193-6BP00-0BA0","Base units","ET 200SP BaseUnit Type A0, BU15-P16+A0+2B"],
+  ["6ES7193-6BP00-0DA0","Base units","ET 200SP BaseUnit Type A0, BU15-P16+A0+2D"],
+  ["6ES7193-6BP20-0BA0","Base units","ET 200SP BaseUnit Type A0, BU15-P16+A10+2B"],
+  ["6ES7193-6BP20-0DA0","Base units","ET 200SP BaseUnit Type A0, BU15-P16+A10+2D"],
+  ["6ES7193-6BP00-0BA1","Base units","ET 200SP BaseUnit Type A1, BU15-P16+A0+2B/T"],
+  ["6ES7193-6BP00-0DA1","Base units","ET 200SP BaseUnit Type A1, BU15-P16+A0+2D/T"],
+  ["6ES7193-6BP40-0BA1","Base units","ET 200SP BaseUnit Type A1, BU15-P16+A0+12B/T"],
+  ["6ES7193-6BP40-0DA1","Base units","ET 200SP BaseUnit Type A1, BU15-P16+A0+12D/T"],
+  ["6ES7193-6BP20-0BB0","Base units","ET 200SP BaseUnit Type B0, BU20-P12+A4+0B"],
+  ["6ES7193-6BP20-0BB1","Base units","ET 200SP BaseUnit Type B1, BU20-P12+A0+4B, PU 1"],
+  ["6ES7193-6BP20-0DC0","Base units","ET 200SP BaseUnit Type C0, BU20-P6+A2+4D"],
+  ["6ES7193-6BP20-0BC1","Base units","ET 200SP BaseUnit Type C1, BU20-P6+A2+4B"],
+  ["6ES7193-6BP00-0BD0","Base units","ET 200SP BaseUnit Type D0, BU20-P12+A0+0B"],
+  ["6ES7193-6BP20-0BF0","Base units","ET 200SP BaseUnit Type F0, BU20-P8+A4+0B"],
+  ["6ES7193-6BN00-0NE0","Base units","ET 200SP BaseUnit BU-Send"],
+  ["3RK1908-0AP00-0AP0","Base units","ET 200SP BU with infeed 24V and 500V"],
+  ["3RK1908-0AP00-0BP0","Base units","ET 200SP BU with infeed 24V"],
+  ["3RK1908-0AP00-0CP0","Base units","ET 200SP BU with infeed 500V"],
+  ["3RK1908-0AP00-0DP0","Base units","ET 200SP BU without infeed"],
+  ["3RK1908-0AP00-0GP0","Base units","ET 200SP BU F-DI-infeed and 500V"],
+  ["3RK1908-0AP00-0HP0","Base units","ET 200SP BU F-DI-forwarding infeed 500V"],
+  ["3RK1908-0AP00-0JP0","Base units","ET 200SP BU F-DI-forwarding"],
+  ["3RK1908-0AP00-0KP0","Base units","ET 200SP BU F-DI-infeed"],
+  ["6ES7193-6UP00-0BP1","Base units","ET 200SP PotDis-BU type P1, dark-colored, PU 1"],
+  ["6ES7193-6UP00-0BP2","Base units","ET 200SP PotDis-BU type P2, dark-colored, PU 1"],
+  ["6ES7193-6UP00-0DP1","Base units","ET 200SP PotDis-BU type P1, light-colored, PU 1"],
+  ["6ES7193-6UP00-0DP2","Base units","ET 200SP PotDis-BU type P2, light-colored, PU 1"],
+  ["6AG1193-6BP20-2BF0","Base units","SIPLUS ET 200SP BU20-P8+A4+0B"],
+  ["6AG1193-6BP20-7DC0","Base units","SIPLUS ET 200SP BU20-P6+A2+4D"],
+  ["6AG1193-6BP00-7BA0","Base units","SIPLUS ET 200SP BU15-P16+A0+2B"],
+  ["6AG1193-6BP00-7BA1","Base units","SIPLUS ET 200SP BU15-P16+A0+2B/T"],
+  ["6AG1193-6BP00-7BD0","Base units","SIPLUS ET 200SP BU20-P12+A0+0B"],
+  ["6AG1193-6BP00-7DA0","Base units","SIPLUS ET 200SP BU15-P16+A0+2D"],
+  ["6AG1193-6BP00-7DA1","Base units","SIPLUS ET 200SP BU15-P16+A0+2D/T"],
+  ["6AG1193-6BP20-7BA0","Base units","SIPLUS ET 200SP BU15-P16+A10+2B"],
+  ["6AG1193-6BP20-7BB0","Base units","SIPLUS ET 200SP BU20-P12+A4+0B"],
+  ["6AG1193-6BP20-7BB1","Base units","SIPLUS ET 200SP BU20-P12+A0+4B Type B1"],
+  ["6AG1193-6BP20-7DA0","Base units","SIPLUS ET 200SP BU15-P16+A10+2D"],
+  ["6AG1193-6BP40-7BA1","Base units","SIPLUS ET 200SP BU15-P16+A0+12B/T"],
+  ["6AG1193-6BP40-7DA1","Base units","SIPLUS ET 200SP BU15-P16+A0+12D/T"],
+  ["6AG2193-6BP00-4BA0","Base units","SIPLUS ET 200SP BU15-P16+A0+2B TX RAIL"],
+  ["6AG2193-6BP00-4BD0","Base units","SIPLUS ET 200SP BU20-P12+A0+0B TX RAIL"],
+  ["6AG2193-6BP00-4DA0","Base units","SIPLUS ET 200SP BU15-P16+A0+2D TX RAIL"],
+  ["6AG2193-6BP00-4DA1","Base units","SIPLUS ET 200SP BU15-P16+A0+2D/T TX RAIL"],
+  ["6AG2193-6BP20-4BA0","Base units","SIPLUS ET 200SP BU15-P16+A10+2B TX RAIL"],
+  ["6AG2193-6BP20-4BB1","Base units","SIPLUS ET 200SP BU20-P12+A0+4B TX RAIL"],
+  ["6AG2193-6BP20-4BF0","Base units","SIPLUS ET 200SP BU20-P8+A4+0B TX RAIL"],
+  ["6AG2193-6BP20-4DA0","Base units","SIPLUS ET 200SP BU15-P16+A10+2D TX RAIL"],
+  ["6AG2193-6BP20-4DC0","Base units","SIPLUS ET 200SP BU20-P6+A2+4D TX RAIL"],
+  ["6ES7193-6AR00-0AA0","Communications modules","ET 200SP Busadapter BA 2xRJ45"],
+  ["6ES7193-6AF00-0AA0","Communications modules","ET 200SP Busadapter BA 2xFC"],
+  ["6ES7193-6AP00-0AA0","Communications modules","ET 200SP Busadapter BA 2xSCRJ"],
+  ["6ES7193-6AP20-0AA0","Communications modules","ET 200SP Busadapter BA SCRJ/RJ45"],
+  ["6ES7193-6AP40-0AA0","Communications modules","ET 200SP Busadapter BA SCRJ/FC"],
+  ["6ES7193-6AM00-0AA0","Communications modules","SIMATIC Busadapter BA 2xM12"],
+  ["6ES7193-6AG00-0AA0","Communications modules","SIMATIC Busadapter BA 2xLC"],
+  ["6ES7193-6AG20-0AA0","Communications modules","SIMATIC Busadapter BA LC/RJ45"],
+  ["6ES7193-6AG40-0AA0","Communications modules","SIMATIC Busadapter BA LC/FC"],
+  ["6ES7193-6AG50-0AA0","Communications modules","SIMATIC Busadapter BA 2xLC-LD"],
+  ["6ES7193-6AG60-0AA0","Communications modules","SIMATIC Busadapter BA LC-LD/RJ45"],
+  ["6ES7193-6AG70-0AA0","Communications modules","SIMATIC Busadapter BA LC-LD/M12"],
+  ["6AG1193-6AG00-2AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xLC"],
+  ["6AG1193-6AG20-2AA0","Communications modules","SIPLUS ET 200SP Busadapter BA LC/RJ45"],
+  ["6AG1193-6AP00-2AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xSCRJ PN"],
+  ["6AG1193-6AF00-7AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xFC PN"],
+  ["6AG1193-6AM00-7AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xM12"],
+  ["6AG1193-6AR00-7AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xRJ45"],
+  ["6AG2193-6AF00-4AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xFC TX RAIL"],
+  ["6AG2193-6AM00-4AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xM12 RAIL"],
+  ["6AG2193-6AR00-4AA0","Communications modules","SIPLUS ET 200SP Busadapter BA 2xRJ45 TX RAIL"],
+];
+const siemensEt200spExpansionProducts = siemensEt200spExpansionRows
+  .map(([identifier,category,officialDescription])=>({
+    manufacturer:"Siemens",identifier,family:"SIMATIC ET 200SP",category,attributes:{officialDescription},
+    source:{url:siemensEt200spCatalog,title:"Siemens product overview for SIMATIC ET 200SP expansion hardware (export 2025-10-14)",retrievedOn:"2026-11-02",exportDate:"2025-10-14"},
+    simulation:{status:"reference-only",model:null,limitations:"The Siemens export provides this product name and order code only; this application does not simulate or verify its terminal layout, electrical ratings, environmental grade, compatibility, or behavior."},
+  }))
+  .filter((item)=>{
+    const key=`${item.manufacturer}|${item.identifier}`;
+    if(siemensKnownIdentifiers.has(key))return false;
+    siemensKnownIdentifiers.add(key);
+    return true;
+  });
+const siemensLogo8Known = new Set([...siemensKnownIdentifiers,...siemensEt200spProducts,...siemensEt200spExpansionProducts].map((item)=>`${item.manufacturer}|${item.identifier}`));
+const siemensLogo8Products = siemensLogo8Rows
+  .map(([identifier,category,officialDescription])=>({
+    manufacturer:"Siemens",identifier,family:"LOGO! 8",category,attributes:{officialDescription},
+    source:{url:siemensLogo8Catalog,title:"Siemens product overview for LOGO! 8 (export 2025-10-08)",retrievedOn:"2026-11-02",exportDate:"2025-10-08"},
+    simulation:{status:"reference-only",model:null,limitations:"The Siemens export provides this product name and order code only; this application does not simulate or verify its terminal layout, electrical ratings, environmental grade, compatibility, or behavior."},
+  }))
+  .filter((item)=>{
+    const key=`${item.manufacturer}|${item.identifier}`;
+    if(siemensLogo8Known.has(key))return false;
+    siemensLogo8Known.add(key);
     return true;
   });
 
@@ -451,6 +609,8 @@ const industrialProductCatalog = Object.freeze([
   ...siemensOverviewProducts,
   ...siemens1500Rows,
   ...siemensEt200spProducts,
+  ...siemensEt200spExpansionProducts,
+  ...siemensLogo8Products,
   ...omronSensors,
   {
     manufacturer:"Schneider Electric",identifier:"TM221CE24R",family:"Modicon M221",category:"PLC controllers",
