@@ -88,4 +88,71 @@ assert.equal(compileStructuredText("IF Start THEN Motor := TRUE ELSE Motor := FA
 assert.equal(compileStructuredText("Motor := (* outer (* inner *) end *) TRUE;",["Motor"]).ok,true);
 assert.equal(renameStructuredTextIdentifier("(* Motor (* Motor *) Motor *) MOTOR := TRUE;", "Motor","Drive"),"(* Motor (* Motor *) Motor *) Drive := TRUE;");
 assert.equal(countStructuredTextReferences("(* Motor (* Motor *) Motor *) MOTOR := TRUE;","Motor"),1);
-console.log("PASS: ST canonical case binding, typed outputs, state continuity, worker parity, ambiguity rejection, unique tag editing, layout-independent statements and source locations");
+// Reusable scalar functions execute with private, freshly initialized storage.
+const functionSource=`FUNCTION Bounded : REAL
+VAR_INPUT
+ Value : REAL;
+ Low : REAL;
+ High : REAL;
+END_VAR
+VAR
+ Result : REAL;
+END_VAR
+IF Value < Low THEN Result := Low;
+ELSIF Value > High THEN Result := High;
+ELSE Result := Value; END_IF;
+Bounded := Result;
+END_FUNCTION
+FUNCTION Twice : INT
+VAR_INPUT X : INT; END_VAR
+Twice := X * 2;
+END_FUNCTION
+Output := bounded(Input, 2, 8); Count := TWICE(Output);`;
+const fnTags=["Input","Output","Count"], fnCompiled=compileStructuredText(functionSource,fnTags);
+assert.equal(fnCompiled.ok,true,fnCompiled.errors.join("; "));
+assert.deepEqual(compileWorkerRequest({id:9,source:functionSource,tags:fnTags}).result,fnCompiled);
+for(const [Input,Output,Count] of [[-1,2,4],[4.5,4.5,8],[99,8,16]]){
+ const result=executeStructuredText(JSON.parse(JSON.stringify(fnCompiled)),{Input},{Output:0,Count:0},["Output","Count"],{Output:"REAL",Count:"INT"});
+ assert.deepEqual(result.outputs,{Output,Count});assert.deepEqual(result.errors,[]);assert.equal(Object.hasOwn(result.values,"Result"),false);
+}
+const nested=compileStructuredText(functionSource.replace("Count := TWICE(Output);","Count := Twice(Bounded(Input, 2, 8));"),fnTags);
+assert.equal(nested.ok,true,nested.errors.join("; "));
+assert.equal(executeStructuredText(nested,{Input:3.9},{Count:0},["Count"]).outputs.Count,6);
+const privateSource=`FUNCTION Gate : BOOL
+VAR_INPUT Motor : BOOL; END_VAR
+VAR Seen : INT; END_VAR
+Seen := Seen + 1; Gate := Motor AND Seen = 1;
+END_FUNCTION
+Motor := Gate(Start);`;
+const privateAst=compileStructuredText(privateSource,["Motor","Start"]);assert.equal(privateAst.ok,true,privateAst.errors.join("; "));
+for(let scan=0;scan<3;scan++)assert.equal(executeStructuredText(privateAst,{Start:true},{Motor:false},["Motor"]).outputs.Motor,true,"locals reinitialize each call");
+const renamedFn=renameStructuredTextIdentifier(privateSource,"Motor","Drive");
+assert.match(renamedFn,/VAR_INPUT Motor : BOOL/);assert.match(renamedFn,/Drive := Gate\(Start\);/);assert.equal(countStructuredTextReferences(privateSource,"Motor"),1);
+assert.equal(compileStructuredText(renamedFn,["Drive","Start"]).ok,true);
+for(const [source,pattern] of [
+ [functionSource.replace("bounded(Input, 2, 8)","bounded(Input)"),/requires 3 arguments/],
+ [functionSource.replace("TWICE(Output)","Unknown(Output)"),/not declared/],
+ [privateSource.replace("Gate := Motor AND Seen = 1","Gate := Missing"),/Missing.*not declared/],
+ [privateSource.replace("Seen : INT;","seen : INT; Seen : INT;"),/declared more than once/],
+ [privateSource.replace("Gate := Motor AND Seen = 1","Gate := Gate(Motor)"),/Recursive/],
+ [privateSource.replace("Motor : BOOL;","Motor : BOOL"),/semicolon/],
+ [privateSource.replace("END_FUNCTION",""),/missing END_FUNCTION/],
+ [privateSource+"\nEND_FUNCTION",/no matching FUNCTION/],
+ [functionSource.replace("FUNCTION Twice : INT","FUNCTION bounded : INT"),/function.*declared more than once/]
+]){const compiled=compileStructuredText(source,fnTags.concat("Motor","Start"));assert.equal(compiled.ok,false);assert.match(compiled.errors.join("; "),pattern);}
+const faultyFunction=compileStructuredText("FUNCTION Divide : REAL\nVAR_INPUT X : REAL; END_VAR\nDivide := 1 / X;\nEND_FUNCTION\nOutput := Divide(Input);",["Output","Input"]);
+assert.equal(faultyFunction.ok,true);const fnFault=executeStructuredText(faultyFunction,{Input:0},{Output:5},["Output"]);assert.equal(fnFault.outputs.Output,5);assert.match(fnFault.errors.join("; "),/Divide line 3: Division by zero/);
+const indirect=compileStructuredText("FUNCTION A : BOOL\nA := B();\nEND_FUNCTION\nFUNCTION B : BOOL\nB := A();\nEND_FUNCTION\nMotor := A();",["Motor"]);assert.equal(indirect.ok,false);assert.match(indirect.errors.join("; "),/Recursive/);
+const budgetSource=Array.from({length:15},(_,index)=>`FUNCTION F${index} : INT\nF${index} := ${index===14?"1":`F${index+1}() + F${index+1}()`};\nEND_FUNCTION`).join("\n")+"\nOutput := F0();";
+const budgetAst=compileStructuredText(budgetSource,["Output"]);assert.equal(budgetAst.ok,true,budgetAst.errors.join("; "));
+const budgetResult=executeStructuredText(budgetAst,{}, {Output:7},["Output"]);assert.equal(budgetResult.outputs.Output,7);assert.match(budgetResult.errors.join("; "),/execution limit/);
+const noReturn=compileStructuredText("FUNCTION NoResult : INT\nVAR X : INT; END_VAR\nX := 1;\nEND_FUNCTION\nOutput := NoResult();",["Output"]);assert.equal(noReturn.ok,false);assert.match(noReturn.errors.join("; "),/must assign its result/);
+assert.equal(compileStructuredText(privateSource,["Gate","Motor","Start"]).ok,false,"function/global name collision is rejected");
+const timeFunction=compileStructuredText("FUNCTION DelayValue : TIME\nVAR_INPUT Ticks : TIME; END_VAR\nDelayValue := Ticks + 1.9;\nEND_FUNCTION\nOutput := DelayValue(Input);",["Output","Input"]);
+assert.equal(timeFunction.ok,true,timeFunction.errors.join("; "));assert.equal(executeStructuredText(timeFunction,{Input:3.8},{Output:0},["Output"],{Output:"TIME"}).outputs.Output,4);
+assert.equal(compileStructuredText(privateSource.replace("Motor : BOOL;","Motor : STRING;"),["Motor","Start"]).ok,false);
+const guideFunction=[...readFileSync("docs/user-guide.md","utf8").matchAll(/```iecst\r?\n([\s\S]*?)```/g)].map(match=>match[1]).find(source=>source.includes("FUNCTION Clamp01"));assert.ok(guideFunction);
+const savedGuideProject=JSON.parse(JSON.stringify({editorType:"ST",stSource:guideFunction,tags:[{name:"Raw",type:"REAL"},{name:"Result",type:"REAL"}],io:{inputs:["Raw"],outputs:["Result"]}}));
+const guideAst=compileStructuredText(savedGuideProject.stSource,savedGuideProject.tags.map(tag=>tag.name));assert.equal(guideAst.ok,true,guideAst.errors.join("; "));
+for(const [Raw,Result] of [[-2,0],[0.4,0.4],[3,1]])assert.equal(executeStructuredText(guideAst,{Raw},{Result:0},savedGuideProject.io.outputs,{Result:"REAL"}).outputs.Result,Result);
+console.log("PASS: ST canonical case binding, typed outputs, state continuity, worker parity, ambiguity rejection, unique tag editing, layout-independent statements, source locations and isolated scalar functions");

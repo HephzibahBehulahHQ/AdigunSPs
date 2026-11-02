@@ -21,7 +21,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 
 ## Getting started
 
-**What you'll see:** The editor opens with an untitled project, menus and toolbar above it, side panels, and status information along the bottom.
+**What you'll see:** The editor shows an untitled project, top menus, canvas, side panels and bottom status.
 
 1. Open the AdigunSPs website in your browser.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
@@ -111,6 +111,8 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 1. Add logic in **Program / Main** or choose **Programs** to open FBD, ST, or SFC.
 2. For ladder logic, set simulated inputs in the **Simulated inputs** panel and select **Run** to scan continuously, or **Step** for one scan. Select **Pause** to pause; **Reset** stops and clears simulation state.
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
+ST also supports scalar `FUNCTION` declarations with `VAR_INPUT` and private `VAR` storage; see the User Guide for syntax and limits.
+
 4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
 
 The HUD is educational: voltage, current, and motor RPM are not calculated. This simulator does not certify a design or operate physical hardware.
@@ -182,7 +184,7 @@ Co-pilot never auto-saves. Draft saves require sign-in; checks do not certify wi
 **What you'll see:** The profile icon shows your photo/status; errors appear in **Diagnostics**.
 
 1. **I can't sign in:** Enter your email/password via the profile icon. New accounts need email confirmation. Check spam or ask the administrator about missing emails.
-2. **I forgot my password:** Select **Forgot password?** below the password field and enter your account email. Open the recovery email, use the **Reset password** page at `/reset-password` to set and confirm a new password, then sign in again. If the link expired, request another reset email.
+2. **I forgot my password:** Select **Forgot password?**, enter your email, then open the recovery email. Set and confirm your password at `/reset-password`, then sign in. Request another email if the link expired.
 3. **My project disappeared:** Check **Project manager** on the browser/device used. Local projects stay there; check **Account → Your cloud projects** or import your JSON backup.
 4. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
 5. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
