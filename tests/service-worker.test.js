@@ -5,17 +5,22 @@ import vm from "node:vm";
 const handlers = new Map();
 const writes = [];
 let networkCalls = 0;
+let installedRequests=[];
 const cache = {
-  addAll: async () => {},
+  addAll: async (requests) => {installedRequests=requests;},
   put: async (request, response) => writes.push({ url: request.url, body: await response.text() }),
 };
 const context = {
   URL, Request, Response, Promise,
-  self: { location: { origin: "https://adigun.test" }, clients: { claim: async () => {} }, addEventListener: (type, handler) => handlers.set(type, handler), skipWaiting: async () => {} },
+  self: { location: { origin: "https://adigun.test", href:"https://adigun.test/service-worker.js" }, clients: { claim: async () => {} }, addEventListener: (type, handler) => handlers.set(type, handler), skipWaiting: async () => {} },
   caches: { open: async () => cache, match: async () => null, keys: async () => [], delete: async () => true },
   fetch: async (request) => { networkCalls += 1; return new Response("payload", { headers: { "content-type": request.url.endsWith(".js") ? "text/javascript" : "text/event-stream" } }); },
 };
 vm.runInNewContext(readFileSync("service-worker.js", "utf8"), context);
+let installation;
+handlers.get("install")({waitUntil:promise=>{installation=promise;}});
+await installation;
+assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
 assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v117";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/example-search\.js"/, "Bot example search module must be included in the offline app shell");
