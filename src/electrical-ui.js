@@ -135,7 +135,9 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
     }));
     root.querySelectorAll("[data-drag-component]").forEach((head)=>head.addEventListener("pointerdown",(event)=>{if(event.button!==0)return;const component=diagram.components.find((item)=>item.id===head.dataset.dragComponent),rect=board.getBoundingClientRect();if(!component)return;onBeforeChange();selectedId=component.id;root.dataset.selectedComponent=selectedId;drag={id:component.id,dx:event.clientX-rect.left-component.x,dy:event.clientY-rect.top-component.y};head.setPointerCapture(event.pointerId);event.preventDefault();}));
     board?.addEventListener("pointermove",(event)=>{if(!drag)return;const rect=board.getBoundingClientRect(),component=diagram.components.find((item)=>item.id===drag.id);if(!component)return;Object.assign(component,moveElectricalComponent(component,event.clientX-rect.left-drag.dx,event.clientY-rect.top-drag.dy));const card=board.querySelector(`[data-component-id="${CSS.escape(component.id)}"]`);if(card){card.style.left=`${component.x}px`;card.style.top=`${component.y}px`;}for(const wire of diagram.wires.filter(w=>w.from.componentId===component.id||w.to.componentId===component.id))board.querySelector(`[data-wire-id="${CSS.escape(wire.id)}"]`)?.setAttribute("d",electricalWirePath(wire,diagram.components));});
-    board?.addEventListener("pointerup",()=>{if(!drag)return;drag=null;onChange();render();});
+    const finishDrag=()=>{if(!drag)return;drag=null;onChange();render();};
+    board?.addEventListener("pointerup",finishDrag);
+    board?.addEventListener("pointercancel",finishDrag);
     root.dataset.selectedComponent=selectedId;
   };
   render();
