@@ -9,17 +9,21 @@ import { normalizeImportedProject } from "../src/project-import.js";
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
 {
   const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},boardEvents={},card={style:{}};
+  const source=createElectricalComponent("supply24vdc",1,600,200),wire={id:"drag-wire",from:{componentId:component.id,terminal:"X1"},to:{componentId:source.id,terminal:"+"}},wireAttributes={};
+  const originalEndpoints=structuredClone(wire);
   const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>headEvents[name]=handler,setPointerCapture(){}};
-  const board={getBoundingClientRect:()=>({left:-300,top:-200}),addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:()=>card};
+  const board={getBoundingClientRect:()=>({left:-300,top:-200}),addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:s=>s.startsWith("[data-wire-id=")?{setAttribute:(name,value)=>wireAttributes[name]=value}:card};
   const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:[]};
   const previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
   try{
-    renderElectricalWorkspace(root,{tags:[],electrical:{components:[component],wires:[]}});
+    renderElectricalWorkspace(root,{tags:[],electrical:{components:[component,source],wires:[wire]}});
     headEvents.pointerdown({button:0,clientX:-80,clientY:10,pointerId:1,preventDefault(){}});
     boardEvents.pointermove({clientX:-80,clientY:10});
     assert.deepEqual([component.x,component.y],[200,200],"drag starts without jumping on a scrolled canvas");
     boardEvents.pointermove({clientX:-40,clientY:70});
     assert.deepEqual([component.x,component.y],[240,260],"drag follows pointer delta without double-counting canvas scroll");
+    assert.equal(wireAttributes.d,"M240 292H420V232H600","wire geometry follows the component before pointer release");
+    assert.deepEqual(wire,originalEndpoints,"drag preserves terminal connectivity");
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){

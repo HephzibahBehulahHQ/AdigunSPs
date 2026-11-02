@@ -21,6 +21,12 @@ const terminalPosition = (component,terminal) => {
   const local = [left ? -60 : 60, Math.min(150,32+slot*22)], angle = Number(component.rotation || 0) * Math.PI / 180;
   return [component.x + 60 + local[0] * Math.cos(angle) - (local[1]-40) * Math.sin(angle), component.y + 40 + local[0] * Math.sin(angle) + (local[1]-40) * Math.cos(angle)];
 };
+export function electricalWirePath(wire,components) {
+  const a=components.find(item=>item.id===wire.from.componentId),b=components.find(item=>item.id===wire.to.componentId);
+  if(!a||!b)return "";
+  const [x1,y1]=terminalPosition(a,wire.from.terminal),[x2,y2]=terminalPosition(b,wire.to.terminal),mid=Math.round((x1+x2)/40)*20;
+  return `M${x1} ${y1}H${mid}V${y2}H${x2}`;
+}
 export function electricalSymbolSvg(component) {
   const spec=electricalComponentCatalog[component.type],common='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"',line=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${common}/`,text=(x,y,value,size=8)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="currentColor" stroke="none">${escape(value)}</text>`;
   if(!spec)return "";
@@ -128,7 +134,7 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
       root.querySelector(`[data-drag-component="${CSS.escape(component.id)}"]`)?.focus();
     }));
     root.querySelectorAll("[data-drag-component]").forEach((head)=>head.addEventListener("pointerdown",(event)=>{if(event.button!==0)return;const component=diagram.components.find((item)=>item.id===head.dataset.dragComponent),rect=board.getBoundingClientRect();if(!component)return;onBeforeChange();selectedId=component.id;root.dataset.selectedComponent=selectedId;drag={id:component.id,dx:event.clientX-rect.left-component.x,dy:event.clientY-rect.top-component.y};head.setPointerCapture(event.pointerId);event.preventDefault();}));
-    board?.addEventListener("pointermove",(event)=>{if(!drag)return;const rect=board.getBoundingClientRect(),component=diagram.components.find((item)=>item.id===drag.id);if(!component)return;Object.assign(component,moveElectricalComponent(component,event.clientX-rect.left-drag.dx,event.clientY-rect.top-drag.dy));const card=board.querySelector(`[data-component-id="${CSS.escape(component.id)}"]`);if(card){card.style.left=`${component.x}px`;card.style.top=`${component.y}px`;}});
+    board?.addEventListener("pointermove",(event)=>{if(!drag)return;const rect=board.getBoundingClientRect(),component=diagram.components.find((item)=>item.id===drag.id);if(!component)return;Object.assign(component,moveElectricalComponent(component,event.clientX-rect.left-drag.dx,event.clientY-rect.top-drag.dy));const card=board.querySelector(`[data-component-id="${CSS.escape(component.id)}"]`);if(card){card.style.left=`${component.x}px`;card.style.top=`${component.y}px`;}for(const wire of diagram.wires.filter(w=>w.from.componentId===component.id||w.to.componentId===component.id))board.querySelector(`[data-wire-id="${CSS.escape(wire.id)}"]`)?.setAttribute("d",electricalWirePath(wire,diagram.components));});
     board?.addEventListener("pointerup",()=>{if(!drag)return;drag=null;onChange();render();});
     root.dataset.selectedComponent=selectedId;
   };
