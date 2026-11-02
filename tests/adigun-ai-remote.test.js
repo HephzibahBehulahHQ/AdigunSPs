@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import worker, { createAdigunAIWorker } from "../cloudflare/adigun-ai-worker.js";
@@ -53,7 +54,7 @@ const rejected=await askAdigunHostedAI({client:{auth:{getSession:async()=>({data
 assert.equal(rejected.error,"signed-in-account-required","Worker authentication reason is preserved for useful guidance");
 assert.equal((await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:null},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>{throw new Error("must not call");}})).error,"authenticated-session-required");
 assert.equal((await askAdigunHostedAI({client:{auth:{getSession:async()=>({data:{session:{access_token:"x"}},error:null})}},question:"help",project:{},consent:true,workerUrl:"https://worker.example",fetchImpl:async()=>{throw new Error("offline");}})).error,"hosted-ai-unavailable","network failure preserves local fallback");
-assert.deepEqual(Object.keys(adigunAiRemoteLabels("en")).sort(),["accountRequired","consent","failed","hosted","serviceUnavailable","unavailable"]);
+assert.deepEqual(Object.keys(adigunAiRemoteLabels("en")).sort(),["accountRequired","cancel","cancelled","consent","failed","hosted","pending","serviceUnavailable","timeout","unavailable"]);
 assert.equal(adigunAiRemoteErrorLabel("signed-in-account-required"),"accountRequired");
 assert.equal(adigunAiRemoteErrorLabel("invalid-session"),"accountRequired");
 assert.equal(adigunAiRemoteErrorLabel("worker-not-configured"),"serviceUnavailable");
@@ -133,3 +134,48 @@ for (const [modelResult,diagnostic] of [[{choices:[{finish_reason:"length",messa
  assert.equal(res.status,502);const body=await res.json();assert.equal(body.diagnostic,diagnostic);
  assert.deepEqual(Object.keys(body).sort(),["diagnostic","error"]);
 }
+
+const permanentClient={auth:{getSession:async()=>({data:{session:{access_token:"test-token"}}})}};
+const requestBase={client:permanentClient,question:"Explain relay contacts",project:{},consent:true,workerUrl:"https://worker.example"};
+let stalledSignal;
+assert.equal((await askAdigunHostedAI({...requestBase,timeoutMs:10,fetchImpl:(_url,options)=>{stalledSignal=options.signal;return new Promise(()=>{});}})).error,"hosted-ai-timeout");
+assert.equal(stalledSignal.aborted,true,"timeout aborts the underlying fetch signal even if transport ignores it");
+let authFetches=0;
+assert.equal((await askAdigunHostedAI({...requestBase,client:{auth:{getSession:()=>new Promise(()=>{})}},timeoutMs:10,fetchImpl:()=>{authFetches++;}})).error,"hosted-ai-timeout");assert.equal(authFetches,0);
+assert.equal((await askAdigunHostedAI({...requestBase,timeoutMs:10,fetchImpl:async()=>({ok:true,json:()=>new Promise(()=>{})})})).error,"hosted-ai-timeout","response-body stalls are also bounded");
+const alreadyCancelled=new AbortController();alreadyCancelled.abort();
+assert.equal((await askAdigunHostedAI({...requestBase,signal:alreadyCancelled.signal,fetchImpl:()=>{throw Error("must not send");}})).error,"hosted-ai-cancelled");
+const cancelPending=new AbortController();
+const cancellation=askAdigunHostedAI({...requestBase,signal:cancelPending.signal,fetchImpl:()=>new Promise(()=>{})});cancelPending.abort();assert.equal((await cancellation).error,"hosted-ai-cancelled");
+let successSignal;const listenerSet=new Set();const observedSignal={aborted:false,addEventListener:(_type,fn)=>listenerSet.add(fn),removeEventListener:(_type,fn)=>listenerSet.delete(fn)};
+assert.equal((await askAdigunHostedAI({...requestBase,signal:observedSignal,timeoutMs:20,fetchImpl:async(_url,options)=>{successSignal=options.signal;return Response.json({answer:"A relay contact follows its coil."});}})).answer,"A relay contact follows its coil.");
+await new Promise(resolve=>setTimeout(resolve,30));assert.equal(successSignal.aborted,false,"completed request clears its deadline");assert.equal(listenerSet.size,0,"completed request removes external abort listener");
+assert.equal(adigunAiRemoteErrorLabel("hosted-ai-timeout"),"timeout");assert.equal(adigunAiRemoteErrorLabel("hosted-ai-cancelled"),"cancelled");
+for(const locale of ["en","de","yo","pcm"])for(const key of ["pending","cancel","timeout","cancelled"]){assert.ok(adigunAiRemoteLabels(locale)[key]);assert.doesNotMatch(adigunAiRemoteLabels(locale)[key],/Cloudflare|Workers AI|Supabase|Gemma|Llama/i);}
+
+const uiApp=readFileSync("src/app.js","utf8");
+const askStart=uiApp.indexOf("  const ask = async (question) => {");const askEnd=uiApp.indexOf('  $("#adigunAiCancel").onclick',askStart);
+assert.ok(askStart>=0&&askEnd>askStart);
+function requestUiFixture(){
+ let resolveReply;let calls=0;const renders=[],busy=[];
+ const context={AbortController,adigunAiRequest:null,copilotGoalPending:false,project:{id:"p1"},accountUser:{id:"u1"},supabaseClient:{},hostedAI:{workerUrl:"https://worker.example"},document:{querySelector:()=>({checked:true})},validateProject:()=>[],adigunAiMessages:[],remoteCopy:adigunAiRemoteLabels("en"),adigunAiRemoteErrorLabel,updateAdigunAIRequestUi:()=>busy.push(Boolean(context.adigunAiRequest)),askAdigunHostedAI:()=>{calls++;return new Promise(resolve=>{resolveReply=resolve;});},showAdigunAI:options=>renders.push(options)};
+ runInNewContext(uiApp.slice(askStart,askEnd)+";this.ask=ask;",context);
+ return {context,busy,renders,resolve:result=>resolveReply(result),calls:()=>calls};
+}
+const requestUi=requestUiFixture();const firstRequest=requestUi.context.ask("Explain relay contacts");await requestUi.context.ask("Explain relay contacts again");assert.equal(requestUi.calls(),1,"rapid submissions send only once");
+requestUi.resolve({answer:"Relay explanation"});await firstRequest;assert.equal(requestUi.context.adigunAiRequest,null);assert.deepEqual(requestUi.busy,[true,false]);assert.equal(requestUi.context.adigunAiMessages.length,2);assert.equal(requestUi.renders[0].reveal,false,"completion does not reopen or expand the Bot");
+for(const change of ["closed","project","reload","account"]){const fixture=requestUiFixture();const pending=fixture.context.ask("Explain relay contacts");if(change==="closed")fixture.context.adigunAiRequest.closed=true;if(change==="project")fixture.context.project={id:"p2"};if(change==="reload")fixture.context.project={id:"p1"};if(change==="account")fixture.context.accountUser={id:"u2"};fixture.resolve({answer:"Stale reply"});await pending;assert.equal(fixture.context.adigunAiMessages.length,0,`${change} context discards late replies`);assert.equal(fixture.context.adigunAiRequest,null);}
+const failedUi=requestUiFixture();const failedRequest=failedUi.context.ask("Explain relay contacts");failedUi.resolve({error:"hosted-ai-timeout"});await failedRequest;assert.equal(failedUi.context.adigunAiMessages[1].text,adigunAiRemoteLabels("en").timeout);assert.equal(failedUi.context.adigunAiRequest,null);
+
+const formFields=[{id:"send"},{id:"adigunAiQuestion"},{id:"adigunAiCancel"}];const progress={},cancelButton={},consentField={},formAttributes={};
+const uiFields={"#adigunAiForm":{setAttribute:(key,value)=>formAttributes[key]=value,querySelectorAll:()=>formFields},"#adigunAiProgress":progress,"#adigunAiCancel":cancelButton,"#adigunRemoteConsent":consentField};
+const busyContext={$:id=>uiFields[id],adigunAiRequest:{},language:"en",adigunAiRemoteLabels};runInNewContext(uiApp.slice(uiApp.indexOf("function updateAdigunAIRequestUi("),uiApp.indexOf("function showAdigunAI(")),busyContext);busyContext.updateAdigunAIRequestUi();assert.equal(formAttributes["aria-busy"],"true");assert.equal(progress.hidden,false);assert.equal(cancelButton.hidden,false);assert.equal(consentField.disabled,true);assert.deepEqual(formFields.map(f=>f.disabled),[true,true,false]);busyContext.adigunAiRequest=null;busyContext.updateAdigunAIRequestUi();assert.equal(progress.hidden,true);assert.equal(cancelButton.hidden,true);assert.equal(consentField.disabled,false);assert.deepEqual(formFields.map(f=>f.disabled),[false,false,false]);
+
+
+let windowOpens=0;const contentSlot={},titleSlot={};const panelMock={querySelector:()=>contentSlot};const modalContext={$:id=>id==="#adigunBotWindow"?panelMock:titleSlot,adigunAiLabels:()=>({title:"Bot"}),language:"en",adigunBotWindow:{open:()=>windowOpens++}};
+const modalStart=uiApp.indexOf("function modal(title, content, options");runInNewContext(uiApp.slice(modalStart,uiApp.indexOf("\n",modalStart)),modalContext);
+modalContext.modal("Bot","reply",{reveal:false});assert.equal(windowOpens,0);assert.equal(contentSlot.innerHTML,"reply");modalContext.modal("Bot","opened");assert.equal(windowOpens,1);
+let windowOptions;const closingController=new AbortController();const closeContext={$:()=>({}),key:"bot",showAdigunAI:()=>{},adigunAiRequest:{closed:false,controller:closingController},createFloatingWindow:options=>{windowOptions=options;return {};}};
+const wireStart=uiApp.indexOf("  adigunBotWindow = createFloatingWindow(");runInNewContext(uiApp.slice(wireStart,uiApp.indexOf("\n",wireStart)),closeContext);windowOptions.onClose();assert.equal(closeContext.adigunAiRequest.closed,true);assert.equal(closingController.signal.aborted,true,"closing the actual Bot window wiring aborts the request");
+
+console.log("PASS: bounded auth/fetch/body deadlines, cancellation, cleanup, single-flight UI, progress controls, and stale-reply suppression");

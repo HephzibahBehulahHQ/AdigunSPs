@@ -88,3 +88,7 @@ Live fixed-enum diagnostics identified `output-limit`: the 512-token budget ende
 ## Verified live recovery - 2026-11-02
 
 Worker version `661bc66c` returned READY and a two-sentence explanation of consistent PLC input snapshots through the deployed client using an existing permanent-user session. Consent was explicitly checked for each request; afterward the consent-off scan-cycle helper returned its local explanation. A direct custom-origin POST without a bearer token still returned 401 `authentication-required`. These checks verify two bounded inferences and the selected guards, not general answer quality or actual daily Neuron consumption. No billing-plan change was made.
+
+## Client request lifecycle
+
+The hosted client caps waiting at 45 seconds across session lookup, fetch, and JSON response reading. AbortSignal cancellation stops client waiting and aborts fetch; it cannot undo inference already received by the service. The Bot serializes sends, shows a localized status and cancel control, discards replies after close/project/account changes, and updates minimized content without reopening the window. No automatic retry is enabled.

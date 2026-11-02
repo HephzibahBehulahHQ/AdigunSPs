@@ -146,3 +146,5 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
 
 /* Keep scrollable editor controls inside the narrow-screen workspace. */
 @media(max-width:760px){.editor-tabs,.editor-subbar{overflow-x:auto;overflow-y:hidden;flex-shrink:0}.editor-tabs>*,.editor-subbar>*{flex-shrink:0}}
+
+.ai-request-status[hidden],.ai-form button[hidden]{display:none}

@@ -63,6 +63,7 @@ const tour = {
 };
 let language = localStorage.getItem("adigun-language") || "en";
 let adigunAiMessages = [], adigunBotDraft = null, adigunBotRecognition = null, adigunBotWindow;
+let adigunAiRequest = null;
 let liveCopilotEnabled = localStorage.getItem("adigun-live-copilot") !== "off", copilotTypingUntil = 0, copilotPointerActive = false, copilotGoal = "", copilotGoalPending = false, copilotDebounce = 0, copilotTick = 0, copilotActiveState = {active:null,lastShownAt:0,dismissed:new Set()}, copilotFirstSeen = new Map();
 let adigunBotCanvasPreview = null;
 let protocolMemory = createProtocolMemory();
@@ -975,7 +976,7 @@ function updateMotorHum() { const running = Object.values(project.electrical?.si
 function runSimulation() { if (runTimer) return; logEvent(traceReplay ? "replay" : "run", traceReplay ? "Trace replay started" : "Simulation started"); addNarratorEntry("PLC scan started; outputs follow the current logic state."); window.adigunPaused = false; const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; runTimer = setInterval(() => doScan(), delay); updateSimulationHud(); updateStatus(); }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch])); }
 function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#96;"); }
-function modal(title, content) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) adigunBotWindow.open(); else botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
+function modal(title, content, options = {}) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) { if (options.reveal !== false) adigunBotWindow.open(); } else if (options.reveal !== false) botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
 function confirmProjectChange() {
   if (!hasUnsavedChanges) return Promise.resolve(true);
   return new Promise((resolve) => {
@@ -1384,7 +1385,16 @@ const localizationAuditCopy = {
   $("#localizationReport").onclick = showLocalizationReport;
   $("#settingsDone").onclick = () => { const cycleMs = Number($("#taskCycleMs").value); if (!Number.isInteger(cycleMs) || cycleMs < 1 || cycleMs > 60000) { toast(copy.invalidCycle); return; } project.task = { ...(project.task || {}), name:$("#taskName").value.trim() || "Main", mode:"cyclic", cycleMs }; preferences.autosave = $("#prefAutosave").checked; preferences.speed = $("#prefSpeed").value; preferences.theme = $("#prefTheme").value; preferences.trendRetention = Number($("#prefTrendRetention").value); trimTrendHistory(hmiHistory, preferences.trendRetention); preferences.contrast = $("#prefContrast").checked; preferences.dyslexia = $("#prefFont").checked; localStorage.setItem("adigun-preferences", JSON.stringify(preferences)); applyPreferences(); $("#modal").close(); updateStatus(); if (runTimer) { const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; clearInterval(runTimer); runTimer = setInterval(() => doScan(), delay); } persist(); };
 }
-function showAdigunAI() {
+function updateAdigunAIRequestUi() {
+  const form = $("#adigunAiForm"); if (!form) return;
+  const busy = Boolean(adigunAiRequest); form.setAttribute("aria-busy", String(busy));
+  form.querySelectorAll("textarea,button").forEach((field) => { field.disabled = busy && field.id !== "adigunAiCancel"; });
+  const progress = $("#adigunAiProgress"), cancel = $("#adigunAiCancel"), consent = $("#adigunRemoteConsent");
+  if (progress) { progress.hidden = !busy; progress.textContent = adigunAiRemoteLabels(language).pending; }
+  if (cancel) cancel.hidden = !busy;
+  if (consent) consent.disabled = busy;
+}
+function showAdigunAI({ reveal = true } = {}) {
   if (adigunBotDraft?.ok) return showAdigunBuildPlan();
   const c = adigunAiLabels(language);
   const remoteCopy = adigunAiRemoteLabels(language);
@@ -1394,19 +1404,28 @@ function showAdigunAI() {
     : "";
   const copilotCopy = adigunCopilotLabels(language);
   const transcript = () => adigunAiMessages.map((message) => `<article class="ai-message ${message.role}"><b>${message.role === "user" ? "You" : escapeHtml(c.name)}</b><p>${escapeHtml(message.text)}</p>${message.exampleMatches?.map((item) => `<button type="button" class="secondary" data-load-example="${escapeAttr(item.id)}">Load ${escapeHtml(item.title)}</button>`).join("") || ""}</article>`).join("");
-  modal(c.title, `<div class="modal-body adigun-ai"><p class="safety-copy">${escapeHtml(c.privacy)}</p><label class="copilot-toggle"><input id="liveCopilotToggle" type="checkbox" ${liveCopilotEnabled?"checked":""}> ${escapeHtml(copilotCopy.toggle)} · ${liveCopilotEnabled?escapeHtml(copilotCopy.enabled):escapeHtml(copilotCopy.disabled)}</label>${remoteConsentMarkup}<div id="adigunAiTranscript" class="ai-messages" aria-live="polite">${transcript() || `<p class="safety-copy">${escapeHtml(c.source)}</p>`}</div><form id="adigunAiForm" class="ai-form"><label class="field" for="adigunAiQuestion">${escapeHtml(c.title)}<textarea id="adigunAiQuestion" rows="2" maxlength="1000" placeholder="${escapeAttr(c.placeholder)}" required></textarea></label><div class="modal-actions"><button class="secondary" type="button" id="adigunAiVoice">🎙 Voice input</button><button class="secondary" type="button" data-ai-question="scan">${escapeHtml(c.explain)}</button><button class="secondary" type="button" data-ai-question="project">${escapeHtml(c.reviewAction)}</button><button class="secondary" type="button" data-ai-question="network">${escapeHtml(c.network)}</button><button class="primary" type="submit">${escapeHtml(c.ask)}</button><button class="secondary" type="button" id="adigunAiClear">${escapeHtml(c.clear)}</button></div></form><p class="safety-copy">${escapeHtml(c.source)} Build requests are interpreted locally; review the generated plan before importing. Physical wiring is not generated.</p></div>`);
+  modal(c.title, `<div class="modal-body adigun-ai"><p class="safety-copy">${escapeHtml(c.privacy)}</p><label class="copilot-toggle"><input id="liveCopilotToggle" type="checkbox" ${liveCopilotEnabled?"checked":""}> ${escapeHtml(copilotCopy.toggle)} · ${liveCopilotEnabled?escapeHtml(copilotCopy.enabled):escapeHtml(copilotCopy.disabled)}</label>${remoteConsentMarkup}<div id="adigunAiTranscript" class="ai-messages" aria-live="polite">${transcript() || `<p class="safety-copy">${escapeHtml(c.source)}</p>`}</div><p id="adigunAiProgress" class="safety-copy ai-request-status" role="status" hidden></p><form id="adigunAiForm" class="ai-form"><label class="field" for="adigunAiQuestion">${escapeHtml(c.title)}<textarea id="adigunAiQuestion" rows="2" maxlength="1000" placeholder="${escapeAttr(c.placeholder)}" required></textarea></label><div class="modal-actions"><button class="secondary" type="button" id="adigunAiVoice">🎙 Voice input</button><button class="secondary" type="button" data-ai-question="scan">${escapeHtml(c.explain)}</button><button class="secondary" type="button" data-ai-question="project">${escapeHtml(c.reviewAction)}</button><button class="secondary" type="button" data-ai-question="network">${escapeHtml(c.network)}</button><button class="primary" type="submit">${escapeHtml(c.ask)}</button><button class="secondary" type="button" id="adigunAiCancel" hidden>${escapeHtml(remoteCopy.cancel)}</button><button class="secondary" type="button" id="adigunAiClear">${escapeHtml(c.clear)}</button></div></form><p class="safety-copy">${escapeHtml(c.source)} Build requests are interpreted locally; review the generated plan before importing. Physical wiring is not generated.</p></div>`, { reveal });
+  updateAdigunAIRequestUi();
   document.querySelectorAll("[data-load-example]").forEach((button) => button.onclick = async () => { const examples = await loadExamples(); const chosen = examples.find((example) => example.id === button.dataset.loadExample); await openExample(chosen); });
   $("#liveCopilotToggle").onchange = (event) => { liveCopilotEnabled=event.currentTarget.checked;localStorage.setItem("adigun-live-copilot",liveCopilotEnabled?"on":"off");if(!liveCopilotEnabled){copilotActiveState.active=null;renderCopilotPanel(null);}else scheduleCopilotAnalysis(); };
   const ask = async (question) => {
-    if (!question.trim()) return;
+    if (adigunAiRequest || !question.trim()) return;
     if (copilotGoalPending) { copilotGoal=question.trim();copilotGoalPending=false;adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:`I’ll use “${question.trim()}” as this project’s goal for live suggestions in this session.`});showAdigunAI();return; }
     if (/\b(hud|dashboard|voltage|current|rpm|active rungs?|active timers?)\b/i.test(question)) { adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:"The HUD shows live PLC scan count, rungs with energized outputs, active timers, and run/fault status. Voltage, current, and motor RPM are marked Not modeled because this simulator does not calculate those physical quantities."}); showAdigunAI(); return; }
     if (/\b(example|project|load|find|show|search|conveyor|sorter|tank|pump|motor|traffic|hvac|building)\b/i.test(question)) { const examples = await loadExamples(), matches = searchExamples(examples, question, language, 3); if (matches.length) { const found = matches.map(({example}) => ({id:example.id,title:example.title[language],description:example.description[language],test:example.howToTest?.[language]})); adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:`I found ${found.length} matching library project${found.length === 1 ? "" : "s"}. ${found.map((item) => `${item.title}: ${item.description} How to test: ${item.test}`).join(" ")}`,exampleMatches:found}); showAdigunAI(); return; } }
     if (document.querySelector("#adigunRemoteConsent")?.checked) {
-      const result = await askAdigunHostedAI({ client:supabaseClient, question, project, diagnostics:validateProject(project), consent:true, workerUrl:hostedAI.workerUrl });
+      if (adigunAiRequest) return;
+      const request = { controller:new AbortController(), projectId:project.id, projectRef:project, userId:accountUser?.id, closed:false };
+      adigunAiRequest = request; updateAdigunAIRequestUi();
+      let result;
+      try { result = await askAdigunHostedAI({ client:supabaseClient, question, project, diagnostics:validateProject(project), consent:true, workerUrl:hostedAI.workerUrl, signal:request.controller.signal }); }
+      catch { result = { error:"hosted-ai-unavailable" }; }
+      finally { if (adigunAiRequest === request) { adigunAiRequest = null; updateAdigunAIRequestUi(); } }
+      if (request.closed || project !== request.projectRef || project.id !== request.projectId || accountUser?.id !== request.userId) return;
       const answer = result.answer ? `${remoteCopy.hosted}: ${result.answer}` : remoteCopy[adigunAiRemoteErrorLabel(result.error)];
       adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:answer});
-      showAdigunAI();return;
+      if (adigunAiMessages.length > 40) adigunAiMessages.splice(0,adigunAiMessages.length - 40);
+      showAdigunAI({ reveal:false }); return;
     }
     if (/\b(build|create|make|generate|add|construct|rename|delete|remove)\b/i.test(question)) {
       const draft = await planAdigunBotBuild(question,{ project });
@@ -1420,6 +1439,7 @@ function showAdigunAI() {
     showAdigunAI();
     $("#adigunAiQuestion").focus();
   };
+  $("#adigunAiCancel").onclick = () => adigunAiRequest?.controller.abort();
   $("#adigunAiForm").onsubmit = (event) => { event.preventDefault(); ask($("#adigunAiQuestion").value); };
   document.querySelectorAll("[data-ai-question]").forEach((button) => button.onclick = () => ask(button.dataset.aiQuestion === "scan" ? c.scan : button.dataset.aiQuestion === "project" ? "Review project" : "Explain selected network"));
   $("#adigunAiClear").onclick = () => { adigunAiMessages = []; showAdigunAI(); };
@@ -1795,7 +1815,7 @@ applyPreferences(); $("#settingsButton").addEventListener("click", showSettings)
 function setupAdigunBotWindow() {
   const identity = accountUser?.id || "guest", config = globalThis.ADIGUN_RUNTIME_CONFIG?.ai || {};
   const key = "adigunsps.bot-window.v1:" + identity;
-  adigunBotWindow = createFloatingWindow({ panel:$("#adigunBotWindow"), trigger:$("#adigunAiButton"), storageKey:key, onOpen:showAdigunAI });
+  adigunBotWindow = createFloatingWindow({ panel:$("#adigunBotWindow"), trigger:$("#adigunAiButton"), storageKey:key, onOpen:showAdigunAI, onClose:() => { if (adigunAiRequest) { adigunAiRequest.closed = true; adigunAiRequest.controller.abort(); } } });
   const copy={en:["Hosted AI available","Offline helper"],de:["Gehostete KI verfügbar","Offline-Hilfe"],yo:["Hosted AI wà nílẹ̀","Olùrànlọ́wọ́ offline"],pcm:["Hosted AI dey available","Offline helper"]}[language]||["Hosted AI available","Offline helper"];
   $("#adigunBotStatus").textContent=config.enabled&&config.workerUrl?copy[0]:copy[1];
   const labels={en:["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"],de:["Bot-Fenster minimieren","Bot-Fenster maximieren","Bot-Fenster wiederherstellen","Bot-Fenster schließen","Bot-Fenstergröße ändern"],yo:["Dín fèrèsé Bot kù","Mú fèrèsé Bot tóbi","Dá fèrèsé Bot padà","Pa fèrèsé Bot dé","Yí ìwọ̀n fèrèsé Bot"],pcm:["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"]}[language]||["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"];

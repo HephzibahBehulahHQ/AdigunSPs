@@ -112,3 +112,5 @@ If hosted AI cannot return an answer, your project remains unchanged. A request 
 On narrow phones the header uses two rows: company/product identity above, project menu and account/language/settings/search/help controls below. All five controls remain available without horizontal scrolling.
 
 On phones, scroll the editor tabs and its control row sideways to reach extra controls; the page itself stays within the screen.
+
+Hosted questions show **Waiting for a reply...** and temporarily disable other sends. Choose **Cancel request**, or close the Bot, to stop waiting; requests time out after 45 seconds, including session lookup and response reading. Cancellation or timeout does not undo a request already processed; the project remains unchanged, and a reply from a different project/account is discarded.

@@ -151,7 +151,9 @@ The builder supports FBD gates, a TON lamp, LD start/stop, tag rename, and selec
 
 ### Hosted AI privacy
 
-Hosted AI is optional. When you check consent and select **Ask**, your question and a brief project summary (editor type, I/O and logic counts, and up to eight project-check codes) go to Cloudflare Workers AI to generate an educational reply. A sign-in token goes to HEPHZIBAH BEHULAH for account verification. Replies are not engineering or safety approval.
+With consent, **Ask** sends your question and a short project summary (editor, I/O/logic counts, up to eight check codes) to Cloudflare Workers AI for an educational reply. HEPHZIBAH BEHULAH receives a sign-in token for account verification. Replies are not engineering or safety approval.
+
+**Waiting for a reply…** blocks duplicate sends. **Cancel request** or closing the Bot stops waiting. Timeout: 45 seconds; processing may already have occurred.
 
 ## The live co-pilot
 
@@ -164,7 +166,7 @@ The co-pilot flags project-check errors, missing inputs on supported FBD gates, 
 3. Select **Accept** on a missing AND/OR input suggestion to review a draft plan. Use **Preview on canvas** to inspect it, then **Commit project** to apply it or **Discard preview** to roll it back. Other suggestions open the relevant workspace or Bot prompt for inspection.
 4. When the co-pilot asks what you are building, enter the goal in Adigun BOT. The answer guides suggestions until you switch projects.
 
-The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and the supported checks do not certify physical wiring or safety.
+Co-pilot never auto-saves. Draft saves require sign-in; checks do not certify wiring or safety.
 
 ## Using ready-made example projects
 
