@@ -4,15 +4,15 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 220, "catalog has 220 distinct provenance-backed product references");
+assert.equal(validation.count, 295, "catalog has 295 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 220);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 295);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
-assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 50);
-assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 50);
-assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 35);
-assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 34);
+assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 62);
+assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 76);
+assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 49);
+assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 42);
 assert.equal(searchIndustrialCatalog({ category: "Power supplies", manufacturer: "Siemens" }).items[0].identifier, "6EP1332-1SH71");
 assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].identifier, "LC1D09B7");
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);
@@ -25,6 +25,10 @@ for (const item of industrialProductCatalog) {
 const siemensOverview = industrialProductCatalog.filter((item) => item.manufacturer === "Siemens" && item.source.title.includes("export 2025-10-02"));
 assert.equal(siemensOverview.length, 163, "Siemens additions are distinct entries in its official S7-1200 export");
 assert.ok(siemensOverview.every((item) => item.attributes.officialDescription && item.simulation.status === "reference-only"), "Siemens overview entries carry sourced descriptions and remain reference-only");
+const siemens1500 = industrialProductCatalog.filter((item) => item.manufacturer === "Siemens" && item.source.exportDate === "2024-09-29");
+assert.equal(siemens1500.length, 75, "S7-1500 references match distinct rows in Siemens' official 2024 export");
+assert.ok(siemens1500.every((item) => item.attributes.officialDescription && item.simulation.status === "reference-only" && item.source.url.includes("S7_1500")), "S7-1500 records retain source labels, export date, and reference-only status");
+assert.equal(searchIndustrialCatalog({ query:"6ES7522-5HF00-0AB0" }).items[0].attributes.officialDescription,"S7-1500, DQ 8x230VAC/5A ST (Relay)");
 const ui = readFileSync(new URL("../src/electrical-ui.js", import.meta.url), "utf8");
 const worker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 assert.ok(ui.includes("searchIndustrialCatalog") && ui.includes('id="industrialCatalogSearch"'), "Components workspace exposes a searchable catalog");
