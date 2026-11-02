@@ -7,6 +7,12 @@ import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+for (const [type,allowed,rejected] of [["digitalInputModule4","Digital","Analog"],["analogInputModule2","Analog","Digital"]]) {
+  const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[{name:"Digital",type:"BOOL",role:"input"},{name:"Analog",type:"REAL",role:"input"}],electrical:{components:[createElectricalComponent(type,1)],wires:[]}});
+  assert.ok(root.innerHTML.includes(`value="${allowed}"`),`${type} offers compatible tags`);
+  assert.ok(!root.innerHTML.includes(`value="${rejected}"`),`${type} excludes incompatible tag types`);
+}
 for (const language of ["en","de","yo","pcm"]) for (const tripped of [false,true]) {
   const fuse={...createElectricalComponent("fuse",1),tripped};
   const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
