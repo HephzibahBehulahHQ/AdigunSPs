@@ -85,3 +85,5 @@ The HMI toolbar's **SCREEN** selector switches among project-saved screens. Use 
 Cloud saving: open **Account**, enter **Cloud project name**, then click **Save to Cloud**. The name is entered in the Account panel; no browser popup is required. Each save creates a separate cloud copy; earlier copies remain available.
 
 Cloud project rows show the saved copy name and update time. A version is shown only when version metadata is available.
+
+Opening a different project, importing a project, or reopening a cloud copy stops the prior simulation and clears its forced inputs, timer/output state, recording/replay, trace breakpoints, and undo history. The loaded project starts from its own initial inputs. **Reset** within the same project keeps recorded trace frames available for inspection.

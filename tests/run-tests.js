@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { examples } from "../src/examples.js";
@@ -684,3 +685,22 @@ const numericRecipeProject=structuredClone(project); numericRecipeProject.tags.p
 assert.equal(validateProject(numericRecipeProject).some(issue=>issue.code==="recipe-value-type"),false,"typed numeric recipes validate");
 numericRecipeProject.hmi.recipes[0].values.Speed=true;
 assert.equal(validateProject(numericRecipeProject).some(issue=>issue.code==="recipe-value-type"),true,"boolean corruption of numeric recipes is rejected");
+
+const resetRuntimeSource = appSource.slice(appSource.indexOf("function resetProjectSimulation("),appSource.indexOf("function stopSimulation()"));
+const stoppedIntervals=[]; const runtimeContext={runTimer:42,clearInterval:id=>stoppedIntervals.push(id),traceReplay:true,traceRecording:true,simulationFaults:[{}],narratorEntries:[{}],priorNarratorOutputs:{Old:true},priorNarratorInputs:{Old:true},priorFaultSignature:"old",priorElectricalFaultSignature:"old",forcedInputs:{Old:true},$:()=>null,window:{adigunPaused:true},scans:12,sim:{outputs:{Old:true},timers:{T:{elapsed:500}}},project:{initialState:{Start:false,Speed:12.5}},hmiHistory:{Old:[{value:1}]},sessionOperations:{elapsedMs:500,outputRuntimeMs:{Old:500}},traceFrames:[{old:true}],traceCursor:3,traceInitial:{old:true},traceInitialFaults:[{}],traceProjectKey:"old",traceMismatches:[{}],traceBreakpoints:new Set([1]),history:[{}],future:[{}]};
+runInNewContext(resetRuntimeSource+";resetProjectSimulation(true);",runtimeContext);
+assert.deepEqual(stoppedIntervals,[42]); assert.equal(runtimeContext.runTimer,null); assert.equal(runtimeContext.scans,0);
+assert.equal(runtimeContext.traceReplay,false); assert.equal(runtimeContext.traceRecording,false); assert.equal(runtimeContext.window.adigunPaused,false);
+assert.deepEqual(Object.keys(runtimeContext.sim.outputs),[]); assert.deepEqual(Object.keys(runtimeContext.sim.timers),[]); assert.deepEqual(Object.keys(runtimeContext.forcedInputs),[]);
+assert.deepEqual(JSON.parse(JSON.stringify(runtimeContext.sim.values)),{Start:false,Speed:12.5});
+assert.equal(runtimeContext.traceFrames.length,0); assert.equal(runtimeContext.traceBreakpoints.size,0); assert.equal(runtimeContext.history.length,0);
+assert.match(appSource,/viewProjectId !== project.id\) \{ resetProjectSimulation\(true\)/,"project changes reset runtime before rendering");
+assert.match(appSource,/project = next; resetProjectSimulation\(true\); await persist/,"cloud reopening resets even when project ID is unchanged");
+
+runtimeContext.traceFrames=[{scan:1}]; runtimeContext.traceBreakpoints.add(0); runtimeContext.history=[{sameProject:true}];
+runInNewContext(resetRuntimeSource+";resetProjectSimulation();",runtimeContext);
+assert.equal(runtimeContext.traceFrames.length,1,"manual reset retains same-project trace inspection");
+assert.equal(runtimeContext.history.length,1,"manual reset does not erase editing history");
+
+assert.equal(Object.keys(runtimeContext.hmiHistory).length,0,"cloud reopening clears previous trend samples");
+assert.equal(runtimeContext.sessionOperations.elapsedMs,0,"cloud reopening clears previous operations totals");
