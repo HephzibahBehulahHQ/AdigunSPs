@@ -2,7 +2,7 @@
 
 ## Latest release verification — 2026-11-01 (password recovery)
 
-- Commit `706a1295fcc8ef9a5946f2614b64f38dc7d0e764` was published to `main`; GitHub Actions CI run `41348421690` and Pages deployment `41348421697` both succeeded.
+- Application commit `269260c8b41effed7333f34681c22980d9ccbcd0` and documentation follow-up `3a9733c909244178a7fee61774d3efd129c627c2` were published to `main`; CI runs `41475890441` and `41476735002`, and Pages runs `41475890592` and `41476734389` all succeeded.
 - Live HTTP probes returned 200 for the custom-domain root and `/reset-password/`. This verifies published route availability, not actual email delivery or password recovery redemption.
 - `npm test` and `npm run build` passed on the tested source before publication; account and Help guide focused tests passed after merge. The available example-validation report records 1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. It also records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
 - The browser app can search and offer to load matching examples through Adigun BOT; automated tests cover this path. HUD voltage, current, and RPM are explicitly unmodeled. Physical-device control is not available.

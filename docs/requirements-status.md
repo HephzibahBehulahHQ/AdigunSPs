@@ -1,6 +1,6 @@
 # Master prompt coverage
 
-Latest application release — 2026-11-02: commit `269260c8b41effed7333f34681c22980d9ccbcd0` was published to `main`. GitHub Actions CI run `41475890441` and Pages deployment `41475890592` both succeeded. The release adds a 519-entry manufacturer reference catalog; entries are informational and not runtime-supported devices. Local `npm test` and `npm run build` passed before publishing. Real inbox authentication, cloud save/reload, and authenticated account scenarios remain unverified.
+Latest application release — 2026-11-02: commit `269260c8b41effed7333f34681c22980d9ccbcd0` was published to `main`. GitHub Actions CI run `41475890441` and Pages deployment `41475890592` both succeeded. The release adds a 519-entry manufacturer reference catalog; entries are reference-only, informational, and not runtime-supported devices. Local `npm test` and `npm run build` passed before publishing. Real inbox authentication, cloud save/reload, and authenticated account scenarios remain unverified.
 
 The current executable schematic library contains 45 generic educational models. The manufacturer catalog is a separate set of 519 sourced product references; it does not establish vendor compatibility or hardware simulation. The catalog meets the 500-reference count target, but physical-device control and safety validation are not complete.
 

@@ -15,7 +15,7 @@ Supabase provides email/password accounts, profiles, guest expiry, and owner-sco
 - HMI screens, alarms, recipes, trends, six educational process models, branded reports, and an offline PWA shell.
 - Exactly 1,000 generated learning examples across six categories. The latest local validator reports 1,000/1,000 project model round-trips, 4,717 logic cases, 8,913 schematic checks, and 4,517 PLC-to-component integration cases passing. These verify the app's own supported model, not vendor behavior or engineering correctness.
 - Forty-five generic electrical simulation models with editable symbols, component properties, terminal wiring, I/O mapping, validation, and electrical path behavior. Auxiliary contacts can be associated with relay/contactor coils; this is a Boolean/scalar teaching model, not physical electrical simulation.
-- A separate 295-entry source-linked manufacturer reference catalog. Catalog entries are informational only and do not claim simulator support or hardware compatibility.
+- A separate 519-entry source-linked manufacturer reference catalog. Catalog entries are informational only and do not claim simulator support or hardware compatibility.
 - English, German, Yoruba, and Nigerian Pidgin interface and example content; technical review of Yoruba/Pidgin remains pending.
 
 See [`COMPONENTS.md`](COMPONENTS.md), [`requirements-status.md`](requirements-status.md), and [`verification.md`](verification.md) for current component limits, requirement coverage, and test evidence.
@@ -44,7 +44,7 @@ Details and owner inputs are tracked in [`stakeholder-inputs.md`](stakeholder-in
 ## Delivery phases
 
 1. **Local educational workspace — implemented:** project lifecycle, LD/FBD/ST/SFC subsets, deterministic scans, HMI/process models, PWA shell, localized interface, and 1,000 tested example models.
-2. **Electrical reference and educational circuit model — implemented with limits:** 45 generic components, terminal wiring, editable properties, coil-linked auxiliary contacts, electrical validation, and 295 sourced catalog references. Physical behavior and manufacturer-compatible simulation are not implemented.
+2. **Electrical reference and educational circuit model — implemented with limits:** 45 generic components, terminal wiring, editable properties, coil-linked auxiliary contacts, electrical validation, and 519 sourced catalog references. Physical behavior and manufacturer-compatible simulation are not implemented.
 3. **Accounts, cloud projects, and hosted BOT — partial:** Supabase authentication, four-minute guest expiry, owner-scoped project copies, consent-gated Worker, and local BOT are present. Live inbox, guest-upgrade, cloud save/reload, multi-user RLS, and authenticated hosted-inference workflows still need acceptance testing.
 4. **IEC/device, collaboration, and operations expansion — open:** full IEC language/POU/task support, PLC downloads, hardware-in-the-loop, additional network protocols, collaboration, signatures, durable historian, licensing, backups, and disaster recovery require technical and policy decisions.
 5. **Release assurance — partial:** automated tests and static build pass locally; full browser E2E, cross-browser/PWA installation, accessibility, security, performance, human translation review, and physical validation are outstanding. Consult [`verification.md`](verification.md) before describing the product as release-qualified.
