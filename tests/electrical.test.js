@@ -24,6 +24,10 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.equal(changes,3,"each keyboard move persists its change");
     assert.equal(focus,3,"focus returns to the moved component header");
     press("Enter");assert.equal(changes,3,"unrelated keys do not move components");
+    listeners.click({detail:0});
+    assert.equal(root.dataset.selectedComponent,component.id,"keyboard activation opens the component properties");
+    assert.equal(changes,3,"keyboard selection does not mark the project changed");
+    assert.equal(focus,4,"keyboard selection keeps focus on the component header");
   } finally { if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss; }
 }
 for (const [type,allowed,rejected] of [["digitalInputModule4","Digital","Analog"],["analogInputModule2","Analog","Digital"]]) {
