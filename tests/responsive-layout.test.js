@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
@@ -14,7 +15,7 @@ assert.match(html, /id="accountButton"[^>]*class="icon-button account-button[\s\
 assert.match(html, /id="accountAvatarImage" class="account-avatar-image"[^>]*hidden/, "top-bar account control includes an uploaded-avatar image fallback");
 assert.match(styles, /\.account-button \.account-avatar-image\{[^}]*border-radius:50%;object-fit:cover/, "uploaded profile photos are cropped to the round account control");
 assert.match(app, /async function updateAccountAvatar\(user, avatarUrl\)[\s\S]*?accountService\.getProfile\(user\)[\s\S]*?image\.onerror[\s\S]*?showAccountAvatarFallback/, "profile avatar loads from the profile row and broken URLs fall back to the default icon");
-assert.match(app, /const showAvatar = \(\) => \{[\s\S]*?icon\.hidden = true;[\s\S]*?if \(image\.complete && image\.naturalWidth > 0\) showAvatar\(\)/, "cached avatars hide the default icon immediately after a successful image load");
+assert.match(app, /const showAvatar = \(\) => \{[\s\S]*?icon\.toggleAttribute\("hidden", true\);[\s\S]*?if \(image\.complete && image\.naturalWidth > 0\) showAvatar\(\)/, "cached avatars hide the default icon immediately after a successful image load");
 assert.match(app, /void updateAccountAvatar\(state === "member" \? accountUser : null\)/, "session restoration and sign-in reload the stored profile avatar");
 assert.match(app, /const profile = await accountService\.uploadAvatar\(accountUser, file\); await updateAccountAvatar\(accountUser, profile\.avatar_url\)/, "upload immediately refreshes the top-bar avatar");
 assert.doesNotMatch(html, /id="accountButton"[^>]*>Account</, "top-bar account control does not render the Account word");
@@ -29,3 +30,20 @@ assert.match(styles, /\.account-button\.is-guest \.account-status-dot\{backgroun
 
 console.log("Responsive layout breakpoint checks passed.");
 
+
+// SVG has no HTMLElement.hidden property: test the actual attribute, not a plain hidden-field stub.
+const iconAttributes=new Set();const avatarIcon={toggleAttribute:(name,on)=>on?iconAttributes.add(name):iconAttributes.delete(name)};
+const avatarImage={hidden:true,complete:false,naturalWidth:0,removeAttribute(name){if(name==="src")delete this.src;}};
+const avatarContext={$:selector=>selector==="#accountAvatarImage"?avatarImage:avatarIcon,accountAvatarRequestId:0,accountUser:{id:"owner"},accountAccess:"member",accountService:{getProfile:async()=>({avatar_url:"https://image.example/avatar.png"})}};
+const avatarFunctions=app.slice(app.indexOf("function showAccountAvatarFallback("),app.indexOf("function setAccountAccess("));
+runInNewContext(avatarFunctions,avatarContext);
+await avatarContext.updateAccountAvatar(avatarContext.accountUser);
+avatarImage.onload();assert.equal(avatarImage.hidden,false);assert.ok(iconAttributes.has("hidden"),"loaded avatar hides SVG by attribute");
+avatarImage.onerror();assert.equal(avatarImage.hidden,true);assert.ok(!iconAttributes.has("hidden"),"broken image restores SVG attribute visibility");assert.equal(avatarImage.src,undefined);
+await avatarContext.updateAccountAvatar(avatarContext.accountUser,null);assert.ok(!iconAttributes.has("hidden"),"no-picture fallback remains visible");
+avatarImage.complete=true;avatarImage.naturalWidth=64;await avatarContext.updateAccountAvatar(avatarContext.accountUser,"https://image.example/cached.png");assert.equal(avatarImage.hidden,false);assert.ok(iconAttributes.has("hidden"),"cached image immediately hides SVG without waiting for load");
+let resolveProfile;avatarContext.accountService.getProfile=()=>new Promise(resolve=>{resolveProfile=resolve;});
+const pendingAvatar=avatarContext.updateAccountAvatar(avatarContext.accountUser);avatarContext.accountUser=null;avatarContext.accountAccess="guest";
+await avatarContext.updateAccountAvatar(null);resolveProfile({avatar_url:"https://image.example/stale.png"});await pendingAvatar;
+assert.equal(avatarImage.src,undefined);assert.ok(!iconAttributes.has("hidden"),"late profile response cannot replace signed-out fallback");
+assert.match(styles,/\.account-button \[hidden\]\{display:none!important\}/,"hidden SVG and avatar override display rules");

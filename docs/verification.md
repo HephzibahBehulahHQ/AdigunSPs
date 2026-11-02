@@ -216,3 +216,8 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - Worker version `661bc66c` uses non-streaming, optional thinking disabled, and max_completion_tokens 1024. It returned READY for a one-word probe and explained that a PLC copies inputs into a consistent memory snapshot before evaluating logic. Provider identity was absent from the displayed answer.
 - Consent reset after each hosted answer. With consent off, Explain scan cycle returned the existing local scan explanation. A direct POST from the production custom origin without a bearer token returned 401 authentication-required. No project was edited by these questions, and no private prompt, token, answer, or project content is included in diagnostics.
 - AI guard/format/budget tests, Help checks, and production build passed locally. Broad answer quality, daily Neuron accounting, request quotas, and new-user authentication remain unverified.
+
+## Existing-avatar verification and SVG visibility fix - 2026-11-02
+
+- The existing signed-in profile image loaded with natural dimensions 1408 by 1408. Before the fix, both the image and fallback SVG had computed display block: assigning SVG.hidden did not create the HTML hidden attribute. No profile, image, credential, or session was changed during this inspection.
+- The renderer now toggles the SVG hidden attribute and CSS explicitly hides hidden children of the account button. Executed function tests cover fresh/cached image display, failed/missing image fallback, and stale profile resolution after sign-out. Upload/re-sign-in and post-deployment visual checks remain unverified.

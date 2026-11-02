@@ -177,7 +177,7 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 
 ## Troubleshooting
 
-**What you'll see:** The profile icon shows account status; errors appear in **Diagnostics**.
+**What you'll see:** The profile icon shows your photo/status; errors appear in **Diagnostics**.
 
 1. **I can't sign in:** Enter your email/password via the profile icon. New accounts need email confirmation. Check spam or ask the administrator about missing emails.
 2. **I forgot my password:** Select **Forgot password?** below the password field and enter your account email. Open the recovery email, use the **Reset password** page at `/reset-password` to set and confirm a new password, then sign in again. If the link expired, request another reset email.

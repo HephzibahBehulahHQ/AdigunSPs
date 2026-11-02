@@ -1202,7 +1202,7 @@ const signupResendCopy = { en:"Resend signup confirmation",de:"Bestätigungs-E-M
 function accountAuthText(key) { return accountAuthCopy[language]?.[key] || (key === "resendSignupConfirmation" ? signupResendCopy[language] : "") || accountAuthCopy.en[key] || key; }
 function showAccountAvatarFallback(image, icon) {
   if (image) { image.hidden = true; image.removeAttribute("src"); image.onload = null; image.onerror = null; }
-  if (icon) icon.hidden = false;
+  if (icon) icon.toggleAttribute("hidden", false);
 }
 async function updateAccountAvatar(user, avatarUrl) {
   const requestId = ++accountAvatarRequestId, image = $("#accountAvatarImage"), icon = $("#accountFallbackIcon");
@@ -1213,7 +1213,7 @@ async function updateAccountAvatar(user, avatarUrl) {
   }
   if (requestId !== accountAvatarRequestId || accountUser?.id !== user.id || accountAccess !== "member") return;
   if (!url || !image) { showAccountAvatarFallback(image, icon); return; }
-  const showAvatar = () => { if (requestId === accountAvatarRequestId && accountUser?.id === user.id) { image.hidden = false; if (icon) icon.hidden = true; } };
+  const showAvatar = () => { if (requestId === accountAvatarRequestId && accountUser?.id === user.id) { image.hidden = false; if (icon) icon.toggleAttribute("hidden", true); } };
   image.onload = showAvatar;
   image.onerror = () => { if (requestId === accountAvatarRequestId) showAccountAvatarFallback(image, icon); };
   image.src = url;

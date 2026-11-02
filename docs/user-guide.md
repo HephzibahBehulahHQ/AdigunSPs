@@ -26,6 +26,8 @@ Select the profile icon in the top bar to open the account panel. Enter your ema
 
 Guest access lasts four minutes. After it expires, editing pauses; temporary work remains in the current browser tab. Signed-in users can save a cloud copy from the account panel; guest work is temporary and is not uploaded.
 
+Your saved profile picture replaces the top-bar person icon after loading; a missing or failed image uses the person icon. The status dot remains visible. Select a JPG, PNG, or WebP under 3 MB in Account and choose **Save profile** to upload a replacement.
+
 ## PLC/device profile
 
 Open **Project → PLC/device profile** to record a vendor, CPU/device model, platform, firmware version, module counts, and notes. This optional profile is user-entered and saves with the project. It does not select from a supported-device catalog, check compatibility or ratings, or connect hardware. Use **Tags & I/O** to manage logical tag roles and addresses; the generic hardware inventory remains a user-entered bill of materials.
