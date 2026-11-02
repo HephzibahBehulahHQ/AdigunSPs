@@ -27,7 +27,7 @@ AdigunSPs simulates PLC programs, I/O, HMIs, and examples; it does not connect t
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
 3. To register or sign in, select the profile icon. It is labelled **Sign in** when signed out and **Account** after sign-in. Enter your email and password, then choose **Create account** or **Sign in**. New accounts must confirm their email; use **Forgot password?** below the password field if you need a recovery email.
 
-The first screen has the product bar, menus, and toolbar above the editor. The project tree and simulated inputs are on the left; the canvas is centered; Properties, Watch, and Diagnostics sit on the right. Run, storage, language, and help status appear in the footer.
+The project tree and inputs are left; the canvas is centered; Properties, Watch, and Diagnostics are right. The footer shows run, storage, language, and help status.
 
 ## Taking the onboarding tour
 
@@ -86,7 +86,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 **What you'll see:** The top bar shows **Saving…**, **Saved locally**, or **Unsaved changes**; the footer says **Project saved on this device** when local storage is available.
 
 1. For signed-in users, autosave is enabled by default and stores changes in this browser. Guest autosave keeps only a temporary draft in the current tab. To change autosave, open **Settings** (⚙), adjust the preference, and select **Done**.
-2. After signing in, choose **Save** or **File → Save locally (JSON)** and save the downloaded project file. **Save as** creates a named copy; in **Account**, enter **Cloud project name** and select **Save to Cloud** (a new copy). Guests must authenticate before permanently saving or exporting a project file.
+2. After signing in, choose **Save** or **File → Save locally (JSON)** and save the downloaded project file. **Save as** creates a named copy; in **Account**, enter **Cloud project name** and select **Save to Cloud** (new copy). Guests must authenticate before permanently saving or exporting a project file.
 3. If autosave is off, select **Save** before closing. With unsaved edits, the browser asks before leaving; if storage is unavailable, export a JSON copy.
 4. To recover an earlier local version, open **Project manager** and select the curved-arrow recovery control beside the project. Choose a snapshot to restore it.
 
@@ -185,3 +185,5 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 4. **The build failed:** For ST, read errors beside **Compile** and in **Diagnostics**. For simulation, check input values, tags, and logic validation.
 5. **I got logged out:** Select the profile icon and sign in again. Local projects stay in that browser; cloud projects need an account session.
 6. **Old interface:** Open [Update application](https://adigunsps.hephzibahbehulah.com/update/), select **Update application**, then return to AdigunSPs. Saved projects and sign-in remain.
+
+Input recipes preserve BOOL, INT, REAL, and TIME values.

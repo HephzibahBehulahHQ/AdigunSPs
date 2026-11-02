@@ -13,7 +13,7 @@ import { validateFbdBlocks, requiredFbdInputs, connectFbdPorts } from "../src/fb
 import { convertLadderToFbd } from "../src/logic-conversion.js";
 import { compileStructuredText, executeStructuredText } from "../src/structured-text.js";
 import { isApprovedExternalUrl } from "../src/resources.js";
-import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe } from "../src/hmi.js";
+import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe, captureRecipeInputs } from "../src/hmi.js";
 import { defaultProcessModel, stepProcesses } from "../src/process.js";
 import { renderProcessTwin } from "../src/process-view.js";
 import { applyAnalogFaults, applyInputFaults, applyOutputFaults } from "../src/faults.js";
@@ -671,3 +671,16 @@ assert.match(app, /setPointerCapture\(event\.pointerId\)/, "HMI widgets support 
 console.log(`PASS: ${examples.length} examples, ${examples.reduce((n, e) => n + e.testCases.length, 0)} cases, process models, LD TON/TOF/TP, replay, breakpoints, ST, FBD, SFC, HMI, validation and UI bindings`)
 
 
+
+const recipeTags = [{name:"Start",type:"BOOL"},{name:"Speed",type:"REAL"},{name:"Count",type:"INT"},{name:"Delay",type:"TIME"}];
+const recipeValues = captureRecipeInputs(recipeTags.map(tag=>tag.name), recipeTags, {Start:false,Speed:12.75,Count:7,Delay:1500,Motor:true});
+assert.deepEqual(recipeValues,{Start:false,Speed:12.75,Count:7,Delay:1500});
+const numericRecipeModel=saveRecipe({},"Numeric",recipeValues,100);
+assert.deepEqual(applyRecipe(JSON.parse(JSON.stringify(numericRecipeModel)),numericRecipeModel.recipes[0].id),recipeValues,"numeric recipe settings survive persistence and application");
+assert.throws(()=>captureRecipeInputs(["Count"],recipeTags,{Count:2.5}),/Invalid recipe input/);
+assert.throws(()=>captureRecipeInputs(["Speed"],recipeTags,{Speed:Infinity}),/Invalid recipe input/);
+assert.throws(()=>captureRecipeInputs(["Delay"],recipeTags,{Delay:-1}),/Invalid recipe input/);
+const numericRecipeProject=structuredClone(project); numericRecipeProject.tags.push(...recipeTags.filter(tag=>tag.name!=="Start").map(tag=>({...tag,role:"input"}))); numericRecipeProject.io.inputs.push("Speed","Count","Delay"); numericRecipeProject.hmi=numericRecipeModel;
+assert.equal(validateProject(numericRecipeProject).some(issue=>issue.code==="recipe-value-type"),false,"typed numeric recipes validate");
+numericRecipeProject.hmi.recipes[0].values.Speed=true;
+assert.equal(validateProject(numericRecipeProject).some(issue=>issue.code==="recipe-value-type"),true,"boolean corruption of numeric recipes is rejected");

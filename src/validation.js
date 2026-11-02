@@ -80,7 +80,9 @@ export function validateProject(project) {
       if (!Number.isInteger(recipe.version) || recipe.version < 1) issues.push({ level: "error", code: "recipe-version", message: `Recipe ${recipe.name} has an invalid version.` });
       for (const [name, value] of Object.entries(recipe.values || {})) {
         if (!inputNames.has(name)) issues.push({ level: "warning", code: "recipe-input", message: `Recipe ${recipe.name} includes non-input tag ${name}.` });
-        if (typeof value !== "boolean") issues.push({ level: "error", code: "recipe-value-type", message: `Recipe ${recipe.name} value for ${name} must be Boolean.` });
+        const type = tags.get(name)?.type || "BOOL";
+        const valid = type === "BOOL" ? typeof value === "boolean" : typeof value === "number" && Number.isFinite(value) && (type !== "INT" || Number.isInteger(value)) && (type !== "TIME" || value >= 0);
+        if (!valid) issues.push({ level: "error", code: "recipe-value-type", message: `Recipe ${recipe.name} value for ${name} must match ${type}.` });
       }
     }
   }

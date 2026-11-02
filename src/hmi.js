@@ -45,3 +45,13 @@ export function applyRecipe(model, recipeId) {
   if (!recipe) throw new Error("Recipe not found");
   return structuredClone(recipe.values);
 }
+
+export function captureRecipeInputs(inputNames, tags, values) {
+  const types = new Map((tags || []).map(tag => [tag.name, tag.type || "BOOL"]));
+  return Object.fromEntries(inputNames.map(name => {
+    const type = types.get(name) || "BOOL", value = values[name] ?? (type === "BOOL" ? false : 0);
+    const valid = type === "BOOL" ? typeof value === "boolean" : typeof value === "number" && Number.isFinite(value) && (type !== "INT" || Number.isInteger(value)) && (type !== "TIME" || value >= 0);
+    if (!valid) throw new Error(`Invalid recipe input: ${name} (${type})`);
+    return [name, value];
+  }));
+}
