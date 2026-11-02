@@ -161,3 +161,5 @@ Do not describe this milestone as production-ready. Complete the later phases in
 ## Live numeric-alarm verification — 2026-11-02
 
 - Release `930f7ba`: created a REAL input and a high alarm at 75 through the UI. Input 80 raised the alarm; 70 cleared it. Alarm history showed Configured, Raised, and Cleared; project validation stayed Ready. Numeric-tag setup initially offered BOOL, so the follow-up defaults numeric tags to high comparison and rejects blank thresholds.
+
+- Release `c2d94ed`: live numeric alarm setup defaulted to high comparison, disabled BOOL for a REAL tag, and kept the form open with a visible finite-threshold message when the threshold was blank. No captured browser errors.
