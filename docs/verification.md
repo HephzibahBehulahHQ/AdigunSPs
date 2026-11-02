@@ -1,5 +1,11 @@
 # Verification record
 
+## Live cache-recovery verification — 2026-11-02
+
+- A fresh browser tab at the production custom-domain root rendered 519 manufacturer references after recovery installation; the earlier stale count was 391.
+- The workspace displayed Untitled project, Saved locally, and Account. Captured browser error logs were empty. This does not establish new sign-in, session validity, cloud save/reload, or preservation of nonempty projects.
+- The focused service-worker test passed again. The earlier recovery tab was unavailable; a fresh production tab supplied the rendered-release evidence.
+
 ## Latest release verification — 2026-11-01 (password recovery)
 
 - Application commit `269260c8b41effed7333f34681c22980d9ccbcd0` and documentation follow-up `3a9733c909244178a7fee61774d3efd129c627c2` were published to `main`; CI runs `41475890441` and `41476735002`, and Pages runs `41475890592` and `41476734389` all succeeded.
@@ -7,6 +13,9 @@
 - `npm test` and `npm run build` passed on the tested source before publication; account and Help guide focused tests passed after merge. The available example-validation report records 1,000 projects, 4,717 PLC logic cases, 8,913 schematic checks, 4,517 integrated cases, and 1,000 project-model JSON round-trips. It also records 1,104 floating-terminal warnings and 15 duplicate-address warnings; passing checks do not certify layout, electrical design, physical wiring, or safety.
 - The browser app can search and offer to load matching examples through Adigun BOT; automated tests cover this path. HUD voltage, current, and RPM are explicitly unmodeled. Physical-device control is not available.
 - Supabase Auth Site URL and redirect allowlist were already correct on read-only dashboard inspection. The main sign-in flow uses email/password, and the reset route is published; signup confirmation, password-recovery email redemption, guest upgrade, cloud save/reload, avatar upload and multi-user RLS behavior still need approved live test accounts.
+
+- Production Account panel identified the existing signed-in session and Refresh cloud projects returned two existing project rows with Open controls. No credentials or profile data were changed. New login, cloud writes, and cloud content round-trip remain unverified.
+- New project created a separate empty local record. Rename used a native browser prompt that was not exposed by the current browser automation; no name was changed. This limits that browser test and does not by itself prove a general browser defect.
 
 ## Documentation maintenance
 

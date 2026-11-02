@@ -31,3 +31,9 @@ for (const locale of ["en", "de", "yo", "pcm"]) {
 assert.doesNotMatch(app, /accountUpgradeEmail|accountPasswordVisibility|accountSaveNewPassword|passwordRecoveryStorageKey|clearPasswordRecoveryPending/, "obsolete OTP and inline recovery controls are absent from the interface code");
 console.log("Password account UI, custom-domain callbacks, recovery route, guest-preservation, and locale checks passed.");
 
+
+assert.match(app, /id="accountCloudProjectName"[^>]*maxlength="120"[^>]*required/);
+const cloudSaveHandler = app.slice(app.indexOf('$("#accountCloudSave")?.addEventListener'), app.indexOf('$("#accountCloudRefresh")?.addEventListener'));
+assert.doesNotMatch(cloudSaveHandler, /prompt\(/, "cloud naming works without native browser prompts");
+assert.match(cloudSaveHandler, /reportValidity\(\)/, "blank cloud names are rejected before saving");
+assert.match(cloudSaveHandler, /saveCloudProject[\s\S]*loadCloudProjectList/, "successful writes refresh the cloud listing");
