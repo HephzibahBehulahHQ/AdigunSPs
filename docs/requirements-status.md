@@ -2,7 +2,7 @@
 
 Latest application release - 2026-11-02: `4ecf0526aeb8c5c073460549a75b7b1585f6ec2e` passed CI run `41527721395` and Pages run `41527721150`. Local full tests and production build passed. Live alarm hysteresis and retention controls, existing-owner cloud round-trip, and independent recipe approval/import are verified in `docs/verification.md`. New-user confirmation/recovery, avatar upload, guest expiry, and broad browser audits remain unverified.
 
-The current executable schematic library contains 45 generic educational models. The manufacturer catalog is a separate set of 519 sourced product references; it does not establish vendor compatibility or hardware simulation. The catalog meets the 500-reference count target, but physical-device control and safety validation are not complete.
+The current executable schematic library contains 45 generic educational models. The manufacturer catalog is a separate, reference-only set of 519 sourced product references; it does not establish vendor compatibility or hardware simulation. The catalog meets the 500-reference count target, but physical-device control and safety validation are not complete.
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|
