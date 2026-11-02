@@ -179,3 +179,16 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - Applied remote migration adigunsps_recipe_approval_snapshots: immutable submissions, owner/admin visibility, separate append-only decisions, server-issued owner/reviewer/time, one decision per submission, and independent permanent-admin review. No UPDATE or DELETE grants are provided to browser users.
 - Rollback-only SQL tests passed before and after applying the schema: guest submission, outsider access, non-admin decisions, self-approval, snapshot modification, and duplicate decisions were denied; independent admin decision succeeded. Claims were transaction-local test fixtures, not live JWT/browser identities.
 - Security advisor reports an anonymous-access heuristic for decision reads, whose access depends on the permanent-user-filtered parent policy. Existing unrelated advisories remain. Client integration is tested; Recipes UI integration and real independent reviewer accounts are pending. This is optional recipe review, not a safety or legal signature service.
+
+## Live recipe-submission verification — 2026-11-02
+
+- Release `798e99f`: the existing signed-in user submitted the synthetic QA decimal 42.5 recipe through Recipes. Cloud recipe reviews displayed Pending and the stored QA_Temperature value 42.5. No self-review decision controls were displayed and captured browser errors were empty. The QA submission was retained for independent reviewer testing.
+- This verifies one authenticated submission/list/snapshot path. Independent live approval, rejection, and approved-copy retrieval still require a separately authorized permanent admin reviewer session; rollback SQL role tests do not replace that browser check.
+
+## Shared company admin integration — 2026-11-02
+
+- Company PR #147 merged as `37eea23`: adds an isolated AdigunSPs panel to the existing Cloudflare-hosted admin portal. Local validation passed all 171 company-platform tests and the full prescribed release build. Product requests use only fqcbfnktdvqojyezxeis; no VoltPro gateway, account configuration, or credential was changed.
+- The explicitly designated, existing verified AdigunSPs account received the admin role. The update preserved its other app metadata and was limited to this project. Production rollout and a fresh product-admin sign-in remain to be verified.
+
+- Production company workflow `41521981868` attempt 2 passed after the first attempt hit a transient public-route fetch failure. Deployment reported Sandbox ready, Worker version `a71fb1a5-30ac-4dc6-b90f-a09abe3a4336`, deployed commit `37eea23`, and all 18 production security checks passed.
+- Live shared-portal test: the designated admin signed into the isolated AdigunSPs panel and approved the synthetic QA snapshot. Database verification confirmed reviewer and submitter IDs differ and the fixed value remains 42.5. The original owner session stayed signed in separately, fetched the approval, and imported a local copy. A native input change plus review confirmed runtime Current 7.000000 remained unchanged after importing recipe value 42.500000. No physical outputs or real machinery were involved.

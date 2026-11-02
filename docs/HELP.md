@@ -188,4 +188,4 @@ The co-pilot never auto-saves. Saving a Bot draft still requires sign-in, and th
 
 Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms default high; enter a finite threshold. Opening projects stops simulation and clears forces/replay.
 
-Recipes: **Submit for review** sends a snapshot. **Cloud recipe reviews** supports independent admin decisions. **Import approved copy** adds an unapplied local recipe. No safety certification.
+Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
