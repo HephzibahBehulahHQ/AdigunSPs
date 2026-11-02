@@ -163,3 +163,8 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - Release `930f7ba`: created a REAL input and a high alarm at 75 through the UI. Input 80 raised the alarm; 70 cleared it. Alarm history showed Configured, Raised, and Cleared; project validation stayed Ready. Numeric-tag setup initially offered BOOL, so the follow-up defaults numeric tags to high comparison and rejects blank thresholds.
 
 - Release `c2d94ed`: live numeric alarm setup defaulted to high comparison, disabled BOOL for a REAL tag, and kept the form open with a visible finite-threshold message when the threshold was blank. No captured browser errors.
+
+## Live typed-recipe verification — 2026-11-02
+
+- Release `f0a7074`: set a REAL input to 42.5 and saved QA decimal 42.5 v1 using the inline name field. Changed the input to 5, selected Apply, accepted its confirmation, and observed 42.5 restored with validation Ready and no captured browser errors.
+- Reloaded the application, reopened the local QA project, and confirmed the same recipe version remained. Changing the input to 5 and applying the persisted recipe restored 42.5 again. This covers one REAL recipe and local persistence; approval workflows, role enforcement, and full multilingual recipe UI remain incomplete.

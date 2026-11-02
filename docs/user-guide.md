@@ -89,3 +89,5 @@ Cloud project rows show the saved copy name and update time. A version is shown 
 Opening a different project, importing a project, or reopening a cloud copy stops the prior simulation and clears its forced inputs, timer/output state, recording/replay, trace breakpoints, and undo history. The loaded project starts from its own initial inputs. **Reset** within the same project keeps recorded trace frames available for inspection.
 
 In **Add simulated alarm**, numeric tags default to the high-threshold trigger. Select the low-threshold trigger if needed and enter a numeric threshold; empty thresholds are rejected. BOOL tags use the true/false trigger.
+
+Recipe application: select **Review inputs** to compare current and saved values, then **Apply inputs** to commit or **Back to recipes** to cancel. The project retains the latest 200 application records with time, signed-in user ID when available, and before/after values. This browser-local history is editable project data, not a trusted approval/signature service; independent reviewer approval remains unimplemented. Removed or mistyped input tags are rejected before application.

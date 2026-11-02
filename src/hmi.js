@@ -55,3 +55,7 @@ export function captureRecipeInputs(inputNames, tags, values) {
     return [name, value];
   }));
 }
+
+export function recipeInputChanges(model, recipeId, currentValues = {}) {
+  return Object.entries(applyRecipe(model, recipeId)).map(([tag, after]) => ({ tag, before:currentValues[tag], after, changed:!Object.is(currentValues[tag], after) }));
+}
