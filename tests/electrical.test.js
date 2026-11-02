@@ -7,6 +7,25 @@ import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+{
+  const component=createElectricalComponent("pilotLamp",1,20,20),listeners={};
+  let history=0,changes=0,focus=0;
+  const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>{listeners[name]=handler;},focus:()=>{focus++;}};
+  const root={dataset:{},innerHTML:"",querySelector:(selector)=>selector.startsWith("[data-drag-component=")?head:null,querySelectorAll:(selector)=>selector==="[data-drag-component]"?[head]:[]};
+  const previousCss=globalThis.CSS;
+  globalThis.CSS={escape:value=>value};
+  try {
+    renderElectricalWorkspace(root,{tags:[],electrical:{components:[component],wires:[]}},{onBeforeChange:()=>history++,onChange:()=>changes++});
+    const press=(key,shiftKey=false)=>listeners.keydown({key,shiftKey,preventDefault(){},stopPropagation(){}});
+    press("ArrowRight");assert.equal(component.x,40,"arrow moves one grid step");
+    press("ArrowDown",true);assert.equal(component.y,120,"Shift moves five grid steps");
+    press("ArrowLeft",true);assert.equal(component.x,0,"keyboard movement stays inside the canvas origin");
+    assert.equal(history,3,"each keyboard move records undo history");
+    assert.equal(changes,3,"each keyboard move persists its change");
+    assert.equal(focus,3,"focus returns to the moved component header");
+    press("Enter");assert.equal(changes,3,"unrelated keys do not move components");
+  } finally { if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss; }
+}
 for (const [type,allowed,rejected] of [["digitalInputModule4","Digital","Analog"],["analogInputModule2","Analog","Digital"]]) {
   const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
   renderElectricalWorkspace(root,{tags:[{name:"Digital",type:"BOOL",role:"input"},{name:"Analog",type:"REAL",role:"input"}],electrical:{components:[createElectricalComponent(type,1)],wires:[]}});
