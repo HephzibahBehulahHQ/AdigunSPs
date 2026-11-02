@@ -5,7 +5,12 @@ export function evaluateAlarms(model, values, timestamp = Date.now()) {
     let active;
     if (alarm.condition?.kind === "threshold") {
       const numeric = value, threshold = alarm.condition.threshold;
-      active = typeof numeric === "number" && typeof threshold === "number" && Number.isFinite(numeric) && Number.isFinite(threshold) && ["gte", "lte"].includes(alarm.condition.operator) && (alarm.condition.operator === "lte" ? numeric <= threshold : numeric >= threshold);
+      const hysteresis = alarm.condition.hysteresis === undefined ? 0 : alarm.condition.hysteresis;
+      const valid = typeof numeric === "number" && typeof threshold === "number" && Number.isFinite(numeric) && Number.isFinite(threshold) && typeof hysteresis === "number" && Number.isFinite(hysteresis) && hysteresis >= 0 && ["gte", "lte"].includes(alarm.condition.operator);
+      // Hysteresis affects only clearing; zero preserves the original inclusive comparison.
+      active = valid && (alarm.condition.operator === "lte"
+        ? alarm.active && hysteresis > 0 ? numeric < threshold + hysteresis : numeric <= threshold
+        : alarm.active && hysteresis > 0 ? numeric > threshold - hysteresis : numeric >= threshold);
     } else active = (!alarm.condition || alarm.condition.kind === "bool") && Boolean(value);
     if (active !== Boolean(alarm.active)) {
       alarm.active = active;

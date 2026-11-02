@@ -197,3 +197,8 @@ Do not describe this milestone as production-ready. Complete the later phases in
 
 - On deployed release `8c70248`, the existing QA project opened with a 500-event limit. Selecting 100 changed the control; closing the dialog and pressing Undo restored 500 with its three existing events intact.
 - Selecting 2000 persisted across browser reload and reopening the saved local project. The existing configured/raised/cleared events remained visible. This browser check does not exercise count-pressure trimming: automated tests cover 2,500-event fixtures, all three limits, and undo snapshots before truncation.
+
+## Numeric alarm hysteresis - 2026-11-02
+
+- Added a four-language Hysteresis field to numeric alarm creation. The finite non-negative margin affects clearing only; omitted/zero retains the previous inclusive comparison. High thresholds clear at threshold minus margin; low thresholds clear at threshold plus margin. Configuration persists in project JSON and invalid imported margins are rejected.
+- Automated scan sequences cover both operators, exact raise/clear boundaries, repeated readings inside the band, negative thresholds, zero-margin compatibility, JSON reload, and invalid margins. Browser creation/interaction remains to be verified. This is alarm event stabilization in the educational model, not sensor validation or a safety function.
