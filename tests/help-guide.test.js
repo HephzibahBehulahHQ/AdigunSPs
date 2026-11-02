@@ -27,7 +27,7 @@ assert.match(app, /dataset\.appMenu === "help"\) \{ showHelpGuideMenu/);
 assert.match(app, /data-help-action="safety"/);
 assert.match(app, /data-help-action="resources"/);
 assert.match(app, /\.\.\/docs\/HELP\.md/);
-assert.match(serviceWorker, /adigunsps-shell-v116/);
+assert.match(serviceWorker, /adigunsps-shell-v117/);
 assert.match(rendered, /id="using-the-bot-window"/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-tools\.js/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-verifier\.js/);
