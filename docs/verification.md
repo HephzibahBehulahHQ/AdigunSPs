@@ -254,3 +254,5 @@ Do not describe this milestone as production-ready. Complete the later phases in
 
 - Follow-up: advanced the application shell cache to v118. A separate local preview preserved the existing tab and authenticated session; at 455 CSS pixels the inspector was hidden and editor height was 559px. The Logic tab received clicks and ST was visibly selected. Loading an example prompted for unsaved changes, so that switch was cancelled; mixed-case runtime behavior is covered by automated tests, not claimed as browser-verified.
 - Full npm test and production build passed: 1,000/1,000 examples and JSON round-trips, 4,717 logic cases, 8,913 schematic checks, and 4,517 integrated cases. Service-worker checks also passed after the v118 increment.
+
+- CI run 41544385940 exposed a stale duplicate v117 assertion in the Help test after the v118 cache change. The Help test now checks for a versioned shell; the dedicated service-worker test retains the exact current-version assertion.
