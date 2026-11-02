@@ -192,3 +192,8 @@ Do not describe this milestone as production-ready. Complete the later phases in
 
 - Production company workflow `41521981868` attempt 2 passed after the first attempt hit a transient public-route fetch failure. Deployment reported Sandbox ready, Worker version `a71fb1a5-30ac-4dc6-b90f-a09abe3a4336`, deployed commit `37eea23`, and all 18 production security checks passed.
 - Live shared-portal test: the designated admin signed into the isolated AdigunSPs panel and approved the synthetic QA snapshot. Database verification confirmed reviewer and submitter IDs differ and the fixed value remains 42.5. The original owner session stayed signed in separately, fetched the approval, and imported a local copy. A native input change plus review confirmed runtime Current 7.000000 remained unchanged after importing recipe value 42.500000. No physical outputs or real machinery were involved.
+
+## Live alarm-history retention verification - 2026-11-02
+
+- On deployed release `8c70248`, the existing QA project opened with a 500-event limit. Selecting 100 changed the control; closing the dialog and pressing Undo restored 500 with its three existing events intact.
+- Selecting 2000 persisted across browser reload and reopening the saved local project. The existing configured/raised/cleared events remained visible. This browser check does not exercise count-pressure trimming: automated tests cover 2,500-event fixtures, all three limits, and undo snapshots before truncation.
