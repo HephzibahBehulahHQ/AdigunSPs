@@ -7,4 +7,4 @@ binding = "AI"
 
 [vars]
 SUPABASE_URL = "https://fqcbfnktdvqojyezxeis.supabase.co"
-ADIGUN_AI_ALLOWED_ORIGINS = "https://hephzibahbehulahhq.github.io,http://127.0.0.1:8086,http://localhost:8086"
+ADIGUN_AI_ALLOWED_ORIGINS = "https://adigunsps.hephzibahbehulah.com,https://hephzibahbehulahhq.github.io,http://127.0.0.1:8086,http://localhost:8086"

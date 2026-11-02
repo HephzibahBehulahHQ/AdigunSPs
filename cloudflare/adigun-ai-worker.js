@@ -70,7 +70,7 @@ export function createAdigunAIWorker({ fetchImpl = fetch } = {}) {
           max_tokens: 512,
           temperature: 0.2,
         });
-        const answer = typeof result === "string" ? result : result?.response;
+        const answer = typeof result === "string" ? result : result?.choices?.[0]?.message?.content ?? result?.response;
         if (typeof answer !== "string" || !answer.trim()) return response({ error: "empty-model-response" }, 502, origin);
         return response({ answer: answer.trim(), source: "Cloudflare Workers AI · review before use" }, 200, origin);
       } catch {

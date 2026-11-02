@@ -70,3 +70,9 @@ To redeploy after changing the Pages client or runtime configuration, run **Acti
 ## Verification and limits
 
 `npm run test:ai` checks the consent gate, authenticated-user verification, anonymous-session rejection, allowed origins, context minimization, fixed model selection, and client fallback. `npm run build` syntax-checks browser JavaScript. These local tests do not call Cloudflare or Supabase. After deployment, verify one signed-in request, one guest rejection, the consent-off case, and usage in the Cloudflare dashboard. The Worker does not persist prompts; account-level Cloudflare retention and data processing terms still apply.
+
+## Production-origin configuration
+
+`ADIGUN_AI_ALLOWED_ORIGINS` must include the exact browser origin `https://adigunsps.hephzibahbehulah.com` (no path or trailing slash). Preserve the old Pages origin while it is supported. A custom-domain preflight returning 403 blocks the browser before account verification or model inference. Keep the checked-in Wrangler value and deployed variable synchronized. Origin permission does not bypass the token, permanent-user, or per-request consent gates.
+
+The pinned model returns chat-completion text at `choices[0].message.content`; the Worker also accepts the legacy `response` shape. See [the model response schema](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/). Reject missing/non-text answers rather than showing a fabricated success.

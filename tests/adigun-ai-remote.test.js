@@ -96,3 +96,26 @@ if(priorUrl===undefined)delete process.env.ADIGUN_AI_WORKER_URL;else process.env
 const wrangler=readFileSync("wrangler.toml","utf8"),workflow=readFileSync(".github/workflows/deploy-pages.yml","utf8");
 assert.match(wrangler,/\[ai\]\s+binding\s*=\s*"AI"/);assert.match(wrangler,/fqcbfnktdvqojyezxeis/);assert.match(workflow,/ADIGUN_AI_ENABLED:\s*\$\{\{ vars\.ADIGUN_AI_ENABLED\s*\|\|\s*'true' \}\}/);assert.match(workflow,/ADIGUN_AI_WORKER_URL:\s*\$\{\{ vars\.ADIGUN_AI_WORKER_URL\s*\|\|\s*'https:\/\/adigunsps-ai\.hephzibah-behulah\.workers\.dev' \}\}/);
 console.log("Adigun AI Cloudflare Worker auth, consent, pinned model, minimized context, CORS, fallback, runtime config, and Wrangler binding passed.");
+
+// Production custom-domain requests must survive CORS without permitting other origins.
+const deployedOrigins=wrangler.match(/ADIGUN_AI_ALLOWED_ORIGINS\s*=\s*"([^"]+)"/)[1];
+assert.ok(deployedOrigins.split(",").includes("https://adigunsps.hephzibahbehulah.com"));
+const productionEnv={...aiEnv,ADIGUN_AI_ALLOWED_ORIGINS:deployedOrigins};
+const productionOrigin="https://adigunsps.hephzibahbehulah.com";
+for(const method of ["OPTIONS","POST"]){
+ const result=await testWorker.fetch(makeRequest(payload,{method,origin:productionOrigin}),productionEnv);
+ assert.equal(result.status,method==="OPTIONS"?204:200);
+ assert.equal(result.headers.get("access-control-allow-origin"),productionOrigin);
+}
+assert.equal((await testWorker.fetch(makeRequest(payload,{method:"OPTIONS",origin:"https://attacker.example"}),productionEnv)).status,403);
+assert.equal((await testWorker.fetch(makeRequest(payload,{token:null,origin:productionOrigin}),productionEnv)).status,401);
+
+const chatCompletion=await testWorker.fetch(makeRequest(payload),{...aiEnv,AI:{run:async()=>({choices:[{message:{role:"assistant",content:"PLC inputs form a consistent scan snapshot."}}]})}});
+assert.equal(chatCompletion.status,200);
+assert.equal((await chatCompletion.json()).answer,"PLC inputs form a consistent scan snapshot.");
+for(const malformed of [{choices:[]},{choices:[{message:{content:null}}]},{choices:[{message:{content:{text:"invalid"}}}]}]){
+ const result=await testWorker.fetch(makeRequest(payload),{...aiEnv,AI:{run:async()=>malformed}});
+ assert.equal(result.status,502);
+ assert.equal((await result.json()).error,"empty-model-response");
+}
+for(const locale of ["en","de","yo","pcm"]) assert.ok(!/not sent|nicht gesendet|no send/.test(adigunAiRemoteLabels(locale).unavailable),"network/model failure must not claim no transmission");
