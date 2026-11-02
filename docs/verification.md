@@ -220,6 +220,12 @@ Do not describe this milestone as production-ready. Complete the later phases in
 ## Existing-avatar verification and SVG visibility fix - 2026-11-02
 
 - The existing signed-in profile image loaded with natural dimensions 1408 by 1408. Before the fix, both the image and fallback SVG had computed display block: assigning SVG.hidden did not create the HTML hidden attribute. No profile, image, credential, or session was changed during this inspection.
-- The renderer now toggles the SVG hidden attribute and CSS explicitly hides hidden children of the account button. Executed function tests cover fresh/cached image display, failed/missing image fallback, and stale profile resolution after sign-out. Upload/re-sign-in and post-deployment visual checks remain unverified.
+- The renderer now toggles the SVG hidden attribute and CSS explicitly hides hidden children of the account button. Executed function tests cover fresh/cached image display, failed/missing image fallback, and stale profile resolution after sign-out. Existing-avatar post-deployment visibility passed as recorded below. Upload/re-sign-in remains unverified.
 
 - Post-deployment avatar check passed: photo loaded, fallback hidden attribute present with computed display none, and signed-in dot rgb(70,195,123). A 360px check revealed the later brand-overrides.css forced a one-row identity layout and pushed Help to x357..384 outside the viewport. Added a two-row mobile header in that owning stylesheet; live verification of the layout correction is pending.
+
+## GitHub visibility review - 2026-11-02
+
+- Inspected the AdigunSPs repository, local branch, origin, clean tracked status, staged/unstaged diff, and latest committed mobile-layout diff. Origin is HephzibahBehulahHQ/AdigunSPs. Local bbb635a and published main 90d28e2 have the same tracked tree, 2cbda40e21f9a7d92d935ce300b0578a2e386f32; application changes were already published before this review.
+- Preserved the original local hardening branch and created codex/visibility-review-2026-11-02 for the review record. No history rewrite, force push, credential/cache publication, or additional deployment action is part of this review. Pages is configured for main pushes only; this branch and its draft PR are for validation/review. The previous main push was already in flight when the no-deployment instruction arrived.
+- Excluded and preserved untracked .supabase-cli/ and supabase/.temp/. No unrelated project was accessed for this review. Existing automated/avatar verification is documented above; mobile layout browser verification and upload/re-sign-in remain pending.
