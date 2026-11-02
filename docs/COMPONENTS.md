@@ -29,7 +29,8 @@ The **Components** tab is an editable schematic workspace with terminal-level wi
 | Relay coil | A1/A2 simulated coil associated by reference with auxiliary contacts | Drive an auxiliary control contact |
 | NO / NC auxiliary contact | Follows its paired contactor/relay coil state | Seal in a starter command |
 | NC overload relay | Simulated normally closed protection contact | Interrupt a command when tripped |
-| Circuit breaker / fuse | Editable closed/open or tripped series element | Interrupt a simulated supply path |
+| Circuit breaker | Editable, manually resettable series switch | Interrupt and manually restore a simulated path |
+| Fuse | Manually trippable, non-resettable series element; remove and add a replacement to restore continuity | Interrupt a simulated path and practice replacement workflow |
 | Pilot lamp / buzzer | Load energized by a complete simulated path | Indicate a run or alarm state |
 | Solenoid valve | Simulated coil/load state | Operate a valve output |
 | Heater element | Resistive load presence/state only | Show an energized heater circuit |
@@ -39,7 +40,7 @@ The **Components** tab is an editable schematic workspace with terminal-level wi
 | Junction | Explicit wire split point | Branch a control signal |
 | Protective earth / ground common | Diagram connection node; no earth-fault analysis | Show the PE/common reference |
 
-References and component labels are unique within a project. Ratings shown for generic models are editable teaching values, not verified hardware specifications. Use the separate manufacturer reference catalog to inspect source-backed products; those references do not run in the simulator.
+References and component labels are unique within a project. Ratings shown for generic models are editable teaching values, not verified hardware specifications. The fuse model requires replacement after its test trip, but does not calculate current or thermal response. Use the separate manufacturer reference catalog to inspect source-backed products; those references do not run in the simulator.
 
 ## PLC instructions
 

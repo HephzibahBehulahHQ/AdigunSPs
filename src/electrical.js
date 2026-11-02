@@ -99,6 +99,12 @@ export function duplicateElectricalComponent(component, reference, offset = 40) 
   return { ...structuredClone(component), id:crypto.randomUUID(), reference, x:component.x + offset, y:component.y + offset };
 }
 
+export function updateElectricalComponentProperties(component, updates = {}) {
+  const next = { ...component, ...updates };
+  if (component.type === "fuse" && component.tripped) next.tripped = true;
+  return next;
+}
+
 export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}) {
   const components = [], wires = [];
   const add = (type, x, y, tag = "") => {

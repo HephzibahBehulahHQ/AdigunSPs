@@ -1,20 +1,30 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
 import { electricalSimulationStatus, electricalSymbolSvg } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+const helpGuide=readFileSync(new URL("../docs/HELP.md",import.meta.url),"utf8");
+const userGuide=readFileSync(new URL("../docs/user-guide.md",import.meta.url),"utf8");
 assert.match(electricalUiSource,/name="coilRef"/u,"auxiliary-contact properties expose a coil association control");
 assert.match(electricalUiSource,/coilRef\)\)\.map/u,"linked auxiliary contacts are removed from manual input controls");
 assert.match(electricalUiSource,/previousReference!==selected\.reference/u,"renaming a coil updates linked auxiliary contacts");
 assert.equal((electricalUiSource.match(/coilLink:/gu)||[]).length,4,"coil association labels are localized in all supported languages");
 assert.equal((electricalUiSource.match(/contactClosedState:"/gu)||[]).length,4,"live contact state labels are localized in all supported languages");
+assert.equal((electricalUiSource.match(/fuseReplaceHint:"/gu)||[]).length,4,"fuse replacement guidance is localized in all supported languages");
+assert.match(electricalUiSource,/selected\.tripped\?"checked disabled"/u,"blown fuses cannot be cleared from the property editor");
+assert.ok(helpGuide.includes("delete and replace it")&&userGuide.includes("Blow fuse (manual test)"),"Help and user guide explain fuse replacement behavior");
 assert.match(electricalUiSource,/data-contact-state=/u,"schematic controls expose computed open/closed contact state accessibly");
 
 const supply = createElectricalComponent("supply24vdc",1,103,103);
+const fuse = createElectricalComponent("fuse",1);
+const blownFuse = updateElectricalComponentProperties(fuse,{tripped:true});
+assert.equal(blownFuse.tripped,true,"the fuse test trip opens the replaceable fuse element");
+assert.equal(updateElectricalComponentProperties(blownFuse,{tripped:false}).tripped,true,"a blown fuse stays open until it is replaced");
+assert.equal(createElectricalComponent("fuse",2).tripped,false,"a newly added replacement fuse starts intact");
 const button = {...createElectricalComponent("pushbuttonNO",1,220,103),tag:"Start"};
 const lamp = {...createElectricalComponent("pilotLamp",1,340,103),tag:"Lamp"};
 const diagram = {components:[supply,button,lamp],wires:[]};
