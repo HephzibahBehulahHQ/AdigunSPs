@@ -721,3 +721,13 @@ for (const badCondition of [{kind:"threshold",operator:"invalid",threshold:75},{
 }
 thresholdProject.hmi.alarms[0].tag="Start";
 assert.ok(validateProject(thresholdProject).some(issue=>issue.code==="alarm-tag-type"),"numeric thresholds cannot bind BOOL tags");
+
+const alarmSyncStart=appSource.indexOf("const syncCondition = () =>"), alarmSyncEnd=appSource.indexOf('$("#alarmTag").addEventListener',alarmSyncStart);
+const alarmSyncSource=appSource.slice(alarmSyncStart,alarmSyncEnd);
+let alarmTagType="REAL",thresholdHidden=true; const boolOption={disabled:false}; const conditionSelect={value:"bool",disabled:false,querySelector:()=>boolOption};
+const alarmSyncContext={$:id=>id==="#alarmTag"?{selectedOptions:[{dataset:{type:alarmTagType}}]}:id==="#alarmCondition"?conditionSelect:{classList:{toggle:(_name,hidden)=>{thresholdHidden=hidden;}}}};
+runInNewContext("{ "+alarmSyncSource+"syncCondition(); }",alarmSyncContext);
+assert.equal(conditionSelect.value,"gte"); assert.equal(boolOption.disabled,true); assert.equal(thresholdHidden,false);
+conditionSelect.value="lte"; runInNewContext("{ "+alarmSyncSource+"syncCondition(); }",alarmSyncContext); assert.equal(conditionSelect.value,"lte");
+alarmTagType="BOOL"; runInNewContext("{ "+alarmSyncSource+"syncCondition(); }",alarmSyncContext); assert.equal(conditionSelect.value,"bool"); assert.equal(conditionSelect.disabled,true); assert.equal(thresholdHidden,true);
+assert.match(appSource,/!\$\("#alarmThreshold"\)\.value\.trim\(\)/,"blank threshold is not silently coerced to zero");
