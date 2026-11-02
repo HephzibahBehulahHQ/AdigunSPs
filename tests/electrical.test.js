@@ -7,6 +7,14 @@ import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
+  const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
+  const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
+  for(const [x,y]of [[0,0],[120,0],[120,height],[0,height]]){
+    const px=component.x+60+(x-60)*Math.cos(r)-(y-40)*Math.sin(r),py=component.y+40+(x-60)*Math.sin(r)+(y-40)*Math.cos(r);
+    assert.ok(px>=-1e-6&&px<=2200+1e-6&&py>=-1e-6&&py<=1400+1e-6,`${type} at ${rotation}° stays inside canvas`);
+  }
+}
 {
   const component=createElectricalComponent("pilotLamp",1,20,20),listeners={};
   let history=0,changes=0,focus=0;

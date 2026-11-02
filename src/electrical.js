@@ -88,12 +88,16 @@ export function connectElectricalTerminals(diagram, from, to) {
 }
 
 export function moveElectricalComponent(component, x, y) {
-  return { ...component, x:Math.round(Number(x) / 20) * 20, y:Math.round(Number(y) / 20) * 20 };
+  const height=Math.max(80,32+Math.ceil((component.terminals?.length||0)/2)*22);
+  const angle=(component.rotation||0)*Math.PI/180,cos=Math.round(Math.cos(angle)),sin=Math.round(Math.sin(angle));
+  const corners=[[0,0],[120,0],[120,height],[0,height]].map(([cx,cy])=>[60+(cx-60)*cos-(cy-40)*sin,40+(cx-60)*sin+(cy-40)*cos]);
+  const clamp=(value,axis,size)=>Math.max(Math.ceil(-Math.min(...corners.map(p=>p[axis]))/20)*20,Math.min(Math.floor((size-Math.max(...corners.map(p=>p[axis])))/20)*20,Math.round(Number(value)/20)*20));
+  return { ...component, x:clamp(x,0,2200), y:clamp(y,1,1400) };
 }
 export function rotateElectricalComponent(component, degrees = 90) {
   const rotation = ((Number(component.rotation || 0) + degrees) % 360 + 360) % 360;
   if (![0,90,180,270].includes(rotation)) throw new Error("Electrical components rotate in 90-degree steps.");
-  return { ...component, rotation };
+  return moveElectricalComponent({ ...component, rotation },component.x,component.y);
 }
 export function duplicateElectricalComponent(component, reference, offset = 40) {
   return { ...structuredClone(component), id:crypto.randomUUID(), reference, x:component.x + offset, y:component.y + offset };
