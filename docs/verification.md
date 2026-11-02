@@ -221,3 +221,5 @@ Do not describe this milestone as production-ready. Complete the later phases in
 
 - The existing signed-in profile image loaded with natural dimensions 1408 by 1408. Before the fix, both the image and fallback SVG had computed display block: assigning SVG.hidden did not create the HTML hidden attribute. No profile, image, credential, or session was changed during this inspection.
 - The renderer now toggles the SVG hidden attribute and CSS explicitly hides hidden children of the account button. Executed function tests cover fresh/cached image display, failed/missing image fallback, and stale profile resolution after sign-out. Upload/re-sign-in and post-deployment visual checks remain unverified.
+
+- Post-deployment avatar check passed: photo loaded, fallback hidden attribute present with computed display none, and signed-in dot rgb(70,195,123). A 360px check revealed the later brand-overrides.css forced a one-row identity layout and pushed Help to x357..384 outside the viewport. Added a two-row mobile header in that owning stylesheet; live verification of the layout correction is pending.

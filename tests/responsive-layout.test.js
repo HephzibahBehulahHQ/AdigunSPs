@@ -47,3 +47,8 @@ const pendingAvatar=avatarContext.updateAccountAvatar(avatarContext.accountUser)
 await avatarContext.updateAccountAvatar(null);resolveProfile({avatar_url:"https://image.example/stale.png"});await pendingAvatar;
 assert.equal(avatarImage.src,undefined);assert.ok(!iconAttributes.has("hidden"),"late profile response cannot replace signed-out fallback");
 assert.match(styles,/\.account-button \[hidden\]\{display:none!important\}/,"hidden SVG and avatar override display rules");
+
+const brandStyles=readFileSync("assets/brand/brand-overrides.css","utf8");
+assert.match(brandStyles,/\.topbar \{ display: grid; grid-template-columns: minmax\(0, 1fr\) auto; grid-template-rows: 32px 30px;/,"mobile branding uses two rows instead of overflowing controls");
+assert.match(brandStyles,/\.topbar > \.top-actions \{ grid-column: 2; grid-row: 2;/);
+assert.match(brandStyles,/\.topbar > \.project-name \{ grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden;/);

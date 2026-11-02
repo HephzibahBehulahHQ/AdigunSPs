@@ -108,3 +108,5 @@ The shared company portal at https://admin.hephzibahbehulah.com/ hosts a separat
 In **Alarm history**, choose **Event history limit**: 100, 500 (default), or 2000 events. This setting saves with the project and applies to configured, raised, cleared, acknowledged, shelved, suppressed, and removed events. Reducing the limit keeps the newest events; export JSON first if you need older records. Close the dialog, then use **Undo** to restore a retention change and its prior local events. This is local event-count retention, not a tamper-proof historian or a server retention policy.
 
 If hosted AI cannot return an answer, your project remains unchanged. A request may already have reached the service; an unavailable-answer message does not prove that nothing was sent. Keep consent off to use only the offline helper.
+
+On narrow phones the header uses two rows: company/product identity above, project menu and account/language/settings/search/help controls below. All five controls remain available without horizontal scrolling.

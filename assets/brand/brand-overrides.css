@@ -72,7 +72,11 @@ body[data-theme="light"] {
   .corporate-footer a { min-height: 19px; }
   .corporate-footer a[data-brand-link="linkedin"] { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
   #footerYear { grid-column: 1; grid-row: 2; justify-self: start; align-self: start; margin-left: 0; }
-  .topbar { gap: 8px; padding: 0 8px; }
+  .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 32px 30px; gap: 5px 8px; height: auto; min-height: 79px; padding: 6px 8px; }
+  .topbar > .brand { grid-column: 1; grid-row: 1; width: 96px; }
+  .topbar > .product-brand { grid-column: 2; grid-row: 1; min-width: 0; justify-self: end; text-align: right; }
+  .topbar > .project-name { grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden; }
+  .topbar > .top-actions { grid-column: 2; grid-row: 2; margin-left: 0; gap: 6px; min-width: 0; }
   .corporate-logo { width: 96px; height: 32px; }
   .product-brand { min-width: 94px; }
   .product-brand strong { font-size: 14px; }
