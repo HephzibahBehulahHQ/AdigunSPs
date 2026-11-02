@@ -82,4 +82,6 @@ Open the project menu to see local projects sorted by most recently opened. The 
 
 The HMI toolbar's **SCREEN** selector switches among project-saved screens. Use **＋ Screen** to add a screen, edit **NAME** to rename it, or **Delete screen** to remove it. A project always keeps at least one screen, and each screen retains its own widgets
 
-Cloud saving: open **Account**, enter **Cloud project name**, then click **Save to Cloud**. The name is entered in the Account panel; no browser popup is required. This creates or updates the current project’s cloud record.
+Cloud saving: open **Account**, enter **Cloud project name**, then click **Save to Cloud**. The name is entered in the Account panel; no browser popup is required. Each save creates a separate cloud copy; earlier copies remain available.
+
+Cloud project rows show the saved copy name and update time. A version is shown only when version metadata is available.

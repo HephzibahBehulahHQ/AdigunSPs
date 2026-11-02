@@ -140,3 +140,9 @@ Do not describe this milestone as production-ready. Complete the later phases in
 - SFC accessibility checks — verify localized step and transition outline labels, keyboard tree navigation, and focus navigation to each corresponding editor control.
 - Export safety checks — verify the localized educational safety notice appears in I/O schedule, BOM, scenario, example-test, and trend CSVs, while printable reports include the same app-level sa
 
+
+## Live cloud-save verification — 2026-11-02
+
+- Release `3569d1d` deployed with successful CI and Pages workflows. After using the update recovery page, Account displayed the inline Cloud project name field.
+- The existing authenticated session saved a clearly named QA project and loaded its title from the cloud list. A second save containing a PS1 supply produced a separate cloud copy, matching the implemented insert-only behavior. The user guide now states that saves create separate copies.
+- After deleting PS1 only from the local QA copy, opening the newest cloud copy and choosing Switch without an extra save restored PS1 and both terminal controls. Captured browser error logs were empty. This proves one component payload round-trip in the existing session, not full project-format coverage or new-user authentication. Two clearly named QA cloud copies were retained; existing user projects were untouched.

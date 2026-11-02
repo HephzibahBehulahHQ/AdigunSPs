@@ -37,3 +37,5 @@ const cloudSaveHandler = app.slice(app.indexOf('$("#accountCloudSave")?.addEvent
 assert.doesNotMatch(cloudSaveHandler, /prompt\(/, "cloud naming works without native browser prompts");
 assert.match(cloudSaveHandler, /reportValidity\(\)/, "blank cloud names are rejected before saving");
 assert.match(cloudSaveHandler, /saveCloudProject[\s\S]*loadCloudProjectList/, "successful writes refresh the cloud listing");
+
+assert.doesNotMatch(app, /latest\?\.version \|\| 0/, "cloud list does not fabricate version zero when version metadata is absent");

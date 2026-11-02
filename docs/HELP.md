@@ -86,7 +86,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 **What you'll see:** The top bar shows **Saving…**, **Saved locally**, or **Unsaved changes**; the footer says **Project saved on this device** when local storage is available.
 
 1. For signed-in users, autosave is enabled by default and stores changes in this browser. Guest autosave keeps only a temporary draft in the current tab. To change autosave, open **Settings** (⚙), adjust the preference, and select **Done**.
-2. After signing in, choose **Save** or **File → Save locally (JSON)** and save the downloaded project file. **Save as** creates a named copy; in **Account**, enter **Cloud project name** and select **Save to Cloud**. Guests must authenticate before permanently saving or exporting a project file.
+2. After signing in, choose **Save** or **File → Save locally (JSON)** and save the downloaded project file. **Save as** creates a named copy; in **Account**, enter **Cloud project name** and select **Save to Cloud** (a new copy). Guests must authenticate before permanently saving or exporting a project file.
 3. If autosave is off, select **Save** before closing. With unsaved edits, the browser asks before leaving; if storage is unavailable, export a JSON copy.
 4. To recover an earlier local version, open **Project manager** and select the curved-arrow recovery control beside the project. Choose a snapshot to restore it.
 
