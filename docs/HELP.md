@@ -114,7 +114,7 @@ ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling:
 
 4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
 
-The HUD is educational: voltage, current, and motor RPM are not calculated. This simulator does not certify a design or operate physical hardware.
+The HUD is educational: voltage, current, and motor RPM are not calculated. USB controls are under Hardware inventory / BOM.
 
 **How to build a first ladder:**
 
