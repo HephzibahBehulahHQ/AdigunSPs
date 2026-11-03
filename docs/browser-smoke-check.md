@@ -26,3 +26,7 @@ Environment: Chrome, deployed GitHub Pages release `ed092a3` at `https://hephzib
 
 This confirms the existing stored avatar renders in the deployed header. It does not test a fresh avatar upload, sign-out/sign-in persistence, or other users' profiles; those still need dedicated test accounts.
 
+
+### USB dialog on release `50f1da73`
+
+On the custom domain, keyboard navigation through **I/O & Tags → Tags and I/O → Hardware inventory / BOM** opened the dialog. The refreshed browser session displayed **Connect USB**, **Device offline**, and disabled **Sync device** and **Stop all outputs** controls. The earlier session displayed only the inventory fields. The official application refresh was started before opening the fresh session. This check covers the disconnected UI. Device connection, watchdog expiry display, GPIO levels, and physical shutdown remain bench checks.
