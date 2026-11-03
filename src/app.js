@@ -288,10 +288,12 @@ function showHelpGuideMenu(event) {
     hideContextMenu();
     trigger.focus();
   };
+  const keyboardOpened = event.detail === 0;
   helpMarkdownPromise ||= fetch(new URL("../docs/HELP.md", import.meta.url)).then((response) => { if (!response.ok) throw new Error(`Help guide request failed (${response.status})`); return response.text(); });
   helpMarkdownPromise.then((markdown) => {
     if (menu.hidden || !menu.classList.contains("help-guide-menu")) return;
     menu.innerHTML = `<section class="help-guide-content" role="region" aria-label="AdigunSPs Help Guide">${renderHelpMarkdown(markdown)}<div class="help-guide-actions"><button type="button" data-help-action="safety">Safety and help</button><button type="button" data-help-action="resources">External resources</button></div></section>`;
+    if (keyboardOpened && document.activeElement === trigger) menu.querySelector("a[href], button")?.focus();
     menu.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener("click", (click) => { click.preventDefault(); menu.querySelector(link.getAttribute("href"))?.scrollIntoView({ behavior:"smooth", block:"start" }); }));
     menu.querySelectorAll("[data-help-action]").forEach((button) => button.addEventListener("click", () => { const next = button.dataset.helpAction; hideContextMenu(); if (next === "safety") showHelp(); else showResources(); }));
   }).catch(() => { helpMarkdownPromise = undefined; if (!menu.hidden) menu.innerHTML = `<div class="help-guide-loading" role="alert">Help Guide could not be loaded. Check that the docs/HELP.md file is available, then reload the page.</div>`; });
