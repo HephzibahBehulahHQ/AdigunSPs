@@ -24,7 +24,7 @@ See [`COMPONENTS.md`](COMPONENTS.md), [`requirements-status.md`](requirements-st
 
 - The supplied mobile screenshots guide a touch-friendly ladder workspace and timer/rung layout.
 - GitHub Pages serves the static app; Supabase and the consent-gated Cloudflare Worker are separate services. Local `.env` values do not become available in a Pages deployment unless the workflow explicitly injects the documented public runtime settings.
-- The electrical and process models are educational. They do not model voltage/current dynamics, motor torque, verified device ratings, safety circuits, or machine stopping performance. No physical PLC connection, program download, or hardware-in-the-loop transport is implemented in this release.
+- The electrical and process models are educational. They do not model voltage/current dynamics, motor torque, verified device ratings, safety circuits, or machine stopping performance. The hardware command-delivery migration defines a device-scoped queue and event log. The browser transport and device firmware remain open. Bench acceptance requires a confirmed relay supply and interface schematic, independent emergency-stop and motor interlocks, and measured de-energization on disconnect. GPIO readback can confirm the pin state. Relay contact movement requires separate feedback.
 - The supported LD/FBD/ST/SFC and PLCopen XML features are subsets, not full IEC 61131-3 or vendor compatibility implementations. Unsupported constructs are rejected or flagged.
 - User-entered manufacturer data and hardware inventory are not verified by the application. The product is not a safety PLC, certified engineering system, or substitute for vendor and functional-safety validation.
 
