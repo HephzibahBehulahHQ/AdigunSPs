@@ -6,7 +6,7 @@ self.addEventListener("install", (event) => event.waitUntil(
 
 self.addEventListener("activate", (event) => event.waitUntil(
   caches.keys()
-    .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+    .then((keys) => Promise.all(keys.filter((key) => key.startsWith("adigunsps-shell-") && key !== CACHE).map((key) => caches.delete(key))))
     .then(() => self.clients.claim()),
 ));
 
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (event) => {
       }
       return response;
     }).catch(() => event.request.mode === "navigate"
-      ? caches.match("./index.html").then((shell) => shell || Response.error())
+      ? caches.match(new URL("./index.html", self.location.href).href).then((shell) => shell || Response.error())
       : Response.error());
   }));
 });

@@ -34,6 +34,13 @@ vm.runInNewContext(readFileSync("service-worker.js", "utf8"), context);
 let installation;
 handlers.get("install")({waitUntil:promise=>{installation=promise;}});
 await installation;
+const removedCaches = [];
+context.caches.keys = async () => ["adigunsps-shell-v137", "adigunsps-shell-v138", "unrelated-app"];
+context.caches.delete = async key => { removedCaches.push(key); return true; };
+let activation;
+handlers.get("activate")({ waitUntil: promise => { activation = promise; } });
+await activation;
+assert.deepEqual(removedCaches, ["adigunsps-shell-v137"]);
 assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
 assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v138";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
@@ -72,8 +79,12 @@ console.log("PASS: live reload bypass, response cloning, and event-stream cache 
 
 
 context.fetch = async () => { throw new Error("offline"); };
-context.caches.match = async (request) => request === "./index.html" ? new Response("editor shell") : null;
+context.caches.match = async (request) => request === new URL("./index.html", context.self.location.href).href ? new Response("editor shell") : null;
 assert.equal(await (await dispatch("/?offline", "navigate")).text(), "editor shell");
+context.self.location.href = "https://adigun.test/AdigunSPs/service-worker.js";
+context.caches.match = async request => request === "https://adigun.test/AdigunSPs/index.html" ? new Response("editor shell") : null;
+assert.equal(await (await dispatch("/AdigunSPs/?offline", "navigate")).text(), "editor shell");
+assert.equal((await dispatch("/AdigunSPs/src/missing.js")).type, "error");
 assert.equal((await dispatch("/missing.js")).type, "error");
 context.caches.match = async () => null;
 assert.equal((await dispatch("/?offline", "navigate")).type, "error");
