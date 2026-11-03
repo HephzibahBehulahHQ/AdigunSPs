@@ -326,3 +326,7 @@ A disposable local project exported through the browser and re-imported from the
 ### PLCopen TC6 schema verification
 
 Series NO/NC and parallel ladder fixtures exported by AdigunSPs passed the official [PLCopen TC6 2.01 XSD](https://www.plcopen.org/downloads/) using the .NET XML schema validator. The import guard rejects files containing multiple POUs. Live browser XML round-trip and vendor-tool compatibility remain unverified.
+
+### Production PLCopen export with rung comments
+
+After refreshing application files, a commented ladder downloaded from release ea2a6ce passed the official TC6 2.01 XSD. An earlier cached export omitted the required comment dimensions and failed validation. Browser re-import and vendor-tool compatibility remain unverified.
