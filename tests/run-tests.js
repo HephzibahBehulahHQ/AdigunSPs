@@ -119,6 +119,14 @@ const plcInterface = node("interface", {}, [node("inputVars", {}, [plcVar("Start
 const plcRoot = node("project", {}, [node("contentHeader", { name:"Imported exercise" }), node("types", {}, [node("pous", {}, [node("pou", { pouType:"program" }, [plcInterface, node("body", {}, [node("LD", {}, plcLd)])])])])]); plcRoot.namespaceURI = "http://www.plcopen.org/xml/tc6_0200";
 class PlcopenDomParserStub { parseFromString() { return { documentElement:plcRoot, getElementsByTagName:(name) => descendantsForTest(plcRoot, name) }; } }
 const importedPlcopen = parsePlcopenXml("<project/>", PlcopenDomParserStub);
+const plcPous = descendantsForTest(plcRoot, "pous")[0].children;
+plcPous.push(node("pou", {pouType:"functionBlock"}));
+try {
+  assert.throws(() => parsePlcopenXml("<project/>", PlcopenDomParserStub), /multiple POUs/);
+} finally {
+  plcPous.pop();
+}
+
 assert.equal(importedPlcopen.name, "Imported exercise", "PLCopen importer reads project name");
 assert.deepEqual(importedPlcopen.io, { inputs:["Start", "Stop", "Sensor"], outputs:["Motor"] }, "PLCopen importer recovers I/O roles and addresses");
 assert.equal(importedPlcopen.initialState.Delay, 1500, "PLCopen importer restores TIME initial values in milliseconds");

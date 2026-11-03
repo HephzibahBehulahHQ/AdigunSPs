@@ -83,7 +83,9 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (!DOMParserImpl) throw new Error("XML import is unavailable in this browser.");
   const document = new DOMParserImpl().parseFromString(xml, "application/xml"), root = document.documentElement;
   if (root?.localName !== "project" || !/^http:\/\/www\.plcopen\.org\/xml\/tc6_020[01]$/.test(root.namespaceURI || "") || descendants(document, "parsererror").length) throw new Error("This is not a supported PLCopen TC6 project XML document.");
-  const pou = descendants(root, "pou").find((node) => node.getAttribute("pouType") === "program" && child(child(node, "body"), "LD"));
+  const pous = descendants(root, "pou");
+  if (pous.length > 1) throw new Error("PLCopen import supports one program POU. This file contains multiple POUs.");
+  const pou = pous.find((node) => node.getAttribute("pouType") === "program" && child(child(node, "body"), "LD"));
   if (!pou) throw new Error("PLCopen import needs a program POU with a Ladder Diagram body.");
   const ld = child(child(pou, "body"), "LD"), names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "comment"]);
   const nodes = [...ld.children].filter((node) => !["position"].includes(node.localName));
