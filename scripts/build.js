@@ -42,7 +42,7 @@ async function hashAssets(directory, prefix="") {
   for(const entry of entries){
     const relative=prefix+entry.name,path=join(directory,entry.name);
     if(entry.isDirectory())await hashAssets(path,relative+"/");
-    else if(relative!=="service-worker.js")releaseHash.update(relative+"\0").update(await readFile(path)).update("\0");
+    else releaseHash.update(relative+"\0").update(await readFile(path)).update("\0");
   }
 }
 await hashAssets(output);
