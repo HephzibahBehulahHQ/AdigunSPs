@@ -85,3 +85,35 @@ const branding = { productName:"AdigunSPs", companyName:"HB", attribution:"HB" }
 const failedRows = [{index:1,pass:false,error:"Invalid <unit>"}];
 assert.match(createScenarioTestReportCsv(project, {}, failedRows, branding), /Invalid <unit>/);
 assert.match(createScenarioTestReportHtml(project, {}, failedRows, branding), /Invalid &lt;unit&gt;/);
+
+const { readFileSync } = await import("node:fs");
+const { runInNewContext } = await import("node:vm");
+const appSource = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+const adapterStart = appSource.indexOf("const preparedProgramUnits = new WeakMap();");
+const adapterEnd = appSource.indexOf("function doScan(", adapterStart);
+assert.ok(adapterStart >= 0 && adapterEnd > adapterStart);
+const scanMixedProject = runInNewContext(
+  appSource.slice(adapterStart, adapterEnd) + "\nscanMixedProject;",
+  { compileStructuredText, executeProgramTasks, validateMixedProgramUnits }
+);
+const scenarioProject = normalizeImportedProject({
+  ...project,
+  tags: ["Start","Ready","Permit"].map(name => ({name,type:"BOOL"}))
+});
+let simulation = {};
+const scenarioRun = runScenario({frames:[
+  {inputs:{Start:true},expectedOutputs:{Ready:false,Permit:false}},
+  {inputs:{Start:true},expectedOutputs:{Ready:true,Permit:true}},
+  {inputs:{Start:false},expectedOutputs:{Ready:false,Permit:false}}
+]}, scenarioProject, frame => {
+  const result = scanMixedProject(scenarioProject,frame.inputs,simulation,100);
+  assert.deepEqual(Array.from(result.errors), []);
+  simulation = { values:result.image, mixedState:result.state };
+  return result.image;
+});
+assert.deepEqual(scenarioRun.errors, []);
+assert.deepEqual(scenarioRun.results.map(frame => frame.pass), [true,true,true]);
+scenarioProject.programUnits[1].source = "Permit := Missing;";
+const invalidScan = scanMixedProject(scenarioProject,{Start:true},simulation,100);
+assert.match(invalidScan.errors.join(" "), /Check.*Missing/);
+assert.equal(invalidScan.state,simulation.mixedState);
