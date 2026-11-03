@@ -256,3 +256,5 @@ Select a saved unit and choose **Load unit into editor** to replace the working 
 **Latest scan snapshot** shows shared outputs and retained state by unit when the dialog opens. Reopen the dialog to refresh the snapshot.
 
 Mixed ST units share project inputs and outputs. Other scalar tags use their project initial values on the first scan, then retain separate values in each ST unit until reset.
+
+For mixed projects, **Project > Cyclic ST tasks** also accepts the saved LD, FBD, ST and SFC unit names. Task assignments apply to saved units rather than unsaved working bodies.

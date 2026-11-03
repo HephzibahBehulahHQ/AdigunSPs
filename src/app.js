@@ -1757,14 +1757,14 @@ function showMixedPrograms() {
   };
 }
 function showCyclicTasks(draft) {
-  const projectId = project.id, source = project.stSource || "", view = cyclicTaskEditor(project,language,draft);
+  const projectId = project.id, source = project.stSource || "", units = project.programUnits, view = cyclicTaskEditor(project,language,draft);
   modal(view.copy.title,view.html);
   const allowed = () => {
     if (!["member","guest"].includes(accountAccess)) { showAccount(); return false; }
-    if (project.id !== projectId || (project.stSource || "") !== source) { toast(view.copy.stale); return false; }
+    if (project.id !== projectId || (project.stSource || "") !== source || project.programUnits !== units) { toast(view.copy.stale); return false; }
     return true;
   };
-  $("#openTaskPrograms").onclick = () => showStructuredTextFunctions("programs");
+  $("#openTaskPrograms").onclick = () => project.programUnits?.length ? showMixedPrograms() : showStructuredTextFunctions("programs");
   $("#defaultCyclicTasks").onclick = () => { if (!allowed()) return; pushHistory(); delete project.tasks; persist(); $("#modal").close(); };
   const form = $("#cyclicTaskForm");
   if (!form) return;

@@ -48,3 +48,8 @@ assert.equal(counted.image.Result, 11);
 assert.equal(counted.image.CounterValue, 10);
 assert.equal(executeProgramTasks([counter], undefined, seeded, counted.state).image.Result, 12);
 assert.equal(executeProgramTasks([counter], undefined, seeded).image.Result, 11);
+
+const { cyclicTaskEditor } = await import("../src/cyclic-task-ui.js");
+const mixedTaskView = cyclicTaskEditor(project);
+assert.deepEqual(mixedTaskView.programNames, ["Ladder", "Check"]);
+assert.match(mixedTaskView.html, /id="cyclicTaskForm"/);
