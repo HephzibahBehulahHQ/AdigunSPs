@@ -79,3 +79,9 @@ const { runScenario } = await import("../src/scenarios.js");
 const failedScenario = runScenario({frames:[{expectedOutputs:{Ready:false}}]}, {...project,tags:[{name:"Ready",type:"BOOL"}]}, () => { throw new Error("Invalid unit"); });
 assert.equal(failedScenario.results[0].pass, false);
 assert.equal(failedScenario.results[0].error, "Invalid unit");
+
+const { createScenarioTestReportCsv, createScenarioTestReportHtml } = await import("../src/reports.js");
+const branding = { productName:"AdigunSPs", companyName:"HB", attribution:"HB" };
+const failedRows = [{index:1,pass:false,error:"Invalid <unit>"}];
+assert.match(createScenarioTestReportCsv(project, {}, failedRows, branding), /Invalid <unit>/);
+assert.match(createScenarioTestReportHtml(project, {}, failedRows, branding), /Invalid &lt;unit&gt;/);
