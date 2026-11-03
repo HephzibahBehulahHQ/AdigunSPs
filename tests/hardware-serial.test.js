@@ -40,15 +40,15 @@ for (const fault of [false, true]) {
     const port = {
       readable: new ReadableStream({ start(controller) { input = controller; } }),
       writable: new WritableStream({ write() {
-        if (fault) input.enqueue(new TextEncoder().encode('{"type":"HARD_FAULT"}\n'));
+        if (fault) input.enqueue(new TextEncoder().encode('{"type":"HARD_FAULT","reason":"Heartbeat expired"}\n'));
       } }),
       async open() {},
       async close() { closed = true; }
     };
     const session = await openSerialExchange(port, 30);
-    await assert.rejects(session.send("SYNC"), fault ? /HARD_FAULT/ : /timed out/);
+    await assert.rejects(session.send("SYNC"), fault ? /HARD_FAULT: Heartbeat expired/ : /timed out/);
     const reason = await session.disconnected;
-    assert.match(reason.message, fault ? /HARD_FAULT/ : /timed out/);
+    assert.match(reason.message, fault ? /HARD_FAULT: Heartbeat expired/ : /timed out/);
     assert.equal(closed, true);
     await assert.rejects(session.send("HEARTBEAT"), /Offline/);
   });
