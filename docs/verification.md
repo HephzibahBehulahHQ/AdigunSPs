@@ -309,3 +309,8 @@ Local preview at port 8139 accepted a disposable project with a BOOL output and 
 ### Saved Structured Text unit edit
 
 In a disposable local browser project, the saved ST unit `Check` assigned `TRUE` to BOOL output `Tag1`. A single Step showed `Tag1: true` in Latest scan snapshot. Loading the unit into the ST editor, changing the assignment to `FALSE`, copying the editor changes back, and applying the configuration produced `Tag1: false` on the next Step. This verifies the local browser workflow for a saved ST unit. The corresponding scan-adapter regression is included in PR #45.
+
+
+### Production update preserves a saved project
+
+On release `67cef4f`, a disposable project retained the task name `QAReleasePersistence` after an ordinary reload. The production update page then reported Update ready. After returning to the editor and reloading, the task name was still present. This verifies preservation of the saved local project setting across an online update. Offline reload remains unverified.
