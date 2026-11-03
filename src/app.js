@@ -1678,7 +1678,46 @@ function showApplicationMenu(event) {
 function showMixedPrograms() {
   const projectId = project.id;
   const configuration = {programUnits:project.programUnits || [], tasks:project.tasks || []};
-  modal("Mixed-language programs", `<div class="modal-body"><label class="field">Program units and task assignments<textarea id="mixedProgramJson" rows="16" spellcheck="false">${escapeHtml(JSON.stringify(configuration,null,2))}</textarea></label><p>Use an empty program list to return to single-editor execution.</p><button id="captureMixedProgram" class="secondary">Add current editor as a unit</button><p id="mixedProgramErrors" role="status"></p><button id="saveMixedPrograms" class="primary">Apply configuration</button></div>`);
+  const monitor = configuration.programUnits.map(unit => {
+    const states = sim.mixedState?.units || {};
+    const key = unit.name.toLowerCase();
+    return {unit:unit.name, retainedState:Object.hasOwn(states,key) ? states[key] : null};
+  });
+  const sharedOutputs = Object.fromEntries((project.io.outputs || []).map(name=>[name,sim.outputs?.[name] ?? false]));
+
+  modal("Mixed-language programs", `<div class="modal-body"><label class="field">Program units and task assignments<textarea id="mixedProgramJson" rows="16" spellcheck="false">${escapeHtml(JSON.stringify(configuration,null,2))}</textarea></label><p>Use an empty program list to return to single-editor execution.</p><details><summary>Latest scan snapshot</summary><pre>${escapeHtml(JSON.stringify({sharedOutputs,units:monitor},null,2))}</pre></details><button id="captureMixedProgram" class="secondary">Add current editor as a unit</button><label class="field">Saved unit<select id="mixedUnitSelection">${configuration.programUnits.map((unit,index)=>`<option value="${index}">${escapeHtml(unit.name)} (${escapeHtml(unit.language)})</option>`).join("")}</select></label><button id="openMixedUnit" class="secondary" ${configuration.programUnits.length ? "" : "disabled"}>Load unit into editor</button><button id="updateMixedUnit" class="secondary" ${configuration.programUnits.length ? "" : "disabled"}>Copy editor changes to selected unit</button><p id="mixedProgramErrors" role="status"></p><button id="saveMixedPrograms" class="primary">Apply configuration</button></div>`);
+  const selectedUnit = () => configuration.programUnits[Number($("#mixedUnitSelection").value)];
+  $("#openMixedUnit").onclick = () => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
+    if (project.id !== projectId) return;
+    const unit = selectedUnit();
+    if (!unit) return;
+    pushHistory();
+    if (unit.language === "LD") project.rungs = structuredClone(unit.rungs);
+    if (unit.language === "FBD") project.fbdBlocks = structuredClone(unit.blocks);
+    if (unit.language === "ST") project.stSource = unit.source;
+    if (unit.language === "SFC") project.sfc = structuredClone(unit.chart);
+    project.editorType = unit.language;
+    workspaceView = "logic";
+    $("#modal").close();
+    render();
+    persist();
+  };
+  $("#updateMixedUnit").onclick = () => {
+    try {
+      const unit = selectedUnit();
+      if (!unit || unit.language !== (project.editorType || "LD")) throw new Error("Open the matching language editor first.");
+      const draft = JSON.parse($("#mixedProgramJson").value);
+      const target = draft.programUnits.find(item=>item.name === unit.name && item.language === unit.language);
+      if (!target) throw new Error("The selected unit is missing from the draft.");
+      if (unit.language === "LD") target.rungs = projectRungs(project);
+      if (unit.language === "FBD") target.blocks = project.fbdBlocks || [];
+      if (unit.language === "ST") target.source = project.stSource || "";
+      if (unit.language === "SFC") target.chart = project.sfc;
+      $("#mixedProgramJson").value = JSON.stringify(draft,null,2);
+      $("#mixedProgramErrors").textContent = "";
+    } catch (error) { $("#mixedProgramErrors").textContent = error.message; }
+  };
   $("#captureMixedProgram").onclick = () => {
     try {
       const draft = JSON.parse($("#mixedProgramJson").value);

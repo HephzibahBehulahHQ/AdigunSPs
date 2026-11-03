@@ -245,8 +245,12 @@ Hosted questions show **Waiting for a reply...** and temporarily disable other s
 
 Project JSON can define a `programUnits` array with named LD, FBD, ST and SFC units. Each unit declares its project output tags and provides `rungs`, `blocks`, `source` or `chart` for its language. Optional `tasks` assign unit names in execution order. Without assignments, units run in file order.
 
-The simulator runs these units when the project is opened. Units share the current tag image and retain their own execution state. The graphical editor still displays the legacy project body. Unit editing and per-unit graphical monitoring remain pending.
+The simulator runs these units when the project is opened. Units share the current tag image and retain their own execution state. Each saved unit can be copied into its language editor. Per-unit graphical monitoring remains pending.
 
 Open **Programs > Mixed-language programs** to edit and apply the JSON configuration in the app. Applying resets simulation state. Use empty arrays to return to single-editor execution.
 
 **Add current editor as a unit** copies the current logic into the draft. Review its name, output tags and task assignment before applying.
+
+Select a saved unit and choose **Load unit into editor** to replace the working body for that language. Undo can restore the previous working body. After editing, reopen the dialog, select the same unit, choose **Copy editor changes to selected unit**, then **Apply configuration**. Running uses the saved units until you apply the draft.
+
+**Latest scan snapshot** shows shared outputs and retained state by unit when the dialog opens. Reopen the dialog to refresh the snapshot.
