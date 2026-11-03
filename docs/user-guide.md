@@ -188,7 +188,7 @@ The language button cycles English, German, Yoruba, and Nigerian Pidgin. Project
 
 ## Adigun BOT
 
-Open **Adigun BOT** from the floating button or **Tools**. The offline helper can explain curated electrical and PLC lessons and create limited drafts for FBD gates, TON delayed lamps, or LD start/stop circuits. It shows a plan and assumptions before import or save; guests may import but cannot download or cloud-save. Optional speech input depends on browser support. Hosted answers are optional and require a signed-in account; read [Help → Hosted AI privacy](HELP.md#hosted-ai-privacy) before sending a request. The Bot does not build schematic wiring, edit arbitrary existing projects, or approve safety designs; see [BOT.md](BOT.md) for supported prompts and limits.
+Open **Adigun BOT** from the floating button or **Tools**. The Bot window stays below the top menus. The offline helper can explain curated electrical and PLC lessons and create limited drafts for FBD gates, TON delayed lamps, or LD start/stop circuits. It shows a plan and assumptions before import or save; guests may import but cannot download or cloud-save. Optional speech input depends on browser support. Hosted answers are optional and require a signed-in account; read [Help → Hosted AI privacy](HELP.md#hosted-ai-privacy) before sending a request. The Bot does not build schematic wiring, edit arbitrary existing projects, or approve safety designs; see [BOT.md](BOT.md) for supported prompts and limits.
 
 ## External resources
 

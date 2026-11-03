@@ -139,7 +139,7 @@ Adigun BOT answers PLC questions, drafts supported gate/timer/start-stop logic, 
 
 **What you'll see:** Title bar controls, chat, and a lower-right resize handle; the canvas remains clickable.
 
-1. Drag the title bar to move the panel; it stays reachable.
+1. Drag the title bar to move the panel below the menus.
 2. Drag the bottom-right handle to resize; layout saves per account or guest.
 3. Select **Minimize** to collapse it; the Adigun BOT button restores it.
 4. Select **Maximize**, then **Restore**, to expand and return to the previous size and position.
