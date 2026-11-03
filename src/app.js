@@ -1192,7 +1192,7 @@ function bindHardwareSerial() {
   const stop = $("#stopHardwareSerial");
   function showStatus(message, failed = false) {
     status.textContent = message;
-    status.classList.toggle("validation-list", failed);
+    status.classList.toggle("validation-item", failed);
   }
 
   let session;
