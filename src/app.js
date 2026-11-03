@@ -3,7 +3,7 @@ import { cyclicTaskEditor, readCyclicTaskRows } from "./cyclic-task-ui.js";
 import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
 import { store } from "./store.js";
-import { validateProject } from "./validation.js";
+import { validateProject, validateMixedProgramUnits } from "./validation.js";
 import { compileStructuredText, executeStructuredText, renameStructuredTextIdentifier, countStructuredTextReferences } from "./structured-text.js";
 import { structuredTextFunctionLibrary, structuredTextProgramLibrary, structuredTextBlockLibrary, structuredTextLineOffset } from "./st-function-library.js";
 import { runStandardsChecks } from "./standards.js";
@@ -516,6 +516,8 @@ function scanMixedProject(project, inputs, state, dt) {
     preparedProgramUnits.set(project,prepared);
   }
   const image = {...state.values,...state.outputs,...inputs};
+  const errors = validateMixedProgramUnits(project).map(issue => issue.message);
+  if (errors.length) return {image,state:state.mixedState,errors};
   return executeProgramTasks(prepared.units,project.tasks,image,state.mixedState,dt);
 }
 function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const started = performance.now(); sim.breakpointHit = null;
@@ -1748,6 +1750,8 @@ function showMixedPrograms() {
       if (programUnits.length) candidate.programUnits = programUnits;
       if (tasks.length) candidate.tasks = tasks;
       const checked = normalizeImportedProject(candidate);
+      const errors = validateMixedProgramUnits(checked);
+      if (errors.length) throw new Error(errors.map(issue => issue.message).join(" "));
       resetProjectSimulation();
       pushHistory();
       project = checked;

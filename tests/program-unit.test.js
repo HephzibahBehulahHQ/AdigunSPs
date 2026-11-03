@@ -67,3 +67,10 @@ for (const unit of editableUnits) {
   assert.equal(programUnitUsesTag(unit, "Ready"), false);
   assert.equal(programUnitUsesTag(unit, "Available"), true);
 }
+
+const { validateMixedProgramUnits } = await import("../src/validation.js");
+const badUnitProject = normalizeImportedProject(project);
+badUnitProject.programUnits[1].source = "Permit := Unknown;";
+assert.match(validateMixedProgramUnits(badUnitProject)[0].message, /Check.*Unknown/);
+badUnitProject.programUnits[1].source = "Permit := Ready;";
+assert.deepEqual(validateMixedProgramUnits(badUnitProject), []);

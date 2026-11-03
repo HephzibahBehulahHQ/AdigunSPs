@@ -262,3 +262,5 @@ For mixed projects, **Project > Cyclic ST tasks** also accepts the saved LD, FBD
 Mixed-project trace history includes retained unit state and the task clock. Replay divergence reports include expected and actual mixed state.
 
 Tag renames update saved unit references. Remove references from saved units before deleting a tag.
+
+Diagnostics identifies saved units with invalid logic by name. Applying a configuration or scanning a mixed project checks these errors before execution.
