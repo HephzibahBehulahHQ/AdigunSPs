@@ -1,7 +1,11 @@
+import { executeProgramTasks, programUnitUsesTag, renameProgramUnitTag } from "./program-unit.js";
+import { cyclicTaskEditor, readCyclicTaskRows } from "./cyclic-task-ui.js";
+import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
 import { store } from "./store.js";
-import { validateProject } from "./validation.js";
-import { compileStructuredText, executeStructuredText } from "./structured-text.js";
+import { validateProject, validateMixedProgramUnits } from "./validation.js";
+import { compileStructuredText, executeStructuredText, renameStructuredTextIdentifier, countStructuredTextReferences } from "./structured-text.js";
+import { structuredTextFunctionLibrary, structuredTextProgramLibrary, structuredTextBlockLibrary, structuredTextLineOffset } from "./st-function-library.js";
 import { runStandardsChecks } from "./standards.js";
 import { appendResourceAudit, checkResourceLink, isApprovedExternalUrl, readResourceAudit, readResourceRegistry, removeResource, resources, saveResource } from "./resources.js";
 import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe, captureRecipeInputs, recipeInputChanges, normalizeAlarmHistoryLimit, retainAlarmEvents } from "./hmi.js";
@@ -18,7 +22,7 @@ import { validateHardwareItem } from "./hardware.js";
 import { hmiDragPosition } from "./hmi-layout.js";
 import { validateScenario, runScenario } from "./scenarios.js";
 import { appendTrendSample, trendSampleHeights, trimTrendHistory } from "./hmi-history.js";
-import { isHistoricalBreakpoint, shiftHistoricalBreakpoints } from "./trace-utils.js";
+import { isHistoricalBreakpoint, shiftHistoricalBreakpoints, traceSectionValues } from "./trace-utils.js";
 import { sortProjectsByRecent } from "./project-list.js";
 import { recordOperationsScan, calculateOperations, createOperationsReportCsv } from "./operations.js";
 import { resolveProjectLanguage } from "./project-language.js";
@@ -63,6 +67,7 @@ const tour = {
 };
 let language = localStorage.getItem("adigun-language") || "en";
 let adigunAiMessages = [], adigunBotDraft = null, adigunBotRecognition = null, adigunBotWindow;
+let adigunAiRequest = null;
 let liveCopilotEnabled = localStorage.getItem("adigun-live-copilot") !== "off", copilotTypingUntil = 0, copilotPointerActive = false, copilotGoal = "", copilotGoalPending = false, copilotDebounce = 0, copilotTick = 0, copilotActiveState = {active:null,lastShownAt:0,dismissed:new Set()}, copilotFirstSeen = new Map();
 let adigunBotCanvasPreview = null;
 let protocolMemory = createProtocolMemory();
@@ -499,6 +504,22 @@ function renderInspector() {
 }
 function address(name) { return project.tags?.find((tag) => tag.name === name)?.address || name; }
 function updateStatus() { $("#scanTime").textContent = `${lastScanMs} ms`; $("#cycleCount").textContent = scans; $("#taskCycleInfo").textContent = `${project.task?.name || "Main"} · ${getTaskCycleMs(project)} ms`; $("#scanLabel").textContent = `SCAN ${String(scans).padStart(5, "0")}`; $("#plcStatus").textContent = t(runTimer ? "running" : (window.adigunPaused ? "paused" : "ready")); $(".statusbar").classList.toggle("running", Boolean(runTimer)); }
+const preparedProgramUnits = new WeakMap();
+function scanMixedProject(project, inputs, state, dt) {
+  const signature = JSON.stringify([project.programUnits, project.tags, project.io]);
+  let prepared = preparedProgramUnits.get(project);
+  if (prepared?.signature !== signature) {
+    const names = [...new Set([...project.tags.map(tag=>tag.name), ...project.io.inputs, ...project.io.outputs])];
+    const types = Object.fromEntries(project.tags.map(tag=>[tag.name,tag.type]));
+    const sharedNames = [...project.io.inputs, ...project.io.outputs];
+    prepared = {signature, units:project.programUnits.map(unit=>unit.language === "ST" ? {...unit, types, sharedNames, compiled:compileStructuredText(unit.source,names)} : unit)};
+    preparedProgramUnits.set(project,prepared);
+  }
+  const image = {...state.values,...state.outputs,...inputs};
+  const errors = validateMixedProgramUnits(project).map(issue => issue.message);
+  if (errors.length) return {image,state:state.mixedState,errors};
+  return executeProgramTasks(prepared.units,project.tasks,image,state.mixedState,dt);
+}
 function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const started = performance.now(); sim.breakpointHit = null;
   if (traceReplay) { const frame = traceFrames[traceCursor]; if (!frame) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); return; } inputOverride = frame.inputs; simulationFaults = structuredClone(frame.faults || []); Object.assign(sim.values, frame.numericInputs || {}); dt = frame.dt; traceCursor++; }
   const tags = inferTags(), baseInputs = Object.fromEntries(tags.signals.map((name) => [name, Object.hasOwn(forcedInputs, name) ? forcedInputs[name] : Boolean(sim.values[name])]));
@@ -509,12 +530,19 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   for (const [tag,value] of Object.entries(inputs)) if (Object.hasOwn(priorNarratorInputs, tag) && Boolean(priorNarratorInputs[tag]) !== Boolean(value)) addNarratorEntry(`Input ${tag} switched ${value ? "ON" : "OFF"}; PLC evaluates the change on this scan.`);
   priorNarratorInputs = { ...inputs };
   const connectedAnalogInputs = inputElectrical ? Object.fromEntries(Object.keys(analogInputValues).map((name) => [name, Number(inputElectrical.inputs[name] ?? 0)])) : analogInputValues;
-  if (project.editorType === "ST") {
+  if (project.programUnits?.length) {
+    const result = scanMixedProject(project,{...inputs,...connectedAnalogInputs},sim,dt);
+    const runtimeError = result.errors.join("; ");
+    if (runtimeError && runtimeError !== sim.stRuntimeError) logEvent("runtime-error",runtimeError);
+    const outputs = Object.fromEntries((project.io.outputs || []).map(name=>[name,result.image[name] ?? false]));
+    sim = {...sim, values:result.image, outputs, mixedState:result.state, stRuntimeError:runtimeError, energized:{}};
+  }
+  else if (project.editorType === "ST") {
     const stSource = project.stSource || "", stTags = [...new Set([...(project.tags || []).map((tag) => tag.name), ...tags.signals, ...tags.outputs])], signature = stCompileSignature(stSource, stTags);
     if (!compiledST || compiledSTSignature !== signature) { compiledST = compileStructuredText(stSource, stTags); compiledSTSignature = signature; }
     if (!compiledST.ok) logEvent("compile-error", compiledST.errors.join("; "));
     const tagTypes = Object.fromEntries((project.tags || []).map((tag) => [tag.name, tag.type || "BOOL"]));
-    const stInputs = { ...sim.values, ...inputs, ...connectedAnalogInputs }, execution = executeStructuredText(compiledST, stInputs, sim.outputs, tags.outputs, tagTypes), runtimeError = compiledST.ok ? execution.errors.join("; ") : "";
+    const stInputs = { ...sim.values, ...inputs, ...connectedAnalogInputs }, execution = executeStructuredText(compiledST, stInputs, sim.outputs, tags.outputs, tagTypes, sim.programState, {tasks:project.tasks,dtMs:dt,previousState:sim.taskState}), runtimeError = compiledST.ok ? execution.errors.join("; ") : "";
     if (runtimeError && runtimeError !== sim.stRuntimeError) logEvent("runtime-error", runtimeError);
     sim = { ...sim, ...execution, stRuntimeError:runtimeError, energized:{} };
   }
@@ -547,7 +575,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   if (!traceReplay && inputOverride === null) sessionOperations = recordOperationsScan(sessionOperations, sim.outputs, dt, tags.outputs);
   lastScanMs = Math.round((performance.now() - started) * 100) / 100; scans++; sampleHmiHistory(); logEvent("scan", `Scan completed in ${lastScanMs} ms`, { durationMs:lastScanMs, outputs:{ ...sim.outputs } });
   if (traceRecording) { traceFrames.push({ dt, inputs:{ ...inputs }, numericInputs:traceNumericInputs(), faults:structuredClone(simulationFaults), outputs:{ ...sim.outputs }, timers:structuredClone(sim.timers || {}), processValues:{ ...sim.processValues }, state:structuredClone(sim) }); if (traceFrames.length > 5000) { const discarded = traceFrames.shift(); traceInitial = discarded.state || traceInitial; traceInitialFaults = structuredClone(discarded.faults || []); traceBreakpoints = shiftHistoricalBreakpoints(traceBreakpoints); } }
-  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues }); }
+  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {}) || JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {}) || JSON.stringify(expected.state?.taskState || {}) !== JSON.stringify(sim.taskState || {}) || JSON.stringify(expected.state?.mixedState || {}) !== JSON.stringify(sim.mixedState || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues, expectedProgramState:structuredClone(expected.state?.programState || {}), actualProgramState:structuredClone(sim.programState || {}), expectedTaskState:structuredClone(expected.state?.taskState || {}), actualTaskState:structuredClone(sim.taskState || {}), expectedMixedState:structuredClone(expected.state?.mixedState || {}), actualMixedState:structuredClone(sim.mixedState || {}) }); }
   renderLadder(); updateSimulationHud(); if (sim.breakpointHit) { logEvent("breakpoint", `Paused before network ${sim.rungIndex + 1}`, { rungId:sim.breakpointHit }); if (runTimer) { clearInterval(runTimer); runTimer = null; toast(`Breakpoint · network ${sim.rungIndex + 1}`); updateStatus(); } } if (traceReplay && isHistoricalBreakpoint(traceBreakpoints, traceCursor, traceFrames.length) && runTimer) { clearInterval(runTimer); runTimer = null; window.adigunPaused = true; logEvent("historical-breakpoint", `Replay paused at historical scan ${traceCursor}`, { scan:traceCursor }); toast(`Historical breakpoint · scan ${traceCursor}`); showTrace(); updateStatus(); } if (traceReplay && traceCursor >= traceFrames.length) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); }
 }
 function ladderToStructuredText() { return project.rungs.filter((rung) => rung.coil).map((rung) => { const paths = rungPaths(rung).map((path) => path.length ? path.map((contact) => `${contact.mode === "NC" ? "NOT " : ""}${contact.tag}`).join(" AND ") : "TRUE"); return `${rung.coil} := ${paths.length > 1 ? `(${paths.join(") OR (")})` : paths[0]};`; }).join("\n"); }
@@ -876,7 +904,7 @@ function pasteFbdSelection() { if (!copiedFbdBlocks?.length) { toast("Copy a fun
 function duplicateFbdSelection() { copiedFbdBlocks = copyFbdBlocks(project.fbdBlocks || [], fbdSelection); if (copiedFbdBlocks.length) pasteFbdSelection(); }
 function copyRung(cut = false) { if (selection?.rung == null || !project.rungs[selection.rung]) { toast("Select a rung first"); return; } copiedRung = structuredClone(project.rungs[selection.rung]); if (cut) rungAction("delete", selection.rung); else toast("Rung copied"); }
 function pasteRung() { if (!copiedRung) { toast("Copy a rung first"); return; } selectedContacts.clear(); pushHistory(); const copy = structuredClone(copiedRung); copy.id = crypto.randomUUID(); copy.comment = `${copy.comment || "Rung"} copy`; const index = selection?.rung == null ? project.rungs.length : selection.rung + 1; project.rungs.splice(index, 0, copy); selection = { rung:index, kind:"coil" }; render(); persist(); }
-function traceKey() { return JSON.stringify({ editorType:project.editorType || "LD", tags:project.tags, rungs:project.rungs, fbdBlocks:project.fbdBlocks, stSource:project.stSource, sfc:project.sfc, processes:project.processes, breakpoints:[...breakpoints] }); }
+function traceKey() { return JSON.stringify({ editorType:project.editorType || "LD", tags:project.tags, rungs:project.rungs, fbdBlocks:project.fbdBlocks, stSource:project.stSource, task:project.task, tasks:project.tasks, programUnits:project.programUnits, sfc:project.sfc, processes:project.processes, breakpoints:[...breakpoints] }); }
 function showFaults() {
   const copy = ({ en:{title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected faults. Faults affect simulation only and are session-only."}, de:{title:"Simulationsfehler",input:"Simulierte E/A",kind:"Fehlertyp",high:"Dauerhaft 1",low:"Dauerhaft 0",offset:"Numerischer Offset",amount:"Offset",add:"Fehler injizieren",empty:"Keine injizierten Fehler. Fehler wirken nur in der Simulation und nur für diese Sitzung."}, yo:{title:"Àṣìṣe àfarawé",input:"I/O àfarawé",kind:"Irú àṣìṣe",high:"Dúró ní gíga",low:"Dúró ní ìsàlẹ̀",offset:"Àfikún nọ́ńbà",amount:"Àfikún",add:"Fi àṣìṣe sí i",empty:"Kò sí àṣìṣe. Àwọn àṣìṣe yìí kan àfarawé nìkan, wọ́n sì wà fún ìgbà yìí nìkan."}, pcm:{title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected fault. E affect simulation only and na for this session."} })[language] || {title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected faults. Faults affect simulation only and are session-only."};
   const io = inferTags(), faultTargets = [...io.inputs.map((name) => ({ name, direction:"input" })), ...io.outputs.map((name) => ({ name, direction:"output" }))].map((item) => ({ ...item, ...(project.tags?.find((tag) => tag.name === item.name) || {}) }));
@@ -904,10 +932,13 @@ function showScenarioRunner() {
     const run = runScenario(scenario, project, (frame) => {
       sim.values = { ...sim.values, ...(frame.inputs || {}), ...(frame.numericInputs || {}) };
       doScan(Number(frame.dt) || getTaskCycleMs(project));
+      const runtimeError = project.programUnits?.length || project.editorType === "ST" ? sim.stRuntimeError : project.editorType === "FBD" ? sim.fbdRuntimeError : "";
+      if (runtimeError) throw new Error(runtimeError);
+      if (!project.programUnits?.length && project.editorType === "ST" && compiledST && !compiledST.ok) throw new Error(compiledST.errors.join("; "));
       return { ...(sim.outputs || {}), ...(sim.processValues || {}) };
     });
     lastScenario = scenario; lastResults = run.results; $("#scenarioReportCsv").disabled = !run.results.length; $("#scenarioReportPrint").disabled = !run.results.length;
-    const rows = run.results.map(({ index, inputs, numericInputs, actual, expected, pass }) => `<div class="validation-item ${pass === false ? "error" : pass === true ? "ok" : ""}"><b>Scan ${index}${pass === true ? " · PASS" : pass === false ? " · FAIL" : ""}</b><small>${escapeHtml(JSON.stringify({ inputs, numericInputs, outputs:actual, expected }))}</small></div>`);
+    const rows = run.results.map(({ index, inputs, numericInputs, actual, expected, pass, error }) => `<div class="validation-item ${pass === false ? "error" : pass === true ? "ok" : ""}"><b>Scan ${index}${pass === true ? " · PASS" : pass === false ? " · FAIL" : ""}</b><small>${escapeHtml(JSON.stringify({ inputs, numericInputs, outputs:actual, expected, error }))}</small></div>`);
     $("#scenarioResults").innerHTML = rows.join(""); renderLadder(); updateStatus();
   };
 }
@@ -921,11 +952,11 @@ function showTrace() {
   const paintHistory = () => {
     const index = Number($("#traceScrubber").value), current = snapshot(index), previous = index ? snapshot(index - 1) : null;
     $("#traceScanLabel").textContent = index === 0 ? "Initial state" : `Scan ${index}`;
-    const sections = ["values", "outputs", "timers", "processValues"];
+    const sections = ["values", "outputs", "timers", "processValues", "programState", "taskState", "mixedState"];
     const rows = sections.flatMap((section) => {
-      const now = current?.[section] || {}, before = previous?.[section] || {};
+      const now = traceSectionValues(current,section), before = traceSectionValues(previous,section);
       const keys = new Set([...Object.keys(now), ...Object.keys(before)]);
-      return [...keys].filter((key) => JSON.stringify(now[key]) !== JSON.stringify(before[key])).map((key) => `<div class="validation-item"><b>${escapeHtml(section)} · ${escapeHtml(key)}</b>: ${escapeHtml(JSON.stringify(before[key] ?? "—"))} → ${escapeHtml(JSON.stringify(now[key] ?? "—"))}</div>`);
+      return [...keys].filter((key) => JSON.stringify(now[key]) !== JSON.stringify(before[key])).map((key) => `<div class="validation-item"><b>${escapeHtml(section === "programState" ? ({en:"Program locals",de:"Lokale Programmvariablen",yo:"Oníyípadà inú ètò",pcm:"Program locals"})[language] : section === "taskState" ? ({en:"Task timing",de:"Taskzeit",yo:"Àkókò iṣé́",pcm:"Task timing"})[language] : section)} · ${escapeHtml(section === "taskState" ? ({en:"Time (ms)",de:"Zeit (ms)",yo:"Àkókò (ms)",pcm:"Time (ms)"})[language] : key)}</b>: ${escapeHtml(JSON.stringify(before[key] ?? "—"))} → ${escapeHtml(JSON.stringify(now[key] ?? "—"))}</div>`);
     });
     $("#traceStatePreview").innerHTML = index === 0 ? '<div class="validation-item ok">Initial recorded state.</div>' : rows.join("") || '<div class="validation-item ok">No state changes since the preceding scan.</div>';
     const toggle = $("#traceBreakpointToggle"); toggle.disabled = index === 0; toggle.textContent = traceBreakpoints.has(index) ? copy.remove : copy.mark;
@@ -975,7 +1006,7 @@ function updateMotorHum() { const running = Object.values(project.electrical?.si
 function runSimulation() { if (runTimer) return; logEvent(traceReplay ? "replay" : "run", traceReplay ? "Trace replay started" : "Simulation started"); addNarratorEntry("PLC scan started; outputs follow the current logic state."); window.adigunPaused = false; const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; runTimer = setInterval(() => doScan(), delay); updateSimulationHud(); updateStatus(); }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch])); }
 function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#96;"); }
-function modal(title, content) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) adigunBotWindow.open(); else botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
+function modal(title, content, options = {}) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) { if (options.reveal !== false) adigunBotWindow.open(); } else if (options.reveal !== false) botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
 function confirmProjectChange() {
   if (!hasUnsavedChanges) return Promise.resolve(true);
   return new Promise((resolve) => {
@@ -1058,6 +1089,7 @@ $("#fileInput").addEventListener("change", async (event) => { const file = event
 async function showPalette() {
   const commands = [{label:t("new"),action:"new"},{label:t("titleProjects"),action:"projects"},{label:t("titleExamples"),action:"examples"},{label:t("import"),action:"import"},{label:t("export"),action:"export"},{label:t("addRung"),action:"add-rung"},{label:t("addContact"),action:"add-contact"},{label:t("run"),action:"run"},{label:t("step"),action:"step"},{label:t("reset"),action:"stop"},{label:t("titleTags"),action:"tags"},{label:({ en:"Fault injection", de:"Fehlerinjektion", yo:"Fifi àṣìṣe", pcm:"Fault injection" })[language],action:"faults"},{label:"Find / Replace",action:"find"},{label:"Copy rung",action:"copy"},{label:"Paste rung",action:"paste"},{label:t("titleHelp"),action:"help"}];
   commands.push({ label:({ en:"Run scripted scenario", de:"Szenario ausführen", yo:"Ṣe ìtẹ̀lé ìdánwò", pcm:"Run scripted scenario" })[language], action:"scenario" });
+  for (const entry of Object.values(createApplicationMenuEntries(language)).flat()) if (!commands.some(command => command.action === entry.action)) commands.push(entry);
   const projects = await store.all(), prefixes = { en:{project:"Project",tag:"Tag",example:"Example"}, de:{project:"Projekt",tag:"Tag",example:"Beispiel"}, yo:{project:"Iṣẹ́ akanṣe",tag:"Àmì",example:"Àpẹẹrẹ"}, pcm:{project:"Project",tag:"Tag",example:"Example"} }[language] || {project:"Project",tag:"Tag",example:"Example"};
   modal(t("titlePalette"), `<div class="modal-body"><input id="paletteSearch" class="palette-input" placeholder="${t("search")}" autofocus><div class="palette-commands" id="paletteResults"></div></div>`);
   const score = (query, candidate) => { let cursor = -1, gaps = 0; for (const char of query) { const found = candidate.indexOf(char, cursor + 1); if (found < 0) return Infinity; gaps += found - cursor - 1; cursor = found; } return gaps; };
@@ -1153,7 +1185,7 @@ function renderTagManager() {
   body.innerHTML = `<table class="tag-table"><thead><tr><th>Tag name</th><th>Type</th><th>Role</th><th>Address</th><th>Alias</th><th></th></tr></thead><tbody>${tags.map((tag, index) => { const role = tag.role || (outputs.has(tag.name) ? "output" : inputs.has(tag.name) ? "input" : "internal"); return `<tr><td><input class="tag-edit" data-tag-index="${index}" data-field="name" value="${escapeAttr(tag.name)}" aria-label="Tag name"></td><td><select class="tag-edit" data-tag-index="${index}" data-field="type" aria-label="Data type">${["BOOL", "INT", "REAL", "TIME"].map((type) => `<option ${type === (tag.type || "BOOL") ? "selected" : ""}>${type}</option>`).join("")}</select></td><td><select class="tag-edit" data-tag-index="${index}" data-field="role" aria-label="Tag role">${["input", "output", "internal"].map((value) => `<option value="${value}" ${value === role ? "selected" : ""}>${value}</option>`).join("")}</select></td><td><input class="tag-edit" data-tag-index="${index}" data-field="address" value="${escapeAttr(tag.address || "")}" aria-label="Address"></td><td><input class="tag-edit" data-tag-index="${index}" data-field="alias" value="${escapeAttr(tag.alias || "")}" aria-label="Alias"></td><td><button class="tag-remove" data-remove-tag="${index}" aria-label="Delete tag">×</button></td></tr>`; }).join("")}</tbody></table><div id="tagValidation" class="validation-list"></div><p class="safety-copy">Edits save locally. BOOL inputs use switches; INT, REAL, and TIME inputs accept numeric values for FBD math and comparisons.</p>`;
   body.querySelectorAll(".tag-edit").forEach((field) => field.addEventListener("change", () => {
     const tag = tags[Number(field.dataset.tagIndex)], oldName = tag.name, fieldName = field.dataset.field, value = field.value.trim();
-    if (fieldName === "name" && (!value || (tags.some((item) => item.name === value && item !== tag)))) { toast("Tag name must be unique and nonempty"); field.value = oldName; return; }
+    if (fieldName === "name" && (!value || (tags.some((item) => item.name.toLowerCase() === value.toLowerCase() && item !== tag)))) { toast(({en:"Tag name must be unique (ignoring case) and nonempty",de:"Tag-Namen müssen unabhängig von Groß-/Kleinschreibung eindeutig und nicht leer sein",yo:"Orúkọ tag gbọ́dọ̀ yàtọ̀ láìkà lẹ́tà ńlá tàbí kékeré sí, kò sì gbọ́dọ̀ ṣófo",pcm:"Tag name no fit empty or repeat, even if big/small letters differ"})[language]); field.value = oldName; return; }
     pushHistory();
     if (fieldName === "name" && oldName !== value) renameTag(oldName, value);
     else if (fieldName === "role") { tag.role = value; project.io ||= { inputs: [], outputs: [] }; project.io.inputs = project.io.inputs.filter((name) => name !== tag.name); project.io.outputs = project.io.outputs.filter((name) => name !== tag.name); if (value === "input") project.io.inputs.push(tag.name); if (value === "output") project.io.outputs.push(tag.name); }
@@ -1162,14 +1194,16 @@ function renderTagManager() {
   }));
   body.querySelectorAll("[data-remove-tag]").forEach((button) => button.addEventListener("click", () => {
     const index = Number(button.dataset.removeTag), tag = tags[index];
-    const used = project.rungs.some((r) => (r.branches || [r.contacts || []]).flat().some((contact) => contact.tag === tag.name) || r.coil === tag.name || [r.scale?.inputTag, r.scale?.outputTag].includes(tag.name)) || project.fbdBlocks?.some((block) => (block.inputs || []).includes(tag.name) || block.outputTag === tag.name || block.countTag === tag.name) || project.hmi?.widgets?.some((widget) => widget.tag === tag.name) || project.hmi?.alarms?.some((alarm) => alarm.tag === tag.name) || project.hmi?.recipes?.some((recipe) => Object.hasOwn(recipe.values || {}, tag.name)) || project.processes?.some((model) => [model.controlTag, model.inputTag, model.secondaryTag, model.outputTag].includes(tag.name));
+    const used = project.programUnits?.some(unit => programUnitUsesTag(unit,tag.name)) || countStructuredTextReferences(project.stSource || "",tag.name) > 0 || project.rungs.some((r) => (r.branches || [r.contacts || []]).flat().some((contact) => contact.tag === tag.name) || r.coil === tag.name || [r.scale?.inputTag, r.scale?.outputTag].includes(tag.name)) || project.fbdBlocks?.some((block) => (block.inputs || []).includes(tag.name) || block.outputTag === tag.name || block.countTag === tag.name) || project.hmi?.widgets?.some((widget) => widget.tag === tag.name) || project.hmi?.alarms?.some((alarm) => alarm.tag === tag.name) || project.hmi?.recipes?.some((recipe) => Object.hasOwn(recipe.values || {}, tag.name)) || project.processes?.some((model) => [model.controlTag, model.inputTag, model.secondaryTag, model.outputTag].includes(tag.name));
     if (used) { toast("Remove this tag from logic, HMI, alarms, recipes, and process models before deleting it"); return; }
     pushHistory(); tags.splice(index, 1); project.io.inputs = (project.io.inputs || []).filter((name) => name !== tag.name); project.io.outputs = (project.io.outputs || []).filter((name) => name !== tag.name); delete project.initialState?.[tag.name]; render(); persist(); renderTagManager();
   }));
   const issues = validateProject(project); $("#tagValidation").innerHTML = issues.length ? issues.map((issue) => `<div class="validation-item ${issue.level}">${escapeHtml(issue.message)}</div>`).join("") : '<div class="validation-item ok">Project tags and ladder references are valid.</div>';
-  $("#addTag").onclick = () => { pushHistory(); const name = `Tag${tags.length + 1}`; tags.push({ name, type: "BOOL", role: "internal", address: "" }); renderTagManager(); persist(); };
+  $("#addTag").onclick = () => { pushHistory(); let number = tags.length + 1; while (tags.some((tag) => tag.name.toLowerCase() === `tag${number}`)) number++; const name = `Tag${number}`; tags.push({ name, type: "BOOL", role: "internal", address: "" }); renderTagManager(); persist(); };
 }
 function renameTag(oldName, newName) {
+  for (const unit of project.programUnits || []) renameProgramUnitTag(unit,oldName,newName);
+  if (typeof project.stSource === "string") { project.stSource = renameStructuredTextIdentifier(project.stSource,oldName,newName); compiledST = null; }
   const tag = project.tags.find((item) => item.name === oldName); if (tag) tag.name = newName;
   simulationFaults.forEach((fault) => { if (fault.tag === oldName) fault.tag = newName; });
   for (const model of project.processes || []) for (const field of ["controlTag", "inputTag", "secondaryTag", "outputTag"]) if (model[field] === oldName) model[field] = newName;
@@ -1356,7 +1390,7 @@ function showTutorial(stepIndex = 0) { const steps = tour[language].steps, step 
 function showFindReplace() {
   modal("Find and replace", `<div class="modal-body"><div class="find-fields"><label>Find<input id="findText" autofocus></label><label>Replace<input id="replaceText"></label></div><div class="modal-actions"><button class="secondary" id="findNext">Find</button><button class="primary" id="replaceAll">Replace all</button></div><div id="findResults" class="validation-list"></div><p class="safety-copy">Structured Text replaces text. Other editors replace an exact tag name and keep all references linked.</p></div>`);
   const count = () => { const needle = $("#findText").value; if (!needle) { $("#findResults").textContent = "Enter a search term."; return 0; } const hits = countProjectMatches(project, project.editorType, needle); $("#findResults").textContent = `${hits} match${hits === 1 ? "" : "es"}`; return hits; };
-  $("#findText").oninput = count; $("#findNext").onclick = count; $("#replaceAll").onclick = () => { const needle = $("#findText").value, replacement = $("#replaceText").value; if (!needle || !count()) return; if (project.editorType !== "ST") { const tag = project.tags?.find((item) => item.name === needle); if (!tag) { toast("In LD/FBD/SFC, replace an exact tag name from the tag table"); return; } if (!replacement.trim() || project.tags.some((item) => item !== tag && item.name === replacement.trim())) { toast("Replacement tag must be unique and nonempty"); return; } } pushHistory(); if (project.editorType === "ST") { project.stSource = project.stSource.replace(new RegExp(escapeRegex(needle), "gi"), replacement); compiledST = null; } else renameTag(needle, replacement.trim()); $("#modal").close(); render(); persist(); toast("Replacement complete"); };
+  $("#findText").oninput = count; $("#findNext").onclick = count; $("#replaceAll").onclick = () => { const needle = $("#findText").value, replacement = $("#replaceText").value; if (!needle || !count()) return; if (project.editorType !== "ST") { const tag = project.tags?.find((item) => item.name === needle); if (!tag) { toast("In LD/FBD/SFC, replace an exact tag name from the tag table"); return; } if (!replacement.trim() || project.tags.some((item) => item !== tag && item.name.toLowerCase() === replacement.trim().toLowerCase())) { toast("Replacement tag must be unique and nonempty"); return; } } pushHistory(); if (project.editorType === "ST") { project.stSource = project.stSource.replace(new RegExp(escapeRegex(needle), "gi"), replacement); compiledST = null; } else renameTag(needle, replacement.trim()); $("#modal").close(); render(); persist(); toast("Replacement complete"); };
 }
 function escapeRegex(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 function applyPreferences() { document.body.classList.toggle("high-contrast", preferences.contrast); document.body.classList.toggle("readable-font", preferences.dyslexia); document.body.dataset.theme = currentBrandTheme(); applyBrand(); setupCanvasPanning(); setupFbdPanning(); }
@@ -1384,7 +1418,16 @@ const localizationAuditCopy = {
   $("#localizationReport").onclick = showLocalizationReport;
   $("#settingsDone").onclick = () => { const cycleMs = Number($("#taskCycleMs").value); if (!Number.isInteger(cycleMs) || cycleMs < 1 || cycleMs > 60000) { toast(copy.invalidCycle); return; } project.task = { ...(project.task || {}), name:$("#taskName").value.trim() || "Main", mode:"cyclic", cycleMs }; preferences.autosave = $("#prefAutosave").checked; preferences.speed = $("#prefSpeed").value; preferences.theme = $("#prefTheme").value; preferences.trendRetention = Number($("#prefTrendRetention").value); trimTrendHistory(hmiHistory, preferences.trendRetention); preferences.contrast = $("#prefContrast").checked; preferences.dyslexia = $("#prefFont").checked; localStorage.setItem("adigun-preferences", JSON.stringify(preferences)); applyPreferences(); $("#modal").close(); updateStatus(); if (runTimer) { const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; clearInterval(runTimer); runTimer = setInterval(() => doScan(), delay); } persist(); };
 }
-function showAdigunAI() {
+function updateAdigunAIRequestUi() {
+  const form = $("#adigunAiForm"); if (!form) return;
+  const busy = Boolean(adigunAiRequest); form.setAttribute("aria-busy", String(busy));
+  form.querySelectorAll("textarea,button").forEach((field) => { field.disabled = busy && field.id !== "adigunAiCancel"; });
+  const progress = $("#adigunAiProgress"), cancel = $("#adigunAiCancel"), consent = $("#adigunRemoteConsent");
+  if (progress) { progress.hidden = !busy; progress.textContent = adigunAiRemoteLabels(language).pending; }
+  if (cancel) cancel.hidden = !busy;
+  if (consent) consent.disabled = busy;
+}
+function showAdigunAI({ reveal = true } = {}) {
   if (adigunBotDraft?.ok) return showAdigunBuildPlan();
   const c = adigunAiLabels(language);
   const remoteCopy = adigunAiRemoteLabels(language);
@@ -1394,19 +1437,28 @@ function showAdigunAI() {
     : "";
   const copilotCopy = adigunCopilotLabels(language);
   const transcript = () => adigunAiMessages.map((message) => `<article class="ai-message ${message.role}"><b>${message.role === "user" ? "You" : escapeHtml(c.name)}</b><p>${escapeHtml(message.text)}</p>${message.exampleMatches?.map((item) => `<button type="button" class="secondary" data-load-example="${escapeAttr(item.id)}">Load ${escapeHtml(item.title)}</button>`).join("") || ""}</article>`).join("");
-  modal(c.title, `<div class="modal-body adigun-ai"><p class="safety-copy">${escapeHtml(c.privacy)}</p><label class="copilot-toggle"><input id="liveCopilotToggle" type="checkbox" ${liveCopilotEnabled?"checked":""}> ${escapeHtml(copilotCopy.toggle)} · ${liveCopilotEnabled?escapeHtml(copilotCopy.enabled):escapeHtml(copilotCopy.disabled)}</label>${remoteConsentMarkup}<div id="adigunAiTranscript" class="ai-messages" aria-live="polite">${transcript() || `<p class="safety-copy">${escapeHtml(c.source)}</p>`}</div><form id="adigunAiForm" class="ai-form"><label class="field" for="adigunAiQuestion">${escapeHtml(c.title)}<textarea id="adigunAiQuestion" rows="2" maxlength="1000" placeholder="${escapeAttr(c.placeholder)}" required></textarea></label><div class="modal-actions"><button class="secondary" type="button" id="adigunAiVoice">🎙 Voice input</button><button class="secondary" type="button" data-ai-question="scan">${escapeHtml(c.explain)}</button><button class="secondary" type="button" data-ai-question="project">${escapeHtml(c.reviewAction)}</button><button class="secondary" type="button" data-ai-question="network">${escapeHtml(c.network)}</button><button class="primary" type="submit">${escapeHtml(c.ask)}</button><button class="secondary" type="button" id="adigunAiClear">${escapeHtml(c.clear)}</button></div></form><p class="safety-copy">${escapeHtml(c.source)} Build requests are interpreted locally; review the generated plan before importing. Physical wiring is not generated.</p></div>`);
+  modal(c.title, `<div class="modal-body adigun-ai"><p class="safety-copy">${escapeHtml(c.privacy)}</p><label class="copilot-toggle"><input id="liveCopilotToggle" type="checkbox" ${liveCopilotEnabled?"checked":""}> ${escapeHtml(copilotCopy.toggle)} · ${liveCopilotEnabled?escapeHtml(copilotCopy.enabled):escapeHtml(copilotCopy.disabled)}</label>${remoteConsentMarkup}<div id="adigunAiTranscript" class="ai-messages" aria-live="polite">${transcript() || `<p class="safety-copy">${escapeHtml(c.source)}</p>`}</div><p id="adigunAiProgress" class="safety-copy ai-request-status" role="status" hidden></p><form id="adigunAiForm" class="ai-form"><label class="field" for="adigunAiQuestion">${escapeHtml(c.title)}<textarea id="adigunAiQuestion" rows="2" maxlength="1000" placeholder="${escapeAttr(c.placeholder)}" required></textarea></label><div class="modal-actions"><button class="secondary" type="button" id="adigunAiVoice">🎙 Voice input</button><button class="secondary" type="button" data-ai-question="scan">${escapeHtml(c.explain)}</button><button class="secondary" type="button" data-ai-question="project">${escapeHtml(c.reviewAction)}</button><button class="secondary" type="button" data-ai-question="network">${escapeHtml(c.network)}</button><button class="primary" type="submit">${escapeHtml(c.ask)}</button><button class="secondary" type="button" id="adigunAiCancel" hidden>${escapeHtml(remoteCopy.cancel)}</button><button class="secondary" type="button" id="adigunAiClear">${escapeHtml(c.clear)}</button></div></form><p class="safety-copy">${escapeHtml(c.source)} Build requests are interpreted locally; review the generated plan before importing. Physical wiring is not generated.</p></div>`, { reveal });
+  updateAdigunAIRequestUi();
   document.querySelectorAll("[data-load-example]").forEach((button) => button.onclick = async () => { const examples = await loadExamples(); const chosen = examples.find((example) => example.id === button.dataset.loadExample); await openExample(chosen); });
   $("#liveCopilotToggle").onchange = (event) => { liveCopilotEnabled=event.currentTarget.checked;localStorage.setItem("adigun-live-copilot",liveCopilotEnabled?"on":"off");if(!liveCopilotEnabled){copilotActiveState.active=null;renderCopilotPanel(null);}else scheduleCopilotAnalysis(); };
   const ask = async (question) => {
-    if (!question.trim()) return;
+    if (adigunAiRequest || !question.trim()) return;
     if (copilotGoalPending) { copilotGoal=question.trim();copilotGoalPending=false;adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:`I’ll use “${question.trim()}” as this project’s goal for live suggestions in this session.`});showAdigunAI();return; }
     if (/\b(hud|dashboard|voltage|current|rpm|active rungs?|active timers?)\b/i.test(question)) { adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:"The HUD shows live PLC scan count, rungs with energized outputs, active timers, and run/fault status. Voltage, current, and motor RPM are marked Not modeled because this simulator does not calculate those physical quantities."}); showAdigunAI(); return; }
     if (/\b(example|project|load|find|show|search|conveyor|sorter|tank|pump|motor|traffic|hvac|building)\b/i.test(question)) { const examples = await loadExamples(), matches = searchExamples(examples, question, language, 3); if (matches.length) { const found = matches.map(({example}) => ({id:example.id,title:example.title[language],description:example.description[language],test:example.howToTest?.[language]})); adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:`I found ${found.length} matching library project${found.length === 1 ? "" : "s"}. ${found.map((item) => `${item.title}: ${item.description} How to test: ${item.test}`).join(" ")}`,exampleMatches:found}); showAdigunAI(); return; } }
     if (document.querySelector("#adigunRemoteConsent")?.checked) {
-      const result = await askAdigunHostedAI({ client:supabaseClient, question, project, diagnostics:validateProject(project), consent:true, workerUrl:hostedAI.workerUrl });
+      if (adigunAiRequest) return;
+      const request = { controller:new AbortController(), projectId:project.id, projectRef:project, userId:accountUser?.id, closed:false };
+      adigunAiRequest = request; updateAdigunAIRequestUi();
+      let result;
+      try { result = await askAdigunHostedAI({ client:supabaseClient, question, project, diagnostics:validateProject(project), consent:true, workerUrl:hostedAI.workerUrl, signal:request.controller.signal }); }
+      catch { result = { error:"hosted-ai-unavailable" }; }
+      finally { if (adigunAiRequest === request) { adigunAiRequest = null; updateAdigunAIRequestUi(); } }
+      if (request.closed || project !== request.projectRef || project.id !== request.projectId || accountUser?.id !== request.userId) return;
       const answer = result.answer ? `${remoteCopy.hosted}: ${result.answer}` : remoteCopy[adigunAiRemoteErrorLabel(result.error)];
       adigunAiMessages.push({role:"user",text:question.trim()},{role:"assistant",text:answer});
-      showAdigunAI();return;
+      if (adigunAiMessages.length > 40) adigunAiMessages.splice(0,adigunAiMessages.length - 40);
+      showAdigunAI({ reveal:false }); return;
     }
     if (/\b(build|create|make|generate|add|construct|rename|delete|remove)\b/i.test(question)) {
       const draft = await planAdigunBotBuild(question,{ project });
@@ -1420,6 +1472,7 @@ function showAdigunAI() {
     showAdigunAI();
     $("#adigunAiQuestion").focus();
   };
+  $("#adigunAiCancel").onclick = () => adigunAiRequest?.controller.abort();
   $("#adigunAiForm").onsubmit = (event) => { event.preventDefault(); ask($("#adigunAiQuestion").value); };
   document.querySelectorAll("[data-ai-question]").forEach((button) => button.onclick = () => ask(button.dataset.aiQuestion === "scan" ? c.scan : button.dataset.aiQuestion === "project" ? "Review project" : "Explain selected network"));
   $("#adigunAiClear").onclick = () => { adigunAiMessages = []; showAdigunAI(); };
@@ -1629,7 +1682,129 @@ function showApplicationMenu(event) {
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
+function showMixedPrograms() {
+  const projectId = project.id;
+  const configuration = {programUnits:project.programUnits || [], tasks:project.tasks || []};
+  const monitor = configuration.programUnits.map(unit => {
+    const states = sim.mixedState?.units || {};
+    const key = unit.name.toLowerCase();
+    return {unit:unit.name, retainedState:Object.hasOwn(states,key) ? states[key] : null};
+  });
+  const sharedOutputs = Object.fromEntries((project.io.outputs || []).map(name=>[name,sim.outputs?.[name] ?? false]));
+
+  modal("Mixed-language programs", `<div class="modal-body"><label class="field">Program units and task assignments<textarea id="mixedProgramJson" rows="16" spellcheck="false">${escapeHtml(JSON.stringify(configuration,null,2))}</textarea></label><p>Use an empty program list to return to single-editor execution.</p><details><summary>Latest scan snapshot</summary><pre>${escapeHtml(JSON.stringify({sharedOutputs,units:monitor},null,2))}</pre></details><button id="captureMixedProgram" class="secondary">Add current editor as a unit</button><label class="field">Saved unit<select id="mixedUnitSelection">${configuration.programUnits.map((unit,index)=>`<option value="${index}">${escapeHtml(unit.name)} (${escapeHtml(unit.language)})</option>`).join("")}</select></label><button id="openMixedUnit" class="secondary" ${configuration.programUnits.length ? "" : "disabled"}>Load unit into editor</button><button id="updateMixedUnit" class="secondary" ${configuration.programUnits.length ? "" : "disabled"}>Copy editor changes to selected unit</button><p id="mixedProgramErrors" role="status"></p><button id="saveMixedPrograms" class="primary">Apply configuration</button></div>`);
+  const selectedUnit = () => configuration.programUnits[Number($("#mixedUnitSelection").value)];
+  $("#openMixedUnit").onclick = () => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
+    if (project.id !== projectId) return;
+    const unit = selectedUnit();
+    if (!unit) return;
+    pushHistory();
+    if (unit.language === "LD") project.rungs = structuredClone(unit.rungs);
+    if (unit.language === "FBD") project.fbdBlocks = structuredClone(unit.blocks);
+    if (unit.language === "ST") project.stSource = unit.source;
+    if (unit.language === "SFC") project.sfc = structuredClone(unit.chart);
+    project.editorType = unit.language;
+    workspaceView = "logic";
+    $("#modal").close();
+    render();
+    persist();
+  };
+  $("#updateMixedUnit").onclick = () => {
+    try {
+      const unit = selectedUnit();
+      if (!unit || unit.language !== (project.editorType || "LD")) throw new Error("Open the matching language editor first.");
+      const draft = JSON.parse($("#mixedProgramJson").value);
+      const target = draft.programUnits.find(item=>item.name === unit.name && item.language === unit.language);
+      if (!target) throw new Error("The selected unit is missing from the draft.");
+      if (unit.language === "LD") target.rungs = projectRungs(project);
+      if (unit.language === "FBD") target.blocks = project.fbdBlocks || [];
+      if (unit.language === "ST") target.source = project.stSource || "";
+      if (unit.language === "SFC") target.chart = project.sfc;
+      $("#mixedProgramJson").value = JSON.stringify(draft,null,2);
+      $("#mixedProgramErrors").textContent = "";
+    } catch (error) { $("#mixedProgramErrors").textContent = error.message; }
+  };
+  $("#captureMixedProgram").onclick = () => {
+    try {
+      const draft = JSON.parse($("#mixedProgramJson").value);
+      const language = project.editorType || "LD";
+      const unit = {name:"Unit" + (draft.programUnits.length + 1), language, outputs:[...(project.io.outputs || [])]};
+      if (language === "LD") unit.rungs = projectRungs(project);
+      if (language === "FBD") unit.blocks = project.fbdBlocks || [];
+      if (language === "ST") unit.source = project.stSource || "";
+      if (language === "SFC") unit.chart = project.sfc;
+      const used = new Set(draft.programUnits.map(item=>item.name.toLowerCase()));
+      while (used.has(unit.name.toLowerCase())) unit.name += "_";
+      draft.programUnits.push(unit);
+      $("#mixedProgramJson").value = JSON.stringify(draft,null,2);
+      $("#mixedProgramErrors").textContent = "";
+    } catch (error) { $("#mixedProgramErrors").textContent = error.message; }
+  };
+  $("#saveMixedPrograms").onclick = () => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
+    if (project.id !== projectId) return;
+    try {
+      const {programUnits,tasks} = JSON.parse($("#mixedProgramJson").value);
+      if (!Array.isArray(programUnits) || !Array.isArray(tasks)) throw new Error("Provide programUnits and tasks arrays.");
+      const candidate = structuredClone(project);
+      delete candidate.programUnits;
+      delete candidate.tasks;
+      if (programUnits.length) candidate.programUnits = programUnits;
+      if (tasks.length) candidate.tasks = tasks;
+      const checked = normalizeImportedProject(candidate);
+      const errors = validateMixedProgramUnits(checked);
+      if (errors.length) throw new Error(errors.map(issue => issue.message).join(" "));
+      resetProjectSimulation();
+      pushHistory();
+      project = checked;
+      persist();
+      $("#modal").close();
+      render();
+    } catch (error) { $("#mixedProgramErrors").textContent = error.message; }
+  };
+}
+function showCyclicTasks(draft) {
+  const projectId = project.id, source = project.stSource || "", units = project.programUnits, view = cyclicTaskEditor(project,language,draft);
+  modal(view.copy.title,view.html);
+  const allowed = () => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return false; }
+    if (project.id !== projectId || (project.stSource || "") !== source || project.programUnits !== units) { toast(view.copy.stale); return false; }
+    return true;
+  };
+  $("#openTaskPrograms").onclick = () => project.programUnits?.length ? showMixedPrograms() : showStructuredTextFunctions("programs");
+  $("#defaultCyclicTasks").onclick = () => { if (!allowed()) return; pushHistory(); delete project.tasks; persist(); $("#modal").close(); };
+  const form = $("#cyclicTaskForm");
+  if (!form) return;
+  form.onsubmit = (event) => {
+    event.preventDefault(); if (!allowed()) return;
+    const tasks = readCyclicTaskRows(form), errors = validateCyclicTasks(tasks,view.programNames);
+    if (errors.length) { $("#cyclicTaskErrors").textContent = errors.join(" "); return; }
+    pushHistory(); project.tasks = tasks; persist(); $("#modal").close();
+  };
+  $("#addCyclicTask").onclick = () => { const tasks = readCyclicTaskRows(form); if (tasks.length >= 16) return; let number = tasks.length + 1; while (tasks.some(task=>task.name.toLowerCase() === `task${number}`)) number++; showCyclicTasks([...tasks,{name:`Task${number}`,cycleMs:getTaskCycleMs(project),priority:0,enabled:true,programs:[]}]); };
+  form.querySelectorAll("[data-remove-cyclic-task]").forEach(button => { button.onclick = () => showCyclicTasks(readCyclicTaskRows(form).filter((task,index)=>index!==Number(button.dataset.removeCyclicTask))); });
+}
+function showStructuredTextFunctions(kind = "functions") {
+  const view = (kind === "programs" ? structuredTextProgramLibrary : kind === "functionBlocks" ? structuredTextBlockLibrary : structuredTextFunctionLibrary)(project,language);
+  modal(view.title,view.html);
+  const openSource = (line = 1) => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
+    $("#modal").close();
+    if (project.editorType !== "ST") setEditorMode("ST");
+    workspaceView = "logic"; applyWorkspaceView();
+    const editor = $("#stSource"), offset = structuredTextLineOffset(project.stSource || "",line);
+    editor.focus(); editor.setSelectionRange(offset,offset);
+  };
+  $("#openFunctionSource").onclick = () => openSource();
+  $("#modalContent").querySelectorAll("[data-st-function-line]").forEach(button => { button.onclick = () => openSource(Number(button.dataset.stFunctionLine)); });
+}
 function action(name) {
+  if (name === "mixed-programs") { showMixedPrograms(); return; }
+  if (name === "st-function-blocks") { showStructuredTextFunctions("functionBlocks"); return; }
+  if (name === "cyclic-tasks") { showCyclicTasks(); return; }
+  if (name === "st-programs") { showStructuredTextFunctions("programs"); return; }
+  if (name === "st-functions") { showStructuredTextFunctions(); return; }
   if (name === "adigun-ai") { showAdigunAI(); return; }
   if (name === "resources") { showResources(); return; }
   if (name === "protocol-simulator") { showProtocolSimulator(); return; }
@@ -1795,7 +1970,7 @@ applyPreferences(); $("#settingsButton").addEventListener("click", showSettings)
 function setupAdigunBotWindow() {
   const identity = accountUser?.id || "guest", config = globalThis.ADIGUN_RUNTIME_CONFIG?.ai || {};
   const key = "adigunsps.bot-window.v1:" + identity;
-  adigunBotWindow = createFloatingWindow({ panel:$("#adigunBotWindow"), trigger:$("#adigunAiButton"), storageKey:key, onOpen:showAdigunAI });
+  adigunBotWindow = createFloatingWindow({ panel:$("#adigunBotWindow"), trigger:$("#adigunAiButton"), storageKey:key, onOpen:showAdigunAI, onClose:() => { if (adigunAiRequest) { adigunAiRequest.closed = true; adigunAiRequest.controller.abort(); } } });
   const copy={en:["Hosted AI available","Offline helper"],de:["Gehostete KI verfügbar","Offline-Hilfe"],yo:["Hosted AI wà nílẹ̀","Olùrànlọ́wọ́ offline"],pcm:["Hosted AI dey available","Offline helper"]}[language]||["Hosted AI available","Offline helper"];
   $("#adigunBotStatus").textContent=config.enabled&&config.workerUrl?copy[0]:copy[1];
   const labels={en:["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"],de:["Bot-Fenster minimieren","Bot-Fenster maximieren","Bot-Fenster wiederherstellen","Bot-Fenster schließen","Bot-Fenstergröße ändern"],yo:["Dín fèrèsé Bot kù","Mú fèrèsé Bot tóbi","Dá fèrèsé Bot padà","Pa fèrèsé Bot dé","Yí ìwọ̀n fèrèsé Bot"],pcm:["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"]}[language]||["Minimize Bot window","Maximize Bot window","Restore Bot window","Close Bot window","Resize Bot window"];

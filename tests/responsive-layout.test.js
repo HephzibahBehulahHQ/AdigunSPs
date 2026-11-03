@@ -8,7 +8,7 @@ const html = readFileSync("index.html", "utf8");
 
 assert.match(app, /matchMedia\("\(max-width: 760px\)"\)\.matches/, "panel controls must switch to drawer behavior at the tablet breakpoint");
 assert.match(styles, /@media\(max-width:760px\)\{body\{height:100dvh\}/, "compact toolbar and mobile workspace layout must include 710px viewports");
-assert.match(styles, /@media\(max-width:760px\)\{\.workspace \.left-sidebar,\.workspace \.right-sidebar\{display:none\}\}/, "tablet workspace sidebars must close behind drawer controls");
+assert.match(styles, /@media\(max-width:760px\)\{\.workspace:not\(\.mobile-left-open\) \.left-sidebar,\.workspace:not\(\.mobile-right-open\) \.right-sidebar\{display:none\}\}/, "tablet workspace sidebars must close behind drawer controls");
 assert.match(styles, /@media\(max-width:760px\)\{\.workspace\{position:relative\}\.workspace\.mobile-left-open/, "tablet side drawers must have a positioned workspace container");
 assert.match(styles, /@media\s*\(\s*min-width:\s*761px\s*\)/, "desktop workspace layout must begin immediately above the compact breakpoint");
 assert.match(html, /id="accountButton"[^>]*class="icon-button account-button[\s\S]*?<svg[\s\S]*?account-status-dot/, "top-bar account control uses a profile icon and status dot");
@@ -52,3 +52,5 @@ const brandStyles=readFileSync("assets/brand/brand-overrides.css","utf8");
 assert.match(brandStyles,/\.topbar \{ display: grid; grid-template-columns: minmax\(0, 1fr\) auto; grid-template-rows: 32px 30px;/,"mobile branding uses two rows instead of overflowing controls");
 assert.match(brandStyles,/\.topbar > \.top-actions \{ grid-column: 2; grid-row: 2;/);
 assert.match(brandStyles,/\.topbar > \.project-name \{ grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden;/);
+
+assert.match(styles,/@media\(max-width:760px\)\{\.editor-tabs,\.editor-subbar\{overflow-x:auto;overflow-y:hidden;flex-shrink:0\}/,"mobile editor controls scroll within their rows instead of widening the page");

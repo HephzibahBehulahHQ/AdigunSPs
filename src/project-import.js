@@ -1,3 +1,4 @@
+import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { electricalComponentCatalog } from "./electrical.js";
 
 const MAX_PROJECT_BYTES = 5 * 1024 * 1024;
@@ -212,6 +213,36 @@ export function normalizeImportedProject(value) {
     if (!isRecord(tag) || typeof tag.name !== "string" || !tag.name.trim() || tag.name.length > 128) fail(`tag ${index + 1} has an invalid name.`);
     if (tag.type === undefined) tag.type = "BOOL";
     if (!SUPPORTED_TAG_TYPES.has(tag.type)) fail(`tag ${tag.name} has unsupported type ${String(tag.type)}.`);
+  }
+
+  if (project.programUnits !== undefined) {
+    if (!Array.isArray(project.programUnits) || !project.programUnits.length || project.programUnits.length > 32) fail("provide 1–32 program units.");
+    const names = new Set();
+    project.programUnits = project.programUnits.map(unit => {
+      if (!isRecord(unit) || typeof unit.name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(unit.name) || !["LD","FBD","ST","SFC"].includes(unit.language)) fail("invalid program unit name or language.");
+      const key = unit.name.toLowerCase();
+      if (names.has(key)) fail("duplicate program unit name.");
+      names.add(key);
+      requireStringList(unit.outputs,"program outputs must be a list.");
+      if (unit.outputs.some(name => !project.io.outputs.includes(name))) fail("program outputs must be declared project outputs.");
+      const checked = normalizeImportedProject({name:unit.name,rungs:unit.rungs ?? [],...(unit.blocks === undefined ? {} : {fbdBlocks:unit.blocks}),...(unit.chart === undefined ? {} : {sfc:unit.chart})});
+      if (unit.language === "ST" && typeof unit.source !== "string") fail("ST program unit requires source.");
+      if (unit.language === "LD") return {name:unit.name,language:unit.language,outputs:unit.outputs,rungs:checked.rungs};
+      if (unit.language === "FBD") return {name:unit.name,language:unit.language,outputs:unit.outputs,blocks:checked.fbdBlocks ?? []};
+      if (unit.language === "SFC") {
+        if (!checked.sfc) fail("SFC program unit requires a chart.");
+        return {name:unit.name,language:unit.language,outputs:unit.outputs,chart:checked.sfc};
+      }
+      return {name:unit.name,language:unit.language,outputs:unit.outputs,source:unit.source};
+    });
+    if (project.tasks !== undefined) {
+      const errors = validateCyclicTasks(project.tasks,project.programUnits.map(unit=>unit.name));
+      if (errors.length) fail(errors.join(" "));
+    }
+  }
+  if (project.tasks !== undefined && project.programUnits === undefined) {
+    if (typeof project.stSource !== "string") fail("cyclic tasks require Structured Text source.");
+    const errors = validateCyclicTasks(project.tasks); if (errors.length) fail(errors.join(" "));
   }
 
   let branchCount = 0, contactCount = 0;

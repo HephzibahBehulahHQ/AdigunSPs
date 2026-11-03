@@ -14,6 +14,7 @@ for (const section of ["getting-started", "taking-the-onboarding-tour", "navigat
   assert.match(rendered, new RegExp(`id="${section}"`), `guide renders ${section}`);
   assert.match(rendered, new RegExp(`href="#${section}"`), `contents links to ${section}`);
 }
+for (const [, anchor] of guide.matchAll(/\]\(#([^)]+)\)/g)) assert.ok(rendered.includes(`id="${anchor}"`), `Help contents target ${anchor} exists`);
 assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the requested word limit");
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
 assert.match(guide, /select the profile icon[\s\S]*?labelled \*\*Sign in\*\*[\s\S]*?\*\*Account\*\*/i, "Help identifies the current profile icon labels");
@@ -27,7 +28,7 @@ assert.match(app, /dataset\.appMenu === "help"\) \{ showHelpGuideMenu/);
 assert.match(app, /data-help-action="safety"/);
 assert.match(app, /data-help-action="resources"/);
 assert.match(app, /\.\.\/docs\/HELP\.md/);
-assert.match(serviceWorker, /adigunsps-shell-v117/);
+assert.match(serviceWorker, /adigunsps-shell-v\d+/, "Help assets belong to a versioned application shell");
 assert.match(rendered, /id="using-the-bot-window"/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-tools\.js/);
 assert.match(serviceWorker, /\.\/src\/adigun-bot-verifier\.js/);

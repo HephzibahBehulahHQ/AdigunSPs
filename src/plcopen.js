@@ -20,6 +20,9 @@ function supportedRungs(project) {
 }
 
 export function createPlcopenXml(project) {
+  if (project.programUnits?.length || project.tasks?.length) {
+    throw new Error("PLCopen XML export supports a single ladder body. Use project JSON to preserve program units and task assignments.");
+  }
   const rungs = supportedRungs(project), tags = project.tags || [];
   const variables = tags.map((tag) => {
     const type = String(tag.type || "BOOL").toUpperCase();

@@ -1,13 +1,56 @@
+import { compileStructuredText } from "./structured-text.js";
+import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { validateFbdBlocks } from "./fbd-validation.js";
 import { validateElectricalDiagram } from "./electrical.js";
 
-export function validateProject(project) {
+const taskProgramCache = new WeakMap();
+const mixedValidationCache = new WeakMap();
+
+export function validateMixedProgramUnits(project) {
+  if (!project.programUnits?.length) return [];
+  const signature = JSON.stringify([project.programUnits, project.tags, project.io]);
+  const cached = mixedValidationCache.get(project);
+  if (cached?.signature === signature) return cached.issues;
   const issues = [];
-  const tags = new Map();
+  const names = new Set([...(project.tags || []).map(tag => tag.name), ...(project.io?.inputs || []), ...(project.io?.outputs || [])]);
+  for (const unit of project.programUnits) {
+    const report = message => issues.push({level:"error", code:"program-unit", message:unit.name + " | " + message});
+    if (unit.language === "ST") {
+      for (const error of compileStructuredText(unit.source,[...names]).errors) report(error);
+    } else if (unit.language === "LD" || unit.language === "FBD") {
+      const body = {tags:project.tags, io:project.io, rungs:unit.rungs, fbdBlocks:unit.blocks};
+      for (const issue of validateProject(body)) if (issue.level === "error") report(issue.message);
+    } else if (unit.language === "SFC") {
+      const steps = unit.chart?.steps || [];
+      const ids = new Set(steps.map(step => step.id));
+      if (!steps.length || ids.size !== steps.length) report("Chart requires uniquely identified steps.");
+      for (const step of steps) for (const output of step.actions || []) {
+        if (!unit.outputs.includes(output)) report("Step action requires a declared unit output: " + output);
+      }
+      for (const transition of unit.chart?.transitions || []) {
+        if (!ids.has(transition.from) || !ids.has(transition.to)) report("Transition references a missing step.");
+        if (!names.has(transition.condition)) report("Transition references an undeclared tag: " + transition.condition);
+      }
+    }
+  }
+  mixedValidationCache.set(project,{signature,issues});
+  return issues;
+}
+
+
+export function validateProject(project) {
+  const issues = [...validateMixedProgramUnits(project)];
+  if (project.tasks !== undefined) {
+    const source = typeof project.stSource === "string" ? project.stSource : "";
+    let cached = taskProgramCache.get(project);
+    if (!cached || cached.source !== source) { cached = {source,names:compileStructuredText(source).programs.map(program=>program.name)}; taskProgramCache.set(project,cached); }
+    for (const message of validateCyclicTasks(project.tasks,project.programUnits?.map(unit=>unit.name) ?? cached.names)) issues.push({level:"error",code:"task-config",message});
+  }
+  const tags = new Map(), foldedTagNames = new Set();
   for (const tag of project.tags || []) {
     if (!tag.name?.trim()) issues.push({ level: "error", code: "tag-name", message: "Every tag needs a name." });
-    else if (tags.has(tag.name)) issues.push({ level: "error", code: "tag-duplicate", message: `Tag ${tag.name} is defined more than once.` });
-    else tags.set(tag.name, tag);
+    else if (foldedTagNames.has(tag.name.toLowerCase())) issues.push({ level: "error", code: "tag-duplicate", message: `Tag ${tag.name} is defined more than once (ignoring case).` });
+    else { tags.set(tag.name, tag); foldedTagNames.add(tag.name.toLowerCase()); }
   }
   const addresses = new Map();
   for (const tag of project.tags || []) {

@@ -95,24 +95,24 @@ const testReportHeadings = {
 const localized = (value, locale) => value && typeof value === "object" ? value[locale] ?? value.en ?? "" : value ?? "";
 
 const scenarioReportCopy = {
-  en:{ title:"Simulation scenario test report", scan:"Scan", inputs:"Inputs", expected:"Expected outputs", actual:"Actual outputs", result:"Result", pass:"PASS", fail:"FAIL", na:"NOT CHECKED" },
-  de:{ title:"Testbericht des Simulationsszenarios", scan:"Scan", inputs:"Eingänge", expected:"Erwartete Ausgänge", actual:"Tatsächliche Ausgänge", result:"Ergebnis", pass:"BESTANDEN", fail:"FEHLER", na:"NICHT GEPRÜFT" },
-  yo:{ title:"Ìròyìn ìdánwò ìtẹ̀lé àfarawé", scan:"Scan", inputs:"Àwọn ìwọlé", expected:"Àwọn ìjáde tí a retí", actual:"Àwọn ìjáde gidi", result:"Àbájáde", pass:"KỌJÁ", fail:"KÒ KỌJÁ", na:"A KÒ ṢE ÀYẸ̀WÒ" },
-  pcm:{ title:"Simulation scenario test report", scan:"Scan", inputs:"Inputs", expected:"Expected outputs", actual:"Actual outputs", result:"Result", pass:"PASS", fail:"FAIL", na:"NO CHECK" },
+  en:{ title:"Simulation scenario test report", scan:"Scan", inputs:"Inputs", expected:"Expected outputs", actual:"Actual outputs", result:"Result", error:"Scan error", pass:"PASS", fail:"FAIL", na:"NOT CHECKED" },
+  de:{ title:"Testbericht des Simulationsszenarios", scan:"Scan", inputs:"Eingänge", expected:"Erwartete Ausgänge", actual:"Tatsächliche Ausgänge", result:"Ergebnis", error:"Scanfehler", pass:"BESTANDEN", fail:"FEHLER", na:"NICHT GEPRÜFT" },
+  yo:{ title:"Ìròyìn ìdánwò ìtẹ̀lé àfarawé", scan:"Scan", inputs:"Àwọn ìwọlé", expected:"Àwọn ìjáde tí a retí", actual:"Àwọn ìjáde gidi", result:"Àbájáde", error:"Àṣìṣe scan", pass:"KỌJÁ", fail:"KÒ KỌJÁ", na:"A KÒ ṢE ÀYẸ̀WÒ" },
+  pcm:{ title:"Simulation scenario test report", scan:"Scan", inputs:"Inputs", expected:"Expected outputs", actual:"Actual outputs", result:"Result", error:"Scan error", pass:"PASS", fail:"FAIL", na:"NO CHECK" },
 };
 const scenarioValue = (value) => JSON.stringify(value ?? {});
 const scenarioResult = (pass, copy) => pass === null ? copy.na : pass ? copy.pass : copy.fail;
 
 export function createScenarioTestReportCsv(project, scenario, results, presentation, locale = "en") {
   const copy = scenarioReportCopy[locale] || scenarioReportCopy.en;
-  const rows = [["Product", "Company", "Attribution", "Project", "Scenario", copy.scan, copy.inputs, copy.expected, copy.actual, copy.result], ...(results || []).map((row) => [presentation.productName, presentation.companyName, presentation.attribution, project.name, scenario?.name || "Scenario", row.index, scenarioValue({ ...(row.inputs || {}), ...(row.numericInputs || {}) }), scenarioValue(row.expected), scenarioValue(row.actual), scenarioResult(row.pass, copy)])];
+  const rows = [["Product", "Company", "Attribution", "Project", "Scenario", copy.scan, copy.inputs, copy.expected, copy.actual, copy.result, copy.error], ...(results || []).map((row) => [presentation.productName, presentation.companyName, presentation.attribution, project.name, scenario?.name || "Scenario", row.index, scenarioValue({ ...(row.inputs || {}), ...(row.numericInputs || {}) }), scenarioValue(row.expected), scenarioValue(row.actual), scenarioResult(row.pass, copy), row.error || ""])];
   return csvDocument(rows, locale);
 }
 
 export function createScenarioTestReportHtml(project, scenario, results, presentation, locale = "en", safety = "") {
-  const copy = scenarioReportCopy[locale] || scenarioReportCopy.en, headers = [copy.scan, copy.inputs, copy.expected, copy.actual, copy.result];
-  const rows = (results || []).map((row) => `<tr><td>${html(row.index)}</td><td>${html(scenarioValue({ ...(row.inputs || {}), ...(row.numericInputs || {}) }))}</td><td>${html(scenarioValue(row.expected))}</td><td>${html(scenarioValue(row.actual))}</td><td>${html(scenarioResult(row.pass, copy))}</td></tr>`).join("");
-  return `<header class="io-report-header">${reportBrand(presentation)}<h1>${html(copy.title)}</h1><p>${html(presentation.attribution)}</p><p><strong>${html(project.name)}</strong> · ${html(scenario?.name || "Scenario")}</p></header><table class="io-report-table"><thead><tr>${headers.map((cell) => `<th>${html(cell)}</th>`).join("")}</tr></thead><tbody>${rows || `<tr><td colspan="5">—</td></tr>`}</tbody></table><footer class="io-report-safety">${html(safety)}</footer>`;
+  const copy = scenarioReportCopy[locale] || scenarioReportCopy.en, headers = [copy.scan, copy.inputs, copy.expected, copy.actual, copy.result, copy.error];
+  const rows = (results || []).map((row) => `<tr><td>${html(row.index)}</td><td>${html(scenarioValue({ ...(row.inputs || {}), ...(row.numericInputs || {}) }))}</td><td>${html(scenarioValue(row.expected))}</td><td>${html(scenarioValue(row.actual))}</td><td>${html(scenarioResult(row.pass, copy))}</td><td>${html(row.error || "")}</td></tr>`).join("");
+  return `<header class="io-report-header">${reportBrand(presentation)}<h1>${html(copy.title)}</h1><p>${html(presentation.attribution)}</p><p><strong>${html(project.name)}</strong> · ${html(scenario?.name || "Scenario")}</p></header><table class="io-report-table"><thead><tr>${headers.map((cell) => `<th>${html(cell)}</th>`).join("")}</tr></thead><tbody>${rows || `<tr><td colspan="6">—</td></tr>`}</tbody></table><footer class="io-report-safety">${html(safety)}</footer>`;
 }
 
 export function createExampleTestReportCsv(example, checks, presentation, locale = "en") {
