@@ -4,7 +4,7 @@ import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromEx
 import { store } from "./store.js";
 import { validateProject } from "./validation.js";
 import { compileStructuredText, executeStructuredText, renameStructuredTextIdentifier, countStructuredTextReferences } from "./structured-text.js";
-import { structuredTextFunctionLibrary, structuredTextProgramLibrary, structuredTextLineOffset } from "./st-function-library.js";
+import { structuredTextFunctionLibrary, structuredTextProgramLibrary, structuredTextBlockLibrary, structuredTextLineOffset } from "./st-function-library.js";
 import { runStandardsChecks } from "./standards.js";
 import { appendResourceAudit, checkResourceLink, isApprovedExternalUrl, readResourceAudit, readResourceRegistry, removeResource, resources, saveResource } from "./resources.js";
 import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe, captureRecipeInputs, recipeInputChanges, normalizeAlarmHistoryLimit, retainAlarmEvents } from "./hmi.js";
@@ -1676,7 +1676,7 @@ function showCyclicTasks(draft) {
   form.querySelectorAll("[data-remove-cyclic-task]").forEach(button => { button.onclick = () => showCyclicTasks(readCyclicTaskRows(form).filter((task,index)=>index!==Number(button.dataset.removeCyclicTask))); });
 }
 function showStructuredTextFunctions(kind = "functions") {
-  const view = (kind === "programs" ? structuredTextProgramLibrary : structuredTextFunctionLibrary)(project,language);
+  const view = (kind === "programs" ? structuredTextProgramLibrary : kind === "functionBlocks" ? structuredTextBlockLibrary : structuredTextFunctionLibrary)(project,language);
   modal(view.title,view.html);
   const openSource = (line = 1) => {
     if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
@@ -1690,6 +1690,7 @@ function showStructuredTextFunctions(kind = "functions") {
   $("#modalContent").querySelectorAll("[data-st-function-line]").forEach(button => { button.onclick = () => openSource(Number(button.dataset.stFunctionLine)); });
 }
 function action(name) {
+  if (name === "st-function-blocks") { showStructuredTextFunctions("functionBlocks"); return; }
   if (name === "cyclic-tasks") { showCyclicTasks(); return; }
   if (name === "st-programs") { showStructuredTextFunctions("programs"); return; }
   if (name === "st-functions") { showStructuredTextFunctions(); return; }

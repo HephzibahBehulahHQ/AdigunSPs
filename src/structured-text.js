@@ -1,3 +1,4 @@
+import { extractFunctionBlocks, splitBlockArguments } from "./st-blocks.js";
 import { cyclicTaskSchedule } from "./cyclic-tasks.js";
 
 // Keep source spans intact so comments, strings and diagnostics share one lexer.
@@ -33,34 +34,35 @@ function* sourceSpans(source) {
 }
 function privateProgramSpan(span, programs, key) {
   const scope = programs.find(program=>span.start>=program.start && span.start<program.end);
-  return scope && (span.start < scope.headerEnd || scope.declarations.some(range=>span.start>=range.start && span.start<range.end) || scope.locals.some(local=>local.name.toLowerCase()===key));
+  return scope && (span.start < scope.headerEnd || scope.declarations.some(range=>span.start>=range.start && span.start<range.end) || scope.locals.some(local=>local.name.toLowerCase()===key) || (scope.instances || []).some(instance=>instance.name.toLowerCase() === key || instance.fields.some(field=>`${instance.name}.${field.name}`.toLowerCase() === key)));
+}
+function* globalIdentifierSpans(source,key) {
+  const spans = [...sourceSpans(source)], masked = spans.map(span=>span.kind === "comment" ? span.text.replace(/[^\r\n]/g," ") : span.text).join("");
+  const programs = /\bPROGRAM\b/i.test(source) ? compileStructuredText(source).programs : [];
+  let privateDepth = 0, parentheses = 0;
+  for (const span of spans) {
+    if (span.kind === "identifier" && /^(FUNCTION|FUNCTION_BLOCK)$/i.test(span.text)) privateDepth++;
+    const namedInput = parentheses > 0 && /^\s*:=/.test(masked.slice(span.end));
+    yield {span,global:!privateDepth && !privateProgramSpan(span,programs,key) && span.kind === "identifier" && !namedInput};
+    if (span.kind === "identifier" && /^(END_FUNCTION|END_FUNCTION_BLOCK)$/i.test(span.text)) privateDepth = Math.max(0,privateDepth-1);
+    if (span.kind === "text") { if (span.text === "(") parentheses++; else if (span.text === ")") parentheses = Math.max(0,parentheses-1); }
+  }
 }
 export function renameStructuredTextIdentifier(source, oldName, newName) {
-  const key = oldName.toLowerCase();
-  const programs = /\bPROGRAM\b/i.test(source || "") ? compileStructuredText(source).programs : [];
-  let result = "", inFunction = false;
-  for (const span of sourceSpans(String(source || ""))) {
-    if (span.kind === "identifier" && /^FUNCTION$/i.test(span.text)) inFunction = true;
-    result += !inFunction && !privateProgramSpan(span,programs,key) && span.kind === "identifier" && span.text.toLowerCase() === key ? newName : span.text;
-    if (span.kind === "identifier" && /^END_FUNCTION$/i.test(span.text)) inFunction = false;
-  }
+  const key = oldName.toLowerCase(); let result = "";
+  for (const {span,global} of globalIdentifierSpans(String(source || ""),key)) result += global && span.text.toLowerCase() === key ? newName : span.text;
   return result;
 }
 export function countStructuredTextReferences(source, name) {
   const key = name.toLowerCase(); let count = 0;
-  const programs = /\bPROGRAM\b/i.test(source || "") ? compileStructuredText(source).programs : [];
-  let inFunction = false;
-  for (const span of sourceSpans(String(source || ""))) {
-    if (span.kind === "identifier" && /^FUNCTION$/i.test(span.text)) inFunction = true;
-    if (!inFunction && !privateProgramSpan(span,programs,key) && span.kind === "identifier" && span.text.toLowerCase() === key) count++;
-    if (span.kind === "identifier" && /^END_FUNCTION$/i.test(span.text)) inFunction = false;
-  }
+  for (const {span,global} of globalIdentifierSpans(String(source || ""),key)) if (global && span.text.toLowerCase() === key) count++;
   return count;
 }
+
 function splitStatements(source, errors) {
-  const statements = []; let text = "", startLine = 1, line = 1, header = false;
-  const flush = () => { if (text.trim()) statements.push({ text:text.trim(), line:startLine }); text = ""; header = false; };
-  const append = (value) => { if (!text.trim() && value.trim()) startLine = line; text += value; };
+  const statements = []; let text = "", startLine = 1, line = 1, header = false, hasText = false;
+  const flush = () => { if (hasText) statements.push({ text:text.trim(), line:startLine }); text = ""; header = false; hasText = false; };
+  const append = (value) => { if (!hasText) { if (!/\S/.test(value)) return; startLine = line; hasText = true; } text += value; };
   for (const span of sourceSpans(String(source || ""))) {
     if (span.kind === "comment") {
       if (!span.closed) errors.push(`Line ${line}: block comment is missing *).`);
@@ -71,7 +73,7 @@ function splitStatements(source, errors) {
     } else if (span.kind === "identifier" && /^THEN$/i.test(span.text) && header) {
       append(span.text); flush();
     } else if (span.kind === "text" && span.text === ";") {
-      if (text.trim()) { append(";"); flush(); }
+      if (hasText) { append(";"); flush(); }
     } else append(span.text);
     line += (span.text.match(/\n/g) || []).length;
   }
@@ -115,13 +117,14 @@ function parseExpression(tokens, line) {
   const tree = parseOr(); if (cursor !== tokens.length) throw new Error(`Line ${line}: unexpected “${tokens[cursor]}”.`); return tree;
 }
 
-function compileProgram(source, variableNames = [], signatures = new Map(), allowEmpty = false) {
-  const statements = [], errors = [], allowed = new Map(), stack = [];
+function compileProgram(source, variableNames = [], signatures = new Map(), allowEmpty = false, instances = new Map(), readOnlyNames = new Set(), strictDeclarations = false) {
+  const statements = [], errors = [], allowed = new Map(), stack = [], readOnly = new Set(readOnlyNames);
+  for (const instance of instances.values()) for (const field of instance.fields) if (field.role === "output") readOnly.add(`${instance.name}.${field.name}`.toLowerCase());
   for (const name of variableNames) { const key = name.toLowerCase(); if (allowed.has(key)) errors.push(`Tag "${name}" is declared more than once (ignoring case).`); else allowed.set(key,name); }
   const append = (statement) => { const parent = stack.at(-1); if (!parent) statements.push(statement); else if (parent.branch === "then") parent.node.consequent.push(statement); else if (parent.branch === "else") parent.node.alternate.push(statement); else parent.node.elseIf[parent.index].statements.push(statement); };
   const validateNames = (expression, line) => {
     const visit = (node) => { if (!node || typeof node !== "object") return;
-      if (node.op === "tag") { const key = node.name.toLowerCase(); if (allowed.size && !allowed.has(key)) errors.push(`Line ${line}: "${node.name}" is not declared in the tag table.`); else if (allowed.has(key)) node.name = allowed.get(key); }
+      if (node.op === "tag") { const key = node.name.toLowerCase(); if ((allowed.size || strictDeclarations) && !allowed.has(key)) errors.push(`Line ${line}: "${node.name}" is not declared in the tag table.`); else if (allowed.has(key)) node.name = allowed.get(key); }
       if (node.op === "call") {
         const definition = signatures.get(node.name.toLowerCase());
         if (!definition) errors.push(`Line ${line}: function "${node.name}" is not declared.`);
@@ -142,17 +145,34 @@ function compileProgram(source, variableNames = [], signatures = new Map(), allo
     if (elseIfMatch) { const current = stack.at(-1); if (!current || current.branch === "else") { errors.push(`Line ${lineNumber}: ELSIF must precede ELSE in an IF block.`); return; } try { const condition = parseExpression(tokenize(elseIfMatch[1], lineNumber), lineNumber); validateNames(condition, lineNumber); current.node.elseIf.push({ condition, statements:[], line:lineNumber }); current.branch = "elseIf"; current.index = current.node.elseIf.length - 1; } catch (error) { errors.push(error.message); } return; }
     if (/^ELSE$/i.test(line)) { const current = stack.at(-1); if (!current) errors.push(`Line ${lineNumber}: ELSE has no matching IF.`); else if (current.branch === "else") errors.push(`Line ${lineNumber}: duplicate ELSE branch.`); else current.branch = "else"; return; }
     if (/^END_IF\s*;?$/i.test(line)) { if (!stack.length) errors.push(`Line ${lineNumber}: END_IF has no matching IF.`); else stack.pop(); return; }
+    const blockCall = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\);$/);
+    if (blockCall) {
+      const instance = instances.get(blockCall[1].toLowerCase());
+      if (!instance) { errors.push(`Line ${lineNumber}: function-block instance "${blockCall[1]}" is not declared in this program.`); return; }
+      try {
+        const seen = new Set(), args = splitBlockArguments(blockCall[2],lineNumber).map(argument => {
+          const key = argument.name.toLowerCase(), field = instance.fields.find(field=>field.role === "input" && field.name.toLowerCase() === key);
+          if (!field) errors.push(`Line ${lineNumber}: "${argument.name}" is not an input of ${instance.name}.`);
+          if (seen.has(key)) errors.push(`Line ${lineNumber}: block input "${argument.name}" is repeated.`); seen.add(key);
+          const expression = parseExpression(tokenize(argument.source,lineNumber),lineNumber); validateNames(expression,lineNumber);
+          return {name:field?.name || argument.name,expression};
+        });
+        append({kind:"blockCall",instance:instance.name,args,line:lineNumber});
+      } catch (error) { errors.push(error.message); }
+      return;
+    }
     const assignment = line.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s*:=\s*([\s\S]+);$/);
     if (!assignment) { errors.push(`Line ${lineNumber}: use “Tag := expression;”, IF … THEN, ELSE, or END_IF.`); return; }
     const target = allowed.get(assignment[1].toLowerCase()) || assignment[1];
-    if (allowed.size && !allowed.has(target.toLowerCase())) errors.push(`Line ${lineNumber}: “${target}” is not declared in the tag table.`);
+    if (readOnly.has(target.toLowerCase())) errors.push(`Line ${lineNumber}: "${target}" is read-only in this scope.`);
+    if ((allowed.size || strictDeclarations) && !allowed.has(target.toLowerCase())) errors.push(`Line ${lineNumber}: “${target}” is not declared in the tag table.`);
     try {
       const expression = parseExpression(tokenize(assignment[2], lineNumber), lineNumber); validateNames(expression, lineNumber);
       append({ kind:"assignment", target, expression, line:lineNumber });
     } catch (error) { errors.push(error.message); }
   });
   for (const open of stack) errors.push(`Line ${open.node.line}: IF block is missing END_IF.`);
-  const hasAssignment = (items) => items.some((item) => item.kind === "assignment" || hasAssignment(item.consequent || []) || (item.elseIf || []).some((branch) => hasAssignment(branch.statements)) || hasAssignment(item.alternate || []));
+  const hasAssignment = (items) => items.some((item) => (item.kind === "assignment" || item.kind === "blockCall") || hasAssignment(item.consequent || []) || (item.elseIf || []).some((branch) => hasAssignment(branch.statements)) || hasAssignment(item.alternate || []));
   if (!allowEmpty && !hasAssignment(statements) && !errors.length) errors.push("Enter at least one assignment.");
   return { ok:errors.length === 0, statements, errors, variables:[...allowed.values()] };
 }
@@ -162,8 +182,8 @@ const maskSource = (text) => text.replace(/[^\r\n]/g," ");
 const sourceLine = (source, offset) => 1 + (source.slice(0,offset).match(/\n/g) || []).length;
 export function compileStructuredText(source, variableNames = []) {
   source = String(source || ""); const errors = [], definitions = [], ranges = []; let open;
-  const masked = [...sourceSpans(source)].map(span => span.kind === "comment" ? maskSource(span.text) : span.text).join("");
-  for (const span of sourceSpans(source)) {
+  const spans = [...sourceSpans(source)], masked = spans.map(span => span.kind === "comment" ? maskSource(span.text) : span.text).join("");
+  for (const span of spans) {
     if (span.kind !== "identifier") continue;
     if (/^FUNCTION$/i.test(span.text)) {
       if (open) errors.push(`Line ${sourceLine(source,span.start)}: nested FUNCTION declarations are not supported.`);
@@ -203,8 +223,17 @@ export function compileStructuredText(source, variableNames = []) {
     if (signatures.has(key)) errors.push(`Line ${definition.line}: function "${definition.name}" is declared more than once (ignoring case).`);
     else signatures.set(key,definition);
   }
+  const blocks = extractFunctionBlocks(source,spans), blockTypes = new Map(); errors.push(...blocks.errors);
+  for (const definition of blocks.definitions) {
+    const key = definition.name.toLowerCase();
+    if (blockTypes.has(key) || signatures.has(key) || variableNames.some(name=>name.toLowerCase() === key)) errors.push(`Line ${definition.line}: function-block type names must be unique and distinct from functions/global tags.`);
+    blockTypes.set(key,definition);
+    const declarations = [...definition.inputs,...definition.outputs,...definition.locals];
+    const compiled = compileProgram(definition.body,declarations.map(variable=>variable.name),signatures,false,new Map(),new Set(definition.inputs.map(input=>input.name.toLowerCase())),true);
+    definition.statements = compiled.statements; delete definition.body; errors.push(...compiled.errors.map(error=>`${definition.name}: ${error}`));
+  }
   const programs = [], programRanges = []; let openProgram;
-  for (const span of sourceSpans(source)) {
+  for (const span of spans) {
     if (span.kind !== "identifier") continue;
     if (/^PROGRAM$/i.test(span.text)) {
       if (openProgram) errors.push(`Line ${sourceLine(source,span.start)}: nested PROGRAM declarations are not supported.`);
@@ -216,43 +245,53 @@ export function compileStructuredText(source, variableNames = []) {
   }
   if (openProgram) errors.push(`Line ${sourceLine(source,openProgram.start)}: PROGRAM is missing END_PROGRAM.`);
   if (programRanges.length > 32) errors.push("A task supports at most 32 ST programs.");
-  const pouNames = new Set(signatures.keys());
+  const pouNames = new Set([...signatures.keys(),...blockTypes.keys()]);
   for (const range of programRanges.slice(0,32)) {
     const text = masked.slice(range.start,range.bodyEnd), header = text.match(/^PROGRAM\s+([A-Za-z_][A-Za-z0-9_]*)[ \t]*(?:\r?\n|$)/i), line = sourceLine(source,range.start);
     if (!header) { errors.push(`Line ${line}: use PROGRAM Name on its own line.`); continue; }
     const name = header[1], key = name.toLowerCase();
     if (pouNames.has(key) || variableNames.some(tag=>tag.toLowerCase()===key)) errors.push(`Line ${line}: program, function and global tag names must be distinct.`);
     pouNames.add(key);
-    const definition = {name,line,start:range.start,end:range.end,headerEnd:range.start+header[0].length,locals:[],declarations:[]};
+    const definition = {name,line,start:range.start,end:range.end,headerEnd:range.start+header[0].length,locals:[],instances:[],declarations:[]};
     let body = text.slice(header[0].length), bodyOffset = definition.headerEnd;
     body = body.replace(/\bVAR\b([\s\S]*?)\bEND_VAR\b/gi,(section,entries,offset) => {
       definition.declarations.push({start:bodyOffset+offset,end:bodyOffset+offset+section.length});
       if (entries.trim() && !entries.trim().endsWith(";")) errors.push(`Line ${sourceLine(source,bodyOffset+offset)}: program declarations require a semicolon.`);
       for (const entry of entries.split(";")) {
         if (!entry.trim()) continue;
-        const match = entry.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(BOOL|INT|REAL|TIME)$/i);
-        if (!match) errors.push(`Line ${sourceLine(source,bodyOffset+offset)}: program locals require Name : BOOL, INT, REAL, or TIME followed by a semicolon.`);
-        else definition.locals.push({name:match[1],type:match[2].toUpperCase(),key:`${name}.${match[1]}`});
+        const match = entry.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)$/i), block = match && blockTypes.get(match[2].toLowerCase());
+        if (!match || (!block && !/^(BOOL|INT|REAL|TIME)$/i.test(match[2]))) errors.push(`Line ${sourceLine(source,bodyOffset+offset)}: program locals require a scalar or declared function-block type followed by a semicolon.`);
+        else if (block) {
+          if (match[1].length > 64) errors.push(`Line ${line}: instance names must not exceed 64 characters.`);
+          definition.instances.push({name:match[1],type:block.name,key:`${name}.${match[1]}`,fields:[...block.inputs.map(field=>({...field,role:"input"})),...block.outputs.map(field=>({...field,role:"output"}))].map(field=>({...field,key:`${name}.${match[1]}.${field.name}`}))});
+        } else definition.locals.push({name:match[1],type:match[2].toUpperCase(),key:`${name}.${match[1]}`});
       }
       return maskSource(section);
     });
-    if (definition.locals.length > 128) errors.push(`Line ${line}: a program supports at most 128 local variables.`);
-    const bindings = new Map(definition.locals.map(local=>[local.name.toLowerCase(),local.key]));
-    for (const local of definition.locals) if (variableNames.some(tag=>tag.toLowerCase()===local.key.toLowerCase())) errors.push(`Line ${line}: private program storage collides with global tag "${local.key}".`);
-    const scope = [...variableNames.filter(tag=>!bindings.has(tag.toLowerCase())),...definition.locals.map(local=>local.name)];
-    const compiled = compileProgram("\n".repeat(sourceLine(source,bodyOffset)-1)+body,scope,signatures);
+    if (definition.locals.length + definition.instances.length > 128) errors.push(`Line ${line}: a program supports at most 128 local variables.`);
+    const instanceMap = new Map(), localNames = new Set();
+    for (const local of [...definition.locals,...definition.instances]) { const key = local.name.toLowerCase(); if (localNames.has(key)) errors.push(`Line ${line}: program variable "${local.name}" is declared more than once.`); localNames.add(key); }
+    for (const instance of definition.instances) instanceMap.set(instance.name.toLowerCase(),instance);
+    const publicFields = definition.instances.flatMap(instance=>instance.fields.map(field=>({...field,sourceName:`${instance.name}.${field.name}`})));
+    const bindings = new Map([...definition.locals.map(local=>[local.name.toLowerCase(),local.key]),...publicFields.map(field=>[field.sourceName.toLowerCase(),field.key])]);
+    for (const local of [...definition.locals,...publicFields]) if (variableNames.some(tag=>tag.toLowerCase()===local.key.toLowerCase())) errors.push(`Line ${line}: private program storage collides with global tag "${local.key}".`);
+    const scope = [...variableNames.filter(tag=>!bindings.has(tag.toLowerCase()) && !instanceMap.has(tag.toLowerCase())),...definition.locals.map(local=>local.name),...publicFields.map(field=>field.sourceName)];
+    const compiled = compileProgram("\n".repeat(sourceLine(source,bodyOffset)-1)+body,scope,signatures,false,instanceMap,new Set(),true);
     const qualify = (value) => {
       if (!value || typeof value !== "object") return;
       if (value.op === "tag" && bindings.has(value.name.toLowerCase())) value.name = bindings.get(value.name.toLowerCase());
+      if (value.kind === "blockCall" && instanceMap.has(value.instance.toLowerCase())) value.instance = instanceMap.get(value.instance.toLowerCase()).key;
       if (value.kind === "assignment" && bindings.has(value.target.toLowerCase())) value.target = bindings.get(value.target.toLowerCase());
       Object.values(value).forEach(qualify);
     };
     qualify(compiled.statements); definition.statements = compiled.statements;
     errors.push(...compiled.errors.map(error=>`${name}: ${error}`)); programs.push(definition);
   }
+  if (programs.reduce((sum,definition)=>sum+definition.instances.length,0) > 64) errors.push("A source supports at most 64 function-block instances.");
+  for (const blockRange of blocks.ranges) for (const other of [...ranges,...programRanges]) if (blockRange.start < other.end && other.start < blockRange.end) errors.push("Function-block declarations cannot be nested in other POUs.");
   for (const functionRange of ranges) for (const programRange of programRanges) if (functionRange.start < programRange.end && programRange.start < functionRange.end) errors.push("PROGRAM and FUNCTION declarations cannot be nested.");
   let main = source;
-  for (const range of [...ranges,...programRanges].sort((a,b)=>b.start-a.start)) main = main.slice(0,range.start) + maskSource(main.slice(range.start,range.end)) + main.slice(range.end);
+  for (const range of [...ranges,...programRanges,...blocks.ranges].sort((a,b)=>b.start-a.start)) main = main.slice(0,range.start) + maskSource(main.slice(range.start,range.end)) + main.slice(range.end);
   const program = compileProgram(main,variableNames,signatures,programs.length > 0);
   const calls = (value, result = new Set()) => {
     if (!value || typeof value !== "object") return result;
@@ -262,7 +301,7 @@ export function compileStructuredText(source, variableNames = []) {
   };
   for (const definition of definitions) {
     const scope = [definition.name,...definition.inputs.map(v=>v.name),...definition.locals.map(v=>v.name)];
-    const compiled = compileProgram(definition.body,scope,signatures); delete definition.body;
+    const compiled = compileProgram(definition.body,scope,signatures,false,new Map(),new Set(definition.inputs.map(input=>input.name.toLowerCase())),true); delete definition.body;
     definition.statements = compiled.statements; errors.push(...compiled.errors.map(error=>`${definition.name}: ${error}`));
     const assignsResult = (value) => value && typeof value === "object" && (value.kind === "assignment" && value.target.toLowerCase() === definition.name.toLowerCase() || Object.values(value).some(assignsResult));
     if (!assignsResult(compiled.statements)) errors.push(`Line ${definition.line}: function "${definition.name}" must assign its result.`);
@@ -276,7 +315,7 @@ export function compileStructuredText(source, variableNames = []) {
     visiting.delete(name); visited.add(name);
   };
   definitions.forEach(definition=>visit(definition.name.toLowerCase()));
-  return {...program,ok:program.ok && !errors.length,errors:[...program.errors,...errors],functions:definitions,programs,variables:[...program.variables,...programs.flatMap(definition=>definition.locals.map(local=>local.key))]};
+  return {...program,ok:program.ok && !errors.length,errors:[...program.errors,...errors],functions:definitions,functionBlocks:blocks.definitions,programs,variables:[...program.variables,...programs.flatMap(definition=>[...definition.locals.map(local=>local.key),...definition.instances.flatMap(instance=>instance.fields.map(field=>field.key))])]};
 }
 
 function lookup(values, name) { if (Object.hasOwn(values, name)) return values[name]; const key = Object.keys(values).find((item) => item.toLowerCase() === name.toLowerCase()); return key ? values[key] : false; }
@@ -315,44 +354,76 @@ export function executeStructuredText(compiled, inputs, previousOutputs = {}, ou
   if (errors.length) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, taskState:taskOptions.previousState || null, errors };
   const values = Object.create(null), outputs = Object.create(null), types = new Map(Object.entries(tagTypes).map(([name,type]) => [name.toLowerCase(),type]));
   for (const source of [inputs,previousOutputs]) for (const [name,value] of Object.entries(source)) values[canonical(name)] = value;
-  const programState = Object.create(null);
+  const programState = Object.create(null), blockInstances = new Map(), blockTypes = new Map((compiled.functionBlocks || []).map(definition=>[definition.name.toLowerCase(),definition]));
+  const initialValue = (value,type) => type === "BOOL" ? value === true : typeof value === "number" && Number.isFinite(value) ? (type === "REAL" ? value : Math.trunc(value)) : 0;
   for (const definition of compiled.programs || []) {
-    const key = definition.name.toLowerCase(), schema = JSON.stringify(definition.locals.map(local=>[local.name.toLowerCase(),local.type]));
+    const instances = definition.instances || [];
+    const layout = instances.map(instance=>{const block=blockTypes.get(instance.type.toLowerCase());return [instance.name.toLowerCase(),instance.type.toLowerCase(),...block.inputs.map(field=>["input",field.name.toLowerCase(),field.type]),...block.outputs.map(field=>["output",field.name.toLowerCase(),field.type]),...block.locals.map(field=>["local",field.name.toLowerCase(),field.type])];});
+    const key = definition.name.toLowerCase(), schema = JSON.stringify([...definition.locals.map(local=>[local.name.toLowerCase(),local.type]),...layout]);
     const prior = Object.hasOwn(previousProgramState || {},key) ? previousProgramState[key] : null;
     const state = programState[key] = {schema,values:Object.create(null)};
     for (const local of definition.locals) {
       const localKey = local.name.toLowerCase(), value = prior?.schema === schema && Object.hasOwn(prior.values || {},localKey) ? prior.values[localKey] : undefined;
       types.set(local.key.toLowerCase(),local.type);
-      values[canonical(local.key)] = local.type === "BOOL" ? value === true : typeof value === "number" && Number.isFinite(value) ? (local.type === "REAL" ? value : Math.trunc(value)) : 0;
+      values[canonical(local.key)] = initialValue(value,local.type);
+    }
+    if (instances.length) state.instances = Object.create(null);
+    for (const instance of instances) {
+      const block = blockTypes.get(instance.type.toLowerCase()), instanceKey = instance.name.toLowerCase();
+      const previous = prior?.schema === schema && Object.hasOwn(prior.instances || {},instanceKey) ? prior.instances[instanceKey] : null;
+      const memory = state.instances[instanceKey] = {type:block.name,values:Object.create(null)};
+      for (const variable of [...block.inputs,...block.outputs,...block.locals]) memory.values[variable.name.toLowerCase()] = initialValue(Object.hasOwn(previous?.values || {},variable.name.toLowerCase()) ? previous.values[variable.name.toLowerCase()] : undefined,variable.type);
+      for (const field of instance.fields) { types.set(field.key.toLowerCase(),field.type); values[canonical(field.key)] = memory.values[field.name.toLowerCase()]; }
+      blockInstances.set(instance.key.toLowerCase(),{instance,definition:block,memory});
     }
   }
   for (const [name,value] of Object.entries(previousOutputs)) outputs[canonical(name)] = value;
   const functions = new Map((compiled.functions || []).map(definition=>[definition.name.toLowerCase(),definition]));
-  let callDepth = 0, callCount = 0;
+  let callDepth = 0, callCount = 0, executionBudgetExceeded = false;
   const convert = (value,type) => type === "BOOL" ? Boolean(value) : type === "REAL" ? numeric(value,"assignment") : Math.trunc(numeric(value,"assignment"));
+  const runPrivate = (statements,scope,bindings,label) => { for (const statement of statements) {
+      try {
+        if (statement.kind === "if") {
+          if (Boolean(evaluate(statement.condition,scope,callFunction))) runPrivate(statement.consequent,scope,bindings,label);
+          else { const branch=statement.elseIf.find(item=>Boolean(evaluate(item.condition,scope,callFunction))); runPrivate(branch?.statements || statement.alternate,scope,bindings,label); }
+        } else {
+          const variable = bindings.get(statement.target.toLowerCase());
+          if (!variable) throw new Error("Undeclared function variable.");
+          scope[variable.name]=convert(evaluate(statement.expression,scope,callFunction),variable.type);
+        }
+      } catch (error) { throw new Error(`${label} line ${statement.line}: ${error.message}`); }
+    } };
   const callFunction = (name,args) => {
-    if (++callCount > 10000 || callDepth >= 32) throw new Error("Function execution limit exceeded.");
+    if (++callCount > 10000 || callDepth >= 32) { executionBudgetExceeded = true; throw new Error("Function execution limit exceeded."); }
     const definition = functions.get(name.toLowerCase());
     if (!definition || args.length !== definition.inputs.length) throw new Error(`Invalid function call: ${name}.`);
     const scope = Object.create(null), declarations = [{name:definition.name,type:definition.type},...definition.inputs,...definition.locals];
     const bindings = new Map(declarations.map(v=>[v.name.toLowerCase(),v]));
     for (const variable of declarations) scope[variable.name] = variable.type === "BOOL" ? false : 0;
     definition.inputs.forEach((variable,index)=>{scope[variable.name]=convert(args[index],variable.type);});
-    const run = (statements) => { for (const statement of statements) {
-      try {
-        if (statement.kind === "if") {
-          if (Boolean(evaluate(statement.condition,scope,callFunction))) run(statement.consequent);
-          else { const branch=statement.elseIf.find(item=>Boolean(evaluate(item.condition,scope,callFunction))); run(branch?.statements || statement.alternate); }
-        } else {
-          const variable = bindings.get(statement.target.toLowerCase());
-          if (!variable) throw new Error("Undeclared function variable.");
-          scope[variable.name]=convert(evaluate(statement.expression,scope,callFunction),variable.type);
-        }
-      } catch (error) { throw new Error(`${definition.name} line ${statement.line}: ${error.message}`); }
-    } };
-    callDepth++; try { run(definition.statements); return scope[definition.name]; } finally { callDepth--; }
+    callDepth++; try { runPrivate(definition.statements,scope,bindings,definition.name); return scope[definition.name]; } finally { callDepth--; }
+  };
+  const callBlock = (statement) => {
+    if (++callCount > 10000 || callDepth >= 32) { executionBudgetExceeded = true; throw new Error("Function-block execution limit exceeded."); }
+    const target = blockInstances.get(statement.instance.toLowerCase());
+    if (!target) throw new Error(`Unknown function-block instance: ${statement.instance}.`);
+    const {instance,definition,memory} = target, scope = Object.create(null), declarations = [...definition.inputs,...definition.outputs,...definition.locals];
+    const bindings = new Map(declarations.map(variable=>[variable.name.toLowerCase(),variable]));
+    for (const variable of declarations) scope[variable.name] = memory.values[variable.name.toLowerCase()];
+    for (const field of instance.fields) if (field.role === "input") scope[field.name] = convert(values[canonical(field.key)],field.type);
+    for (const argument of statement.args) {
+      const input = definition.inputs.find(field=>field.name.toLowerCase() === argument.name.toLowerCase());
+      if (!input) throw new Error(`Unknown block input: ${argument.name}.`);
+      scope[input.name] = convert(evaluate(argument.expression,values,callFunction),input.type);
+    }
+    callDepth++; try { runPrivate(definition.statements,scope,bindings,instance.key); } finally { callDepth--; }
+    // A failed body never commits partial local/output state.
+    for (const variable of declarations) memory.values[variable.name.toLowerCase()] = scope[variable.name];
+    for (const field of instance.fields) values[canonical(field.key)] = scope[field.name];
   };
   const executeList = (statements, programName = "") => { for (const statement of statements) {
+    if (executionBudgetExceeded) break;
+    if (statement.kind === "blockCall") { try { callBlock(statement); } catch (error) { errors.push(`${programName ? programName + ": " : ""}Line ${statement.line}: ${error.message}`); } continue; }
     if (statement.kind === "if") { try { if (Boolean(evaluate(statement.condition, values, callFunction))) executeList(statement.consequent,programName); else { const branch = statement.elseIf.find((item) => Boolean(evaluate(item.condition, values, callFunction))); executeList(branch?.statements || statement.alternate,programName); } } catch (error) { errors.push(`${programName ? programName + ": " : ""}Line ${statement.line}: ${error.message}`); } continue; }
     try { const target = canonical(statement.target); let value = evaluate(statement.expression, values, callFunction), type = types.get(target.toLowerCase()); if (type === "BOOL") value = Boolean(value); else if (["INT", "REAL", "TIME"].includes(type)) { value = numeric(value, "assignment"); if (type !== "REAL") value = Math.trunc(value); } values[target] = value; if (outputSet.has(target.toLowerCase())) outputs[target] = value; }
     catch (error) { errors.push(`${programName ? programName + ": " : ""}Line ${statement.line}: ${error.message}`); }
@@ -360,9 +431,11 @@ export function executeStructuredText(compiled, inputs, previousOutputs = {}, ou
   executeList(compiled.statements);
   const programDefinitions = new Map((compiled.programs || []).map(definition=>[definition.name,definition]));
   for (const release of scheduling.releases) for (const name of release.programs) executeList(programDefinitions.get(name).statements,name);
+  if (executionBudgetExceeded) return {values:{...inputs,...previousOutputs},outputs:{...previousOutputs},programState:previousProgramState,taskState:taskOptions.previousState || null,errors};
   for (const definition of compiled.programs || []) {
     const state = programState[definition.name.toLowerCase()];
     for (const local of definition.locals) { state.values[local.name.toLowerCase()] = values[canonical(local.key)]; delete values[canonical(local.key)]; }
+    for (const instance of definition.instances || []) for (const field of instance.fields) { if (field.role === "input") state.instances[instance.name.toLowerCase()].values[field.name.toLowerCase()] = values[canonical(field.key)]; delete values[canonical(field.key)]; }
   }
   return { values:{...values}, outputs:{...outputs}, errors, programState:{...programState}, taskState:scheduling.state };
 }
