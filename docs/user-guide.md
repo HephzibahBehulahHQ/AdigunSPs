@@ -264,3 +264,5 @@ Mixed-project trace history includes retained unit state and the task clock. Rep
 Tag renames update saved unit references. Remove references from saved units before deleting a tag.
 
 Diagnostics identifies saved units with invalid logic by name. Applying a configuration or scanning a mixed project checks these errors before execution.
+
+Use project JSON to export saved program units and task assignments. PLCopen XML export is available for the supported single ladder body and refuses projects with units or task assignments.
