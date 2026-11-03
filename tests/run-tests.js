@@ -98,7 +98,7 @@ plcopenProject.tags.push({ name:"Delay", type:"TIME" }); plcopenProject.initialS
 const plcopenXml = createPlcopenXml(plcopenProject);
 assert.throws(() => createPlcopenXml({...plcopenProject, programUnits:[{name:"Aux"}]}), /Use project JSON/);
 assert.throws(() => createPlcopenXml({...plcopenProject, tasks:[{name:"Cyclic"}]}), /Use project JSON/);
-assert.ok(plcopenXml.includes('xmlns="http://www.plcopen.org/xml/tc6_0200"') && plcopenXml.includes('name="PLC &amp; Training"'), "PLCopen export uses TC6 XML namespace and escapes project names");
+assert.ok(plcopenXml.includes('xmlns="http://www.plcopen.org/xml/tc6_0201"') && plcopenXml.includes('name="PLC &amp; Training"'), "PLCopen export uses TC6 XML namespace and escapes project names");
 assert.ok(plcopenXml.includes('variable name="Start" address="%IX0.0"') && plcopenXml.includes('<BOOL/>') && plcopenXml.includes('<TIME/>') && plcopenXml.includes('value="T#1500ms"') && plcopenXml.includes('negated="true"'), "PLCopen LD export preserves declarations, addresses, initial values, and NC contacts");
 assert.match(plcopenXml, /<coil[^>]*>[\s\S]*?<connectionPointIn>[\s\S]*?<connection refLocalId="\d+"\/>[\s\S]*?<connection refLocalId="\d+"\/>[\s\S]*?<\/connectionPointIn>[\s\S]*?<variable>Lamp<\/variable>/, "PLCopen export preserves parallel OR branches by connecting each series path to the coil");
 assert.ok(plcopenXml.includes("AdigunSPs alias: Drive A"), "PLCopen export preserves app aliases in standard variable documentation");
