@@ -1,6 +1,6 @@
 const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
 
-export function createFloatingWindow({ panel, trigger, storageKey, onOpen = () => {}, onClose = () => {} }) {
+export function createFloatingWindow({ panel, trigger, storageKey, topBoundary = () => 0, onOpen = () => {}, onClose = () => {} }) {
   const titlebar = panel.querySelector("[data-window-titlebar]");
   const resizeHandle = panel.querySelector("[data-window-resize]");
   const content = panel.querySelector("[data-window-content]");
@@ -25,15 +25,16 @@ export function createFloatingWindow({ panel, trigger, storageKey, onOpen = () =
   function persist() { try { localStorage.setItem(storageKey, JSON.stringify({ ...state, previous })); } catch {} }
   function bounds() {
     const mobile = matchMedia("(max-width: 600px)").matches;
-    return { width: mobile ? innerWidth : Math.min(900, innerWidth - 32), height: mobile ? innerHeight : Math.min(800, innerHeight - 32), mobile };
+    const top = Math.ceil(topBoundary());
+    return { top, height: Math.max(0, innerHeight - top), mobile };
   }
   function constrain() {
     const view = bounds();
-    if (view.mobile) { state.x = 0; state.y = 0; state.width = innerWidth; state.height = innerHeight; return; }
+    if (view.mobile) { state.x = 0; state.y = view.top; state.width = innerWidth; state.height = view.height; return; }
     state.width = clamp(state.width, 320, Math.min(900, innerWidth - 32));
-    state.height = clamp(state.height, 400, Math.min(800, innerHeight - 32));
+    state.height = clamp(state.height, Math.min(400, view.height), Math.min(800, view.height));
     state.x = clamp(state.x, 0, Math.max(0, innerWidth - 72));
-    state.y = clamp(state.y, 0, Math.max(0, innerHeight - 48));
+    state.y = clamp(state.y, view.top, innerHeight - (state.minimized ? 48 : state.height));
   }
   function render() {
     constrain();
@@ -43,7 +44,7 @@ export function createFloatingWindow({ panel, trigger, storageKey, onOpen = () =
     const view = bounds();
     panel.style.left = `${state.x}px`; panel.style.top = `${state.y}px`;
     panel.style.width = `${view.mobile ? innerWidth : state.width}px`;
-    panel.style.height = `${view.mobile ? state.minimized ? 56 : innerHeight : state.minimized ? 48 : state.height}px`;
+    panel.style.height = `${view.mobile ? state.minimized ? 56 : view.height : state.minimized ? 48 : state.height}px`;
     content.hidden = state.minimized;
     resizeHandle.hidden = state.minimized || state.maximized || view.mobile;
     for (const button of controls) {
