@@ -15,7 +15,7 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin || requestUrl.pathname === "/__live") return;
 
-  event.respondWith(caches.match(event.request).then((cached) => {
+  event.respondWith(caches.match(event.request, { cacheName: CACHE }).then((cached) => {
     if (cached) return cached;
     return fetch(event.request).then((response) => {
       const contentType = response.headers.get("content-type") || "";
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (event) => {
       }
       return response;
     }).catch(() => event.request.mode === "navigate"
-      ? caches.match(new URL("./index.html", self.location.href).href).then((shell) => shell || Response.error())
+      ? caches.match(new URL("./index.html", self.location.href).href, { cacheName: CACHE }).then((shell) => shell || Response.error())
       : Response.error());
   }));
 });
