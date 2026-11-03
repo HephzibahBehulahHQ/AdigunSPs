@@ -58,7 +58,12 @@ export function createSerialExchange(write, timeoutMs = 750, firstId = 1) {
     },
     receive(line) {
       const reply = decodeSerialReply(line);
-      if (reply.type === "HARD_FAULT") close(new Error("HARD_FAULT"));
+      if (reply.type === "HARD_FAULT") {
+        const detail = typeof reply.reason === "string" && reply.reason.trim();
+        const error = new Error(detail ? "HARD_FAULT: " + detail : "HARD_FAULT");
+        close(error);
+        throw error;
+      }
       else if (pending?.id === reply.id) {
         if (reply.type === "NACK") finish(new Error(typeof reply.reason === "string" && reply.reason.trim() ? "Command Failed: " + reply.reason : "Command Failed: NACK"));
         else if (pending.command === "SET_RELAY" &&
@@ -111,8 +116,7 @@ export async function openSerialExchange(port, timeoutMs) {
         buffer += decoder.decode(value, { stream: true });
         let end;
         while ((end = buffer.indexOf("\n")) !== -1) {
-          const reply = exchange.receive(buffer.slice(0, end));
-          if (reply.type === "HARD_FAULT") throw new Error("HARD_FAULT");
+          exchange.receive(buffer.slice(0, end));
           buffer = buffer.slice(end + 1);
         }
         if (buffer.length > 1024) throw new Error("Serial reply exceeds frame limit");

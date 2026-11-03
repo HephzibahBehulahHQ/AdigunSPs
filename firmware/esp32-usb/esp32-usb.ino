@@ -93,7 +93,13 @@ void setup() {
 
 void loop() {
   checkEmergencyStop();
-  if (watchdogExpired || !heartbeat.active(millis())) stopOutputs();
+  if (watchdogExpired) {
+    stopOutputs();
+    watchdogExpired = false;
+    Serial.println("{\"type\":\"HARD_FAULT\",\"reason\":\"Heartbeat expired\"}");
+  } else if (!heartbeat.active(millis())) {
+    stopOutputs();
+  }
   if (!Serial.available()) return;
   const int byte = Serial.read();
   if (byte == '\n') {
