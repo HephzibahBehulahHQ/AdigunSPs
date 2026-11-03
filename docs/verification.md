@@ -322,3 +322,7 @@ On release 45ae8e0, Enter on Help focused Getting started in a fresh tab. Separa
 ### Browser JSON interchange
 
 A disposable local project exported through the browser and re-imported from the downloaded JSON retained its saved ST unit Check. A Step after import drove BOOL output Tag1 true, as shown in Latest scan snapshot. Vendor PLCopen compatibility remains a separate check.
+
+### PLCopen TC6 schema verification
+
+Series NO/NC and parallel ladder fixtures exported by AdigunSPs passed the official [PLCopen TC6 2.01 XSD](https://www.plcopen.org/downloads/) using the .NET XML schema validator. The import guard rejects files containing multiple POUs. Live browser XML round-trip and vendor-tool compatibility remain unverified.
