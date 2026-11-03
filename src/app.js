@@ -272,7 +272,7 @@ function showContextMenu(event, entries, menuLabel = (contextCopy[language] || c
   menu.onkeydown = (keyEvent) => { const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement); if (keyEvent.key === "Escape") { keyEvent.preventDefault(); keyEvent.stopPropagation(); hideContextMenu(); trigger?.focus(); } else if (["ArrowDown", "ArrowUp"].includes(keyEvent.key)) { keyEvent.preventDefault(); buttons[(index + (keyEvent.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus(); } };
   requestAnimationFrame(() => menu.querySelector("[role=menuitem]")?.focus());
 }
-function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
+function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.onkeydown = null; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
 let helpMarkdownPromise;
 function showHelpGuideMenu(event) {
   event.preventDefault(); hideContextMenu();
@@ -281,6 +281,13 @@ function showHelpGuideMenu(event) {
   const rect = trigger.getBoundingClientRect(), width = Math.min(760, innerWidth - 16), top = Math.min(rect.bottom + 4, innerHeight - 120);
   menu.style.width = `${width}px`; menu.style.maxHeight = `${Math.max(120, innerHeight - top - 8)}px`; menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, top)}px`;
   contextMenuDismiss = bindMenuDismissal(trigger, menu, hideContextMenu);
+  menu.onkeydown = (keyEvent) => {
+    if (keyEvent.key !== "Escape") return;
+    keyEvent.preventDefault();
+    keyEvent.stopPropagation();
+    hideContextMenu();
+    trigger.focus();
+  };
   helpMarkdownPromise ||= fetch(new URL("../docs/HELP.md", import.meta.url)).then((response) => { if (!response.ok) throw new Error(`Help guide request failed (${response.status})`); return response.text(); });
   helpMarkdownPromise.then((markdown) => {
     if (menu.hidden || !menu.classList.contains("help-guide-menu")) return;
