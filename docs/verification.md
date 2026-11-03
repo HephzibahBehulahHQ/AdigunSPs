@@ -318,3 +318,7 @@ On release `67cef4f`, a disposable project retained the task name `QAReleasePers
 ### Production Help keyboard navigation
 
 On release 45ae8e0, Enter on Help focused Getting started in a fresh tab. Separate checks confirmed Tab moved within the guide and Escape restored focus to Help. Earlier tabs did not consistently show the initial focus change.
+
+### Browser JSON interchange
+
+A disposable local project exported through the browser and re-imported from the downloaded JSON retained its saved ST unit Check. A Step after import drove BOOL output Tag1 true, as shown in Latest scan snapshot. Vendor PLCopen compatibility remains a separate check.
