@@ -330,3 +330,7 @@ Series NO/NC and parallel ladder fixtures exported by AdigunSPs passed the offic
 ### Production PLCopen export with rung comments
 
 After refreshing application files, a commented ladder downloaded from release ea2a6ce passed the official TC6 2.01 XSD. An earlier cached export omitted the required comment dimensions and failed validation. Browser re-import and vendor-tool compatibility remain unverified.
+
+### Production PLCopen re-import
+
+File → Import accepted the schema-validated production XML download and restored the Tag1 input and Tag2 output. The imported rung was not stepped in this browser check. Vendor-tool compatibility remains unverified.
