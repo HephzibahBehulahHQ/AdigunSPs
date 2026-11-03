@@ -35,7 +35,7 @@ let installation;
 handlers.get("install")({waitUntil:promise=>{installation=promise;}});
 await installation;
 assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
-assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v135";/, "development cache version advances for this runtime release");
+assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v136";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/example-search\.js"/, "Bot example search module must be included in the offline app shell");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/menu-dismissal\.js"/, "menu dismissal module must be included in the offline app shell");
@@ -46,11 +46,11 @@ assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/adigun-bot-co
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/adigun-ai-remote\.js"/, "AI consent module must be included in the offline app shell");
 const fetchHandler = handlers.get("fetch");
 
-async function dispatch(path) {
+async function dispatch(path, mode = "cors") {
   const waits = [];
   let responsePromise;
   fetchHandler({
-    request: new Request(`https://adigun.test${path}`),
+    request: { url: `https://adigun.test${path}`, method: "GET", mode },
     respondWith: (response) => { responsePromise = Promise.resolve(response); },
     waitUntil: (promise) => waits.push(promise),
   });
@@ -70,6 +70,13 @@ console.log("PASS: live reload bypass, response cloning, and event-stream cache 
 
 
 
+
+context.fetch = async () => { throw new Error("offline"); };
+context.caches.match = async (request) => request === "./index.html" ? new Response("editor shell") : null;
+assert.equal(await (await dispatch("/?offline", "navigate")).text(), "editor shell");
+assert.equal((await dispatch("/missing.js")).type, "error");
+context.caches.match = async () => null;
+assert.equal((await dispatch("/?offline", "navigate")).type, "error");
 
 // Every local module reachable from the application must be available on first offline use.
 const {existsSync}=await import("node:fs"),{posix}=await import("node:path");
