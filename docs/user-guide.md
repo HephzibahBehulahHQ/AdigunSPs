@@ -268,3 +268,9 @@ Diagnostics identifies saved units with invalid logic by name. Applying a config
 Use project JSON to export saved program units and task assignments. PLCopen XML export is available for the supported single ladder body and refuses projects with units or task assignments.
 
 A scenario frame with a compiler or runtime error reports FAIL even if the previously held outputs match the expected values.
+
+## USB connection
+
+Open **I/O & Tags → Hardware inventory / BOM**, then select **Connect USB** in a browser with Web Serial support. Choose the port for a device running compatible firmware. **USB port open** confirms the browser opened the port.
+
+Select **Sync device** to send SYNC. A device acknowledgement starts a one-second heartbeat. **Stop all outputs** sends a stop request and closes the connection after the reply or timeout. An acknowledgement confirms receipt of the stop command. Physical shutdown must be verified separately. Use the independent hardwired emergency stop when immediate shutdown is required.

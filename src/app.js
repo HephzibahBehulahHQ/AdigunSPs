@@ -18,6 +18,7 @@ import { searchExamples } from "./example-search.js";
 import { renderProcessTwin } from "./process-view.js";
 import { applyAnalogFaults, applyInputFaults, applyOutputFaults } from "./faults.js";
 import { createIoScheduleCsv, createIoSchedulePrintHtml, createExampleTestReportCsv, createTrendHistoryCsv, createWiringReferenceHtml, createHardwareBomCsv, createHardwareBomPrintHtml, createScenarioTestReportCsv, createScenarioTestReportHtml, createPanelLayoutReferenceHtml } from "./reports.js";
+import { openSerialExchange } from "./hardware-serial-protocol.js";
 import { validateHardwareItem } from "./hardware.js";
 import { hmiDragPosition } from "./hmi-layout.js";
 import { validateScenario, runScenario } from "./scenarios.js";
@@ -1172,7 +1173,7 @@ const hardwareLinkCopy = {
   yo:{tag:"Ìsopọ̀ àmì PLC (àṣàyàn)",position:"Ipo paneli (tí olùlò tẹ̀ sí i)",layout:"Tẹ ìtọ́kasí layout paneli",none:"— kò so mọ́ àmì —"},
   pcm:{tag:"PLC tag link (optional)",position:"Panel position (user-entered)",layout:"Print panel layout reference",none:"— no tag link —"},
 };
-function showHardwareInventory() { project.hardwareItems ||= []; const copy = hardwareCopy[language] || hardwareCopy.en, links = hardwareLinkCopy[language] || hardwareLinkCopy.en, tagOptions = (selected = "") => `<option value="">${links.none}</option>${(project.tags || []).map((tag) => `<option value="${escapeAttr(tag.name)}" ${selected === tag.name ? "selected" : ""}>${escapeHtml(tag.name)} · ${escapeHtml(tag.address || tag.name)}</option>`).join("")}`; modal(copy.title, `<div class="modal-body"><p class="safety-copy">${copy.scope}</p><div id="hardwareInventoryBody"></div><div class="input-row"><label class="field">${copy.category}<input id="hardwareCategory" maxlength="80"></label><label class="field">${copy.manufacturer}<input id="hardwareManufacturer" maxlength="120"></label><label class="field">${copy.part}<input id="hardwarePartNumber" maxlength="120"></label></div><div class="input-row"><label class="field">${copy.description}<input id="hardwareDescription" maxlength="240" required></label><label class="field">${copy.quantity}<input id="hardwareQuantity" type="number" min="1" step="1" value="1" required></label><label class="field">${copy.notes}<input id="hardwareNotes" maxlength="500"></label></div><div class="input-row"><label class="field">${links.tag}<select id="hardwareTag">${tagOptions()}</select></label><label class="field">${links.position}<input id="hardwarePosition" maxlength="80"></label></div><div id="hardwareValidation" class="validation-list" aria-live="polite"></div><div class="modal-actions"><button class="primary" id="addHardwareItem">${copy.add}</button><button class="secondary" id="exportHardwareBom">${copy.export}</button><button class="secondary" id="printHardwareBom">${copy.print}</button><button class="secondary" id="printPanelLayout">${links.layout}</button></div></div>`); renderHardwareInventory(); $("#addHardwareItem").onclick = () => { const result = validateHardwareItem({ category:$("#hardwareCategory").value, manufacturer:$("#hardwareManufacturer").value, partNumber:$("#hardwarePartNumber").value, description:$("#hardwareDescription").value, quantity:$("#hardwareQuantity").value, notes:$("#hardwareNotes").value, tag:$("#hardwareTag").value, panelPosition:$("#hardwarePosition").value }); if (!result.valid) { $("#hardwareValidation").textContent = copy.required; return; } pushHistory(); project.hardwareItems.push(result.item); persist(); showHardwareInventory(); }; $("#exportHardwareBom").onclick = exportHardwareBom; $("#printHardwareBom").onclick = printHardwareBom; $("#printPanelLayout").onclick = printPanelLayoutReference; document.querySelectorAll("[data-remove-hardware]").forEach((button) => button.onclick = () => { pushHistory(); project.hardwareItems.splice(Number(button.dataset.removeHardware), 1); persist(); showHardwareInventory(); }); document.querySelectorAll("[data-hardware-edit]").forEach((field) => field.onchange = () => { const item = project.hardwareItems[Number(field.dataset.hardwareIndex)]; if (!item) return; pushHistory(); item[field.dataset.hardwareEdit] = field.value; persist(); renderHardwareInventory(); }); }
+function showHardwareInventory() { project.hardwareItems ||= []; const copy = hardwareCopy[language] || hardwareCopy.en, links = hardwareLinkCopy[language] || hardwareLinkCopy.en, tagOptions = (selected = "") => `<option value="">${links.none}</option>${(project.tags || []).map((tag) => `<option value="${escapeAttr(tag.name)}" ${selected === tag.name ? "selected" : ""}>${escapeHtml(tag.name)} · ${escapeHtml(tag.address || tag.name)}</option>`).join("")}`; modal(copy.title, `<div class="modal-body"><p class="safety-copy">${copy.scope}</p><div id="hardwareInventoryBody"></div><button class="secondary" id="connectHardwareSerial">Connect USB</button><button class="secondary" id="syncHardwareSerial" disabled>Sync device</button><button class="secondary" id="stopHardwareSerial" disabled>Stop all outputs</button><p role="status" id="hardwareSerialStatus">Device offline</p><div class="input-row"><label class="field">${copy.category}<input id="hardwareCategory" maxlength="80"></label><label class="field">${copy.manufacturer}<input id="hardwareManufacturer" maxlength="120"></label><label class="field">${copy.part}<input id="hardwarePartNumber" maxlength="120"></label></div><div class="input-row"><label class="field">${copy.description}<input id="hardwareDescription" maxlength="240" required></label><label class="field">${copy.quantity}<input id="hardwareQuantity" type="number" min="1" step="1" value="1" required></label><label class="field">${copy.notes}<input id="hardwareNotes" maxlength="500"></label></div><div class="input-row"><label class="field">${links.tag}<select id="hardwareTag">${tagOptions()}</select></label><label class="field">${links.position}<input id="hardwarePosition" maxlength="80"></label></div><div id="hardwareValidation" class="validation-list" aria-live="polite"></div><div class="modal-actions"><button class="primary" id="addHardwareItem">${copy.add}</button><button class="secondary" id="exportHardwareBom">${copy.export}</button><button class="secondary" id="printHardwareBom">${copy.print}</button><button class="secondary" id="printPanelLayout">${links.layout}</button></div></div>`); renderHardwareInventory(); bindHardwareSerial(); $("#addHardwareItem").onclick = () => { const result = validateHardwareItem({ category:$("#hardwareCategory").value, manufacturer:$("#hardwareManufacturer").value, partNumber:$("#hardwarePartNumber").value, description:$("#hardwareDescription").value, quantity:$("#hardwareQuantity").value, notes:$("#hardwareNotes").value, tag:$("#hardwareTag").value, panelPosition:$("#hardwarePosition").value }); if (!result.valid) { $("#hardwareValidation").textContent = copy.required; return; } pushHistory(); project.hardwareItems.push(result.item); persist(); showHardwareInventory(); }; $("#exportHardwareBom").onclick = exportHardwareBom; $("#printHardwareBom").onclick = printHardwareBom; $("#printPanelLayout").onclick = printPanelLayoutReference; document.querySelectorAll("[data-remove-hardware]").forEach((button) => button.onclick = () => { pushHistory(); project.hardwareItems.splice(Number(button.dataset.removeHardware), 1); persist(); showHardwareInventory(); }); document.querySelectorAll("[data-hardware-edit]").forEach((field) => field.onchange = () => { const item = project.hardwareItems[Number(field.dataset.hardwareIndex)]; if (!item) return; pushHistory(); item[field.dataset.hardwareEdit] = field.value; persist(); renderHardwareInventory(); }); }
 function showDeviceConfiguration() {
   const copy = ({
     en:{ title:"PLC/device profile", notice:"Optional, user-entered reference only. This does not select a supported controller, validate compatibility or ratings, or connect hardware.", vendor:"Vendor", model:"CPU or device model", firmware:"Firmware version", platform:"Controller family or platform", inputs:"Input modules", outputs:"Output modules", notes:"Notes", save:"Save profile", saved:"Device profile saved" },
@@ -1183,6 +1184,99 @@ function showDeviceConfiguration() {
   const device = project.device || {};
   modal(copy.title, `<div class="modal-body"><p class="safety-copy">${copy.notice}</p><div class="input-row"><label class="field">${copy.vendor}<input id="deviceVendor" maxlength="120" value="${escapeAttr(device.vendor || "")}"></label><label class="field">${copy.model}<input id="deviceModel" maxlength="160" value="${escapeAttr(device.model || "")}"></label></div><div class="input-row"><label class="field">${copy.platform}<input id="devicePlatform" maxlength="160" value="${escapeAttr(device.platform || "")}"></label><label class="field">${copy.firmware}<input id="deviceFirmware" maxlength="80" value="${escapeAttr(device.firmware || "")}"></label></div><div class="input-row"><label class="field">${copy.inputs}<input id="deviceInputModules" type="number" min="0" max="256" step="1" value="${Number.isInteger(device.inputModules) ? device.inputModules : 0}"></label><label class="field">${copy.outputs}<input id="deviceOutputModules" type="number" min="0" max="256" step="1" value="${Number.isInteger(device.outputModules) ? device.outputModules : 0}"></label></div><label class="field">${copy.notes}<textarea id="deviceNotes" maxlength="1000">${escapeHtml(device.notes || "")}</textarea></label><div class="modal-actions"><button class="primary" id="saveDeviceConfiguration">${copy.save}</button></div></div>`);
   $("#saveDeviceConfiguration").onclick = () => { const inputs = Number($("#deviceInputModules").value), outputs = Number($("#deviceOutputModules").value); if (![inputs, outputs].every((value) => Number.isInteger(value) && value >= 0 && value <= 256)) { toast(copy.notice); return; } pushHistory(); project.device = { vendor:$("#deviceVendor").value.trim(), model:$("#deviceModel").value.trim(), platform:$("#devicePlatform").value.trim(), firmware:$("#deviceFirmware").value.trim(), inputModules:inputs, outputModules:outputs, notes:$("#deviceNotes").value.trim() }; persist(); $("#modal").close(); toast(copy.saved); };
+}
+function bindHardwareSerial() {
+  const button = $("#connectHardwareSerial");
+  const status = $("#hardwareSerialStatus");
+  const sync = $("#syncHardwareSerial");
+  const stop = $("#stopHardwareSerial");
+  let session;
+  let heartbeat;
+  let stopResult;
+  sync.onclick = async () => {
+    const connected = session;
+    if (!connected) return;
+    sync.disabled = true;
+    try {
+      await connected.send("SYNC");
+      if (session !== connected) return;
+      status.textContent = "Device synchronized";
+      stop.disabled = false;
+      heartbeat = setInterval(async () => {
+        try {
+          await connected.send("HEARTBEAT");
+        } catch (error) {
+          if (session !== connected || stop.disabled) return;
+          clearInterval(heartbeat);
+          await connected.close().catch(() => {});
+          if (!session || session === connected) status.textContent = error.message;
+        }
+      }, 1000);
+    } catch (error) {
+      if (session === connected) {
+        status.textContent = error.message;
+        sync.disabled = false;
+      }
+    }
+  };
+  stop.onclick = async () => {
+    const connected = session;
+    if (!connected) return;
+    stop.disabled = true;
+    clearInterval(heartbeat);
+    try {
+      await connected.send("STOP_ALL");
+      stopResult = "Device acknowledged stop";
+    } catch (error) {
+      stopResult = error.message;
+    } finally {
+      await connected.close().catch(() => {});
+    }
+  };
+  button.disabled = !navigator.serial;
+  if (button.disabled) status.textContent = "Web Serial unavailable";
+  button.onclick = async () => {
+    button.disabled = true;
+    try {
+      if (session) {
+        await session.close();
+        return;
+      }
+      const port = await navigator.serial.requestPort();
+      if (!button.isConnected) return;
+      stopResult = undefined;
+      session = await openSerialExchange(port);
+      if (!button.isConnected) {
+        await session.close();
+        return;
+      }
+      const connected = session;
+      void connected.disconnected.then(reason => {
+        clearInterval(heartbeat);
+        sync.disabled = true;
+        stop.disabled = true;
+        session = undefined;
+        status.textContent = reason?.message || stopResult || "Device offline";
+        button.textContent = "Connect USB";
+        button.disabled = false;
+      });
+      sync.disabled = false;
+      button.textContent = "Disconnect USB";
+      status.textContent = "USB port open";
+      const observer = new MutationObserver(() => {
+        if (!button.isConnected) {
+          observer.disconnect();
+          void connected.close().catch(() => {});
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      void connected.disconnected.then(() => observer.disconnect());
+    } catch (error) {
+      status.textContent = error.name === "NotFoundError" ? "No USB device selected" : "USB connection failed";
+    } finally {
+      button.disabled = false;
+    }
+  };
 }
 function renderHardwareInventory() { const body = $("#hardwareInventoryBody"), copy = hardwareCopy[language] || hardwareCopy.en, links = hardwareLinkCopy[language] || hardwareLinkCopy.en; if (!body) return; const options = (selected = "") => `<option value="">${links.none}</option>${(project.tags || []).map((tag) => `<option value="${escapeAttr(tag.name)}" ${selected === tag.name ? "selected" : ""}>${escapeHtml(tag.name)} · ${escapeHtml(tag.address || tag.name)}</option>`).join("")}`; body.innerHTML = project.hardwareItems.length ? `<div class="project-list">${project.hardwareItems.map((item, index) => `<div class="project-row"><span class="project-open"><b>${escapeHtml(item.description)} · ${escapeHtml(item.quantity)}</b><small>${escapeHtml([item.category, item.manufacturer, item.partNumber, item.notes].filter(Boolean).join(" · "))}</small><select data-hardware-edit="tag" data-hardware-index="${index}" aria-label="${links.tag}">${options(item.tag)}</select><input data-hardware-edit="panelPosition" data-hardware-index="${index}" aria-label="${links.position}" placeholder="${links.position}" maxlength="80" value="${escapeAttr(item.panelPosition || "")}"></span><button data-remove-hardware="${index}" aria-label="${copy.remove}">×</button></div>`).join("")}</div>` : `<p class="safety-copy">${({ en:"No hardware items entered yet.", de:"Noch keine Hardware eingetragen.", yo:"A kò tíì tẹ hardware kankan sí i.", pcm:"You never enter hardware item yet." })[language]}</p>`; }
 function exportHardwareBom() { const docLanguage = reportLanguage(), identity = brandPresentation(docLanguage, currentBrandTheme()), file = new Blob([createHardwareBomCsv(serializeProject(), identity, docLanguage)], { type:"text/csv;charset=utf-8" }), link = document.createElement("a"); link.href = URL.createObjectURL(file); link.download = `${project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.hardware-bom.csv`; link.click(); URL.revokeObjectURL(link.href); toast(t("exported")); }

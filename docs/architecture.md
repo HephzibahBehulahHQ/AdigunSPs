@@ -48,3 +48,14 @@ Details and owner inputs are tracked in [`stakeholder-inputs.md`](stakeholder-in
 3. **Accounts, cloud projects, and hosted BOT — partial:** Supabase authentication, four-minute guest expiry, owner-scoped project copies, consent-gated Worker, and local BOT are present. Live inbox, guest-upgrade, cloud save/reload, multi-user RLS, and authenticated hosted-inference workflows still need acceptance testing.
 4. **IEC/device, collaboration, and operations expansion — open:** full IEC language/POU/task support, PLC downloads, hardware-in-the-loop, additional network protocols, collaboration, signatures, durable historian, licensing, backups, and disaster recovery require technical and policy decisions.
 5. **Release assurance — partial:** automated tests and static build pass locally; full browser E2E, cross-browser/PWA installation, accessibility, security, performance, human translation review, and physical validation are outstanding. Consult [`verification.md`](verification.md) before describing the product as release-qualified.
+
+### USB firmware contract
+
+The browser uses 115200 baud and newline-delimited UTF-8 JSON. Each command carries an integer `id` and a `command` name. The firmware must echo that ID in an `ACK` or `NACK`. A NACK can include a human-readable `reason`. A latched emergency-stop event uses `{"type":"HARD_FAULT"}` without a command ID.
+
+- SYNC must leave all outputs off and start a fresh heartbeat window.
+- HEARTBEAT renews that window. Firmware must independently drive the outputs off when three seconds elapse without renewal.
+- STOP_ALL must drive all outputs off, verify GPIO readback, and disarm before sending ACK.
+- SET_RELAY uses `channel` (1–4) and `enabled` (Boolean). A successful reply must echo both fields after GPIO readback. Forward and reverse must be mutually exclusive, with an independent hardware interlock.
+
+Bench acceptance requires measuring output levels through boot, stop, USB disconnect, heartbeat loss, and emergency-stop reset. Check physical relay and contactor feedback separately from GPIO readback.
