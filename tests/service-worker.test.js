@@ -82,9 +82,14 @@ context.fetch = async () => { throw new Error("offline"); };
 context.caches.match = async (request) => request === new URL("./index.html", context.self.location.href).href ? new Response("editor shell") : null;
 assert.equal(await (await dispatch("/?offline", "navigate")).text(), "editor shell");
 context.self.location.href = "https://adigun.test/AdigunSPs/service-worker.js";
-context.caches.match = async request => request === "https://adigun.test/AdigunSPs/index.html" ? new Response("editor shell") : null;
+const scopedLookups = [];
+context.caches.match = async (request, options) => {
+  scopedLookups.push(options?.cacheName);
+  return request === "https://adigun.test/AdigunSPs/index.html" ? new Response("editor shell") : null;
+};
 assert.equal(await (await dispatch("/AdigunSPs/?offline", "navigate")).text(), "editor shell");
 assert.equal((await dispatch("/AdigunSPs/src/missing.js")).type, "error");
+assert.deepEqual(scopedLookups, Array(3).fill("adigunsps-shell-v138"));
 assert.equal((await dispatch("/missing.js")).type, "error");
 context.caches.match = async () => null;
 assert.equal((await dispatch("/?offline", "navigate")).type, "error");
