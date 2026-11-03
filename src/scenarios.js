@@ -24,7 +24,13 @@ export function runScenario(scenario, project, scanFrame) {
   const errors = validateScenario(scenario, project);
   if (errors.length) return { errors, results:[] };
   const results = scenario.frames.map((frame, index) => {
-    const actual = scanFrame(frame, index) || {}, expected = frame.expectedOutputs || null;
+    const expected = frame.expectedOutputs || null;
+    let actual;
+    try {
+      actual = scanFrame(frame, index) || {};
+    } catch (error) {
+      return { index:index + 1, inputs:frame.inputs || {}, numericInputs:frame.numericInputs || {}, actual:{}, expected, pass:false, error:error.message };
+    }
     const pass = expected ? Object.entries(expected).every(([tag, value]) => typeof value === "number" ? Math.abs(Number(actual[tag]) - value) < 1e-6 : actual[tag] === value) : null;
     return { index:index + 1, inputs:frame.inputs || {}, numericInputs:frame.numericInputs || {}, actual, expected, pass };
   });

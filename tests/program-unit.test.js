@@ -74,3 +74,8 @@ badUnitProject.programUnits[1].source = "Permit := Unknown;";
 assert.match(validateMixedProgramUnits(badUnitProject)[0].message, /Check.*Unknown/);
 badUnitProject.programUnits[1].source = "Permit := Ready;";
 assert.deepEqual(validateMixedProgramUnits(badUnitProject), []);
+
+const { runScenario } = await import("../src/scenarios.js");
+const failedScenario = runScenario({frames:[{expectedOutputs:{Ready:false}}]}, {...project,tags:[{name:"Ready",type:"BOOL"}]}, () => { throw new Error("Invalid unit"); });
+assert.equal(failedScenario.results[0].pass, false);
+assert.equal(failedScenario.results[0].error, "Invalid unit");

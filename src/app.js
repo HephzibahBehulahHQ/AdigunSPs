@@ -932,10 +932,13 @@ function showScenarioRunner() {
     const run = runScenario(scenario, project, (frame) => {
       sim.values = { ...sim.values, ...(frame.inputs || {}), ...(frame.numericInputs || {}) };
       doScan(Number(frame.dt) || getTaskCycleMs(project));
+      const runtimeError = project.programUnits?.length || project.editorType === "ST" ? sim.stRuntimeError : project.editorType === "FBD" ? sim.fbdRuntimeError : "";
+      if (runtimeError) throw new Error(runtimeError);
+      if (!project.programUnits?.length && project.editorType === "ST" && compiledST && !compiledST.ok) throw new Error(compiledST.errors.join("; "));
       return { ...(sim.outputs || {}), ...(sim.processValues || {}) };
     });
     lastScenario = scenario; lastResults = run.results; $("#scenarioReportCsv").disabled = !run.results.length; $("#scenarioReportPrint").disabled = !run.results.length;
-    const rows = run.results.map(({ index, inputs, numericInputs, actual, expected, pass }) => `<div class="validation-item ${pass === false ? "error" : pass === true ? "ok" : ""}"><b>Scan ${index}${pass === true ? " · PASS" : pass === false ? " · FAIL" : ""}</b><small>${escapeHtml(JSON.stringify({ inputs, numericInputs, outputs:actual, expected }))}</small></div>`);
+    const rows = run.results.map(({ index, inputs, numericInputs, actual, expected, pass, error }) => `<div class="validation-item ${pass === false ? "error" : pass === true ? "ok" : ""}"><b>Scan ${index}${pass === true ? " · PASS" : pass === false ? " · FAIL" : ""}</b><small>${escapeHtml(JSON.stringify({ inputs, numericInputs, outputs:actual, expected, error }))}</small></div>`);
     $("#scenarioResults").innerHTML = rows.join(""); renderLadder(); updateStatus();
   };
 }
