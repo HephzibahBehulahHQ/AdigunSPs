@@ -53,3 +53,8 @@ const { cyclicTaskEditor } = await import("../src/cyclic-task-ui.js");
 const mixedTaskView = cyclicTaskEditor(project);
 assert.deepEqual(mixedTaskView.programNames, ["Ladder", "Check"]);
 assert.match(mixedTaskView.html, /id="cyclicTaskForm"/);
+
+const { traceSectionValues } = await import("../src/trace-utils.js");
+const restoredTick = JSON.parse(JSON.stringify(tick.state));
+assert.deepEqual(executeProgramTasks(units, task, image, restoredTick), executeProgramTasks(units, task, image, tick.state));
+assert.equal(traceSectionValues({ mixedState: restoredTick }, "mixedState")["Unit ladder"].timers.T.elapsed, 100);
