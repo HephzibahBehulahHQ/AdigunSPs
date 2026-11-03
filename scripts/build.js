@@ -51,6 +51,16 @@ const workerPath=join(output,"service-worker.js"),workerSource=await readFile(wo
 if(!/^const CACHE = "[^"]+";/m.test(workerSource))throw new Error("Service worker cache declaration is missing.");
 await writeFile(workerPath,workerSource.replace(/^const CACHE = "[^"]+";/m,`const CACHE = "${cacheName}";`),"utf8");
 
+const shellDeclaration = workerSource.match(/^const SHELL = (\[.*\]);$/m);
+if (!shellDeclaration) throw new Error("Service worker precache declaration is missing.");
+for (const asset of JSON.parse(shellDeclaration[1])) {
+  const file = asset.endsWith("/") ? asset + "index.html" : asset;
+  const entry = await stat(join(output, file), { throwIfNoEntry: false }).catch(error => {
+    if (error.code !== "ENOENT") throw error;
+  });
+  if (!entry?.isFile()) throw new Error(`Built app is missing precache asset ${asset}`);
+}
+
 const required = ["update/index.html", "update/update.js","index.html", "styles.css", "service-worker.js", "runtime-config.js", "vendor/supabase.js", "src/app.js", "src/engine.js", "docs/HELP.md", "docs/QUICKSTART.md", "reset-password/index.html", "reset-password/reset-password.css", "reset-password/reset-password.js", "assets/brand/company-official.jpg", "assets/brand/adigunsps-icon-light-192.svg", "assets/brand/adigunsps-icon-dark-512.svg"];
 for (const file of required) if (!(await stat(join(output, file))).isFile()) throw new Error(`Built app is missing ${file}`);
 const html = await (await import("node:fs/promises")).readFile(join(output, "index.html"), "utf8");
