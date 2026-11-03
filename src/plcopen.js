@@ -56,7 +56,7 @@ export function createPlcopenXml(project) {
     const coilId = id++;
     nodes.push(`<coil localId="${coilId}" width="16" height="2"><position x="${64 + maxContacts * 80}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${tails.map((tail) => `<connection refLocalId="${tail}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
     nodes.unshift(`<leftPowerRail localId="${rail}" width="4" height="${Math.max(8, (paths.length - 1) * 2 + 8)}"><position x="32" y="${y + 24}"/><connectionPointOut formalParameter="rail"><relPosition x="4" y="4"/></connectionPointOut></leftPowerRail>`);
-    if (rung.comment) nodes.push(`<comment localId="${id++}"><position x="32" y="${y + (paths.length - 1) * 16}"/><content><xhtml:p>${esc(rung.comment)}</xhtml:p></content></comment>`);
+    if (rung.comment) nodes.push(`<comment localId="${id++}" width="240" height="16"><position x="32" y="${y + (paths.length - 1) * 16}"/><content><xhtml:p>${esc(rung.comment)}</xhtml:p></content></comment>`);
     y += rungHeight;
     return nodes.join("");
   }).join("");

@@ -96,6 +96,7 @@ const plcopenProject = defaultProject(); plcopenProject.name = "PLC & Training";
 plcopenProject.tags.find((tag) => tag.name === "Motor").alias = "Drive A";
 plcopenProject.tags.push({ name:"Delay", type:"TIME" }); plcopenProject.initialState.Delay = 1500;
 const plcopenXml = createPlcopenXml(plcopenProject);
+assert.match(plcopenXml, /<comment localId="\d+" width="240" height="16">/, "PLCopen comments include schema-required dimensions");
 assert.throws(() => createPlcopenXml({...plcopenProject, programUnits:[{name:"Aux"}]}), /Use project JSON/);
 assert.throws(() => createPlcopenXml({...plcopenProject, tasks:[{name:"Cyclic"}]}), /Use project JSON/);
 assert.ok(plcopenXml.includes('xmlns="http://www.plcopen.org/xml/tc6_0201"') && plcopenXml.includes('name="PLC &amp; Training"'), "PLCopen export uses TC6 XML namespace and escapes project names");
