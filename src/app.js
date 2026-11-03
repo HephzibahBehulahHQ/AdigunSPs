@@ -1190,6 +1190,11 @@ function bindHardwareSerial() {
   const status = $("#hardwareSerialStatus");
   const sync = $("#syncHardwareSerial");
   const stop = $("#stopHardwareSerial");
+  function showStatus(message, failed = false) {
+    status.textContent = message;
+    status.classList.toggle("validation-list", failed);
+  }
+
   let session;
   let heartbeat;
   let stopResult;
@@ -1200,7 +1205,7 @@ function bindHardwareSerial() {
     try {
       await connected.send("SYNC");
       if (session !== connected) return;
-      status.textContent = "Device synchronized";
+      showStatus("Device synchronized");
       stop.disabled = false;
       heartbeat = setInterval(async () => {
         try {
@@ -1209,12 +1214,12 @@ function bindHardwareSerial() {
           if (session !== connected || stop.disabled) return;
           clearInterval(heartbeat);
           await connected.close().catch(() => {});
-          if (!session || session === connected) status.textContent = error.message;
+          if (!session || session === connected) showStatus(error.message, true);
         }
       }, 1000);
     } catch (error) {
       if (session === connected) {
-        status.textContent = error.message;
+        showStatus(error.message, true);
         sync.disabled = false;
       }
     }
@@ -1256,13 +1261,13 @@ function bindHardwareSerial() {
         sync.disabled = true;
         stop.disabled = true;
         session = undefined;
-        status.textContent = reason?.message || stopResult || "Device offline";
+        showStatus(reason?.message || stopResult || "Device offline", Boolean(reason || (stopResult && stopResult !== "Device acknowledged stop")));
         button.textContent = "Connect USB";
         button.disabled = false;
       });
       sync.disabled = false;
       button.textContent = "Disconnect USB";
-      status.textContent = "USB port open";
+      showStatus("USB port open");
       const observer = new MutationObserver(() => {
         if (!button.isConnected) {
           observer.disconnect();
