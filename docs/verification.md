@@ -305,3 +305,7 @@ Do not describe this milestone as production-ready. Complete the later phases in
 ## Mixed-language browser smoke
 
 Local preview at port 8139 accepted a disposable project with a BOOL output and a 100 ms task running an LD unit followed by an ST unit. The LD coil set the shared output and the ST unit inverted it. The scan snapshot showed the final false output and retained state for both units. One recorded scan replayed with zero divergences. This smoke covers the LD-to-ST hand-off and trace replay. A second disposable project verified FBD-to-SFC execution. Apply rejected a transition without an ID, then accepted the corrected chart. The FBD TRUE block set Tag1, the SFC advanced from idle to run, and its action set Tag2. One recorded scan replayed with zero divergences.
+
+### Saved Structured Text unit edit
+
+In a disposable local browser project, the saved ST unit `Check` assigned `TRUE` to BOOL output `Tag1`. A single Step showed `Tag1: true` in Latest scan snapshot. Loading the unit into the ST editor, changing the assignment to `FALSE`, copying the editor changes back, and applying the configuration produced `Tag1: false` on the next Step. This verifies the local browser workflow for a saved ST unit. The corresponding scan-adapter regression is included in PR #45.
