@@ -11,7 +11,7 @@ export function validateProject(project) {
     const source = typeof project.stSource === "string" ? project.stSource : "";
     let cached = taskProgramCache.get(project);
     if (!cached || cached.source !== source) { cached = {source,names:compileStructuredText(source).programs.map(program=>program.name)}; taskProgramCache.set(project,cached); }
-    for (const message of validateCyclicTasks(project.tasks,cached.names)) issues.push({level:"error",code:"task-config",message});
+    for (const message of validateCyclicTasks(project.tasks,project.programUnits?.map(unit=>unit.name) ?? cached.names)) issues.push({level:"error",code:"task-config",message});
   }
   const tags = new Map(), foldedTagNames = new Set();
   for (const tag of project.tags || []) {

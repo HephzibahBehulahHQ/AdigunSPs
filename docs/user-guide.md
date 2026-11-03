@@ -240,3 +240,13 @@ On narrow phones the header uses two rows: company/product identity above, proje
 On phones, scroll the editor tabs and its control row sideways to reach extra controls; the page itself stays within the screen.
 
 Hosted questions show **Waiting for a reply...** and temporarily disable other sends. Choose **Cancel request**, or close the Bot, to stop waiting; requests time out after 45 seconds, including session lookup and response reading. Cancellation or timeout does not undo a request already processed; the project remains unchanged, and a reply from a different project/account is discarded.
+
+### Mixed-language project files
+
+Project JSON can define a `programUnits` array with named LD, FBD, ST and SFC units. Each unit declares its project output tags and provides `rungs`, `blocks`, `source` or `chart` for its language. Optional `tasks` assign unit names in execution order. Without assignments, units run in file order.
+
+The simulator runs these units when the project is opened. Units share the current tag image and retain their own execution state. The graphical editor still displays the legacy project body. Unit editing and per-unit graphical monitoring remain pending.
+
+Open **Programs > Mixed-language programs** to edit and apply the JSON configuration in the app. Applying resets simulation state. Use empty arrays to return to single-editor execution.
+
+**Add current editor as a unit** copies the current logic into the draft. Review its name, output tags and task assignment before applying.

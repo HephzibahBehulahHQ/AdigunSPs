@@ -137,7 +137,7 @@ const projectManagerSource = appSource.slice(appSource.indexOf("async function s
 assert.ok(projectManagerSource.includes("sortProjectsByRecent(await store.all())") && projectManagerSource.includes("Recent projects · last opened"), "Project manager provides the File menu recent-projects flow in last-opened order");
 assert.ok(["en", "de", "yo", "pcm"].every((locale) => createApplicationMenuEntries(locale).project.some((entry) => entry.action === "device-configuration" && entry.label)), "Project menu exposes a localized PLC/device profile in all four locales");
 assert.ok(createApplicationMenuEntries("de").edit.some((entry) => entry.label === "Suchen und ersetzen"), "Edit menu labels are localized");
-assert.deepEqual(createApplicationMenuEntries("en").programs.map((entry) => entry.action), ["st-programs", "mode-LD", "mode-FBD", "mode-ST", "st-functions", "st-function-blocks", "mode-SFC"], "Programs menu provides every implemented editor mode");
+assert.deepEqual(createApplicationMenuEntries("en").programs.map((entry) => entry.action), ["mixed-programs", "st-programs", "mode-LD", "mode-FBD", "mode-ST", "st-functions", "st-function-blocks", "mode-SFC"], "Programs menu provides every implemented editor mode");
 assert.ok(createApplicationMenuEntries("yo").project.some((entry) => entry.action === "hardware-inventory"), "Project menu includes the user-entered hardware inventory");
 assert.deepEqual([resolveTheme("system", false), resolveTheme("system", true), resolveTheme("light", false), resolveTheme("dark", true)], ["dark", "light", "light", "dark"], "theme preference resolves system, light, and dark modes");
 const localizationAudit = buildLocalizationReport({ core:ui }, examples);

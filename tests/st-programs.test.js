@@ -56,13 +56,13 @@ assert.equal(compileStructuredText(globalRename,names.map(name=>name==="Motor"?"
 const fault=compileStructuredText("PROGRAM Broken\nMotor := 1 / 0;\nEND_PROGRAM",names);assert.equal(fault.ok,true);const failed=executeStructuredText(fault,{}, {Motor:7},["Motor"],types);assert.equal(failed.outputs.Motor,7);assert.match(failed.errors.join("; "),/Broken: Line 2: Division by zero/);
 
 // Execute the actual application ST scan branch, including state hand-off and trace recovery.
-const app=readFileSync("src/app.js","utf8"),begin=app.indexOf('  if (project.editorType === "ST") {',app.indexOf("function doScan(")),end=app.indexOf('\n  else if (project.editorType === "FBD")',begin);
+const app=readFileSync("src/app.js","utf8"),begin=app.indexOf('  else if (project.editorType === "ST") {',app.indexOf("function doScan(")),end=app.indexOf('\n  else if (project.editorType === "FBD")',begin);
 assert.ok(begin>0&&end>begin);
 const fixture={dt:100,project:{id:"program-test",editorType:"ST",stSource:source,tags:names.map(name=>({name,type:types[name]}))},sim:{values:{Count:99},outputs:{}},inputs:{Start:true},connectedAnalogInputs:{},tags:{signals:names,outputs},compiledST:null,compiledSTSignature:"",compileStructuredText,executeStructuredText,stCompileSignature:(source,tags)=>JSON.stringify([source,tags]),logEvent(){}};
-for(let scan=1;scan<=2;scan++)runInNewContext(app.slice(begin,end),fixture);
-const recorded=JSON.parse(JSON.stringify(fixture.sim));runInNewContext(app.slice(begin,end),fixture);const third=JSON.parse(JSON.stringify(fixture.sim));assert.equal(third.outputs.Motor,true);
-fixture.sim=recorded;runInNewContext(app.slice(begin,end),fixture);assert.deepEqual(JSON.parse(JSON.stringify(fixture.sim)),third,"restored program state reproduces the next scan");
-fixture.sim={values:{Count:99},outputs:{}};runInNewContext(app.slice(begin,end),fixture);assert.equal(fixture.sim.programState.counterline.values.count,1);assert.equal(fixture.sim.outputs.Motor,false);
+for(let scan=1;scan<=2;scan++)runInNewContext(app.slice(begin,end).replace("else if","if"),fixture);
+const recorded=JSON.parse(JSON.stringify(fixture.sim));runInNewContext(app.slice(begin,end).replace("else if","if"),fixture);const third=JSON.parse(JSON.stringify(fixture.sim));assert.equal(third.outputs.Motor,true);
+fixture.sim=recorded;runInNewContext(app.slice(begin,end).replace("else if","if"),fixture);assert.deepEqual(JSON.parse(JSON.stringify(fixture.sim)),third,"restored program state reproduces the next scan");
+fixture.sim={values:{Count:99},outputs:{}};runInNewContext(app.slice(begin,end).replace("else if","if"),fixture);assert.equal(fixture.sim.programState.counterline.values.count,1);assert.equal(fixture.sim.outputs.Motor,false);
 assert.ok(app.includes('JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {})'),"trace replay detects private-state divergence");
 for(const locale of ["en","de","yo","pcm"]){
  const panel=structuredTextProgramLibrary({stSource:source,tags:names.map(name=>({name}))},locale);assert.ok(panel.title);assert.match(panel.html,/CounterLine/);assert.match(panel.html,/Report/);assert.match(panel.html,/data-st-function-line="2"/);

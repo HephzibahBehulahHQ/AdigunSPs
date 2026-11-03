@@ -1,3 +1,4 @@
+import { executeProgramTasks } from "./program-unit.js";
 import { cyclicTaskEditor, readCyclicTaskRows } from "./cyclic-task-ui.js";
 import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
@@ -503,6 +504,19 @@ function renderInspector() {
 }
 function address(name) { return project.tags?.find((tag) => tag.name === name)?.address || name; }
 function updateStatus() { $("#scanTime").textContent = `${lastScanMs} ms`; $("#cycleCount").textContent = scans; $("#taskCycleInfo").textContent = `${project.task?.name || "Main"} · ${getTaskCycleMs(project)} ms`; $("#scanLabel").textContent = `SCAN ${String(scans).padStart(5, "0")}`; $("#plcStatus").textContent = t(runTimer ? "running" : (window.adigunPaused ? "paused" : "ready")); $(".statusbar").classList.toggle("running", Boolean(runTimer)); }
+const preparedProgramUnits = new WeakMap();
+function scanMixedProject(project, inputs, state, dt) {
+  const signature = JSON.stringify([project.programUnits, project.tags, project.io]);
+  let prepared = preparedProgramUnits.get(project);
+  if (prepared?.signature !== signature) {
+    const names = [...new Set([...project.tags.map(tag=>tag.name), ...project.io.inputs, ...project.io.outputs])];
+    const types = Object.fromEntries(project.tags.map(tag=>[tag.name,tag.type]));
+    prepared = {signature, units:project.programUnits.map(unit=>unit.language === "ST" ? {...unit, types, compiled:compileStructuredText(unit.source,names)} : unit)};
+    preparedProgramUnits.set(project,prepared);
+  }
+  const image = {...state.values,...state.outputs,...inputs};
+  return executeProgramTasks(prepared.units,project.tasks,image,state.mixedState,dt);
+}
 function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const started = performance.now(); sim.breakpointHit = null;
   if (traceReplay) { const frame = traceFrames[traceCursor]; if (!frame) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); return; } inputOverride = frame.inputs; simulationFaults = structuredClone(frame.faults || []); Object.assign(sim.values, frame.numericInputs || {}); dt = frame.dt; traceCursor++; }
   const tags = inferTags(), baseInputs = Object.fromEntries(tags.signals.map((name) => [name, Object.hasOwn(forcedInputs, name) ? forcedInputs[name] : Boolean(sim.values[name])]));
@@ -513,7 +527,14 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   for (const [tag,value] of Object.entries(inputs)) if (Object.hasOwn(priorNarratorInputs, tag) && Boolean(priorNarratorInputs[tag]) !== Boolean(value)) addNarratorEntry(`Input ${tag} switched ${value ? "ON" : "OFF"}; PLC evaluates the change on this scan.`);
   priorNarratorInputs = { ...inputs };
   const connectedAnalogInputs = inputElectrical ? Object.fromEntries(Object.keys(analogInputValues).map((name) => [name, Number(inputElectrical.inputs[name] ?? 0)])) : analogInputValues;
-  if (project.editorType === "ST") {
+  if (project.programUnits?.length) {
+    const result = scanMixedProject(project,{...inputs,...connectedAnalogInputs},sim,dt);
+    const runtimeError = result.errors.join("; ");
+    if (runtimeError && runtimeError !== sim.stRuntimeError) logEvent("runtime-error",runtimeError);
+    const outputs = Object.fromEntries((project.io.outputs || []).map(name=>[name,result.image[name] ?? false]));
+    sim = {...sim, values:result.image, outputs, mixedState:result.state, stRuntimeError:runtimeError, energized:{}};
+  }
+  else if (project.editorType === "ST") {
     const stSource = project.stSource || "", stTags = [...new Set([...(project.tags || []).map((tag) => tag.name), ...tags.signals, ...tags.outputs])], signature = stCompileSignature(stSource, stTags);
     if (!compiledST || compiledSTSignature !== signature) { compiledST = compileStructuredText(stSource, stTags); compiledSTSignature = signature; }
     if (!compiledST.ok) logEvent("compile-error", compiledST.errors.join("; "));
@@ -551,7 +572,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   if (!traceReplay && inputOverride === null) sessionOperations = recordOperationsScan(sessionOperations, sim.outputs, dt, tags.outputs);
   lastScanMs = Math.round((performance.now() - started) * 100) / 100; scans++; sampleHmiHistory(); logEvent("scan", `Scan completed in ${lastScanMs} ms`, { durationMs:lastScanMs, outputs:{ ...sim.outputs } });
   if (traceRecording) { traceFrames.push({ dt, inputs:{ ...inputs }, numericInputs:traceNumericInputs(), faults:structuredClone(simulationFaults), outputs:{ ...sim.outputs }, timers:structuredClone(sim.timers || {}), processValues:{ ...sim.processValues }, state:structuredClone(sim) }); if (traceFrames.length > 5000) { const discarded = traceFrames.shift(); traceInitial = discarded.state || traceInitial; traceInitialFaults = structuredClone(discarded.faults || []); traceBreakpoints = shiftHistoricalBreakpoints(traceBreakpoints); } }
-  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {}) || JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {}) || JSON.stringify(expected.state?.taskState || {}) !== JSON.stringify(sim.taskState || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues, expectedProgramState:structuredClone(expected.state?.programState || {}), actualProgramState:structuredClone(sim.programState || {}), expectedTaskState:structuredClone(expected.state?.taskState || {}), actualTaskState:structuredClone(sim.taskState || {}) }); }
+  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {}) || JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {}) || JSON.stringify(expected.state?.taskState || {}) !== JSON.stringify(sim.taskState || {}) || JSON.stringify(expected.state?.mixedState || {}) !== JSON.stringify(sim.mixedState || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues, expectedProgramState:structuredClone(expected.state?.programState || {}), actualProgramState:structuredClone(sim.programState || {}), expectedTaskState:structuredClone(expected.state?.taskState || {}), actualTaskState:structuredClone(sim.taskState || {}) }); }
   renderLadder(); updateSimulationHud(); if (sim.breakpointHit) { logEvent("breakpoint", `Paused before network ${sim.rungIndex + 1}`, { rungId:sim.breakpointHit }); if (runTimer) { clearInterval(runTimer); runTimer = null; toast(`Breakpoint · network ${sim.rungIndex + 1}`); updateStatus(); } } if (traceReplay && isHistoricalBreakpoint(traceBreakpoints, traceCursor, traceFrames.length) && runTimer) { clearInterval(runTimer); runTimer = null; window.adigunPaused = true; logEvent("historical-breakpoint", `Replay paused at historical scan ${traceCursor}`, { scan:traceCursor }); toast(`Historical breakpoint · scan ${traceCursor}`); showTrace(); updateStatus(); } if (traceReplay && traceCursor >= traceFrames.length) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); }
 }
 function ladderToStructuredText() { return project.rungs.filter((rung) => rung.coil).map((rung) => { const paths = rungPaths(rung).map((path) => path.length ? path.map((contact) => `${contact.mode === "NC" ? "NOT " : ""}${contact.tag}`).join(" AND ") : "TRUE"); return `${rung.coil} := ${paths.length > 1 ? `(${paths.join(") OR (")})` : paths[0]};`; }).join("\n"); }
@@ -880,7 +901,7 @@ function pasteFbdSelection() { if (!copiedFbdBlocks?.length) { toast("Copy a fun
 function duplicateFbdSelection() { copiedFbdBlocks = copyFbdBlocks(project.fbdBlocks || [], fbdSelection); if (copiedFbdBlocks.length) pasteFbdSelection(); }
 function copyRung(cut = false) { if (selection?.rung == null || !project.rungs[selection.rung]) { toast("Select a rung first"); return; } copiedRung = structuredClone(project.rungs[selection.rung]); if (cut) rungAction("delete", selection.rung); else toast("Rung copied"); }
 function pasteRung() { if (!copiedRung) { toast("Copy a rung first"); return; } selectedContacts.clear(); pushHistory(); const copy = structuredClone(copiedRung); copy.id = crypto.randomUUID(); copy.comment = `${copy.comment || "Rung"} copy`; const index = selection?.rung == null ? project.rungs.length : selection.rung + 1; project.rungs.splice(index, 0, copy); selection = { rung:index, kind:"coil" }; render(); persist(); }
-function traceKey() { return JSON.stringify({ editorType:project.editorType || "LD", tags:project.tags, rungs:project.rungs, fbdBlocks:project.fbdBlocks, stSource:project.stSource, task:project.task, tasks:project.tasks, sfc:project.sfc, processes:project.processes, breakpoints:[...breakpoints] }); }
+function traceKey() { return JSON.stringify({ editorType:project.editorType || "LD", tags:project.tags, rungs:project.rungs, fbdBlocks:project.fbdBlocks, stSource:project.stSource, task:project.task, tasks:project.tasks, programUnits:project.programUnits, sfc:project.sfc, processes:project.processes, breakpoints:[...breakpoints] }); }
 function showFaults() {
   const copy = ({ en:{title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected faults. Faults affect simulation only and are session-only."}, de:{title:"Simulationsfehler",input:"Simulierte E/A",kind:"Fehlertyp",high:"Dauerhaft 1",low:"Dauerhaft 0",offset:"Numerischer Offset",amount:"Offset",add:"Fehler injizieren",empty:"Keine injizierten Fehler. Fehler wirken nur in der Simulation und nur für diese Sitzung."}, yo:{title:"Àṣìṣe àfarawé",input:"I/O àfarawé",kind:"Irú àṣìṣe",high:"Dúró ní gíga",low:"Dúró ní ìsàlẹ̀",offset:"Àfikún nọ́ńbà",amount:"Àfikún",add:"Fi àṣìṣe sí i",empty:"Kò sí àṣìṣe. Àwọn àṣìṣe yìí kan àfarawé nìkan, wọ́n sì wà fún ìgbà yìí nìkan."}, pcm:{title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected fault. E affect simulation only and na for this session."} })[language] || {title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected faults. Faults affect simulation only and are session-only."};
   const io = inferTags(), faultTargets = [...io.inputs.map((name) => ({ name, direction:"input" })), ...io.outputs.map((name) => ({ name, direction:"output" }))].map((item) => ({ ...item, ...(project.tags?.find((tag) => tag.name === item.name) || {}) }));
@@ -1654,6 +1675,47 @@ function showApplicationMenu(event) {
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
+function showMixedPrograms() {
+  const projectId = project.id;
+  const configuration = {programUnits:project.programUnits || [], tasks:project.tasks || []};
+  modal("Mixed-language programs", `<div class="modal-body"><label class="field">Program units and task assignments<textarea id="mixedProgramJson" rows="16" spellcheck="false">${escapeHtml(JSON.stringify(configuration,null,2))}</textarea></label><p>Use an empty program list to return to single-editor execution.</p><button id="captureMixedProgram" class="secondary">Add current editor as a unit</button><p id="mixedProgramErrors" role="status"></p><button id="saveMixedPrograms" class="primary">Apply configuration</button></div>`);
+  $("#captureMixedProgram").onclick = () => {
+    try {
+      const draft = JSON.parse($("#mixedProgramJson").value);
+      const language = project.editorType || "LD";
+      const unit = {name:"Unit" + (draft.programUnits.length + 1), language, outputs:[...(project.io.outputs || [])]};
+      if (language === "LD") unit.rungs = projectRungs(project);
+      if (language === "FBD") unit.blocks = project.fbdBlocks || [];
+      if (language === "ST") unit.source = project.stSource || "";
+      if (language === "SFC") unit.chart = project.sfc;
+      const used = new Set(draft.programUnits.map(item=>item.name.toLowerCase()));
+      while (used.has(unit.name.toLowerCase())) unit.name += "_";
+      draft.programUnits.push(unit);
+      $("#mixedProgramJson").value = JSON.stringify(draft,null,2);
+      $("#mixedProgramErrors").textContent = "";
+    } catch (error) { $("#mixedProgramErrors").textContent = error.message; }
+  };
+  $("#saveMixedPrograms").onclick = () => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return; }
+    if (project.id !== projectId) return;
+    try {
+      const {programUnits,tasks} = JSON.parse($("#mixedProgramJson").value);
+      if (!Array.isArray(programUnits) || !Array.isArray(tasks)) throw new Error("Provide programUnits and tasks arrays.");
+      const candidate = structuredClone(project);
+      delete candidate.programUnits;
+      delete candidate.tasks;
+      if (programUnits.length) candidate.programUnits = programUnits;
+      if (tasks.length) candidate.tasks = tasks;
+      const checked = normalizeImportedProject(candidate);
+      resetProjectSimulation();
+      pushHistory();
+      project = checked;
+      persist();
+      $("#modal").close();
+      render();
+    } catch (error) { $("#mixedProgramErrors").textContent = error.message; }
+  };
+}
 function showCyclicTasks(draft) {
   const projectId = project.id, source = project.stSource || "", view = cyclicTaskEditor(project,language,draft);
   modal(view.copy.title,view.html);
@@ -1690,6 +1752,7 @@ function showStructuredTextFunctions(kind = "functions") {
   $("#modalContent").querySelectorAll("[data-st-function-line]").forEach(button => { button.onclick = () => openSource(Number(button.dataset.stFunctionLine)); });
 }
 function action(name) {
+  if (name === "mixed-programs") { showMixedPrograms(); return; }
   if (name === "st-function-blocks") { showStructuredTextFunctions("functionBlocks"); return; }
   if (name === "cyclic-tasks") { showCyclicTasks(); return; }
   if (name === "st-programs") { showStructuredTextFunctions("programs"); return; }

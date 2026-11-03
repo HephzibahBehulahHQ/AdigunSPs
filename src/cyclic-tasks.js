@@ -34,7 +34,7 @@ export function cyclicTaskSchedule(tasks,programNames,dtMs=100,previous=null){
  if(counts.reduce((sum,count,index)=>sum+count*normalized[index].programs.length,0)>1024)return {errors:["More than 1024 program activations in one scan. Reduce the base task cycle or increase task periods."],releases:[],state:previous};
  if(counts.reduce((sum,count)=>sum+count,0)>1024)return {errors:["More than 1024 task releases in one scan. Reduce the base task cycle or increase task periods."],releases:[],state:previous};
  const releases=[];
- normalized.forEach((task,index)=>{for(let release=1;release<=counts[index];release++)releases.push({task:task.name,at:(Math.floor(timeMs/task.cycleMs)+release)*task.cycleMs,priority:task.priority,index,programs:task.programs});});
+ normalized.forEach((task,index)=>{for(let release=1;release<=counts[index];release++)releases.push({periodMs:task.cycleMs,task:task.name,at:(Math.floor(timeMs/task.cycleMs)+release)*task.cycleMs,priority:task.priority,index,programs:task.programs});});
  releases.sort((a,b)=>a.at-b.at||a.priority-b.priority||a.index-b.index);
  return {errors:[],releases,state:{schema,timeMs:end}};
 }
