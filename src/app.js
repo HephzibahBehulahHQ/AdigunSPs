@@ -511,7 +511,8 @@ function scanMixedProject(project, inputs, state, dt) {
   if (prepared?.signature !== signature) {
     const names = [...new Set([...project.tags.map(tag=>tag.name), ...project.io.inputs, ...project.io.outputs])];
     const types = Object.fromEntries(project.tags.map(tag=>[tag.name,tag.type]));
-    prepared = {signature, units:project.programUnits.map(unit=>unit.language === "ST" ? {...unit, types, compiled:compileStructuredText(unit.source,names)} : unit)};
+    const sharedNames = [...project.io.inputs, ...project.io.outputs];
+    prepared = {signature, units:project.programUnits.map(unit=>unit.language === "ST" ? {...unit, types, sharedNames, compiled:compileStructuredText(unit.source,names)} : unit)};
     preparedProgramUnits.set(project,prepared);
   }
   const image = {...state.values,...state.outputs,...inputs};

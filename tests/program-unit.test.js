@@ -36,3 +36,15 @@ const project = { name: "Mixed", rungs: [], io: { inputs: ["Start"], outputs: ["
 ], tasks: [{name:"Cyclic",cycleMs:100,programs:["Ladder","Check"]}] };
 assert.deepEqual(normalizeImportedProject(JSON.parse(JSON.stringify(project))).programUnits.map(unit => unit.name), ["Ladder", "Check"]);
 assert.throws(() => normalizeImportedProject({ ...project, tasks: [{name:"Cyclic",cycleMs:100,programs:["Unknown"]}] }), /not declared/);
+
+const counter = {
+  name: "Counter", language: "ST", outputs: ["Result"], sharedNames: ["Start", "Result"],
+  types: { CounterValue: "INT", Result: "INT" },
+  compiled: compileStructuredText("CounterValue := CounterValue + 1; Result := CounterValue;", ["CounterValue", "Result"])
+};
+const seeded = { Start: true, CounterValue: 10, Result: 0 };
+const counted = executeProgramTasks([counter], undefined, seeded);
+assert.equal(counted.image.Result, 11);
+assert.equal(counted.image.CounterValue, 10);
+assert.equal(executeProgramTasks([counter], undefined, seeded, counted.state).image.Result, 12);
+assert.equal(executeProgramTasks([counter], undefined, seeded).image.Result, 11);

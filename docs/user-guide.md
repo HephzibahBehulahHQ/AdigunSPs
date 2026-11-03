@@ -254,3 +254,5 @@ Open **Programs > Mixed-language programs** to edit and apply the JSON configura
 Select a saved unit and choose **Load unit into editor** to replace the working body for that language. Undo can restore the previous working body. After editing, reopen the dialog, select the same unit, choose **Copy editor changes to selected unit**, then **Apply configuration**. Running uses the saved units until you apply the draft.
 
 **Latest scan snapshot** shows shared outputs and retained state by unit when the dialog opens. Reopen the dialog to refresh the snapshot.
+
+Mixed ST units share project inputs and outputs. Other scalar tags use their project initial values on the first scan, then retain separate values in each ST unit until reset.

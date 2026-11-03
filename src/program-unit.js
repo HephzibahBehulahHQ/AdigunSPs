@@ -4,7 +4,10 @@ import { executeStructuredText } from "./structured-text.js";
 
 // The caller owns the shared image and supplies retained state for this unit only.
 export function executeProgramUnit(unit, image, state = {}, dt = 100) {
-  const outputs = Object.fromEntries(unit.outputs.map(name => [name, image[name] ?? false]));
+  const sharedNames = new Set(unit.sharedNames || [...Object.keys(image), ...unit.outputs]);
+  const privateValues = Object.fromEntries(Object.entries(state.values || {}).filter(([name]) => !sharedNames.has(name)));
+  const values = { ...image, ...privateValues };
+  const outputs = Object.fromEntries(unit.outputs.map(name => [name, Object.hasOwn(image, name) ? image[name] : false]));
   const initial = { ...state, outputs };
   let result;
   switch (unit.language) {
@@ -18,7 +21,7 @@ export function executeProgramUnit(unit, image, state = {}, dt = 100) {
       result = scanSFC({ ...unit.chart, outputs: unit.outputs }, image, initial);
       break;
     case "ST":
-      result = executeStructuredText(unit.compiled, { ...state.values, ...image }, outputs, unit.outputs, unit.types, state.programState);
+      result = executeStructuredText(unit.compiled, values, outputs, unit.outputs, unit.types, state.programState);
       break;
     default:
       throw new Error("Unsupported program language: " + unit.language);
@@ -29,7 +32,7 @@ export function executeProgramUnit(unit, image, state = {}, dt = 100) {
   for (const key of ["timers", "counters", "edges", "activeStep", "programState"]) {
     if (Object.hasOwn(result, key)) retained[key] = result[key];
   }
-  if (unit.language === "ST") retained.values = Object.fromEntries(Object.entries(result.values).filter(([name]) => !Object.hasOwn(image, name) && !unit.outputs.includes(name)));
+  if (unit.language === "ST") retained.values = Object.fromEntries(Object.entries(result.values).filter(([name]) => !sharedNames.has(name)));
   return { state: retained, writes, errors: [] };
 }
 
