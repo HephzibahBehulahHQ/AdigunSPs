@@ -117,3 +117,15 @@ scenarioProject.programUnits[1].source = "Permit := Missing;";
 const invalidScan = scanMixedProject(scenarioProject,{Start:true},simulation,100);
 assert.match(invalidScan.errors.join(" "), /Check.*Missing/);
 assert.equal(invalidScan.state,simulation.mixedState);
+
+const editedProject = normalizeImportedProject({
+  ...scenarioProject,
+  programUnits: [scenarioProject.programUnits[0], {
+    ...scenarioProject.programUnits[1],
+    source: "Permit := NOT Ready;"
+  }]
+});
+const editedScan = scanMixedProject(editedProject, { Start:false }, {}, 100);
+assert.deepEqual(Array.from(editedScan.errors), []);
+assert.equal(editedScan.image.Ready, false);
+assert.equal(editedScan.image.Permit, true);
