@@ -1,4 +1,4 @@
-const NS = "http://www.plcopen.org/xml/tc6_0200";
+const NS = "http://www.plcopen.org/xml/tc6_0201";
 const TYPES = new Set(["BOOL", "INT", "REAL", "TIME"]);
 const esc = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 const children = (node, name) => [...(node?.children || [])].filter((child) => child.localName === name);
@@ -55,14 +55,14 @@ export function createPlcopenXml(project) {
     });
     const coilId = id++;
     nodes.push(`<coil localId="${coilId}" width="16" height="2"><position x="${64 + maxContacts * 80}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${tails.map((tail) => `<connection refLocalId="${tail}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
-    nodes.unshift(`<leftPowerRail localId="${rail}" width="4" height="${Math.max(8, (paths.length - 1) * 2 + 8)}"><position x="32" y="${y + 24}"/><connectionPointOut><relPosition x="4" y="4"/></connectionPointOut></leftPowerRail>`);
+    nodes.unshift(`<leftPowerRail localId="${rail}" width="4" height="${Math.max(8, (paths.length - 1) * 2 + 8)}"><position x="32" y="${y + 24}"/><connectionPointOut formalParameter="rail"><relPosition x="4" y="4"/></connectionPointOut></leftPowerRail>`);
     if (rung.comment) nodes.push(`<comment localId="${id++}"><position x="32" y="${y + (paths.length - 1) * 16}"/><content><xhtml:p>${esc(rung.comment)}</xhtml:p></content></comment>`);
     y += rungHeight;
     return nodes.join("");
   }).join("");
   const vars = Object.entries(groups).map(([name, items]) => items.length ? `<${name}>${items.join("")}</${name}>` : "").join("");
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><ld><scaling x="16" y="16"/></ld></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body><LD>${body}</LD></body></pou></pous></types><instances><configurations/></instances></project>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body><LD>${body}</LD></body></pou></pous></types><instances><configurations/></instances></project>`;
 }
 
 function toPlcAddress(address) {
