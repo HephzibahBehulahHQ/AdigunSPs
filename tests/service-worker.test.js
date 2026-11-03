@@ -35,7 +35,7 @@ let installation;
 handlers.get("install")({waitUntil:promise=>{installation=promise;}});
 await installation;
 assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
-assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v122";/, "development cache version advances for this runtime release");
+assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v123";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/example-search\.js"/, "Bot example search module must be included in the offline app shell");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/menu-dismissal\.js"/, "menu dismissal module must be included in the offline app shell");
@@ -70,3 +70,16 @@ console.log("PASS: live reload bypass, response cloning, and event-stream cache 
 
 
 
+
+// Every local module reachable from the application must be available on first offline use.
+const {existsSync}=await import("node:fs"),{posix}=await import("node:path");
+const shellPaths=new Set(JSON.parse(readFileSync("service-worker.js","utf8").match(/const SHELL = (\[[^\n]+\]);/)[1])),visitedModules=new Set();
+function checkCachedImports(file){
+ if(visitedModules.has(file))return;visitedModules.add(file);
+ for(const match of readFileSync(file,"utf8").matchAll(/(?:from\s*|import\s*\()\s*["']([^"']+)["']/g)){
+  if(!match[1].startsWith("."))continue;
+  const dependency=posix.normalize(posix.join(posix.dirname(file),match[1]));if(!dependency.endsWith(".js"))continue;
+  assert.ok(existsSync(dependency),`module ${dependency} exists`);assert.ok(shellPaths.has("./"+dependency),`offline shell caches ${dependency}`);checkCachedImports(dependency);
+ }
+}
+checkCachedImports("src/app.js");

@@ -1,8 +1,18 @@
+import { compileStructuredText } from "./structured-text.js";
+import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { validateFbdBlocks } from "./fbd-validation.js";
 import { validateElectricalDiagram } from "./electrical.js";
 
+const taskProgramCache = new WeakMap();
+
 export function validateProject(project) {
   const issues = [];
+  if (project.tasks !== undefined) {
+    const source = typeof project.stSource === "string" ? project.stSource : "";
+    let cached = taskProgramCache.get(project);
+    if (!cached || cached.source !== source) { cached = {source,names:compileStructuredText(source).programs.map(program=>program.name)}; taskProgramCache.set(project,cached); }
+    for (const message of validateCyclicTasks(project.tasks,cached.names)) issues.push({level:"error",code:"task-config",message});
+  }
   const tags = new Map(), foldedTagNames = new Set();
   for (const tag of project.tags || []) {
     if (!tag.name?.trim()) issues.push({ level: "error", code: "tag-name", message: "Every tag needs a name." });

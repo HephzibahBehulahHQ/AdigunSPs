@@ -1,3 +1,4 @@
+import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { electricalComponentCatalog } from "./electrical.js";
 
 const MAX_PROJECT_BYTES = 5 * 1024 * 1024;
@@ -212,6 +213,11 @@ export function normalizeImportedProject(value) {
     if (!isRecord(tag) || typeof tag.name !== "string" || !tag.name.trim() || tag.name.length > 128) fail(`tag ${index + 1} has an invalid name.`);
     if (tag.type === undefined) tag.type = "BOOL";
     if (!SUPPORTED_TAG_TYPES.has(tag.type)) fail(`tag ${tag.name} has unsupported type ${String(tag.type)}.`);
+  }
+
+  if (project.tasks !== undefined) {
+    if (typeof project.stSource !== "string") fail("cyclic tasks require Structured Text source.");
+    const errors = validateCyclicTasks(project.tasks); if (errors.length) fail(errors.join(" "));
   }
 
   let branchCount = 0, contactCount = 0;

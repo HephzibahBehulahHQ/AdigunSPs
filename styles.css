@@ -150,3 +150,5 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
 .ai-request-status[hidden],.ai-form button[hidden]{display:none}
 
 .st-function-list{padding-left:20px}.st-function-list li{min-width:0}.st-function-list strong{overflow-wrap:anywhere}
+
+.cyclic-task-row{display:grid;gap:8px;min-width:0;margin:12px 0;padding:12px;border:1px solid var(--line)}.cyclic-task-row label{display:grid;gap:4px;min-width:0}.cyclic-task-row input{min-width:0;width:100%}.cyclic-task-row .panel-layout-choice{display:flex}.cyclic-task-row input[type=checkbox]{width:17px}

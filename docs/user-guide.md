@@ -46,7 +46,7 @@ IF/ELSIF/ELSE blocks may also share lines; nested block comments and line commen
 
 ### Named ST programs and cyclic execution
 
-**What you'll see:** **Programs → ST programs** lists named PROGRAM declarations and their source lines. The project still has one cyclic task, configured through **Project → Project task and preferences**.
+**What you'll see:** **Programs → ST programs** lists named PROGRAM declarations and their source lines. **Project → Project task and preferences** sets simulated time per base scan; optional **Cyclic ST tasks** configure program periods and priorities.
 
 1. In **Project → Tags and I/O**, add `CountView` as an INT output and `Complete` as a BOOL output.
 2. Choose **Programs → ST programs**, then **Open ST editor**, and enter:
@@ -68,13 +68,31 @@ END_PROGRAM
 4. Open **Programs → ST programs** and select **Edit source** beside a definition to focus it. Move whole PROGRAM blocks in ST to change execution order, then compile again.
 5. Use **Record**, advance with **Step**, and open **Trace** to inspect **Program locals** in historical state changes. **Restore selected scan** restores those locals along with the rest of the recorded simulation state.
 
-Statements outside declarations execute first; named programs then execute once in source order on every scan. Later assignments to the same global output determine its final value for that scan. Programs may call declared scalar functions; they are not themselves callable as functions.
+Without custom task assignments, statements outside declarations execute first; named programs then execute once in source order on every scan. Later assignments to the same global output determine its final value for that scan. Programs may call declared scalar functions; they are not themselves callable as functions.
 
 Declare BOOL, INT, REAL or TIME locals inside `VAR ... END_VAR`, using `Name : Type;`. Locals persist across scans, are separate between programs and shadow equally named global tags within their program. Changing a program's local declarations reinitializes that program's locals; renaming or removing a program drops its old state after the next scan.
 
 **Reset**, opening another project, and browser reload start execution state again; normal project saving stores source, not live local values. Trace snapshots preserve local state for replay and restoration. Keep global tag names distinct from program/function names and from qualified private names such as `CounterStage.Cycles`.
 
-This subset supports at most 32 named ST programs with 128 scalar locals each. Program headers must be on their own line and end with `END_PROGRAM`; initializers, program input/output parameter blocks, independent tasks, interrupts and LD/FBD/SFC program POUs are not implemented. It is not complete IEC configuration or vendor interchange support.
+This subset supports at most 32 named ST programs with 128 scalar locals each. Program headers must be on their own line and end with `END_PROGRAM`; initializers, program input/output parameter blocks, event/interrupt tasks and LD/FBD/SFC program POUs are not implemented. It is not complete IEC configuration or vendor interchange support.
+
+### Scheduling named ST programs
+
+**What you'll see:** **Project → Cyclic ST tasks** edits periods, priorities, enabled state and program execution order. The settings apply while the ST editor is selected; other editor modes keep their existing scan behavior.
+
+1. Use the CounterStage/Indicate example above. In **Project → Project task and preferences**, set **Task cycle (ms)** to 100 and select **Done**.
+2. Open **Project → Cyclic ST tasks**. Change the default row to name `Counter`, period 100, priority 0, and programs `CounterStage`.
+3. Select **Add task**. Enter name `Indicator`, period 200, priority 1, and programs `Indicate`; leave both tasks **Enabled**.
+4. Select **Save tasks**, then **Reset**, then **Step** four times. CountView reaches 4; Complete stays false at step 3 and becomes true at step 4 because Indicate runs every 200 simulated milliseconds.
+5. Use **Record** and **Trace** to inspect **Task timing** and restore a recorded scan. Select **Use default task** in the task editor to return all named programs to once-per-base-scan execution; locals remain until Reset.
+
+Tasks release at their period boundaries after time zero; the base scan holds one sampled input image for releases within that interval. Releases run in chronological order; simultaneous releases use lower priority numbers first, then task-row order. Each task runs its comma-separated program list in that order; statements outside PROGRAM blocks still run once per base scan.
+
+Every declared program must belong to exactly one task, including programs assigned to disabled tasks. Disabling stops that task's updates and holds its outputs; other running code may still write those outputs. A configuration change restarts task timing while preserving program locals; Reset clears the clock, outputs and locals.
+
+Limits are 16 tasks, periods of 1–60000 whole milliseconds, priorities 0–31 and 1024 releases/program activations per base scan. Invalid assignments or an excessive release count produce a diagnostic and preserve previous outputs, local state and task clock; reduce the base cycle or increase periods before retrying. This is deterministic, non-preemptive simulation scheduling, not real-time hardware or interrupt execution.
+
+Changes stay in the editor draft until **Save tasks**; closing the window discards that draft. Saved assignments travel with project JSON; malformed task data are rejected on import, while unresolved program names remain editable and appear in Diagnostics. Changing task configuration or the base cycle invalidates an older trace.
 
 ### Reusable ST scalar functions
 

@@ -1,3 +1,5 @@
+import { cyclicTaskSchedule } from "./cyclic-tasks.js";
+
 // Keep source spans intact so comments, strings and diagnostics share one lexer.
 function* sourceSpans(source) {
   let offset = 0;
@@ -300,15 +302,17 @@ function evaluate(node, values, callFunction) {
   return false;
 }
 
-export function executeStructuredText(compiled, inputs, previousOutputs = {}, outputNames = [], tagTypes = {}, previousProgramState = {}) {
-  if (!compiled.ok) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, errors:compiled.errors };
+export function executeStructuredText(compiled, inputs, previousOutputs = {}, outputNames = [], tagTypes = {}, previousProgramState = {}, taskOptions = {}) {
+  if (!compiled.ok) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, taskState:taskOptions.previousState || null, errors:compiled.errors };
+  const scheduling = cyclicTaskSchedule(taskOptions.tasks,(compiled.programs || []).map(program=>program.name),taskOptions.dtMs ?? 100,taskOptions.previousState);
+  if (scheduling.errors.length) return {values:{...inputs,...previousOutputs},outputs:{...previousOutputs},programState:previousProgramState,taskState:taskOptions.previousState || null,errors:scheduling.errors};
   const errors = [], names = new Map(), outputSet = new Set(outputNames.map((name) => name.toLowerCase()));
   const canonical = (name) => { const key = name.toLowerCase(); if (!names.has(key)) names.set(key,name); return names.get(key); };
   [...outputNames,...(compiled.variables || []),...Object.keys(tagTypes),...Object.keys(inputs),...Object.keys(previousOutputs)].forEach(canonical);
   for (const [label,record] of [["Inputs",inputs],["Previous outputs",previousOutputs],["Tag types",tagTypes]]) {
     const seen = new Map(); for (const name of Object.keys(record)) { const key = name.toLowerCase(); if (seen.has(key)) errors.push(`${label} contain ambiguous identifiers: ${seen.get(key)} / ${name}.`); else seen.set(key,name); }
   }
-  if (errors.length) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, errors };
+  if (errors.length) return { values:{ ...inputs, ...previousOutputs }, outputs:{ ...previousOutputs }, programState:previousProgramState, taskState:taskOptions.previousState || null, errors };
   const values = Object.create(null), outputs = Object.create(null), types = new Map(Object.entries(tagTypes).map(([name,type]) => [name.toLowerCase(),type]));
   for (const source of [inputs,previousOutputs]) for (const [name,value] of Object.entries(source)) values[canonical(name)] = value;
   const programState = Object.create(null);
@@ -354,10 +358,11 @@ export function executeStructuredText(compiled, inputs, previousOutputs = {}, ou
     catch (error) { errors.push(`${programName ? programName + ": " : ""}Line ${statement.line}: ${error.message}`); }
   } };
   executeList(compiled.statements);
+  const programDefinitions = new Map((compiled.programs || []).map(definition=>[definition.name,definition]));
+  for (const release of scheduling.releases) for (const name of release.programs) executeList(programDefinitions.get(name).statements,name);
   for (const definition of compiled.programs || []) {
-    executeList(definition.statements,definition.name);
     const state = programState[definition.name.toLowerCase()];
     for (const local of definition.locals) { state.values[local.name.toLowerCase()] = values[canonical(local.key)]; delete values[canonical(local.key)]; }
   }
-  return { values:{...values}, outputs:{...outputs}, errors, programState:{...programState} };
+  return { values:{...values}, outputs:{...outputs}, errors, programState:{...programState}, taskState:scheduling.state };
 }

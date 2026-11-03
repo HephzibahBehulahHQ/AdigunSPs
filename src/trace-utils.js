@@ -5,3 +5,9 @@ export function shiftHistoricalBreakpoints(breakpoints) {
 export function isHistoricalBreakpoint(breakpoints, cursor, frameCount) {
   return cursor > 0 && cursor < frameCount && breakpoints.has(cursor);
 }
+
+export function traceSectionValues(snapshot, section) {
+  if (section === "programState") return Object.fromEntries(Object.entries(snapshot?.programState || {}).map(([name,state])=>[name,state.values || {}]));
+  if (section === "taskState") return snapshot?.taskState ? {timeMs:snapshot.taskState.timeMs} : {};
+  return snapshot?.[section] || {};
+}

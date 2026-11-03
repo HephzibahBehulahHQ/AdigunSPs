@@ -1,3 +1,5 @@
+import { cyclicTaskEditor, readCyclicTaskRows } from "./cyclic-task-ui.js";
+import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
 import { store } from "./store.js";
 import { validateProject } from "./validation.js";
@@ -19,7 +21,7 @@ import { validateHardwareItem } from "./hardware.js";
 import { hmiDragPosition } from "./hmi-layout.js";
 import { validateScenario, runScenario } from "./scenarios.js";
 import { appendTrendSample, trendSampleHeights, trimTrendHistory } from "./hmi-history.js";
-import { isHistoricalBreakpoint, shiftHistoricalBreakpoints } from "./trace-utils.js";
+import { isHistoricalBreakpoint, shiftHistoricalBreakpoints, traceSectionValues } from "./trace-utils.js";
 import { sortProjectsByRecent } from "./project-list.js";
 import { recordOperationsScan, calculateOperations, createOperationsReportCsv } from "./operations.js";
 import { resolveProjectLanguage } from "./project-language.js";
@@ -516,7 +518,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
     if (!compiledST || compiledSTSignature !== signature) { compiledST = compileStructuredText(stSource, stTags); compiledSTSignature = signature; }
     if (!compiledST.ok) logEvent("compile-error", compiledST.errors.join("; "));
     const tagTypes = Object.fromEntries((project.tags || []).map((tag) => [tag.name, tag.type || "BOOL"]));
-    const stInputs = { ...sim.values, ...inputs, ...connectedAnalogInputs }, execution = executeStructuredText(compiledST, stInputs, sim.outputs, tags.outputs, tagTypes, sim.programState), runtimeError = compiledST.ok ? execution.errors.join("; ") : "";
+    const stInputs = { ...sim.values, ...inputs, ...connectedAnalogInputs }, execution = executeStructuredText(compiledST, stInputs, sim.outputs, tags.outputs, tagTypes, sim.programState, {tasks:project.tasks,dtMs:dt,previousState:sim.taskState}), runtimeError = compiledST.ok ? execution.errors.join("; ") : "";
     if (runtimeError && runtimeError !== sim.stRuntimeError) logEvent("runtime-error", runtimeError);
     sim = { ...sim, ...execution, stRuntimeError:runtimeError, energized:{} };
   }
@@ -549,7 +551,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   if (!traceReplay && inputOverride === null) sessionOperations = recordOperationsScan(sessionOperations, sim.outputs, dt, tags.outputs);
   lastScanMs = Math.round((performance.now() - started) * 100) / 100; scans++; sampleHmiHistory(); logEvent("scan", `Scan completed in ${lastScanMs} ms`, { durationMs:lastScanMs, outputs:{ ...sim.outputs } });
   if (traceRecording) { traceFrames.push({ dt, inputs:{ ...inputs }, numericInputs:traceNumericInputs(), faults:structuredClone(simulationFaults), outputs:{ ...sim.outputs }, timers:structuredClone(sim.timers || {}), processValues:{ ...sim.processValues }, state:structuredClone(sim) }); if (traceFrames.length > 5000) { const discarded = traceFrames.shift(); traceInitial = discarded.state || traceInitial; traceInitialFaults = structuredClone(discarded.faults || []); traceBreakpoints = shiftHistoricalBreakpoints(traceBreakpoints); } }
-  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {}) || JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues, expectedProgramState:structuredClone(expected.state?.programState || {}), actualProgramState:structuredClone(sim.programState || {}) }); }
+  if (traceReplay) { const expected = traceFrames[traceCursor - 1]; if (JSON.stringify(expected.outputs) !== JSON.stringify(sim.outputs) || JSON.stringify(expected.timers) !== JSON.stringify(sim.timers || {}) || JSON.stringify(expected.processValues) !== JSON.stringify(sim.processValues || {}) || JSON.stringify(expected.state?.programState || {}) !== JSON.stringify(sim.programState || {}) || JSON.stringify(expected.state?.taskState || {}) !== JSON.stringify(sim.taskState || {})) traceMismatches.push({ scan:traceCursor, expected:expected.outputs, actual:sim.outputs, expectedProcess:expected.processValues, actualProcess:sim.processValues, expectedProgramState:structuredClone(expected.state?.programState || {}), actualProgramState:structuredClone(sim.programState || {}), expectedTaskState:structuredClone(expected.state?.taskState || {}), actualTaskState:structuredClone(sim.taskState || {}) }); }
   renderLadder(); updateSimulationHud(); if (sim.breakpointHit) { logEvent("breakpoint", `Paused before network ${sim.rungIndex + 1}`, { rungId:sim.breakpointHit }); if (runTimer) { clearInterval(runTimer); runTimer = null; toast(`Breakpoint · network ${sim.rungIndex + 1}`); updateStatus(); } } if (traceReplay && isHistoricalBreakpoint(traceBreakpoints, traceCursor, traceFrames.length) && runTimer) { clearInterval(runTimer); runTimer = null; window.adigunPaused = true; logEvent("historical-breakpoint", `Replay paused at historical scan ${traceCursor}`, { scan:traceCursor }); toast(`Historical breakpoint · scan ${traceCursor}`); showTrace(); updateStatus(); } if (traceReplay && traceCursor >= traceFrames.length) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); }
 }
 function ladderToStructuredText() { return project.rungs.filter((rung) => rung.coil).map((rung) => { const paths = rungPaths(rung).map((path) => path.length ? path.map((contact) => `${contact.mode === "NC" ? "NOT " : ""}${contact.tag}`).join(" AND ") : "TRUE"); return `${rung.coil} := ${paths.length > 1 ? `(${paths.join(") OR (")})` : paths[0]};`; }).join("\n"); }
@@ -878,7 +880,7 @@ function pasteFbdSelection() { if (!copiedFbdBlocks?.length) { toast("Copy a fun
 function duplicateFbdSelection() { copiedFbdBlocks = copyFbdBlocks(project.fbdBlocks || [], fbdSelection); if (copiedFbdBlocks.length) pasteFbdSelection(); }
 function copyRung(cut = false) { if (selection?.rung == null || !project.rungs[selection.rung]) { toast("Select a rung first"); return; } copiedRung = structuredClone(project.rungs[selection.rung]); if (cut) rungAction("delete", selection.rung); else toast("Rung copied"); }
 function pasteRung() { if (!copiedRung) { toast("Copy a rung first"); return; } selectedContacts.clear(); pushHistory(); const copy = structuredClone(copiedRung); copy.id = crypto.randomUUID(); copy.comment = `${copy.comment || "Rung"} copy`; const index = selection?.rung == null ? project.rungs.length : selection.rung + 1; project.rungs.splice(index, 0, copy); selection = { rung:index, kind:"coil" }; render(); persist(); }
-function traceKey() { return JSON.stringify({ editorType:project.editorType || "LD", tags:project.tags, rungs:project.rungs, fbdBlocks:project.fbdBlocks, stSource:project.stSource, sfc:project.sfc, processes:project.processes, breakpoints:[...breakpoints] }); }
+function traceKey() { return JSON.stringify({ editorType:project.editorType || "LD", tags:project.tags, rungs:project.rungs, fbdBlocks:project.fbdBlocks, stSource:project.stSource, task:project.task, tasks:project.tasks, sfc:project.sfc, processes:project.processes, breakpoints:[...breakpoints] }); }
 function showFaults() {
   const copy = ({ en:{title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected faults. Faults affect simulation only and are session-only."}, de:{title:"Simulationsfehler",input:"Simulierte E/A",kind:"Fehlertyp",high:"Dauerhaft 1",low:"Dauerhaft 0",offset:"Numerischer Offset",amount:"Offset",add:"Fehler injizieren",empty:"Keine injizierten Fehler. Fehler wirken nur in der Simulation und nur für diese Sitzung."}, yo:{title:"Àṣìṣe àfarawé",input:"I/O àfarawé",kind:"Irú àṣìṣe",high:"Dúró ní gíga",low:"Dúró ní ìsàlẹ̀",offset:"Àfikún nọ́ńbà",amount:"Àfikún",add:"Fi àṣìṣe sí i",empty:"Kò sí àṣìṣe. Àwọn àṣìṣe yìí kan àfarawé nìkan, wọ́n sì wà fún ìgbà yìí nìkan."}, pcm:{title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected fault. E affect simulation only and na for this session."} })[language] || {title:"Simulation faults",input:"Simulated I/O",kind:"Fault type",high:"Stuck high",low:"Stuck low",offset:"Numeric offset",amount:"Offset",add:"Inject fault",empty:"No injected faults. Faults affect simulation only and are session-only."};
   const io = inferTags(), faultTargets = [...io.inputs.map((name) => ({ name, direction:"input" })), ...io.outputs.map((name) => ({ name, direction:"output" }))].map((item) => ({ ...item, ...(project.tags?.find((tag) => tag.name === item.name) || {}) }));
@@ -923,11 +925,11 @@ function showTrace() {
   const paintHistory = () => {
     const index = Number($("#traceScrubber").value), current = snapshot(index), previous = index ? snapshot(index - 1) : null;
     $("#traceScanLabel").textContent = index === 0 ? "Initial state" : `Scan ${index}`;
-    const sections = ["values", "outputs", "timers", "processValues", "programState"];
+    const sections = ["values", "outputs", "timers", "processValues", "programState", "taskState"];
     const rows = sections.flatMap((section) => {
-      const now = current?.[section] || {}, before = previous?.[section] || {};
+      const now = traceSectionValues(current,section), before = traceSectionValues(previous,section);
       const keys = new Set([...Object.keys(now), ...Object.keys(before)]);
-      return [...keys].filter((key) => JSON.stringify(now[key]) !== JSON.stringify(before[key])).map((key) => `<div class="validation-item"><b>${escapeHtml(section === "programState" ? ({en:"Program locals",de:"Lokale Programmvariablen",yo:"Oníyípadà inú ètò",pcm:"Program locals"})[language] : section)} · ${escapeHtml(key)}</b>: ${escapeHtml(JSON.stringify(before[key] ?? "—"))} → ${escapeHtml(JSON.stringify(now[key] ?? "—"))}</div>`);
+      return [...keys].filter((key) => JSON.stringify(now[key]) !== JSON.stringify(before[key])).map((key) => `<div class="validation-item"><b>${escapeHtml(section === "programState" ? ({en:"Program locals",de:"Lokale Programmvariablen",yo:"Oníyípadà inú ètò",pcm:"Program locals"})[language] : section === "taskState" ? ({en:"Task timing",de:"Taskzeit",yo:"Àkókò iṣé́",pcm:"Task timing"})[language] : section)} · ${escapeHtml(section === "taskState" ? ({en:"Time (ms)",de:"Zeit (ms)",yo:"Àkókò (ms)",pcm:"Time (ms)"})[language] : key)}</b>: ${escapeHtml(JSON.stringify(before[key] ?? "—"))} → ${escapeHtml(JSON.stringify(now[key] ?? "—"))}</div>`);
     });
     $("#traceStatePreview").innerHTML = index === 0 ? '<div class="validation-item ok">Initial recorded state.</div>' : rows.join("") || '<div class="validation-item ok">No state changes since the preceding scan.</div>';
     const toggle = $("#traceBreakpointToggle"); toggle.disabled = index === 0; toggle.textContent = traceBreakpoints.has(index) ? copy.remove : copy.mark;
@@ -1652,6 +1654,27 @@ function showApplicationMenu(event) {
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
   showContextMenu(event, entries);
 }
+function showCyclicTasks(draft) {
+  const projectId = project.id, source = project.stSource || "", view = cyclicTaskEditor(project,language,draft);
+  modal(view.copy.title,view.html);
+  const allowed = () => {
+    if (!["member","guest"].includes(accountAccess)) { showAccount(); return false; }
+    if (project.id !== projectId || (project.stSource || "") !== source) { toast(view.copy.stale); return false; }
+    return true;
+  };
+  $("#openTaskPrograms").onclick = () => showStructuredTextFunctions("programs");
+  $("#defaultCyclicTasks").onclick = () => { if (!allowed()) return; pushHistory(); delete project.tasks; persist(); $("#modal").close(); };
+  const form = $("#cyclicTaskForm");
+  if (!form) return;
+  form.onsubmit = (event) => {
+    event.preventDefault(); if (!allowed()) return;
+    const tasks = readCyclicTaskRows(form), errors = validateCyclicTasks(tasks,view.programNames);
+    if (errors.length) { $("#cyclicTaskErrors").textContent = errors.join(" "); return; }
+    pushHistory(); project.tasks = tasks; persist(); $("#modal").close();
+  };
+  $("#addCyclicTask").onclick = () => { const tasks = readCyclicTaskRows(form); if (tasks.length >= 16) return; let number = tasks.length + 1; while (tasks.some(task=>task.name.toLowerCase() === `task${number}`)) number++; showCyclicTasks([...tasks,{name:`Task${number}`,cycleMs:getTaskCycleMs(project),priority:0,enabled:true,programs:[]}]); };
+  form.querySelectorAll("[data-remove-cyclic-task]").forEach(button => { button.onclick = () => showCyclicTasks(readCyclicTaskRows(form).filter((task,index)=>index!==Number(button.dataset.removeCyclicTask))); });
+}
 function showStructuredTextFunctions(kind = "functions") {
   const view = (kind === "programs" ? structuredTextProgramLibrary : structuredTextFunctionLibrary)(project,language);
   modal(view.title,view.html);
@@ -1667,6 +1690,7 @@ function showStructuredTextFunctions(kind = "functions") {
   $("#modalContent").querySelectorAll("[data-st-function-line]").forEach(button => { button.onclick = () => openSource(Number(button.dataset.stFunctionLine)); });
 }
 function action(name) {
+  if (name === "cyclic-tasks") { showCyclicTasks(); return; }
   if (name === "st-programs") { showStructuredTextFunctions("programs"); return; }
   if (name === "st-functions") { showStructuredTextFunctions(); return; }
   if (name === "adigun-ai") { showAdigunAI(); return; }
