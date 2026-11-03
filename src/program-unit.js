@@ -1,6 +1,6 @@
 import { cyclicTaskSchedule } from "./cyclic-tasks.js";
 import { scan, scanFBD, scanSFC } from "./engine.js";
-import { executeStructuredText } from "./structured-text.js";
+import { executeStructuredText, countStructuredTextReferences, renameStructuredTextIdentifier } from "./structured-text.js";
 
 // The caller owns the shared image and supplies retained state for this unit only.
 export function executeProgramUnit(unit, image, state = {}, dt = 100) {
@@ -58,3 +58,39 @@ export function executeProgramTasks(units, tasks, image, state = {}, dt = 100) {
   return { image: nextImage, state: { clock: schedule.state, units: { ...state.units, ...Object.fromEntries(nextUnits) } }, errors: [] };
 }
 
+
+function mapUnitTags(unit, map) {
+  const fields = (item, keys) => {
+    if (!item) return;
+    for (const key of keys) if (typeof item[key] === "string") item[key] = map(item[key]);
+  };
+  unit.outputs = unit.outputs.map(map);
+  for (const rung of unit.rungs || []) {
+    for (const contact of (rung.branches || [rung.contacts || []]).flat()) fields(contact, ["tag"]);
+    fields(rung, ["coil"]);
+    fields(rung.timer, ["tag", "resetTag"]);
+    fields(rung.counter, ["tag", "resetTag", "countTag"]);
+    fields(rung.res, ["counterTag"]);
+    fields(rung.scale, ["inputTag", "outputTag"]);
+  }
+  for (const block of unit.blocks || []) {
+    if (block.inputs) block.inputs = block.inputs.map(map);
+    fields(block, ["outputTag", "countTag"]);
+  }
+  for (const step of unit.chart?.steps || []) if (step.actions) step.actions = step.actions.map(map);
+  for (const transition of unit.chart?.transitions || []) fields(transition, ["condition"]);
+  if (unit.chart?.outputs) unit.chart.outputs = unit.chart.outputs.map(map);
+}
+export function renameProgramUnitTag(unit, oldName, newName) {
+  mapUnitTags(unit, name => name === oldName ? newName : name);
+  if (unit.language === "ST") unit.source = renameStructuredTextIdentifier(unit.source, oldName, newName);
+}
+export function programUnitUsesTag(unit, name) {
+  if (unit.language === "ST" && countStructuredTextReferences(unit.source, name)) return true;
+  let found = false;
+  mapUnitTags(structuredClone(unit), value => {
+    if (value === name) found = true;
+    return value;
+  });
+  return found;
+}

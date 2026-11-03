@@ -1,4 +1,4 @@
-import { executeProgramTasks } from "./program-unit.js";
+import { executeProgramTasks, programUnitUsesTag, renameProgramUnitTag } from "./program-unit.js";
 import { cyclicTaskEditor, readCyclicTaskRows } from "./cyclic-task-ui.js";
 import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { scan, scanFBD, scanSFC, defaultProject, emptyProject, makeProjectFromExample, runExampleChecks, getTaskCycleMs } from "./engine.js";
@@ -1189,7 +1189,7 @@ function renderTagManager() {
   }));
   body.querySelectorAll("[data-remove-tag]").forEach((button) => button.addEventListener("click", () => {
     const index = Number(button.dataset.removeTag), tag = tags[index];
-    const used = countStructuredTextReferences(project.stSource || "",tag.name) > 0 || project.rungs.some((r) => (r.branches || [r.contacts || []]).flat().some((contact) => contact.tag === tag.name) || r.coil === tag.name || [r.scale?.inputTag, r.scale?.outputTag].includes(tag.name)) || project.fbdBlocks?.some((block) => (block.inputs || []).includes(tag.name) || block.outputTag === tag.name || block.countTag === tag.name) || project.hmi?.widgets?.some((widget) => widget.tag === tag.name) || project.hmi?.alarms?.some((alarm) => alarm.tag === tag.name) || project.hmi?.recipes?.some((recipe) => Object.hasOwn(recipe.values || {}, tag.name)) || project.processes?.some((model) => [model.controlTag, model.inputTag, model.secondaryTag, model.outputTag].includes(tag.name));
+    const used = project.programUnits?.some(unit => programUnitUsesTag(unit,tag.name)) || countStructuredTextReferences(project.stSource || "",tag.name) > 0 || project.rungs.some((r) => (r.branches || [r.contacts || []]).flat().some((contact) => contact.tag === tag.name) || r.coil === tag.name || [r.scale?.inputTag, r.scale?.outputTag].includes(tag.name)) || project.fbdBlocks?.some((block) => (block.inputs || []).includes(tag.name) || block.outputTag === tag.name || block.countTag === tag.name) || project.hmi?.widgets?.some((widget) => widget.tag === tag.name) || project.hmi?.alarms?.some((alarm) => alarm.tag === tag.name) || project.hmi?.recipes?.some((recipe) => Object.hasOwn(recipe.values || {}, tag.name)) || project.processes?.some((model) => [model.controlTag, model.inputTag, model.secondaryTag, model.outputTag].includes(tag.name));
     if (used) { toast("Remove this tag from logic, HMI, alarms, recipes, and process models before deleting it"); return; }
     pushHistory(); tags.splice(index, 1); project.io.inputs = (project.io.inputs || []).filter((name) => name !== tag.name); project.io.outputs = (project.io.outputs || []).filter((name) => name !== tag.name); delete project.initialState?.[tag.name]; render(); persist(); renderTagManager();
   }));
@@ -1197,6 +1197,7 @@ function renderTagManager() {
   $("#addTag").onclick = () => { pushHistory(); let number = tags.length + 1; while (tags.some((tag) => tag.name.toLowerCase() === `tag${number}`)) number++; const name = `Tag${number}`; tags.push({ name, type: "BOOL", role: "internal", address: "" }); renderTagManager(); persist(); };
 }
 function renameTag(oldName, newName) {
+  for (const unit of project.programUnits || []) renameProgramUnitTag(unit,oldName,newName);
   if (typeof project.stSource === "string") { project.stSource = renameStructuredTextIdentifier(project.stSource,oldName,newName); compiledST = null; }
   const tag = project.tags.find((item) => item.name === oldName); if (tag) tag.name = newName;
   simulationFaults.forEach((fault) => { if (fault.tag === oldName) fault.tag = newName; });

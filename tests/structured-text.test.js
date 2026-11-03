@@ -56,7 +56,7 @@ const renameContext={project:renameProject,simulationFaults:[],compiledST:{old:t
 const renameStart=app.indexOf("function renameTag(");runInNewContext(app.slice(renameStart,app.indexOf("const accountCopy =",renameStart)),renameContext);renameContext.renameTag("Motor","Drive");
 assert.equal(renameProject.stSource,"Drive := START;");assert.deepEqual(renameProject.io.outputs,["Drive"]);assert.equal(renameContext.compiledST,null);
 assert.equal(executeStructuredText(compileStructuredText(renameProject.stSource,renameProject.tags.map(t=>t.name)),{Start:true},{Drive:false},renameProject.io.outputs,{Drive:"BOOL"}).outputs.Drive,true);
-const usedStart=app.indexOf("    const used = countStructuredTextReferences(");const usedEnd=app.indexOf("\n",usedStart);
+const usedStart=app.indexOf("    const used = project.programUnits?.some(");const usedEnd=app.indexOf("\n",usedStart);
 for(const [source,expected] of [["MOTOR := TRUE;",true],["(* Motor *)",false]]){const fixture={project:{rungs:[],stSource:source},tag:{name:"Motor"},countStructuredTextReferences};runInNewContext(app.slice(usedStart,usedEnd)+"this.used=used;",fixture);assert.equal(Boolean(fixture.used),expected);}
 // Statement layout must not change execution or diagnostic source locations.
 const formatted = `IF Start THEN

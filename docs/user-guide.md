@@ -260,3 +260,5 @@ Mixed ST units share project inputs and outputs. Other scalar tags use their pro
 For mixed projects, **Project > Cyclic ST tasks** also accepts the saved LD, FBD, ST and SFC unit names. Task assignments apply to saved units rather than unsaved working bodies.
 
 Mixed-project trace history includes retained unit state and the task clock. Replay divergence reports include expected and actual mixed state.
+
+Tag renames update saved unit references. Remove references from saved units before deleting a tag.

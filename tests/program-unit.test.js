@@ -58,3 +58,12 @@ const { traceSectionValues } = await import("../src/trace-utils.js");
 const restoredTick = JSON.parse(JSON.stringify(tick.state));
 assert.deepEqual(executeProgramTasks(units, task, image, restoredTick), executeProgramTasks(units, task, image, tick.state));
 assert.equal(traceSectionValues({ mixedState: restoredTick }, "mixedState")["Unit ladder"].timers.T.elapsed, 100);
+
+const { renameProgramUnitTag, programUnitUsesTag } = await import("../src/program-unit.js");
+const editableUnits = normalizeImportedProject(project).programUnits;
+for (const unit of editableUnits) {
+  assert.equal(programUnitUsesTag(unit, "Ready"), true);
+  renameProgramUnitTag(unit, "Ready", "Available");
+  assert.equal(programUnitUsesTag(unit, "Ready"), false);
+  assert.equal(programUnitUsesTag(unit, "Available"), true);
+}
