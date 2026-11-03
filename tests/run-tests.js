@@ -128,6 +128,13 @@ try {
   plcPous.pop();
 }
 
+for (const [inputs, expected] of [
+  [{ Start:true, Stop:false, Sensor:false }, true],
+  [{ Start:true, Stop:true, Sensor:false }, false],
+  [{ Start:false, Stop:true, Sensor:true }, true]
+]) {
+  assert.equal(scan(importedPlcopen, inputs, {}).outputs.Motor, expected);
+}
 assert.equal(importedPlcopen.name, "Imported exercise", "PLCopen importer reads project name");
 assert.deepEqual(importedPlcopen.io, { inputs:["Start", "Stop", "Sensor"], outputs:["Motor"] }, "PLCopen importer recovers I/O roles and addresses");
 assert.equal(importedPlcopen.initialState.Delay, 1500, "PLCopen importer restores TIME initial values in milliseconds");
