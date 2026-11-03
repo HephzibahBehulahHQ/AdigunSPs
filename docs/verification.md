@@ -314,3 +314,7 @@ In a disposable local browser project, the saved ST unit `Check` assigned `TRUE`
 ### Production update preserves a saved project
 
 On release `67cef4f`, a disposable project retained the task name `QAReleasePersistence` after an ordinary reload. The production update page then reported Update ready. After returning to the editor and reloading, the task name was still present. This verifies preservation of the saved local project setting across an online update. Offline reload remains unverified.
+
+### Production Help keyboard navigation
+
+On release 45ae8e0, Enter on Help focused Getting started in a fresh tab. Separate checks confirmed Tab moved within the guide and Escape restored focus to Help. Earlier tabs did not consistently show the initial focus change.
