@@ -1373,7 +1373,7 @@ function setAccountAccess(state, guestSession = null) {
   const locked = !["guest", "guest-expired", "member"].includes(state);
   if (["guest", "guest-expired"].includes(state) && accountUser?.id) guestDraftStorageKey ||= `adigunsps-guest-draft-${accountUser.id}`;
   if (state !== "guest" && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
-  for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
+  for (const selector of [".toolbar", ".app-menus", ".workspace", "#globalQuickCommands"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
   const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
   if (button) {
     const label = state === "member" ? accountText("account") : accountText("signIn");
@@ -2053,7 +2053,7 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("click", (event) => {
   if (accountAccess !== "guest-expired" || event.target.closest?.("dialog,#guestExpiryNotice,#accountButton,#languageButton,#helpButton,#footerHelpLink,[data-app-menu='help'],#contextMenu.help-guide-menu")) return;
-  if (!event.target.closest?.("#projectMenu,.toolbar,.app-menus,.workspace,#contextMenu")) return;
+  if (!event.target.closest?.("#projectMenu,.toolbar,.app-menus,.workspace,#globalQuickCommands,#contextMenu")) return;
   event.preventDefault(); event.stopImmediatePropagation(); showAccount();
 }, true);
 document.addEventListener("visibilitychange", async () => {
