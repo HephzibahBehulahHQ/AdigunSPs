@@ -195,3 +195,7 @@ Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms:
 Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
+
+## Electrical engineering workspace — docked tools and properties
+
+Select **Components** to open a large schematic viewport. The left project panel contains the **existing functional component picker, Place Component, Connect Terminals, Rotate, Duplicate, Delete, Validate, Simulate**, and the collapsible **519-entry manufacturer reference catalogue** (information only). The previously duplicate electrical properties panel is now docked inside the existing right **Properties** inspector; it still includes component fields, I/O mapping, manual simulated inputs, wire connections, validation and status. Use **Panel layout** to open or close side panels. On narrow screens the toolbox/inspector are available through the existing panel drawers. Menu-based I/O, simulation and other controls remain available. This is an interface rearrangement; it changes neither the PLC engine nor electrical simulation and is not a physical wiring design.

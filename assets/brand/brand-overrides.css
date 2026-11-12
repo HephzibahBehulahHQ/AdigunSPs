@@ -153,3 +153,26 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 @media(max-width:900px){.electrical-body{grid-template-columns:minmax(0,1fr)}.electrical-inspector{max-height:42vh}.electrical-pane{padding:8px}.electrical-toolbar{gap:6px}.electrical-toolbar select{min-width:150px}}
 .electrical-wire.energized{stroke:#65fff0;stroke-width:4;stroke-dasharray:7 9;filter:drop-shadow(0 0 4px #19f4ff);animation:electrical-current-flow .65s linear infinite}@keyframes electrical-current-flow{to{stroke-dashoffset:-32}}@media(prefers-reduced-motion:reduce){.electrical-wire.energized{animation:none}}
 
+
+/* P0: live electrical tools and contextual inspector dock beside the circuit, never over it. */
+.electrical-toolbox-dock{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 10px;border-bottom:1px solid var(--line)}
+.workspace.electrical-workspace-active .left-sidebar>.side-card{display:none}
+.workspace.electrical-workspace-active .inspector-content{min-height:0;overflow:auto;padding:8px}
+.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{box-sizing:border-box;width:100%;min-width:0;min-height:0;max-height:none;overflow:visible;border:0;border-radius:0;background:transparent;padding:8px}
+.electrical-toolbox-dock .electrical-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:8px;padding:0;border:0;background:transparent}
+.electrical-toolbox-dock .electrical-toolbar label{grid-column:1/-1;min-width:0}
+.electrical-toolbox-dock .electrical-toolbar select{box-sizing:border-box;min-width:0;width:100%;max-width:100%;font-size:11px}
+.electrical-toolbox-dock .electrical-toolbar button{min-width:0;width:100%;min-height:37px;padding:6px 5px;white-space:normal;overflow-wrap:anywhere;font-size:11px;line-height:1.3}
+.electrical-toolbox-dock .electrical-toolbar [data-electrical-action="add"]{grid-column:1/-1}
+.electrical-toolbox-dock .industrial-catalog{margin:12px 0 0;max-width:100%;min-width:0;overflow-wrap:anywhere;font-size:11px}
+.electrical-toolbox-dock .industrial-catalog input{min-width:0;width:100%;box-sizing:border-box}
+.electrical-toolbox-dock .industrial-catalog form{min-width:0;max-width:100%;display:flex;flex-direction:column;gap:7px}
+.electrical-toolbox-dock .industrial-catalog ul{padding-left:17px;overflow-wrap:anywhere}
+.electrical-toolbox-dock .industrial-catalog a{overflow-wrap:anywhere}
+#electricalPane.electrical-editor-pane{box-sizing:border-box;flex:1;min-height:0;height:auto;overflow:hidden;padding:0}
+#electricalPane>.electrical-pane{box-sizing:border-box;display:flex;flex-direction:column;gap:6px;height:100%;min-height:0;max-height:100%;padding:8px}
+#electricalPane .electrical-body{display:grid;grid-template-columns:minmax(0,1fr);gap:0;flex:1;min-height:0;min-width:0;overflow:hidden}
+#electricalPane .electrical-board-wrap{height:100%;min-height:0;min-width:0;box-sizing:border-box;overflow:auto;overscroll-behavior:contain}
+#electricalPane .electrical-safety{flex:none;margin:0;line-height:1.35;padding:6px 10px;font-size:10px}
+@media (min-width:1051px){.workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden){grid-template-columns:minmax(225px,260px) minmax(0,1fr) minmax(280px,325px)}}
+@media(max-width:760px){.workspace.electrical-workspace-active .electrical-toolbox-dock{padding:8px}.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{padding:5px}}
