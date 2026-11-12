@@ -33,11 +33,17 @@ test("electrical workspace stays usable without overlap at required viewports", 
     const boardBox = await board.boundingBox();
     const toolbarBox = await page.locator("#electricalToolboxDock .electrical-toolbar").boundingBox();
     const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const overflowNodes = await page.evaluate(() => { const board = document.querySelector(".electrical-board-wrap"); return [...document.body.querySelectorAll("*")].map((element) => {
+      const box = element.getBoundingClientRect();
+      const parent = element.parentElement;
+      const style = getComputedStyle(parent || element);
+      return { tag:element.tagName, id:element.id, className:typeof element.className === "string" ? element.className.slice(0,80) : "", right:Math.round(box.right), parent:`${parent?.tagName || ""}#${parent?.id || ""}.${String(parent?.className || "").slice(0,60)}`, parentOverflowX:style.overflowX, insideBoard:Boolean(board?.contains(element)) };
+    }).filter((element) => element.right > innerWidth + 1 && element.right <= innerWidth + 40 && !element.insideBoard).sort((a,b) => b.right - a.right).slice(0,12); });
     const overlap = boardBox && toolbarBox && toolbarBox.x < boardBox.x + boardBox.width && toolbarBox.x + toolbarBox.width > boardBox.x && toolbarBox.y < boardBox.y + boardBox.height && toolbarBox.y + toolbarBox.height > boardBox.y;
 
     expect(boardBox, `${viewport.width}x${viewport.height}: board is rendered`).not.toBeNull();
     expect(boardBox.height, `${viewport.width}x${viewport.height}: useful board height`).toBeGreaterThanOrEqual(viewport.minBoardHeight);
-    expect(documentWidth, `${viewport.width}x${viewport.height}: no page horizontal overflow`).toBeLessThanOrEqual(viewport.width);
+    expect(documentWidth, `${viewport.width}x${viewport.height}: no page horizontal overflow; nearby elements: ${JSON.stringify(overflowNodes)}`).toBeLessThanOrEqual(viewport.width);
     expect(toolbarBox, `${viewport.width}x${viewport.height}: electrical tools remain docked`).not.toBeNull();
     if (viewport.width > 760) expect(overlap, `${viewport.width}x${viewport.height}: toolbox does not overlap board`).toBe(false);
     await expect(page.locator("#inspectorContent .electrical-inspector")).toHaveCount(1);
