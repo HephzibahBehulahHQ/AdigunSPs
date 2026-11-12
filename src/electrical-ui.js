@@ -63,7 +63,7 @@ export function electricalSymbolSvg(component) {
   return `<svg class="electrical-standard-symbol" viewBox="${viewBox}" role="img" aria-label="${escape(spec.name)}"><title>${escape(spec.name)}</title>${body}</svg>`;
 }
 
-export function renderElectricalWorkspace(root, project, {language="en",onBeforeChange=()=>{},onChange=()=>{},onInputChange=()=>{},inputValues={},outputValues={}} = {}) {
+export function renderElectricalWorkspace(root, project, {language="en",toolboxHost=null,inspectorHost=null,onBeforeChange=()=>{},onChange=()=>{},onInputChange=()=>{},inputValues={},outputValues={}} = {}) {
   const t = langText(language); project.electrical ||= {components:[],wires:[],inputStates:{}}; const diagram = project.electrical;
   diagram.components ||= []; diagram.wires ||= []; diagram.inputStates ||= {};
   let catalogQuery = "";
@@ -139,6 +139,15 @@ export function renderElectricalWorkspace(root, project, {language="en",onBefore
     board?.addEventListener("pointerup",finishDrag);
     board?.addEventListener("pointercancel",finishDrag);
     root.dataset.selectedComponent=selectedId;
+    // Port already-bound controls, not clones: existing tool actions and properties retain listeners.
+    if (toolboxHost) {
+      const toolbar=root.querySelector(".electrical-toolbar"),catalog=root.querySelector(".industrial-catalog");
+      toolboxHost.replaceChildren(...[toolbar,catalog].filter(Boolean));
+    }
+    if (inspectorHost) {
+      const inspector=root.querySelector(".electrical-inspector");
+      if (inspector) inspectorHost.replaceChildren(inspector);
+    }
   };
   render();
 }

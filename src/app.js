@@ -81,7 +81,7 @@ let project;
 let hasUnsavedChanges = false;
 let sim = { outputs: {}, timers: {}, energized: {}, values: {} };
 let soundEnabled = false, soundContext = null, motorHumOscillator = null, motorHumGain = null, narratorEntries = [], priorNarratorOutputs = {}, priorNarratorInputs = {}, priorFaultSignature = "", priorElectricalFaultSignature = "";
-let runTimer = null, scans = 0, zoom = 100, selection = null, selectedContacts = new Set(), history = [], future = [], grid = true, copiedRung = null, copiedFbdBlocks = null, panSpaceHeld = false, canvasPan = null, viewProjectId = null;
+let runTimer = null, scans = 0, zoom = 100, selection = null, selectedHmiWidgetId = null, selectedContacts = new Set(), history = [], future = [], grid = true, copiedRung = null, copiedFbdBlocks = null, panSpaceHeld = false, canvasPan = null, viewProjectId = null;
 let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor = 0, traceInitial = null, traceInitialFaults = [], traceProjectKey = "", traceMismatches = [], traceBreakpoints = new Set();
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
 const accountService = createAccountService(supabaseClient);
@@ -379,7 +379,7 @@ function renderLadder() {
   if (mode === "FBD") renderFbd(); if (mode === "SFC") renderSfc();
   $("#zoomValue").textContent = `${zoom}%`; renderMinimap(); renderLogicOutline(); renderInspector(); updateStatus(); renderDiagnostics(); if ($("#modal").open && $("#modal").dataset.view === "io") renderIoModal(); if ($("#modal").open && $("#modal").dataset.view === "watch") refreshWatch(); applyWorkspaceView(); if (workspaceView === "hmi") { refreshHmi(); renderHmiAlarms(); renderProcessPanel(); }
 }
-function render() { if (viewProjectId !== project.id) { resetProjectSimulation(true); viewProjectId = project.id; copilotGoal="";copilotGoalPending=false;copilotFirstSeen.clear();copilotActiveState.active=null;copilotActiveState.dismissed.clear(); ladderRungHeights.clear(); fbdBlockHeights.clear(); compiledST = null; compiledSTSignature = ""; sessionOperations = { elapsedMs:0, outputRuntimeMs:{} }; selectedContacts.clear(); fbdSelection.clear(); selection = null; simulationFaults = []; for (const tag of Object.keys(hmiHistory)) delete hmiHistory[tag]; project.viewState ||= {}; zoom = Number.isInteger(project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) ? (project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) : 100; requestAnimationFrame(() => { const wrap = $("#canvasWrap"), fbdPane = $("#fbdPane"); wrap.scrollLeft = project.viewState.scrollLeft || 0; wrap.scrollTop = project.viewState.scrollTop || 0; fbdPane.scrollLeft = project.viewState.fbdScrollLeft || 0; fbdPane.scrollTop = project.viewState.fbdScrollTop || 0; }); } renderLadder(); renderHmi(); if (workspaceView === "electrical") renderElectricalWorkspace($("#electricalPane"),project,{language,inputValues:sim.values,outputValues:{...sim.outputs,...sim.processValues},onInputChange:(tag,value)=>{sim.values[tag]=value;doScan();},onBeforeChange:pushHistory,onChange:()=>{persist();render();}}); applyWorkspaceView();window.dispatchEvent(new CustomEvent("adigunsps:canvas-state-changed",{detail:{projectId:project.id}})); }
+function render() { if (viewProjectId !== project.id) { resetProjectSimulation(true); viewProjectId = project.id; copilotGoal="";copilotGoalPending=false;copilotFirstSeen.clear();copilotActiveState.active=null;copilotActiveState.dismissed.clear(); ladderRungHeights.clear(); fbdBlockHeights.clear(); compiledST = null; compiledSTSignature = ""; sessionOperations = { elapsedMs:0, outputRuntimeMs:{} }; selectedContacts.clear(); fbdSelection.clear(); selection = null; simulationFaults = []; for (const tag of Object.keys(hmiHistory)) delete hmiHistory[tag]; project.viewState ||= {}; zoom = Number.isInteger(project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) ? (project.editorType === "FBD" ? project.viewState.fbdZoom : project.viewState.zoom) : 100; requestAnimationFrame(() => { const wrap = $("#canvasWrap"), fbdPane = $("#fbdPane"); wrap.scrollLeft = project.viewState.scrollLeft || 0; wrap.scrollTop = project.viewState.scrollTop || 0; fbdPane.scrollLeft = project.viewState.fbdScrollLeft || 0; fbdPane.scrollTop = project.viewState.fbdScrollTop || 0; }); } renderLadder(); renderHmi(); if (workspaceView === "electrical") renderElectricalWorkspace($("#electricalPane"),project,{language,toolboxHost:$("#electricalToolboxDock"),inspectorHost:$("#inspectorContent"),inputValues:sim.values,outputValues:{...sim.outputs,...sim.processValues},onInputChange:(tag,value)=>{sim.values[tag]=value;doScan();},onBeforeChange:pushHistory,onChange:()=>{persist();render();}}); applyWorkspaceView();window.dispatchEvent(new CustomEvent("adigunsps:canvas-state-changed",{detail:{projectId:project.id}})); }
 function setZoom(value) { zoom = Math.max(60, Math.min(150, Math.round(value))); project.viewState = { ...(project.viewState || {}), ...(project.editorType === "FBD" ? { fbdZoom:zoom } : { zoom }) }; if (project.editorType === "FBD") renderFbd(); else renderLadder(); $("#zoomValue").textContent = `${zoom}%`; persist(); }
 function fitZoom() { if (project.editorType === "FBD") { setZoom(fbdZoomToFit(project.fbdBlocks || [], $("#fbdPane").clientWidth)); return; } const wrap = $("#canvasWrap"), canvas = $("#ladderCanvas"), width = Math.max(1, wrap.clientWidth - 28); setZoom(canvas.scrollWidth ? width / canvas.scrollWidth * 100 : 100); }
 function setupCanvasPanning() {
@@ -674,16 +674,18 @@ function showProcessManager() { const types = Object.keys(processFields), inputs
 function renderProcessPanel() { const root = $("#processPanel"); if (!root) return; const models = project.processes || [], units = { tank:"%",conveyor:"m",motor:"rpm",thermal:"°C",pump:"L/min",pid:"%" }; root.innerHTML = models.length ? `<div class="process-panel-title">2D PROCESS VIEW · EDUCATIONAL · TAG BOUND</div><div class="process-twin-wrap">${renderProcessTwin(models, sim.processValues || {}, language)}</div><div class="process-cards">${models.map((model) => { const value = Number(sim.processValues?.[model.outputTag] ?? model.initial ?? 0), max = model.type === "tank" ? model.capacity : model.type === "conveyor" ? model.length : model.type === "motor" ? model.ratedSpeed : model.type === "pump" ? model.maxFlow : model.type === "pid" ? model.max : Math.max(100, value); const pct = Math.max(0, Math.min(100, value / (Number(max) || 100) * 100)); return `<article class="process-card"><b>${escapeHtml(model.name)}</b><span>${escapeHtml(model.type)} · ${escapeHtml(model.outputTag)}</span><div class="process-meter ${escapeAttr(model.type)}"><i style="width:${pct}%;height:${pct}%"></i></div><strong>${formatLocaleNumber(Number.isFinite(value) ? value : 0,language,1)} ${units[model.type] || ""}</strong></article>`; }).join("")}</div>` : ""; }
 function updateHmiAlarms(values = { ...sim.values, ...sim.outputs }) { const model = hmiModel(), result = evaluateAlarms(model, values); if (!result.events.length) return; model.alarms = result.alarms; model.alarmEvents = retainAlarmEvents(model.alarmEvents,result.events,model.alarmHistoryLimit); for (const event of result.events) logEvent("alarm", `${event.type}: ${event.tag} · ${event.priority}`, event); persist(); }
 function hmiTagValue(tag) { return sim.outputs[tag] ?? sim.values[tag] ?? false; }
-function addHmiWidget(type, position = null) { if (!["switch", "lamp", "value", "trend"].includes(type)) return; const copy = hmiScreenCopy[language] || hmiScreenCopy.en, model = hmiModel(), tags = inferTags(), options = type === "switch" ? tags.inputs : type === "lamp" ? tags.outputs : [...new Set([...tags.inputs,...tags.outputs])]; if (!options.length) { toast(copy.noTags); return; } pushHistory(); const index = model.widgets.length; model.widgets.push({ id:crypto.randomUUID(), type, label:copy.widgetLabels[type], tag:options[0], col:position?.col ?? index % 6 + 1, row:position?.row ?? Math.floor(index / 6) + 1, offsetX:position?.offsetX ?? 0, offsetY:position?.offsetY ?? 0 }); workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); persist(); }
+function addHmiWidget(type, position = null) { if (!["switch", "lamp", "value", "trend"].includes(type)) return; const copy = hmiScreenCopy[language] || hmiScreenCopy.en, model = hmiModel(), tags = inferTags(), options = type === "switch" ? tags.inputs : type === "lamp" ? tags.outputs : [...new Set([...tags.inputs,...tags.outputs])]; if (!options.length) { toast(copy.noTags); return; } pushHistory(); const index = model.widgets.length, widget = { id:crypto.randomUUID(), type, label:copy.widgetLabels[type], tag:options[0], col:position?.col ?? index % 6 + 1, row:position?.row ?? Math.floor(index / 6) + 1, offsetX:position?.offsetX ?? 0, offsetY:position?.offsetY ?? 0 }; model.widgets.push(widget); selectedHmiWidgetId = widget.id; workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); persist(); }
 function sampleHmiHistory() { const widgets = project.hmi?.widgets || []; for (const tag of new Set(widgets.filter((widget) => widget.type === "trend").map((widget) => widget.tag))) { const raw = hmiTagValue(tag), numeric = Number(raw); appendTrendSample(hmiHistory, tag, { time:Date.now(), value:Number.isFinite(numeric) ? numeric : raw ? 1 : 0 }, preferences.trendRetention); } }
 function renderHmi() {
   const model = hmiModel(), root = $("#hmiBoard"), tags = inferTags();
   const copy = hmiScreenCopy[language] || hmiScreenCopy.en;
+  const previousScroll = {left:root.scrollLeft,top:root.scrollTop};
+  if (!model.widgets.some((widget) => widget.id === selectedHmiWidgetId)) selectedHmiWidgetId = null;
   const gesturePointers = createSinglePointerGesture();
   const pointerPosition = (event) => { const bounds = root.getBoundingClientRect(), style = getComputedStyle(root), columns = style.gridTemplateColumns.split(" ").map(parseFloat).filter(Number.isFinite), gapX = parseFloat(style.columnGap)||12, gapY = parseFloat(style.rowGap)||12, paddingLeft = parseFloat(style.paddingLeft)||0, paddingTop = parseFloat(style.paddingTop)||0, cellH = root.querySelector("[data-hmi-widget]")?.getBoundingClientRect().height || 125; return hmiPointerPosition(event.clientX, event.clientY, bounds, { scrollLeft:root.scrollLeft, scrollTop:root.scrollTop, paddingLeft, paddingTop, cellW:columns[0]||115, cellH, gapX, gapY, snap:preferences.snap }); };
   $("#hmiScreenSelectLabel").firstChild.textContent = `${copy.screen} `; $("#hmiTitleLabel").firstChild.textContent = `${copy.name} `;
   $("#hmiScreenSelect").setAttribute("aria-label", copy.select); $("#hmiScreenSelect").innerHTML = model.screens.map((screen) => `<option value="${escapeAttr(screen.id)}">${escapeHtml(screen.title)}</option>`).join(""); $("#hmiScreenSelect").value = model.activeScreenId;
-  for (const type of ["switch", "lamp", "value", "trend"]) $(`#hmiPane [data-hmi-add="${type}"]`).textContent = copy[type];
+  for (const type of ["switch", "lamp", "value", "trend"]) $(`[data-hmi-add="${type}"]`).textContent = copy[type];
   $("#addHmiScreen").textContent = copy.add; $("#deleteHmiScreen").textContent = copy.remove;
   $("#hmiTitle").value = model.title || "Main HMI";
   const optionsFor = (widget) => widget.type === "switch" ? tags.inputs : widget.type === "lamp" ? tags.outputs : [...new Set([...tags.inputs,...tags.outputs])];
@@ -692,7 +694,7 @@ function renderHmi() {
     else if (widget.type === "lamp") view = `<div class="hmi-lamp ${value ? "on" : ""}" data-hmi-lamp="${escapeAttr(widget.id)}" role="img" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(value ? copy.a11y.on : copy.a11y.off)}"><i></i><span data-hmi-value="${escapeAttr(widget.id)}">${escapeHtml(value ? copy.a11y.on : copy.a11y.off)}</span></div>`;
     else if (widget.type === "trend") view = `<div class="hmi-trend" data-hmi-trend="${escapeAttr(widget.id)}" role="img" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.trendFor)} ${escapeAttr(widget.tag)}">${trendSampleHeights(samples).map((height) => `<i style="height:${height}%"></i>`).join("")}</div>`;
     else view = `<output class="hmi-value" data-hmi-value="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}">${escapeHtml(String(value))}</output>`;
-    return `<article class="hmi-widget" style="grid-column:${col};grid-row:${row};transform:translate(${preferences.snap ? 0 : Number(widget.offsetX)||0}px,${preferences.snap ? 0 : Number(widget.offsetY)||0}px)" data-hmi-widget="${escapeAttr(widget.id)}"><div class="hmi-widget-title">${escapeHtml(widget.label)}</div><div class="hmi-widget-body">${view}<small>${escapeHtml(widget.tag)}</small></div><div class="hmi-widget-controls"><input data-hmi-field="label" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(copy.a11y.widgetLabel)}" value="${escapeAttr(widget.label)}"><select data-hmi-field="tag" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(copy.a11y.widgetTag)}">${choices.map((tag) => `<option value="${escapeAttr(tag)}" ${tag === widget.tag ? "selected" : ""}>${escapeHtml(tag)}</option>`).join("")}</select><span><button data-hmi-move="up" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveUp)}">↑</button><button data-hmi-move="down" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveDown)}">↓</button><button data-hmi-move="left" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveLeft)}">←</button><button data-hmi-move="right" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveRight)}">→</button><button data-hmi-delete="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.deleteWidget)}">×</button></span></div></article>`;
+    return `<article class="hmi-widget ${selectedHmiWidgetId === widget.id ? "hmi-widget-selected" : ""}" style="grid-column:${col};grid-row:${row};transform:translate(${preferences.snap ? 0 : Number(widget.offsetX)||0}px,${preferences.snap ? 0 : Number(widget.offsetY)||0}px)" data-hmi-widget="${escapeAttr(widget.id)}"><button type="button" class="hmi-widget-title" data-hmi-select="${escapeAttr(widget.id)}" aria-label="${escapeAttr(copy.widgetProperties.title)}: ${escapeAttr(widget.label)}">${escapeHtml(widget.label)}</button><div class="hmi-widget-body">${view}<small>${escapeHtml(widget.tag)}</small></div><div class="hmi-widget-controls"><input data-hmi-field="label" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(copy.a11y.widgetLabel)}" value="${escapeAttr(widget.label)}"><select data-hmi-field="tag" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(copy.a11y.widgetTag)}">${choices.map((tag) => `<option value="${escapeAttr(tag)}" ${tag === widget.tag ? "selected" : ""}>${escapeHtml(tag)}</option>`).join("")}</select><span><button data-hmi-move="up" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveUp)}">↑</button><button data-hmi-move="down" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveDown)}">↓</button><button data-hmi-move="left" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveLeft)}">←</button><button data-hmi-move="right" data-hmi-id="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.moveRight)}">→</button><button data-hmi-delete="${escapeAttr(widget.id)}" aria-label="${escapeAttr(widget.label)}: ${escapeAttr(copy.a11y.deleteWidget)}">×</button></span></div></article>`;
   }).join("") || `<p class="empty-message">${escapeHtml(copy.empty)}</p>`;
   root.querySelectorAll("[data-hmi-widget]").forEach((card) => {
     let drag = null;
@@ -713,7 +715,8 @@ function renderHmi() {
     const finishDrag = (event) => { if (!drag || drag.pointerId !== event.pointerId || !gesturePointers.finish(event)) return; card.classList.remove("drag-ready"); if (drag.moved) { pushHistory(); Object.assign(drag.widget, { col:drag.col, row:drag.row, offsetX:drag.offsetX, offsetY:drag.offsetY }); persist(); render(); } drag = null; };
     card.addEventListener("pointerup", finishDrag); card.addEventListener("pointercancel", (event) => { if (!drag || drag.pointerId !== event.pointerId || !gesturePointers.finish(event)) return; drag = null; card.classList.remove("drag-ready"); render(); });
   });
-  $("#hmiScreenSelect").onchange = () => { pushHistory(); selectHmiScreen(model, $("#hmiScreenSelect").value); renderHmi(); persist(); };
+  root.querySelectorAll("[data-hmi-select]").forEach((button) => button.addEventListener("click", () => { selectedHmiWidgetId = button.dataset.hmiSelect; renderHmi(); }));
+  $("#hmiScreenSelect").onchange = () => { pushHistory(); selectHmiScreen(model, $("#hmiScreenSelect").value); selectedHmiWidgetId = null; renderHmi(); persist(); };
   $("#addHmiScreen").onclick = () => { const title = prompt(copy.prompt); if (!title?.trim()) { if (title !== null) toast(copy.required); return; } if (model.screens.length >= 50) { toast(copy.limit); return; } if (model.screens.some((screen) => screen.title.toLocaleLowerCase() === title.trim().toLocaleLowerCase())) { toast(copy.duplicate); return; } pushHistory(); addHmiScreen(model, title); renderHmi(); persist(); };
   $("#deleteHmiScreen").onclick = () => { if (model.screens.length <= 1) { toast(copy.last); return; } if (!confirm(copy.confirm)) return; pushHistory(); deleteActiveHmiScreen(model); renderHmi(); persist(); };
   $("#hmiTitle").onchange = () => { const title = $("#hmiTitle").value.trim(); if (!title) { toast(copy.required); $("#hmiTitle").value = model.title; return; } if (model.screens.some((screen) => screen.id !== model.activeScreenId && screen.title.toLocaleLowerCase() === title.toLocaleLowerCase())) { toast(copy.duplicate); $("#hmiTitle").value = model.title; return; } pushHistory(); renameHmiScreen(model, title); renderHmi(); persist(); };
@@ -721,7 +724,7 @@ function renderHmi() {
   root.querySelectorAll("[data-hmi-move]").forEach((button) => button.addEventListener("click", () => { const widget = model.widgets.find((item) => item.id === button.dataset.hmiId); if (!widget) return; pushHistory(); if (button.dataset.hmiMove === "up") widget.row = Math.max(1, widget.row - 1); if (button.dataset.hmiMove === "down") widget.row = Math.min(12, widget.row + 1); if (button.dataset.hmiMove === "left") widget.col = Math.max(1, widget.col - 1); if (button.dataset.hmiMove === "right") widget.col = Math.min(6, widget.col + 1); widget.offsetX = 0; widget.offsetY = 0; persist(); render(); }));
   root.querySelectorAll("[data-hmi-delete]").forEach((button) => button.addEventListener("click", () => { pushHistory(); model.widgets = model.widgets.filter((item) => item.id !== button.dataset.hmiDelete); render(); persist(); }));
   root.querySelectorAll("[data-hmi-toggle]").forEach((button) => button.addEventListener("click", () => { const widget = model.widgets.find((item) => item.id === button.dataset.hmiToggle); if (!widget || !tags.inputs.includes(widget.tag)) return; if (Object.hasOwn(forcedInputs, widget.tag)) { toast("Clear the forced value in Watch before using this switch"); return; } sim.values[widget.tag] = !Boolean(sim.values[widget.tag]); project.initialState ||= {}; project.initialState[widget.tag] = sim.values[widget.tag]; logEvent("hmi-input", `${widget.tag} set ${sim.values[widget.tag]}`); doScan(); persist(); }));
-  document.querySelectorAll("#hmiPane [data-hmi-add]").forEach((button) => {
+  document.querySelectorAll("#hmiPane [data-hmi-add], #editorToolboxDock [data-hmi-add]").forEach((button) => {
     let gesture = null, suppressClickUntil = 0;
     button.draggable = false; button.style.touchAction = "none";
     button.onpointerdown = (event) => { if (event.button !== 0) return; if (!gesturePointers.begin(event)) { event.preventDefault?.(); return; } gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, moved:false }; button.setPointerCapture(event.pointerId); };
@@ -730,6 +733,7 @@ function renderHmi() {
     button.onpointercancel = (event) => { if (!gesture || gesture.id !== event.pointerId || !gesturePointers.finish(event)) return; gesture = null; };
     button.onclick = () => { if (Date.now() < suppressClickUntil) return; addHmiWidget(button.dataset.hmiAdd); };
   });
+  renderHmiInspector(model,copy); root.scrollLeft = previousScroll.left; root.scrollTop = previousScroll.top;
   renderHmiAlarms(); renderProcessPanel();
 }
 function showAlarmManager() {
@@ -860,9 +864,28 @@ function showRecipeReview(recipeId) {
   };
 }
 function refreshHmi() { const copy = hmiScreenCopy[language] || hmiScreenCopy.en; for (const widget of project.hmi?.widgets || []) { const value = hmiTagValue(widget.tag), valueNode = document.querySelector(`[data-hmi-value="${CSS.escape(widget.id)}"]`); if (valueNode) valueNode.textContent = widget.type === "value" ? String(value) : (value ? copy.a11y.on : copy.a11y.off); const lamp = document.querySelector(`[data-hmi-lamp="${CSS.escape(widget.id)}"]`); lamp?.classList.toggle("on", Boolean(value)); if (lamp) lamp.setAttribute("aria-label", widget.label + ": " + (value ? copy.a11y.on : copy.a11y.off)); const sw = document.querySelector(`[data-hmi-toggle="${CSS.escape(widget.id)}"]`); if (sw) { sw.classList.toggle("on", Boolean(value)); sw.setAttribute("aria-pressed", String(Boolean(value))); sw.setAttribute("aria-label", widget.label + ": " + (value ? copy.a11y.on : copy.a11y.off)); } const trend = document.querySelector(`[data-hmi-trend="${CSS.escape(widget.id)}"]`); if (trend) trend.innerHTML = trendSampleHeights(hmiHistory[widget.tag] || []).map((height) => `<i style="height:${height}%"></i>`).join(""); } }
+function renderHmiInspector(model, copy) {
+  if (workspaceView !== "hmi") return;
+  const inspector = $("#inspectorContent"), widget = model.widgets.find((item) => item.id === selectedHmiWidgetId);
+  if (!widget) {
+    selectedHmiWidgetId = null;
+    inspector.innerHTML = `<div class="empty-inspector"><div class="inspector-icon">▣</div><b>${escapeHtml(copy.widgetProperties.title)}</b><p>${escapeHtml(copy.widgetProperties.select)}</p></div>`;
+    return;
+  }
+  const card = $("#hmiBoard").querySelector(`[data-hmi-widget="${CSS.escape(widget.id)}"]`), controls = card?.querySelector(".hmi-widget-controls");
+  if (!controls) return;
+  const form = document.createElement("div"), heading = document.createElement("h3"), description = document.createElement("p");
+  form.className = "property-form hmi-widget-inspector"; heading.textContent = copy.widgetProperties.title; description.className = "field-help"; description.textContent = `${copy.widgetLabels[widget.type]} · ${widget.tag}`;
+  form.append(heading,description,controls); inspector.replaceChildren(form);
+}
 function applyWorkspaceView() {
   const hmi = workspaceView === "hmi", electrical = workspaceView === "electrical", other = hmi || electrical, mode = project.editorType || "LD", canvas = $("#canvasWrap"), wasCanvasHidden = canvas.classList.contains("hidden");
   $("#hmiPane").classList.toggle("hidden", !hmi); $("#electricalPane").classList.toggle("hidden", !electrical); $(".editor-area").classList.toggle("hmi-mode", hmi || electrical);
+  $(".workspace").classList.toggle("electrical-workspace-active", electrical);
+  $("#electricalToolboxDock").classList.toggle("hidden", !electrical);
+  const editorToolbox = $("#editorToolboxDock"), toolboxMode = hmi ? "HMI" : electrical ? "ELECTRICAL" : mode;
+  editorToolbox.classList.toggle("hidden", electrical);
+  for (const group of editorToolbox.querySelectorAll("[data-editor-toolbox-mode]")) group.hidden = group.dataset.editorToolboxMode !== toolboxMode;
   canvas.classList.toggle("hidden", other || mode !== "LD"); $("#stPane").classList.toggle("hidden", other || mode !== "ST"); $("#fbdPane").classList.toggle("hidden", other || mode !== "FBD"); $("#sfcPane").classList.toggle("hidden", other || mode !== "SFC");
   $("#logicTab").classList.toggle("active", !other); $("#electricalTab").classList.toggle("active", electrical); $("#hmiTab").classList.toggle("active", hmi);
   if (wasCanvasHidden && !other && mode === "LD" && project.rungs.length > 80) requestAnimationFrame(renderLadder);
@@ -1371,7 +1394,7 @@ function setAccountAccess(state, guestSession = null) {
   const locked = !["guest", "guest-expired", "member"].includes(state);
   if (["guest", "guest-expired"].includes(state) && accountUser?.id) guestDraftStorageKey ||= `adigunsps-guest-draft-${accountUser.id}`;
   if (state !== "guest" && runTimer) { clearInterval(runTimer); runTimer = null; updateStatus(); }
-  for (const selector of [".toolbar", ".app-menus", ".workspace"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
+  for (const selector of [".toolbar", ".app-menus", ".workspace", "#globalQuickCommands"]) { const element = document.querySelector(selector); if (element) element.inert = locked; }
   const button = $("#accountButton"), status = $("#guestSessionStatus"), notice = $("#guestExpiryNotice");
   if (button) {
     const label = state === "member" ? accountText("account") : accountText("signIn");
@@ -2051,7 +2074,7 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("click", (event) => {
   if (accountAccess !== "guest-expired" || event.target.closest?.("dialog,#guestExpiryNotice,#accountButton,#languageButton,#helpButton,#footerHelpLink,[data-app-menu='help'],#contextMenu.help-guide-menu")) return;
-  if (!event.target.closest?.("#projectMenu,.toolbar,.app-menus,.workspace,#contextMenu")) return;
+  if (!event.target.closest?.("#projectMenu,.toolbar,.app-menus,.workspace,#globalQuickCommands,#contextMenu")) return;
   event.preventDefault(); event.stopImmediatePropagation(); showAccount();
 }, true);
 document.addEventListener("visibilitychange", async () => {
@@ -2093,6 +2116,37 @@ function setupAdigunBotWindow() {
   $("#adigunBotWindow").querySelector("[data-window-resize]").setAttribute("aria-label",labels[4]);
   if(adigunBotWindow.isOpen())showAdigunAI();
 }
+function setupResponsiveGlobalCommandDocks() {
+  // Move already-bound real buttons, never clone or duplicate global commands.
+  const actions=["save","undo","redo","run"].map((key)=>document.querySelector(`.toolbar [data-action="${key}"]`)).filter(Boolean);
+  const palette=$("#paletteButton");
+  const moved=[...actions,palette].map((button)=>({button,parent:button.parentNode,next:button.nextSibling}));
+  const desktop=matchMedia("(min-width: 1200px)");
+  const position=()=>{
+    if(desktop.matches) { for(const button of actions) $("#globalQuickCommands").append(button); $("#menuCommandDock").append(palette); }
+    else { for(const {button,parent,next} of [...moved].reverse()) { if(next?.parentNode===parent) parent.insertBefore(button,next); else parent.append(button); } }
+  };
+  position(); desktop.addEventListener?.("change",position);
+}
+function setupContextualEditorToolbox() {
+  const host = $("#editorToolboxDock");
+  const groups = [
+    {mode:"LD",title:"Ladder tools",selectors:['.toolbar [data-action="add-contact"]','.toolbar [data-action="add-rung"]']},
+    {mode:"FBD",title:"Function block tools",selectors:['#fbdPane [data-action="add-fbd-block"]']},
+    {mode:"ST",title:"Structured Text tools",selectors:['#stPane [data-action="compile-st"]']},
+    {mode:"SFC",title:"Sequence chart tools",selectors:['#sfcPane [data-action="add-sfc-step"]','#sfcPane [data-action="add-sfc-transition"]']},
+    {mode:"HMI",title:"HMI widgets",selectors:['#hmiPane [data-hmi-add="switch"]','#hmiPane [data-hmi-add="lamp"]','#hmiPane [data-hmi-add="value"]','#hmiPane [data-hmi-add="trend"]']}
+  ];
+  for (const group of groups) {
+    const section = document.createElement("section"), heading = document.createElement("h3"), controls = document.createElement("div");
+    section.className = "editor-context-group"; section.dataset.editorToolboxMode = group.mode; section.hidden = true;
+    heading.textContent = group.title; controls.className = "editor-context-controls"; section.append(heading,controls);
+    for (const selector of group.selectors) { const button = document.querySelector(selector); if (button) controls.append(button); }
+    if (controls.childElementCount) host.append(section);
+  }
+}
+setupContextualEditorToolbox();
+setupResponsiveGlobalCommandDocks();
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
 for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => $(".workspace").classList.remove("mobile-left-open", "mobile-right-open"));
 startAdigunCopilotObservers();

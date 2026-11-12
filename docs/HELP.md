@@ -26,7 +26,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
 3. Select the profile icon labelled **Sign in** or **Account**, enter email and password, then **Create account** or **Sign in**. Confirm registration by email. Use **Forgot password?** for recovery.
 
-Projects and inputs are left; the canvas fills the center; Properties, Watch, and Diagnostics are right. Run, storage, language, and Help status are in the footer.
+Project and tools: left; canvas: center; Properties/Watch/Diagnostics: right; run/status: footer.
 
 ## Taking the onboarding tour
 
@@ -35,11 +35,11 @@ Projects and inputs are left; the canvas fills the center; Properties, Watch, an
 1. Start the tour; reopen via **? → Safety and help → Start quick tour**.
 2. Use **Back/Next**; **Finish** exits.
 
-Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model limits. 1,000 examples pass checks. Physical control unavailable; devices are software models.
+Guide covers canvas, wiring, BOT and limits. Physical control unavailable.
 
 ## Navigating the interface
 
-**What you'll see:** The top menu bar shows File through Help; the toolbar directly below contains common project and simulation actions.
+**What you'll see:** Menus stay reachable. The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo and Run move to the header.
 
 1. Click a top menu or toolbar control to open its menu or panel.
 2. Click outside or press Escape to close a menu; tap outside on touch.
@@ -59,9 +59,11 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 | Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
-| New, Examples, Save, Run, Step, Reset | Common project and simulation actions | Toolbar below menus |
+| New, Examples, Step, Reset | Project/simulation | Toolbar |
+| Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
-| HMI | Add/move/delete widgets | Toolbar and widget controls |
+| LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
+| HMI widgets | Add; edit, move, delete | Left toolbox; right inspector |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
 | Simulated inputs, Outputs, Project tree | Set test inputs and navigate the open project | Left sidebar |
 | Help & docs | Open help and documentation | Footer |
@@ -113,7 +115,7 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
 ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling: **Project → Cyclic ST tasks**. See User Guide.
 
-4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
+4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. On wide screens, ribbon actions remain in menus and search. Fix reported compile errors.
 
 The HUD is educational: voltage, current, and motor RPM are not calculated. USB controls are under Hardware inventory / BOM.
 
@@ -121,7 +123,7 @@ The HUD is educational: voltage, current, and motor RPM are not calculated. USB 
 
 1. Open **Tags and I/O** and create BOOL inputs `Start` and `Stop`, plus a BOOL output `Motor`.
 2. In **Program / Main**, add a rung with Start NO and Stop NC contacts in series. Add a parallel branch with Motor NO and Stop NC, then use Motor as the output coil.
-3. Open **Components** and add a PLC, contactor, and motor. Wire the educational path and map Motor output to the simulated load in its properties. Link an NO/NC auxiliary contact to its relay under **Associated coil**. A selector’s Position I joins 11–12; Position II joins 11–14. **Blow fuse (manual test)** trips a fuse; delete and replace it afterward. Breakers reset manually. Overcurrent is not modeled. Arrow keys move a focused component header; Shift moves five grid steps.
+3. In **Components**, add PLC, contactor and motor from the **left toolbox**, wire the educational path, and edit selections in **right Properties**. Manufacturer references remain informational. Link an NO/NC auxiliary contact to its relay under **Associated coil**. A selector’s Position I joins 11–12; Position II joins 11–14. **Blow fuse (manual test)** trips a fuse; delete and replace it afterward. Breakers reset manually. Overcurrent is not modeled. Arrow keys move a focused component header; Shift moves five grid steps.
 4. Set Start true and Stop false in **Simulated inputs**, then select **Run**. Relay/contactor coils glow when energized, and linked auxiliary symbols show their computed open/closed positions. Set Stop true to stop the simulated Boolean output; this does not verify real motor or safety wiring. See [COMPONENTS.md](COMPONENTS.md) for the model boundaries.
 
 ## Using Adigun BOT
