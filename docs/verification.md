@@ -347,3 +347,8 @@ In a new Chrome tab on the production origin, the local Untitled project reporte
 ## Production narrow-viewport layout check — 2026-11-12
 
 At a 390 CSS-pixel responsive viewport in a fresh production browser tab, the document stayed 390 pixels wide while the 375-pixel toolbar viewport exposed 1,176 pixels of horizontally scrollable controls. The Untitled HMI remained empty. This responsive viewport override confirms layout containment and a scrollable toolbar, not native-device touch gestures, drawer operation, install behavior, or cross-browser compatibility.
+
+
+## Phone drawer close controls — 2026-11-12
+
+The 390-pixel production layout opened each side drawer, but each drawer covered the Panel layout launcher and had no visible close action. The app now places an accessible, localized close button inside each drawer and advances the offline shell cache to v140. Responsive selector, Help-guide, service-worker, and build checks pass. Post-deploy browser interaction and native-device touch behavior still need verification.

@@ -10,6 +10,10 @@ assert.match(app, /matchMedia\("\(max-width: 760px\)"\)\.matches/, "panel contro
 assert.match(styles, /@media\(max-width:760px\)\{body\{height:100dvh\}/, "compact toolbar and mobile workspace layout must include 710px viewports");
 assert.match(styles, /@media\(max-width:760px\)\{\.workspace:not\(\.mobile-left-open\) \.left-sidebar,\.workspace:not\(\.mobile-right-open\) \.right-sidebar\{display:none\}\}/, "tablet workspace sidebars must close behind drawer controls");
 assert.match(styles, /@media\(max-width:760px\)\{\.workspace\{position:relative\}\.workspace\.mobile-left-open/, "tablet side drawers must have a positioned workspace container");
+assert.match(html, /data-mobile-drawer-close="left"[^>]*aria-label="Close project panel"/, "phone project drawer includes an accessible close control");
+assert.match(html, /data-mobile-drawer-close="right"[^>]*aria-label="Close inspector panel"/, "phone inspector drawer includes an accessible close control");
+assert.match(app, /data-mobile-drawer-close[\s\S]*?classList\.remove\("mobile-left-open", "mobile-right-open"\)/, "either drawer close control clears the open phone drawer");
+assert.match(styles, /\.mobile-panel-close\{display:none\}@media\(max-width:760px\)\{\.mobile-panel-close\{display:inline-grid/, "drawer close controls appear only in the compact layout");
 assert.match(styles, /@media\s*\(\s*min-width:\s*761px\s*\)/, "desktop workspace layout must begin immediately above the compact breakpoint");
 assert.match(html, /id="accountButton"[^>]*class="icon-button account-button[\s\S]*?<svg[\s\S]*?account-status-dot/, "top-bar account control uses a profile icon and status dot");
 assert.match(html, /id="accountAvatarImage" class="account-avatar-image"[^>]*hidden/, "top-bar account control includes an uploaded-avatar image fallback");

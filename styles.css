@@ -154,3 +154,5 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
 .cyclic-task-row{display:grid;gap:8px;min-width:0;margin:12px 0;padding:12px;border:1px solid var(--line)}.cyclic-task-row label{display:grid;gap:4px;min-width:0}.cyclic-task-row input{min-width:0;width:100%}.cyclic-task-row .panel-layout-choice{display:flex}.cyclic-task-row input[type=checkbox]{width:17px}
 .bot-window:not(.is-minimized){min-height:0}
 .context-menu{z-index:6002}
+
+.mobile-panel-close{display:none}@media(max-width:760px){.mobile-panel-close{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:18px}}
