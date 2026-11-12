@@ -6,6 +6,7 @@ import { applicationMenuLabels, createApplicationMenuEntries } from "../src/app-
 import { resolveTheme } from "../src/theme.js";
 import { ui } from "../src/locale-ui.js";
 import { buildLocalizationReport } from "../src/localization.js";
+import { hmiScreenCopy } from "../src/hmi-copy.js";
 import { defaultProject, getTaskCycleMs, makeProjectFromExample, orderFbdBlocks, runExampleChecks, scan, scanFBD, scanSFC } from "../src/engine.js";
 import { validateProject } from "../src/validation.js";
 import { countProjectMatches } from "../src/project-search.js";
@@ -158,7 +159,7 @@ assert.ok(createApplicationMenuEntries("de").edit.some((entry) => entry.label ==
 assert.deepEqual(createApplicationMenuEntries("en").programs.map((entry) => entry.action), ["mixed-programs", "st-programs", "mode-LD", "mode-FBD", "mode-ST", "st-functions", "st-function-blocks", "mode-SFC"], "Programs menu provides every implemented editor mode");
 assert.ok(createApplicationMenuEntries("yo").project.some((entry) => entry.action === "hardware-inventory"), "Project menu includes the user-entered hardware inventory");
 assert.deepEqual([resolveTheme("system", false), resolveTheme("system", true), resolveTheme("light", false), resolveTheme("dark", true)], ["dark", "light", "light", "dark"], "theme preference resolves system, light, and dark modes");
-const localizationAudit = buildLocalizationReport({ core:ui }, examples);
+const localizationAudit = buildLocalizationReport({ core:ui, hmi:hmiScreenCopy }, examples);
 assert.deepEqual(localizationAudit.rows.map((row) => row.locale), ["en", "de", "yo", "pcm"], "localization report includes all supported languages");
 assert.ok(localizationAudit.rows.every((row) => row.uiComplete === row.uiTotal && row.exampleComplete === row.exampleTotal), "core interface and learning content are complete in every supported language");
 assert.ok(localizationAudit.rows.every((row) => row.reviewer === null && row.reviewStatus.includes("pending")), "audit does not imply translation review approval");
@@ -639,6 +640,7 @@ assert.ok(app.includes("sortProjectsByRecent(await store.all())") && app.include
 assert.ok(serviceWorker.includes("./src/project-list.js"), "offline shell caches recent-project sorting");
 assert.ok(app.includes("hmiPointerPosition(event.clientX, event.clientY, bounds") && app.includes('$("#snapToggle").addEventListener("change"'), "HMI snap control changes placement and persists its preference");
 assert.ok(serviceWorker.includes("./src/hmi-layout.js"), "offline shell caches HMI layout positioning");
+assert.ok(serviceWorker.includes("./src/hmi-copy.js"), "offline shell caches localized HMI screen and palette copy");
 assert.ok(serviceWorker.includes("./src/fbd-layout.js"), "offline shell caches FBD canvas positioning");
 assert.ok(serviceWorker.includes("./src/fbd-validation.js"), "offline shell caches per-block FBD validation");
 assert.ok(app.includes("data-fbd-drag-handle") && app.includes("moveFbdBlocks") && app.includes("ArrowLeft"), "FBD blocks support pointer placement and keyboard movement");
