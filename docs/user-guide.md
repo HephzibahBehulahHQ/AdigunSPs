@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 9566)
-Total output lines: 279
-
 # User guide
 
 ## Refresh an older application version
@@ -71,7 +68,131 @@ END_PROGRAM
 4. Open **Programs → ST programs** and select **Edit source** beside a definition to focus it. Move whole PROGRAM blocks in ST to change execution order, then compile again.
 5. Use **Record**, advance with **Step**, and open **Trace** to inspect **Program locals** in historical state changes. **Restore selected scan** restores those locals along with the rest of the recorded simulation state.
 
-Without custom task assignments, statements outside declarations execute first; named programs then execute once in source order on every scan. Later assignmen…4566 tokens truncated…t** exports the local open history.
+Without custom task assignments, statements outside declarations execute first; named programs then execute once in source order on every scan. Later assignments to the same global output determine its final value for that scan. Programs may call declared scalar functions; they are not themselves callable as functions.
+
+Declare BOOL, INT, REAL or TIME locals inside `VAR ... END_VAR`, using `Name : Type;`. Locals persist across scans, are separate between programs and shadow equally named global tags within their program. Changing a program's local declarations reinitializes that program's locals; renaming or removing a program drops its old state after the next scan.
+
+**Reset**, opening another project, and browser reload start execution state again; normal project saving stores source, not live local values. Trace snapshots preserve local state for replay and restoration. Keep global tag names distinct from program/function names and from qualified private names such as `CounterStage.Cycles`.
+
+This subset supports at most 32 named ST programs with 128 local declarations each, including function-block instances. Program headers must be on their own line and end with `END_PROGRAM`; initializers, program input/output parameter blocks, event/interrupt tasks and LD/FBD/SFC program POUs are not implemented. It is not complete IEC configuration or vendor interchange support.
+
+### Scheduling named ST programs
+
+**What you'll see:** **Project → Cyclic ST tasks** edits periods, priorities, enabled state and program execution order. The settings apply while the ST editor is selected; other editor modes keep their existing scan behavior.
+
+1. Use the CounterStage/Indicate example above. In **Project → Project task and preferences**, set **Task cycle (ms)** to 100 and select **Done**.
+2. Open **Project → Cyclic ST tasks**. Change the default row to name `Counter`, period 100, priority 0, and programs `CounterStage`.
+3. Select **Add task**. Enter name `Indicator`, period 200, priority 1, and programs `Indicate`; leave both tasks **Enabled**.
+4. Select **Save tasks**, then **Reset**, then **Step** four times. CountView reaches 4; Complete stays false at step 3 and becomes true at step 4 because Indicate runs every 200 simulated milliseconds.
+5. Use **Record** and **Trace** to inspect **Task timing** and restore a recorded scan. Select **Use default task** in the task editor to return all named programs to once-per-base-scan execution; locals remain until Reset.
+
+Tasks release at their period boundaries after time zero; the base scan holds one sampled input image for releases within that interval. Releases run in chronological order; simultaneous releases use lower priority numbers first, then task-row order. Each task runs its comma-separated program list in that order; statements outside PROGRAM blocks still run once per base scan.
+
+Every declared program must belong to exactly one task, including programs assigned to disabled tasks. Disabling stops that task's updates and holds its outputs; other running code may still write those outputs. A configuration change restarts task timing while preserving program locals; Reset clears the clock, outputs and locals.
+
+Limits are 16 tasks, periods of 1–60000 whole milliseconds, priorities 0–31 and 1024 releases/program activations per base scan. Invalid assignments or an excessive release count produce a diagnostic and preserve previous outputs, local state and task clock; reduce the base cycle or increase periods before retrying. This is deterministic, non-preemptive simulation scheduling, not real-time hardware or interrupt execution.
+
+Changes stay in the editor draft until **Save tasks**; closing the window discards that draft. Saved assignments travel with project JSON; malformed task data are rejected on import, while unresolved program names remain editable and appear in Diagnostics. Changing task configuration or the base cycle invalidates an older trace.
+
+### Reusable ST scalar functions
+
+**What you'll see:** The existing ST editor accepts function declarations and calls in the same source. Functions have positional inputs passed by value, private local variables initialized on every call, and a BOOL, INT, REAL, or TIME result.
+
+1. In a project copy, choose **Project → Cyclic ST tasks → Use default task**. In **Project → Tags and I/O**, add `Raw` as a REAL input and `Result` as a REAL output.
+2. Choose **Programs → Functions**, then **Open ST editor**, and enter this source:
+
+```iecst
+FUNCTION Clamp01 : REAL
+VAR_INPUT
+ X : REAL;
+END_VAR
+IF X < 0 THEN Clamp01 := 0;
+ELSIF X > 1 THEN Clamp01 := 1;
+ELSE Clamp01 := X;
+END_IF;
+END_FUNCTION
+Result := Clamp01(Raw);
+```
+
+3. Select **Compile**, then **Reset**. In I/O, set Raw to -2, 0.4, then 3 and select **Step** after each change; Result becomes 0, 0.4, then 1.
+4. Save normally; declarations remain part of the project's ST source and JSON export.
+
+**Programs → Functions** lists declared signatures, local-variable counts and source lines, with compile errors in an expandable section. Select **Edit source** beside a function to focus its declaration in ST; declarations remain editable in the existing editor. The panel lists source definitions even when another part of the program has errors. Command search includes Functions and all other registered menu actions.
+
+Put each `FUNCTION Name : Type` header on its own line and close it with `END_FUNCTION`. Declare inputs in `VAR_INPUT ... END_VAR` and locals in `VAR ... END_VAR`, using `Name : Type;`; assign the result to the function's own name. Calls and declarations ignore letter case; function names must differ from global tag names.
+
+Functions can call other declared functions, including ones below them, but cannot access global tags directly. Inputs are read-only copies and locals/results start at false or zero on each call; there is no retained instance state. Global tag renaming skips function definitions, so equally named private variables remain unchanged.
+
+Limits are 32 functions, 16 inputs and 128 locals per function, a call depth of 32 and 10,000 calls per scan. Recursive calls, unknown functions, wrong argument counts and duplicate names are rejected; runtime faults preserve the affected output and appear in Diagnostics. Named arguments to scalar functions, initializers, arrays, VAR_IN_OUT and complete POU/task organization remain unsupported. Stateful blocks use separate instance calls described below.
+
+### Stateful ST function blocks
+
+**What you'll see:** **Programs → Function blocks** lists block types, their inputs and outputs, and source lines. **ST programs** lists the instances declared in each program. Unlike scalar functions, each instance keeps its own input, output and local values between calls.
+
+1. In a project copy, choose **Project → Cyclic ST tasks → Use default task**. In **Project → Tags and I/O**, add BOOL inputs `Start` and `Stop` and a BOOL output `Motor`.
+2. Choose **Programs → Function blocks**, then **Open ST editor**, and enter:
+
+```iecst
+FUNCTION_BLOCK MemoryLatch
+VAR_INPUT
+ Set : BOOL;
+ Clear : BOOL;
+END_VAR
+VAR_OUTPUT
+ Q : BOOL;
+END_VAR
+IF Clear THEN Q := FALSE;
+ELSIF Set THEN Q := TRUE;
+END_IF;
+END_FUNCTION_BLOCK
+PROGRAM Control
+VAR
+ Memory : MemoryLatch;
+END_VAR
+Memory(Set := Start, Clear := Stop);
+Motor := Memory.Q;
+END_PROGRAM
+```
+
+3. Select **Compile**, then **Reset**. In I/O, turn Start on and select **Step**; Motor turns on.
+4. Turn Start off and step; Motor stays on. Turn Stop on and step; Motor turns off even if Start is on.
+5. Select **Record**, run a few steps, and open **Trace**. Inspect the instance under **Program locals**, or choose **Restore selected scan** to resume from recorded instance state.
+
+Define each block with `FUNCTION_BLOCK Name` on its own line and close it with `END_FUNCTION_BLOCK`. Declare BOOL, INT, REAL or TIME fields in `VAR_INPUT`, `VAR_OUTPUT` and private `VAR` sections. Inside a PROGRAM's `VAR` section, declare an instance with `Instance : BlockType;` and call it as a statement with named inputs.
+
+Use `Instance.Input := value;` to set an input before a call, or supply it as `Instance(Input := value);`. Omitted inputs retain their previous values; `Instance();` uses those values. Inputs are read-only inside the block, outputs are read-only outside, and private locals cannot be accessed by the caller.
+
+Each successful call commits the instance's state and publishes its outputs for later statements. A failed call preserves its previous state and reports the source error; exceeding the shared 10,000-call or 32-depth limit preserves the entire scan's previous outputs and state. Skipping a call holds its state, and a block on a cyclic task runs only when its program runs.
+
+The subset allows 32 block types and 64 instances, with up to 16 inputs, 16 outputs and 128 total scalar fields per type. Reset or a declaration-layout change reinitializes the affected program state; project files store source, while trace snapshots store runtime state. Nested instances, `VAR_IN_OUT`, output arrows, initializers, arrays, built-in ST timer blocks and cross-language instances are not implemented.
+
+FBD blocks execute in dependency order. Add Boolean blocks (AND/OR accept up to eight inputs; NAND/NOR/XOR/XNOR have two), TON/TOF/TP/RTO, CTU/CTD, R_TRIG/F_TRIG, arithmetic (ADD, SUB, MUL, DIV), or comparisons (GT, LT, EQ); enter comma-separated tag names for inputs and an output tag. Arithmetic and comparison inputs must use numeric tags. Counter and RTO blocks accept a second reset input. ST supports semicolon-terminated assignments across lines or on the same line, BOOL logic, numeric literals, `+`, `-`, `*`, `/`, comparisons, and parentheses; numeric assignments use the declared INT, REAL, or TIME tag type. Division by zero appears as a runtime diagnostic. The supported local subset does not implement multiple LD/FBD/SFC programs, nested block instances, arrays, or the full IEC language. SFC steps list active output tags; transitions use an input tag with NO or NC behavior.
+
+## Simulate
+
+Open the **I/O** panel to change simulated digital switches and numeric analog inputs, then view digital lamps and numeric outputs. Numeric inputs are available to FBD arithmetic and comparison blocks. Open **Watch** to monitor live digital values or force a simulated input on/off for this session. **Faults** inject session-only stuck-high/stuck-low faults on digital inputs and outputs, or numeric offsets on analog inputs and outputs. **Scenario** runs up to 1,000 validated JSON scan frames with optional expected-output checks in the local simulator. Trace recording stores active faults and replays them with the scan history. Tap the ○ control on an LD rung to set a breakpoint; Run pauses before that rung, then the next Run or Step passes it once. **Run** scans repeatedly, **Pause** holds the current state, **Step** performs one scan, and **Reset** clears timers, output state, and forced inputs. **Events** shows recent session scans, scan duration, breakpoints, forced values, and ST compile errors. **Record** captures scan inputs and full runtime snapshots in memory; **Replay** resets the simulator and repeats the input sequence against the same program; **Trace** compares adjacent historical states, restores a selected scan for inspection or continuation, and exports JSON. Mark historical scans as breakpoints to pause replay at those positions; markers shift with the bounded history window. History is limited to the latest 5,000 scans and remains in memory for this session. Editing the program invalidates replay for that trace. On the Ladder canvas, hold Space and drag (or use the middle mouse button) to pan; on touch, drag a blank canvas area. Each project saves its pan and zoom position. Use the clickable minimap to jump to a network; open Logic outline for keyboard/screen-reader network, contact, and output navigation. Arrow keys move through outline items. Green contacts and outputs indicate energized logic. Timer presets and task cycle settings are measured in simulated milliseconds.
+
+The Example browser contains 1,000 examples across six categories. Each example provides a description, **How to test** steps, localized notes, tags, I/O mapping, expected behavior, fault notes, and executable test cases. The Bot can search for examples by scenario and offer a **Load** action. The Counters and sequencers category exercises CTU pulses, held inputs, preset/reset behavior, and a two-phase SET/RESET sequence with repeatable multi-scan scenarios. **Export test report CSV** saves the pass/fail results for all example scenarios with expected and actual values and fault explanations. Loading an example replaces the open project; export or duplicate first if you want to preserve it under a separate name.
+
+## HMI screen
+
+For the thermal process model, choose a heater input and an optional cooler input. Set heater and cooler rates; passive temperature loss moves the value toward ambient when both inputs are off. If both are on, the configured rates combine. These controls are educational model parameters, not validated operating ranges.
+
+Choose **HMI** beside the logic tab. Click **＋ Switch**, **＋ Lamp**, **＋ Value**, or **＋ Trend** in its toolbar, or drag a button onto the canvas, to add a tag-bound widget to the active screen. Reposition a widget by dragging its title or using the arrow controls. HMI widget states and screen-reader labels for fields, trends, and Move/Delete controls follow the selected interface language. **Processes** adds tank, conveyor, motor inertia, thermal, pump-curve, and PID educational models; each model writes a numeric value to its output tag after each scan. The live 2D process mimic binds each drawn element to that tag and shows its current value. Select BOOL run inputs for enabled models and a numeric process-variable tag for PID. Tank supports an optional digital drain input. Numeric values work in basic FBD and ST arithmetic/comparison expressions and HMI displays; LD and SFC still evaluate Boolean logic only. ST supports semicolon-terminated assignments across lines or on the same line, BOOL operators, numeric literals, arithmetic, and numeric comparisons; it does not yet support multiple LD/FBD/SFC programs, nested block instances, arrays, or the full IEC language. Create or manage BOOL alarms or numeric high/low threshold alarms from the toolbar; alarm thresholds require numeric tags, finite numeric limits, and supported high/low comparisons; invalid readings do not trigger matches. For numeric alarms, Hysteresis is a non-negative clearing margin (default 0). A high alarm at 75 with hysteresis 5 raises at 75 and clears at 70; a low alarm at 10 with hysteresis 2 clears at 12. Values inside that band retain the active state, preventing repeated events near the threshold. This does not filter invalid sensor readings or provide a safety function. Active alarms support acknowledgement, shelving, suppression, event history, and JSON export. In **Recipes**, enter **Recipe name** and select **Save current inputs as recipe** to save BOOL and numeric inputs; saving the same name creates a new version. The screen, alarms, recipes, and process models save with the project. The Tags & I/O panel can print a generic wiring-reference worksheet from configured I/O addresses; it leaves field terminals and wire numbers for the verified hardware design. Trend values stay in session memory up to the selected limit and **Export trend CSV** downloads branded timestamps and values. The buffer resets on reload; it is not durable historian storage. The process view remains a schematic educational simulation with no validated engineering ranges, 3D geometry, or physical hardware.
+
+Open **Operations** to see session-only simulated runtime for Boolean outputs. Enter a load in kW for each output and a tariff per kWh to estimate average power, energy, and cost; cost uses the same currency unit as the tariff, and these values are assumptions, not meter readings. An optional duty-cycle threshold flags outputs for review. Runtime resets when you switch projects or reload; export the branded CSV to keep the current estimate.
+
+## Languages and offline use
+
+The language button cycles English, German, Yoruba, and Nigerian Pidgin. Project names and tags remain project data when the interface language changes. In Project properties, set a separate project language; generated I/O, wiring, BOM, scenario, trend, and operations reports use that language while the controls remain in the selected interface language. Open **Settings** to enable or disable local autosave, set simulation speed and trend retention (60, 300, or 1,000 samples), increase contrast, or switch to a simple sans-serif font. With autosave disabled, use Save to write changes to local storage. Serve the app over localhost or HTTPS to install it and enable offline shell caching. Browser storage is local to that browser profile.
+
+## Adigun BOT
+
+Open **Adigun BOT** from the floating button or **Tools**. The Bot window stays below the top menus. The offline helper can explain curated electrical and PLC lessons and create limited drafts for FBD gates, TON delayed lamps, or LD start/stop circuits. It shows a plan and assumptions before import or save; guests may import but cannot download or cloud-save. Optional speech input depends on browser support. Hosted answers are optional and require a signed-in account; read [Help → Hosted AI privacy](HELP.md#hosted-ai-privacy) before sending a request. The Bot does not build schematic wiring, edit arbitrary existing projects, or approve safety designs; see [BOT.md](BOT.md) for supported prompts and limits.
+
+## External resources
+
+Choose **Help → External resources** to review the supplied source repository or add a URL with English, German, Yoruba, and Nigerian Pidgin descriptions. New URLs start unapproved; approval applies to that exact HTTPS URL. The registry and its access log are stored in this browser only and do not create organization-wide admin controls. **Check link** uses an HTTPS HEAD request when the remote site allows it; network or CORS blocks are reported as unverified. Opening a resource requires confirmation, and **Download access audit** exports the local open history.
 
 ## Modbus TCP simulator
 
@@ -155,4 +276,3 @@ A scenario frame with a compiler or runtime error reports FAIL even if the previ
 Open **I/O & Tags → Hardware inventory / BOM**, then select **Connect USB** in a browser with Web Serial support. Choose the port for a device running compatible firmware. **USB port open** confirms the browser opened the port.
 
 Select **Sync device** to send SYNC. A device acknowledgement starts a one-second heartbeat. **Stop all outputs** sends a stop request and closes the connection after the reply or timeout. An acknowledgement confirms receipt of the stop command. Physical shutdown must be verified separately. Use the independent hardwired emergency stop when immediate shutdown is required.
-
