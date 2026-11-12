@@ -26,7 +26,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
 3. Select the profile icon labelled **Sign in** or **Account**, enter email and password, then **Create account** or **Sign in**. Confirm registration by email. Use **Forgot password?** for recovery.
 
-Projects and inputs are left; the canvas fills the center; Properties, Watch, and Diagnostics are right. Run, storage, language, and Help status are in the footer.
+Project and tools: left; canvas: center; Properties/Watch/Diagnostics: right; run/status: footer.
 
 ## Taking the onboarding tour
 
@@ -35,11 +35,11 @@ Projects and inputs are left; the canvas fills the center; Properties, Watch, an
 1. Start the tour; reopen via **? → Safety and help → Start quick tour**.
 2. Use **Back/Next**; **Finish** exits.
 
-Guide covers canvas, wiring, BOT and model limits. All 1,000 examples pass. Physical control unavailable.
+Guide covers canvas, wiring, BOT and limits. Physical control unavailable.
 
 ## Navigating the interface
 
-**What you'll see:** File–Help menus remain reachable. At 1200 px, Save, Undo, Redo and Run move to the header.
+**What you'll see:** Menus stay reachable. The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo and Run move to the header.
 
 1. Click a top menu or toolbar control to open its menu or panel.
 2. Click outside or press Escape to close a menu; tap outside on touch.
@@ -59,9 +59,11 @@ Guide covers canvas, wiring, BOT and model limits. All 1,000 examples pass. Phys
 | Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
-| New, Examples, Step, Reset | Project/simulation | Toolbar |\n| Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
+| New, Examples, Step, Reset | Project/simulation | Toolbar |
+| Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
-| HMI | Add/move/delete widgets | Toolbar and widget controls |
+| LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
+| HMI widgets | Add, move, delete | Toolbox and canvas |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
 | Simulated inputs, Outputs, Project tree | Set test inputs and navigate the open project | Left sidebar |
 | Help & docs | Open help and documentation | Footer |

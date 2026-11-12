@@ -16,3 +16,8 @@ assert.match(app,/function setupResponsiveGlobalCommandDocks\(\)/);
 assert.match(app,/\[\.\.\.moved\]\.reverse\(\)/);
 assert.match(app,/matchMedia\("\(min-width: 1200px\)"\)/);
 assert.match(css,/@media\(max-width:1199px\)\{\.header-quick-commands,\.menu-command-dock\{display:none\}\}/);
+assert.match(html,/id="editorToolboxDock" class="editor-context-toolbox hidden"/);
+assert.match(app,/function setupContextualEditorToolbox\(\)/);
+for (const mode of ["LD","FBD","ST","SFC","HMI"]) assert.match(app,new RegExp(`mode:"${mode}"`));
+assert.match(app,/group\.hidden = group\.dataset\.editorToolboxMode !== toolboxMode/);
+assert.match(app,/document\.querySelectorAll\("#hmiPane \[data-hmi-add\], #editorToolboxDock \[data-hmi-add\]"\)/);

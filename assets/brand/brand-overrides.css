@@ -169,6 +169,14 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 .electrical-toolbox-dock .industrial-catalog form{min-width:0;max-width:100%;display:flex;flex-direction:column;gap:7px}
 .electrical-toolbox-dock .industrial-catalog ul{padding-left:17px;overflow-wrap:anywhere}
 .electrical-toolbox-dock .industrial-catalog a{overflow-wrap:anywhere}
+.editor-context-toolbox{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:10px;border-bottom:1px solid var(--line)}
+.editor-context-group{margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.editor-context-group[hidden]{display:none}
+.editor-context-group h3{margin:2px 0 9px;color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.editor-context-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.editor-context-controls button{box-sizing:border-box;min-width:0;min-height:36px;width:100%;padding:6px;font-size:11px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+.editor-context-group[data-editor-toolbox-mode="ST"] .editor-context-controls{grid-template-columns:minmax(0,1fr)}
+.editor-context-toolbox:empty{display:none}
 #electricalPane.electrical-editor-pane{box-sizing:border-box;flex:1;min-height:0;height:auto;overflow:hidden;padding:0}
 #electricalPane>.electrical-pane{box-sizing:border-box;display:flex;flex-direction:column;gap:6px;height:100%;min-height:0;max-height:100%;padding:8px}
 #electricalPane .electrical-body{display:grid;grid-template-columns:minmax(0,1fr);gap:0;flex:1;min-height:0;min-width:0;overflow:hidden}

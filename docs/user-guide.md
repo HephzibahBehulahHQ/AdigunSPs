@@ -18,7 +18,7 @@ A circuit breaker can be opened and manually reset in its properties. To test a 
 
 Open the project selector beside the project name. Create a blank starter project, open a saved project, duplicate it, rename it, or delete it. Changes save to IndexedDB on this device. Use the restore button beside a project to select one of its latest 25 saved snapshots. Use **Save as** to make a named copy; use **Export** to keep a portable JSON file, or **File → Export PLCopen XML** for the supported TC6 2.01 LD subset. **Import** opens JSON projects or supported PLCopen TC6 2.00 and 2.01 XML as a new local project. XML import accepts a single ladder program POU and rejects files with additional POUs. XML interchange handles series NO/NC and rising/falling edge contacts, parallel OR paths, normal/set/reset coils, and export of TON on-delay timers with integer-millisecond presets. Timer XML import, other timer types, counters, and other editor languages are rejected.
 
-On first use, the welcome popup explains the workspace and offers **Start quick tour** or **Continue**. The six-step tour covers the ladder canvas, Components and Examples, schematic terminal wiring, Adigun BOT, Run/Step and the simulation HUD, and the hardware-model boundary. Reopen it later via **? → Safety and help → Start quick tour**; use **Back** and **Next** to navigate and **Finish** to close it. Physical-device control is not available in this build; electrical components are software models.
+On first use, the welcome popup explains the workspace and offers **Start quick tour** or **Continue**. The six-step tour covers the ladder canvas, Components and Examples, schematic terminal wiring, Adigun BOT, Run/Step and the simulation HUD, and the hardware-model boundary. Reopen it later via **? → Safety and help → Start quick tour**; use **Back** and **Next** to navigate and **Finish** to close it. Physical-device control is not available in this build; electrical components are software models. Physical control unavailable.
 
 ## Account access and guest work
 
@@ -284,3 +284,7 @@ Select **Components** to open a large schematic viewport. The left project panel
 ### Wide-screen command relocation
 
 On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run buttons move from the long command toolbar into unused header space. The existing command-search button moves to the application-menu row. On narrower screens these same buttons return to their original locations; no duplicate controls are created, and original functions remain unchanged.
+
+### Contextual editor tools
+
+The left project panel now shows the existing actions for the active editor: Add contact/Rung for LD, Add block for FBD, Compile for ST, Add step/Transition for SFC, and Switch/Lamp/Value/Trend for HMI. The original button elements and actions are reused. HMI screen selection, naming, alarms, processes, and history tools remain in the HMI editor row.
