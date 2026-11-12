@@ -24,4 +24,7 @@ assert.match(app,/document\.querySelectorAll\("#hmiPane \[data-hmi-add\], #edito
 
 assert.match(css,/@media\(min-width:1200px\)\{\.toolbar\{display:none\}\}/,"the overflowing ribbon must be removed at wide desktop sizes");
 assert.match(menus,/online:\[\[[\s\S]*?\["sound","sound"\]\]/,"simulation sound must remain reachable after the ribbon is hidden");
-assert.match(menus,/saveAs:"Save as"[\s\S]*?save:"Save"/,"file actions remain translated and menu reachable");
+for (const action of ["new","examples","save","save-as","import","export","print","undo","redo","io","faults","operations","scenario","run","pause","step","stop","sound","record","replay","trace","events","zoom-in","zoom-out","grid"]) {
+  assert.ok(menus.includes(`\"${action}\"`),`${action} remains reachable through an application menu after the wide ribbon is hidden`);
+}
+assert.equal((menus.match(/sound:"[^"]+"/g)||[]).length,4,"simulation sound has a label in every supported menu locale");
