@@ -43,7 +43,7 @@
 
   <main class="workspace">
     <aside class="sidebar left-sidebar">
-      <div class="panel-heading"><span id="projectHeading">PROJECT</span><button class="subtle-button" data-action="add-rung">＋</button></div>
+      <div class="panel-heading"><span id="projectHeading">PROJECT</span><button type="button" class="mobile-panel-close" data-mobile-drawer-close="left" aria-label="Close project panel" title="Close project panel">×</button><button class="subtle-button" data-action="add-rung">＋</button></div>
       <div class="project-tree"><div class="tree-project">▾ <span id="treeProjectName">My first program</span></div><button class="tree-item selected">⌁ <span id="programTreeLabel">Program Main [LD]</span></button><button class="tree-item" data-action="tags">◉ <span id="tagsTreeLabel">Tags &amp; I/O</span></button><button class="tree-item" data-action="examples">▤ <span id="exampleTreeLabel">Example library</span></button></div>
       <section class="side-card"><div class="panel-heading"><span id="inputsHeading">SIMULATED INPUTS</span><span class="count-pill" id="inputCount">0</span></div><div id="inputList" class="io-list"></div></section>
       <section class="side-card output-card"><div class="panel-heading"><span id="outputsHeading">OUTPUTS</span><span class="count-pill" id="outputCount">0</span></div><div id="outputList" class="io-list"></div></section>
@@ -63,7 +63,7 @@
     </section>
 
     <aside class="sidebar right-sidebar">
-      <div class="inspector-tabs"><button class="active" id="propertiesTab">PROPERTIES</button><button data-action="watch" id="watchTab">WATCH</button></div>
+      <div class="inspector-tabs"><button class="active" id="propertiesTab">PROPERTIES</button><button data-action="watch" id="watchTab">WATCH</button><button type="button" class="mobile-panel-close" data-mobile-drawer-close="right" aria-label="Close inspector panel" title="Close inspector panel">×</button></div>
       <div id="inspectorContent" class="inspector-content"><div class="empty-inspector"><div class="inspector-icon">⌘</div><b>Instruction properties</b><p>Select a contact or coil in the ladder to edit its tag and behavior.</p></div></div>
       <section class="diagnostic-panel"><div class="panel-heading"><span id="diagnosticsHeading">DIAGNOSTICS</span><span class="diagnostic-ok" id="diagnosticSummary">CHECKING</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Logic validation</span><span class="muted" id="logicValidationState">Ready</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Simulation engine</span><span class="muted">Ready</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Project storage</span><span class="muted">Local</span></div></section>
       <div class="version-card"><span id="versionProductName">AdigunSPs</span><div>v0.1 · Educational</div></div>

@@ -42,7 +42,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 **What you'll see:** The top menu bar shows File through Help; the toolbar directly below contains common project and simulation actions.
 
 1. Click a top menu or toolbar control to open its menu or panel.
-2. Move the pointer outside an open menu, click outside, or press Escape to close it. On touch screens, tap outside.
+2. Click outside or press Escape to close a menu; tap outside on touch.
 3. Select **Help** to read this guide. Use the **Safety and help** icon (?) for safety notes and the guided tour; **External resources** remains available below this guide.
 
 | Menu / icon | What it does | Where it is |
@@ -56,7 +56,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 | Programs | Choose LD, FBD, ST, or SFC | Top menu bar |
 | Online / Debug | Simulation tools, watch, trace, events, checks | Top menu bar |
 | Tools | Examples, ST compile, scenarios, estimates, Modbus simulator, Adigun BOT | Top menu bar |
-| Window / Settings | Panel layout, preferences, language | Top menu bar |
+| Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
 | New, Examples, Save, Run, Step, Reset | Common project and simulation actions | Toolbar below menus |

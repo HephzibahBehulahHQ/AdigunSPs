@@ -239,6 +239,8 @@ On narrow phones the header uses two rows: company/product identity above, proje
 
 On phones, scroll the editor tabs and its control row sideways to reach extra controls; the page itself stays within the screen.
 
+Choose **Panel layout** to open the Project and I/O panel or the Inspector and diagnostics panel. Tap the **×** at the top of the open side panel to close it.
+
 Hosted questions show **Waiting for a reply...** and temporarily disable other sends. Choose **Cancel request**, or close the Bot, to stop waiting; requests time out after 45 seconds, including session lookup and response reading. Cancellation or timeout does not undo a request already processed; the project remains unchanged, and a reply from a different project/account is discarded.
 
 ### Mixed-language project files

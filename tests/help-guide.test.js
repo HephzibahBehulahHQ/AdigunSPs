@@ -49,6 +49,8 @@ assert.match(app, /<p class="safety-copy">\$\{tour\[language\]\.welcome\}<\/p>/,
 assert.doesNotMatch(app, /<p class="safety-copy">\$\{tour\[language\]\.welcome\}<\/p><p class="safety-copy"><strong>\$\{t\("safety"\)\}/, "welcome popup no longer repeats the long safety warning");
 assert.match(rendered, /id="taking-the-onboarding-tour"/);
 assert.match(guide, /Physical control unavailable/);
+assert.match(guide, /Window \/ Settings[\s\S]*?open phone drawers here, close with \*\*×\*\*/);
+assert.match(userGuide, /Choose \*\*Panel layout\*\*[\s\S]*?Tap the \*\*×\*\* at the top of the open side panel to close it/);
 assert.match(renderHelpMarkdown("## Safe\n\n<script>alert(1)</script>"), /&lt;script&gt;/, "Markdown rendering escapes HTML");
 console.log("PASS: Help guide, localized six-step tour, popup copy, safe rendering, and offline cache");
 

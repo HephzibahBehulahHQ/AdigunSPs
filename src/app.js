@@ -1955,6 +1955,8 @@ function action(name) {
 function applyLocale() {
   for (const button of document.querySelectorAll("[data-app-menu]")) button.textContent = applicationMenuLabels[language]?.[button.dataset.appMenu] || applicationMenuLabels.en[button.dataset.appMenu];
   const panelTitle = ({ en:"Panel layout", de:"Panelanordnung", yo:"Ìṣètò pánẹ́lì", pcm:"Panel layout" })[language]; $("#panelLayoutButton").title = panelTitle; $("#panelLayoutButton").setAttribute("aria-label", panelTitle);
+  const drawerCloseLabels = { left:{en:"Close project panel",de:"Projektbereich schließen",yo:"Pa pánẹ́lì iṣẹ́",pcm:"Close project panel"}, right:{en:"Close inspector panel",de:"Inspektorbereich schließen",yo:"Pa pánẹ́lì olùṣàyẹ̀wò",pcm:"Close inspector panel"} };
+  for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) { const label = drawerCloseLabels[button.dataset.mobileDrawerClose]?.[language] || drawerCloseLabels[button.dataset.mobileDrawerClose]?.en; if (label) { button.setAttribute("aria-label", label); button.title = label; } }
   $("#operationsButton").textContent = operationsCopy[language].button; $("#operationsButton").title = operationsCopy[language].title;
   const electricalTabLabel = ({en:"Components",de:"Komponenten",yo:"Àwọn component",pcm:"Components"})[language]; $("#electricalTabLabel").textContent = electricalTabLabel; $("#electricalTab").setAttribute("aria-label",electricalTabLabel);
   const chrome = {
@@ -2090,6 +2092,7 @@ function setupAdigunBotWindow() {
   if(adigunBotWindow.isOpen())showAdigunAI();
 }
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
+for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => $(".workspace").classList.remove("mobile-left-open", "mobile-right-open"));
 startAdigunCopilotObservers();
 init().then(setupAdigunBotWindow);
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js").catch(() => {});
