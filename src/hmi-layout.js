@@ -9,3 +9,21 @@ export function hmiDragPosition(x, y, cellW, cellH, gapX = 12, gapY = 12, snap =
 export function hmiPointerPosition(clientX, clientY, bounds, { scrollLeft = 0, scrollTop = 0, paddingLeft = 0, paddingTop = 0, cellW, cellH, gapX = 12, gapY = 12, snap = true }) {
   return hmiDragPosition(clientX - bounds.left + scrollLeft - paddingLeft, clientY - bounds.top + scrollTop - paddingTop, cellW, cellH, gapX, gapY, snap);
 }
+
+export function createSinglePointerGesture() {
+  let activePointerId = null;
+  const owns = (event) => activePointerId !== null && activePointerId === event?.pointerId;
+  return {
+    begin(event) {
+      if (event?.isPrimary === false || activePointerId !== null) return false;
+      activePointerId = event?.pointerId ?? null;
+      return activePointerId !== null;
+    },
+    owns,
+    finish(event) {
+      if (!owns(event)) return false;
+      activePointerId = null;
+      return true;
+    }
+  };
+}

@@ -20,7 +20,7 @@ import { applyAnalogFaults, applyInputFaults, applyOutputFaults } from "./faults
 import { createIoScheduleCsv, createIoSchedulePrintHtml, createExampleTestReportCsv, createTrendHistoryCsv, createWiringReferenceHtml, createHardwareBomCsv, createHardwareBomPrintHtml, createScenarioTestReportCsv, createScenarioTestReportHtml, createPanelLayoutReferenceHtml } from "./reports.js";
 import { openSerialExchange } from "./hardware-serial-protocol.js";
 import { validateHardwareItem } from "./hardware.js";
-import { hmiPointerPosition } from "./hmi-layout.js";
+import { hmiPointerPosition, createSinglePointerGesture } from "./hmi-layout.js";
 import { hmiScreenCopy } from "./hmi-copy.js";
 import { validateScenario, runScenario } from "./scenarios.js";
 import { appendTrendSample, trendSampleHeights, trimTrendHistory } from "./hmi-history.js";
@@ -679,6 +679,7 @@ function sampleHmiHistory() { const widgets = project.hmi?.widgets || []; for (c
 function renderHmi() {
   const model = hmiModel(), root = $("#hmiBoard"), tags = inferTags();
   const copy = hmiScreenCopy[language] || hmiScreenCopy.en;
+  const gesturePointers = createSinglePointerGesture();
   const pointerPosition = (event) => { const bounds = root.getBoundingClientRect(), style = getComputedStyle(root), columns = style.gridTemplateColumns.split(" ").map(parseFloat).filter(Number.isFinite), gapX = parseFloat(style.columnGap)||12, gapY = parseFloat(style.rowGap)||12, paddingLeft = parseFloat(style.paddingLeft)||0, paddingTop = parseFloat(style.paddingTop)||0, cellH = root.querySelector("[data-hmi-widget]")?.getBoundingClientRect().height || 125; return hmiPointerPosition(event.clientX, event.clientY, bounds, { scrollLeft:root.scrollLeft, scrollTop:root.scrollTop, paddingLeft, paddingTop, cellW:columns[0]||115, cellH, gapX, gapY, snap:preferences.snap }); };
   $("#hmiScreenSelectLabel").firstChild.textContent = `${copy.screen} `; $("#hmiTitleLabel").firstChild.textContent = `${copy.name} `;
   $("#hmiScreenSelect").setAttribute("aria-label", copy.select); $("#hmiScreenSelect").innerHTML = model.screens.map((screen) => `<option value="${escapeAttr(screen.id)}">${escapeHtml(screen.title)}</option>`).join(""); $("#hmiScreenSelect").value = model.activeScreenId;
@@ -698,18 +699,19 @@ function renderHmi() {
     card.addEventListener("pointerdown", (event) => {
       if (event.target.closest("button,input,select,.hmi-widget-controls")) return;
       const widget = model.widgets.find((item) => item.id === card.dataset.hmiWidget); if (!widget) return;
+      if (!gesturePointers.begin(event)) { event.preventDefault?.(); return; }
       drag = { pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, widget, col:Number(widget.col)||1, row:Number(widget.row)||1, moved:false };
       card.setPointerCapture(event.pointerId); card.classList.add("drag-ready");
     });
     card.addEventListener("pointermove", (event) => {
-      if (!drag || drag.pointerId !== event.pointerId) return;
+      if (!drag || drag.pointerId !== event.pointerId || !gesturePointers.owns(event)) return;
       if (Math.abs(event.clientX-drag.startX) + Math.abs(event.clientY-drag.startY) > 6) drag.moved = true;
       if (!drag.moved) return;
       const position = pointerPosition(event);
       card.style.gridColumn = String(position.col); card.style.gridRow = String(position.row); card.style.transform = `translate(${position.offsetX}px,${position.offsetY}px)`; Object.assign(drag, position);
     });
-    const finishDrag = (event) => { if (!drag || drag.pointerId !== event.pointerId) return; card.classList.remove("drag-ready"); if (drag.moved) { pushHistory(); Object.assign(drag.widget, { col:drag.col, row:drag.row, offsetX:drag.offsetX, offsetY:drag.offsetY }); persist(); render(); } drag = null; };
-    card.addEventListener("pointerup", finishDrag); card.addEventListener("pointercancel", () => { drag = null; card.classList.remove("drag-ready"); render(); });
+    const finishDrag = (event) => { if (!drag || drag.pointerId !== event.pointerId || !gesturePointers.finish(event)) return; card.classList.remove("drag-ready"); if (drag.moved) { pushHistory(); Object.assign(drag.widget, { col:drag.col, row:drag.row, offsetX:drag.offsetX, offsetY:drag.offsetY }); persist(); render(); } drag = null; };
+    card.addEventListener("pointerup", finishDrag); card.addEventListener("pointercancel", (event) => { if (!drag || drag.pointerId !== event.pointerId || !gesturePointers.finish(event)) return; drag = null; card.classList.remove("drag-ready"); render(); });
   });
   $("#hmiScreenSelect").onchange = () => { pushHistory(); selectHmiScreen(model, $("#hmiScreenSelect").value); renderHmi(); persist(); };
   $("#addHmiScreen").onclick = () => { const title = prompt(copy.prompt); if (!title?.trim()) { if (title !== null) toast(copy.required); return; } if (model.screens.length >= 50) { toast(copy.limit); return; } if (model.screens.some((screen) => screen.title.toLocaleLowerCase() === title.trim().toLocaleLowerCase())) { toast(copy.duplicate); return; } pushHistory(); addHmiScreen(model, title); renderHmi(); persist(); };
@@ -722,10 +724,10 @@ function renderHmi() {
   document.querySelectorAll("#hmiPane [data-hmi-add]").forEach((button) => {
     let gesture = null, suppressClickUntil = 0;
     button.draggable = false; button.style.touchAction = "none";
-    button.onpointerdown = (event) => { if (event.button !== 0) return; gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, moved:false }; button.setPointerCapture(event.pointerId); };
-    button.onpointermove = (event) => { if (!gesture || gesture.id !== event.pointerId) return; if (Math.abs(event.clientX-gesture.x)+Math.abs(event.clientY-gesture.y) > 6) gesture.moved = true; if (gesture.moved) event.preventDefault(); };
-    button.onpointerup = (event) => { if (!gesture || gesture.id !== event.pointerId) return; const moved = gesture.moved; gesture = null; if (!moved) return; suppressClickUntil = Date.now()+500; if (root.contains(document.elementFromPoint(event.clientX,event.clientY))) addHmiWidget(button.dataset.hmiAdd,pointerPosition(event)); };
-    button.onpointercancel = () => { gesture = null; };
+    button.onpointerdown = (event) => { if (event.button !== 0) return; if (!gesturePointers.begin(event)) { event.preventDefault?.(); return; } gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, moved:false }; button.setPointerCapture(event.pointerId); };
+    button.onpointermove = (event) => { if (!gesture || gesture.id !== event.pointerId || !gesturePointers.owns(event)) return; if (Math.abs(event.clientX-gesture.x)+Math.abs(event.clientY-gesture.y) > 6) gesture.moved = true; if (gesture.moved) event.preventDefault(); };
+    button.onpointerup = (event) => { if (!gesture || gesture.id !== event.pointerId || !gesturePointers.finish(event)) return; const moved = gesture.moved; gesture = null; if (!moved) return; suppressClickUntil = Date.now()+500; if (root.contains(document.elementFromPoint(event.clientX,event.clientY))) addHmiWidget(button.dataset.hmiAdd,pointerPosition(event)); };
+    button.onpointercancel = (event) => { if (!gesture || gesture.id !== event.pointerId || !gesturePointers.finish(event)) return; gesture = null; };
     button.onclick = () => { if (Date.now() < suppressClickUntil) return; addHmiWidget(button.dataset.hmiAdd); };
   });
   renderHmiAlarms(); renderProcessPanel();
