@@ -20,13 +20,13 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 
 ## Getting started
 
-**What you'll see:** The editor shows an untitled project, top menus, canvas, side panels and bottom status.
+**What you'll see:** An untitled project, menus, canvas, side panels, and status.
 
 1. Open the AdigunSPs website in your browser.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
 3. Select the profile icon labelled **Sign in** or **Account**, enter email and password, then **Create account** or **Sign in**. Confirm registration by email. Use **Forgot password?** for recovery.
 
-The project tree and inputs are left; the canvas is centered; Properties, Watch, and Diagnostics are right. The footer shows run, storage, language, and help status.
+Projects and inputs are left; the canvas fills the center; Properties, Watch, and Diagnostics are right. Run, storage, language, and Help status are in the footer.
 
 ## Taking the onboarding tour
 
@@ -61,6 +61,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
 | New, Examples, Save, Run, Step, Reset | Common project and simulation actions | Toolbar below menus |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
+| HMI add buttons | Add screen widgets | Toolbar |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
 | Simulated inputs, Outputs, Project tree | Set test inputs and navigate the open project | Left sidebar |
 | Help & docs | Open help and documentation | Footer |
