@@ -20,7 +20,7 @@ import { renderProcessTwin } from "../src/process-view.js";
 import { applyAnalogFaults, applyInputFaults, applyOutputFaults } from "../src/faults.js";
 import { createIoScheduleCsv, createIoSchedulePrintHtml, createExampleTestReportCsv, createTrendHistoryCsv, createWiringReferenceHtml, createScenarioTestReportCsv, createScenarioTestReportHtml } from "../src/reports.js";
 import { appendTrendSample, trendSampleHeights, trimTrendHistory } from "../src/hmi-history.js";
-import { hmiDragPosition } from "../src/hmi-layout.js";
+import { hmiDragPosition, hmiPointerPosition } from "../src/hmi-layout.js";
 import { fbdBlockPosition, moveFbdBlocks, fbdCanvasSize, fbdVisibleBlockIndices, fbdZoomToFit, copyFbdBlocks, pasteFbdBlocks, assignFbdCopyTags, createFbdInternalBoolTag, removeFbdBlocks } from "../src/fbd-layout.js";
 import { runScenario, validateScenario } from "../src/scenarios.js";
 import { isHistoricalBreakpoint, shiftHistoricalBreakpoints } from "../src/trace-utils.js";
@@ -637,7 +637,7 @@ assert.ok(app.includes("createHardwareBomCsv(serializeProject()") && app.include
 assert.ok(app.includes("function showProjectProperties(projectId)") && app.includes("data-properties=\"${p.id}\""), "project manager exposes editable project properties");
 assert.ok(app.includes("sortProjectsByRecent(await store.all())") && app.includes("await store.touch(project)"), "project manager orders by last open without creating snapshots on project open");
 assert.ok(serviceWorker.includes("./src/project-list.js"), "offline shell caches recent-project sorting");
-assert.ok(app.includes("hmiDragPosition(x, y, cellW, cellH, gapX, gapY, preferences.snap)") && app.includes('$("#snapToggle").addEventListener("change"'), "HMI snap control changes placement and persists its preference");
+assert.ok(app.includes("hmiPointerPosition(event.clientX, event.clientY, bounds") && app.includes('$("#snapToggle").addEventListener("change"'), "HMI snap control changes placement and persists its preference");
 assert.ok(serviceWorker.includes("./src/hmi-layout.js"), "offline shell caches HMI layout positioning");
 assert.ok(serviceWorker.includes("./src/fbd-layout.js"), "offline shell caches FBD canvas positioning");
 assert.ok(serviceWorker.includes("./src/fbd-validation.js"), "offline shell caches per-block FBD validation");
@@ -674,6 +674,8 @@ assert.match(app, /class="analog-value"/, "simulated I/O exposes editable analog
 assert.match(app, /input\.type === "checkbox" \? input\.checked : Number\(input\.value\)/, "simulated I/O stores BOOL and numeric input values with matching types");
 assert.match(app, /function renderHmi\(\)/, "tag-bound HMI renderer exists");
 assert.ok(html.includes('data-hmi-add="trend"'), "HMI designer offers trend widgets");
+assert.deepEqual(hmiPointerPosition(180, 75, { left:10, top:20 }, { scrollLeft:20, scrollTop:10, paddingLeft:18, paddingTop:18, cellW:100, cellH:100, gapX:10, gapY:10 }), { col:2, row:1, offsetX:0, offsetY:0 }, "HMI drop coordinates account for board scroll and padding before grid snapping");
+assert.ok(app.includes('application/x-adigunsps-hmi-widget') && app.includes('root.ondrop = (event) =>') && app.includes('addHmiWidget(type, pointerPosition(event))'), "HMI palette widgets can be dropped onto the active screen at the pointer position");
 assert.ok(app.includes('document.querySelectorAll("#hmiPane [data-hmi-add]")') && app.includes("button.onclick = () => addHmiWidget(button.dataset.hmiAdd)") && !app.includes('root.querySelectorAll("[data-hmi-add]")'), "HMI widget toolbar buttons bind from their actual pane and replace prior handlers on re-render");
 assert.ok(html.includes('id="addAlarmButton"') && html.includes('id="manageAlarmsButton"') && html.includes('id="recipesButton"'), "HMI alarm and recipe actions are exposed");
 assert.ok(html.includes('id="processesButton"') && html.includes('id="processPanel"'), "HMI exposes its process simulation manager and panel");

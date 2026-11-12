@@ -20,7 +20,7 @@ import { applyAnalogFaults, applyInputFaults, applyOutputFaults } from "./faults
 import { createIoScheduleCsv, createIoSchedulePrintHtml, createExampleTestReportCsv, createTrendHistoryCsv, createWiringReferenceHtml, createHardwareBomCsv, createHardwareBomPrintHtml, createScenarioTestReportCsv, createScenarioTestReportHtml, createPanelLayoutReferenceHtml } from "./reports.js";
 import { openSerialExchange } from "./hardware-serial-protocol.js";
 import { validateHardwareItem } from "./hardware.js";
-import { hmiDragPosition } from "./hmi-layout.js";
+import { hmiPointerPosition } from "./hmi-layout.js";
 import { validateScenario, runScenario } from "./scenarios.js";
 import { appendTrendSample, trendSampleHeights, trimTrendHistory } from "./hmi-history.js";
 import { isHistoricalBreakpoint, shiftHistoricalBreakpoints, traceSectionValues } from "./trace-utils.js";
@@ -679,11 +679,12 @@ const hmiScreenCopy = {
   yo:{screen:"OJÚ-ÌFẸ́RÀN",name:"ORÚKỌ",select:"Yan ojú-ìfẹ̀rán HMI",add:"＋ Ojú-ìfẹ̀rán",remove:"Pa ojú-ìfẹ̀rán rẹ́",prompt:"Orúkọ ojú-ìfẹ̀rán",required:"Tẹ orúkọ ojú-ìfẹ̀rán sí i.",duplicate:"Orúkọ ojú-ìfẹ̀rán gbọ́dọ̀ yàtọ̀.",limit:"Iṣẹ́ kan lè ní ojú-ìfẹ̀rán HMI 50 péré.",last:"Fi ojú-ìfẹ̀rán HMI kan sílẹ̀ ó kéré tán.",confirm:"Pa ojú-ìfẹ̀rán HMI yìí àti gbogbo widget rẹ́?"},
   pcm:{screen:"SCREEN",name:"NAME",select:"Select HMI screen",add:"＋ Screen",remove:"Delete screen",prompt:"Screen name",required:"Enter screen name.",duplicate:"Screen names must different.",limit:"One project fit get up to 50 HMI screens.",last:"Keep at least one HMI screen.",confirm:"Delete this HMI screen and all the widgets inside?"},
 };
-function addHmiWidget(type) { const model = hmiModel(), tags = inferTags(), options = type === "switch" ? tags.inputs : type === "lamp" ? tags.outputs : [...new Set([...tags.inputs,...tags.outputs])]; if (!options.length) { toast("Add tags before placing HMI widgets"); return; } pushHistory(); const index = model.widgets.length; model.widgets.push({ id:crypto.randomUUID(), type, label:type === "switch" ? "Push button" : type === "lamp" ? "Status lamp" : type === "trend" ? "Trend" : "Value", tag:options[0], col:index % 6 + 1, row:Math.floor(index / 6) + 1 }); workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); persist(); }
+function addHmiWidget(type, position = null) { if (!["switch", "lamp", "value", "trend"].includes(type)) return; const model = hmiModel(), tags = inferTags(), options = type === "switch" ? tags.inputs : type === "lamp" ? tags.outputs : [...new Set([...tags.inputs,...tags.outputs])]; if (!options.length) { toast("Add tags before placing HMI widgets"); return; } pushHistory(); const index = model.widgets.length; model.widgets.push({ id:crypto.randomUUID(), type, label:type === "switch" ? "Push button" : type === "lamp" ? "Status lamp" : type === "trend" ? "Trend" : "Value", tag:options[0], col:position?.col ?? index % 6 + 1, row:position?.row ?? Math.floor(index / 6) + 1, offsetX:position?.offsetX ?? 0, offsetY:position?.offsetY ?? 0 }); workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); persist(); }
 function sampleHmiHistory() { const widgets = project.hmi?.widgets || []; for (const tag of new Set(widgets.filter((widget) => widget.type === "trend").map((widget) => widget.tag))) { const raw = hmiTagValue(tag), numeric = Number(raw); appendTrendSample(hmiHistory, tag, { time:Date.now(), value:Number.isFinite(numeric) ? numeric : raw ? 1 : 0 }, preferences.trendRetention); } }
 function renderHmi() {
   const model = hmiModel(), root = $("#hmiBoard"), tags = inferTags();
   const copy = hmiScreenCopy[language] || hmiScreenCopy.en;
+  const pointerPosition = (event) => { const bounds = root.getBoundingClientRect(), style = getComputedStyle(root), columns = style.gridTemplateColumns.split(" ").map(parseFloat).filter(Number.isFinite), gapX = parseFloat(style.columnGap)||12, gapY = parseFloat(style.rowGap)||12, paddingLeft = parseFloat(style.paddingLeft)||0, paddingTop = parseFloat(style.paddingTop)||0, cellH = root.querySelector("[data-hmi-widget]")?.getBoundingClientRect().height || 125; return hmiPointerPosition(event.clientX, event.clientY, bounds, { scrollLeft:root.scrollLeft, scrollTop:root.scrollTop, paddingLeft, paddingTop, cellW:columns[0]||115, cellH, gapX, gapY, snap:preferences.snap }); };
   $("#hmiScreenSelectLabel").firstChild.textContent = `${copy.screen} `; $("#hmiTitleLabel").firstChild.textContent = `${copy.name} `;
   $("#hmiScreenSelect").setAttribute("aria-label", copy.select); $("#hmiScreenSelect").innerHTML = model.screens.map((screen) => `<option value="${escapeAttr(screen.id)}">${escapeHtml(screen.title)}</option>`).join(""); $("#hmiScreenSelect").value = model.activeScreenId;
   $("#addHmiScreen").textContent = copy.add; $("#deleteHmiScreen").textContent = copy.remove;
@@ -708,9 +709,7 @@ function renderHmi() {
       if (!drag || drag.pointerId !== event.pointerId) return;
       if (Math.abs(event.clientX-drag.startX) + Math.abs(event.clientY-drag.startY) > 6) drag.moved = true;
       if (!drag.moved) return;
-      const bounds = root.getBoundingClientRect(), style = getComputedStyle(root), columns = style.gridTemplateColumns.split(" ").map(parseFloat).filter(Number.isFinite), gapX = parseFloat(style.columnGap)||12, gapY = parseFloat(style.rowGap)||12, padX = parseFloat(style.paddingLeft)||0, padY = parseFloat(style.paddingTop)||0;
-      const cellW = columns[0] || 115, cellH = card.getBoundingClientRect().height || 125, x = event.clientX - bounds.left + root.scrollLeft - padX, y = event.clientY - bounds.top + root.scrollTop - padY;
-      const position = hmiDragPosition(x, y, cellW, cellH, gapX, gapY, preferences.snap);
+      const position = pointerPosition(event);
       card.style.gridColumn = String(position.col); card.style.gridRow = String(position.row); card.style.transform = `translate(${position.offsetX}px,${position.offsetY}px)`; Object.assign(drag, position);
     });
     const finishDrag = (event) => { if (!drag || drag.pointerId !== event.pointerId) return; card.classList.remove("drag-ready"); if (drag.moved) { pushHistory(); Object.assign(drag.widget, { col:drag.col, row:drag.row, offsetX:drag.offsetX, offsetY:drag.offsetY }); persist(); render(); } drag = null; };
@@ -724,7 +723,9 @@ function renderHmi() {
   root.querySelectorAll("[data-hmi-move]").forEach((button) => button.addEventListener("click", () => { const widget = model.widgets.find((item) => item.id === button.dataset.hmiId); if (!widget) return; pushHistory(); if (button.dataset.hmiMove === "up") widget.row = Math.max(1, widget.row - 1); if (button.dataset.hmiMove === "down") widget.row = Math.min(12, widget.row + 1); if (button.dataset.hmiMove === "left") widget.col = Math.max(1, widget.col - 1); if (button.dataset.hmiMove === "right") widget.col = Math.min(6, widget.col + 1); widget.offsetX = 0; widget.offsetY = 0; persist(); render(); }));
   root.querySelectorAll("[data-hmi-delete]").forEach((button) => button.addEventListener("click", () => { pushHistory(); model.widgets = model.widgets.filter((item) => item.id !== button.dataset.hmiDelete); render(); persist(); }));
   root.querySelectorAll("[data-hmi-toggle]").forEach((button) => button.addEventListener("click", () => { const widget = model.widgets.find((item) => item.id === button.dataset.hmiToggle); if (!widget || !tags.inputs.includes(widget.tag)) return; if (Object.hasOwn(forcedInputs, widget.tag)) { toast("Clear the forced value in Watch before using this switch"); return; } sim.values[widget.tag] = !Boolean(sim.values[widget.tag]); project.initialState ||= {}; project.initialState[widget.tag] = sim.values[widget.tag]; logEvent("hmi-input", `${widget.tag} set ${sim.values[widget.tag]}`); doScan(); persist(); }));
-  document.querySelectorAll("#hmiPane [data-hmi-add]").forEach((button) => { button.onclick = () => addHmiWidget(button.dataset.hmiAdd); });
+  document.querySelectorAll("#hmiPane [data-hmi-add]").forEach((button) => { button.draggable = true; button.ondragstart = (event) => { event.dataTransfer.effectAllowed = "copy"; event.dataTransfer.setData("application/x-adigunsps-hmi-widget", button.dataset.hmiAdd); }; button.onclick = () => addHmiWidget(button.dataset.hmiAdd); });
+  root.ondragover = (event) => { if ([...event.dataTransfer.types].includes("application/x-adigunsps-hmi-widget")) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; } };
+  root.ondrop = (event) => { const type = event.dataTransfer.getData("application/x-adigunsps-hmi-widget"); if (!["switch", "lamp", "value", "trend"].includes(type)) return; event.preventDefault(); addHmiWidget(type, pointerPosition(event)); };
   renderHmiAlarms(); renderProcessPanel();
 }
 function showAlarmManager() {
