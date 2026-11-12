@@ -674,6 +674,7 @@ assert.match(app, /class="analog-value"/, "simulated I/O exposes editable analog
 assert.match(app, /input\.type === "checkbox" \? input\.checked : Number\(input\.value\)/, "simulated I/O stores BOOL and numeric input values with matching types");
 assert.match(app, /function renderHmi\(\)/, "tag-bound HMI renderer exists");
 assert.ok(html.includes('data-hmi-add="trend"'), "HMI designer offers trend widgets");
+assert.ok(app.includes('document.querySelectorAll("#hmiPane [data-hmi-add]")') && app.includes("button.onclick = () => addHmiWidget(button.dataset.hmiAdd)") && !app.includes('root.querySelectorAll("[data-hmi-add]")'), "HMI widget toolbar buttons bind from their actual pane and replace prior handlers on re-render");
 assert.ok(html.includes('id="addAlarmButton"') && html.includes('id="manageAlarmsButton"') && html.includes('id="recipesButton"'), "HMI alarm and recipe actions are exposed");
 assert.ok(html.includes('id="processesButton"') && html.includes('id="processPanel"'), "HMI exposes its process simulation manager and panel");
 assert.ok(html.includes('id="hmiScreenSelect"') && html.includes('id="addHmiScreen"') && html.includes('id="deleteHmiScreen"') && serviceWorker.includes("./src/hmi-screens.js"), "HMI exposes offline-cached screen navigation and management");
