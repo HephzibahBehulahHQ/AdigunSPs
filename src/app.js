@@ -2129,7 +2129,6 @@ function setupContextualEditorToolbox() {
 }
 setupContextualEditorToolbox();
 setupResponsiveGlobalCommandDocks();
-applyWorkspaceView();
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
 for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => $(".workspace").classList.remove("mobile-left-open", "mobile-right-open"));
 startAdigunCopilotObservers();
