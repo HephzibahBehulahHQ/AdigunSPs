@@ -11,7 +11,9 @@ function supportedRungs(project) {
   const declared = new Set((project.tags || []).map((tag) => tag.name));
   return project.rungs.map((rung, index) => {
     const paths = rung.branches?.length ? rung.branches : [rung.contacts || []];
-    if (!Array.isArray(paths) || paths.some((path) => !Array.isArray(path)) || !rung.coil || rung.timer || rung.counter || rung.scale || ![undefined, "normal", "set", "reset"].includes(rung.coilMode) || paths.flat().some((contact) => !["NO", "NC", "R_TRIG", "F_TRIG"].includes(contact.mode))) {
+    const timer = rung.timer;
+    const supportedTimer = !timer || ((timer.type || "TON") === "TON" && Number.isInteger(Number(timer.preset)) && Number(timer.preset) > 0 && !timer.resetTag && (timer.output === undefined || timer.output === "DN" || timer.output === "EN") && /^[A-Za-z_][A-Za-z0-9_]*$/.test(timer.tag || ""));
+    if (!Array.isArray(paths) || paths.some((path) => !Array.isArray(path)) || !rung.coil || !supportedTimer || rung.counter || rung.scale || ![undefined, "normal", "set", "reset"].includes(rung.coilMode) || paths.flat().some((contact) => !["NO", "NC", "R_TRIG", "F_TRIG"].includes(contact.mode))) {
       throw new Error(`Network ${index + 1} uses instructions outside the supported PLCopen LD subset.`);
     }
     if (!declared.has(rung.coil) || paths.flat().some((contact) => !declared.has(contact.tag))) throw new Error(`Network ${index + 1} references an undeclared tag.`);
@@ -37,6 +39,9 @@ export function createPlcopenXml(project) {
   const isOutput = (tag) => tag.role === "output" || /^Q\b/i.test(tag.address || "") || (project.io?.outputs || []).includes(tag.name);
   const groups = { inputVars:[], outputVars:[], localVars:[] };
   tags.forEach((tag, index) => groups[isInput(tag) ? "inputVars" : isOutput(tag) ? "outputVars" : "localVars"].push(variables[index]));
+  const timerInstances = [...new Set(rungs.filter((rung) => rung.timer).map((rung) => rung.timer.tag))];
+  if (timerInstances.some((name) => tags.some((tag) => tag.name === name)) || rungs.filter((rung) => rung.timer).length !== timerInstances.length) throw new Error("PLCopen export requires each TON instance name to be unique and undeclared as a project tag.");
+  groups.localVars.push(...timerInstances.map((name) => `<variable name="${esc(name)}"><type><derived name="TON"/></type></variable>`));
   let id = 1, y = 0;
   const body = rungs.map((rung) => {
     const rail = id++, nodes = [], tails = [], paths = rung.branches;
@@ -54,9 +59,16 @@ export function createPlcopenXml(project) {
       });
       tails.push(previous);
     });
+    let coilSource, timerId = null;
     const coilId = id++;
+    if (rung.timer) {
+      timerId = id++; const preset = Math.trunc(Number(rung.timer.preset)), timerWidth = 48, timerX = 64 + maxContacts * 80;
+      nodes.push(`<block localId="${timerId}" width="${timerWidth}" height="48" typeName="TON" instanceName="${esc(rung.timer.tag)}"><position x="${timerX}" y="${y + 24}"/><inputVariables><variable formalParameter="IN"><connectionPointIn><relPosition x="0" y="12"/>${tails.map((tail) => `<connection refLocalId="${tail}"/>`).join("")}</connectionPointIn></variable><variable formalParameter="PT"><connectionPointIn><relPosition x="0" y="36"/><expression>T#${preset}ms</expression></connectionPointIn></variable></inputVariables><inOutVariables/><outputVariables><variable formalParameter="Q"><connectionPointOut><relPosition x="${timerWidth}" y="12"/></connectionPointOut></variable></outputVariables></block>`);
+      coilSource = rung.timer.output === "DN" ? [timerId] : tails;
+    } else coilSource = tails;
     const storage = rung.coilMode === "set" || rung.coilMode === "reset" ? ` storage="${rung.coilMode}"` : "";
-    nodes.push(`<coil localId="${coilId}" width="16" height="2"${storage}><position x="${64 + maxContacts * 80}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${tails.map((tail) => `<connection refLocalId="${tail}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
+    const coilX = 64 + maxContacts * 80 + (rung.timer ? 80 : 0);
+    nodes.push(`<coil localId="${coilId}" width="16" height="2"${storage}><position x="${coilX}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${coilSource.map((source) => `<connection refLocalId="${source}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
     nodes.unshift(`<leftPowerRail localId="${rail}" width="4" height="${Math.max(8, (paths.length - 1) * 2 + 8)}"><position x="32" y="${y + 24}"/><connectionPointOut formalParameter="rail"><relPosition x="4" y="4"/></connectionPointOut></leftPowerRail>`);
     if (rung.comment) nodes.push(`<comment localId="${id++}" width="240" height="16"><position x="32" y="${y + (paths.length - 1) * 16}"/><content><xhtml:p>${esc(rung.comment)}</xhtml:p></content></comment>`);
     y += rungHeight;

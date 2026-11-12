@@ -363,3 +363,7 @@ HMI widget placement and palette drags now share one primary-pointer owner. Seco
 ## PLCopen LD edge and storage modifiers — 2026-11-12
 
 PLCopen TC6 XML import/export maps rising/falling edge contacts to the LD model's `R_TRIG`/`F_TRIG` modes, and `storage="set|reset"` coils to the existing latch modes. Regression checks cover generated attributes, import mapping, scan behavior, and rejection of negated-edge combinations or unknown modifiers. A generated fixture passed the official PLCopen TC6 2.01 XSD. Import mapping is covered with a DOM-shaped test fixture; a browser file-import round-trip and vendor compatibility remain unverified. Timers, counters, multi-POU projects, and other editor languages remain unsupported by this interchange subset.
+
+## PLCopen LD TON export — 2026-11-12
+
+Export now declares a unique TON function-block instance, maps the ladder paths to its IN input, writes an integer-millisecond PT expression, and connects Q to the rung coil when the project uses the timer-done result. Presets with fractional milliseconds and non-TON timer types are rejected instead of rounded or remapped. The generated TON fixture passed the official PLCopen TC6 2.01 XSD; focused regression checks and the static build passed. PLCopen timer import, timer output-time interchange, other timer types, counters, and vendor-tool compatibility remain unverified.

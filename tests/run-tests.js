@@ -106,7 +106,12 @@ assert.match(plcopenXml, /<coil[^>]*>[\s\S]*?<connectionPointIn>[\s\S]*?<connect
 assert.ok(plcopenXml.includes("AdigunSPs alias: Drive A"), "PLCopen export preserves app aliases in standard variable documentation");
 const plcopenModifierXml = createPlcopenXml({ ...plcopenProject, rungs:[{ id:"set-edge", branches:[[{ tag:"Start", mode:"R_TRIG" }]], coil:"Motor", coilMode:"set" }, { id:"reset-edge", branches:[[{ tag:"Stop", mode:"F_TRIG" }]], coil:"Motor", coilMode:"reset" }] });
 assert.ok(plcopenModifierXml.includes('edge="rising"') && plcopenModifierXml.includes('edge="falling"') && plcopenModifierXml.includes('storage="set"') && plcopenModifierXml.includes('storage="reset"'), "PLCopen export preserves LD edge contacts and set/reset coil modifiers");
-assert.throws(() => createPlcopenXml(defaultProject()), /outside the supported PLCopen LD subset/, "PLCopen export refuses unsupported timer networks without silent loss");
+const plcopenTimerProject = {...defaultProject(), rungs:[{ id:"timer-rung", branches:[[{ tag:"Start", mode:"NO" }]], timer:{ tag:"DelayTimer", type:"TON", preset:1500, output:"DN" }, coil:"Lamp" }]};
+const plcopenTimerXml = createPlcopenXml(plcopenTimerProject);
+assert.ok(plcopenTimerXml.includes('<variable name="DelayTimer"><type><derived name="TON"/></type></variable>') && plcopenTimerXml.includes('typeName="TON" instanceName="DelayTimer"') && plcopenTimerXml.includes('<expression>T#1500ms</expression>'), "PLCopen TON export declares an instance and its TIME preset");
+assert.ok(plcopenTimerXml.includes('<block localId="4"') && plcopenTimerXml.includes('<connection refLocalId="4"/>') && plcopenTimerXml.includes('<variable formalParameter="Q"><connectionPointOut>'), "PLCopen TON Q pin is represented and the output coil receives the block result");
+assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, type:"TOF"}}]}), /outside the supported PLCopen LD subset/, "non-TON timer export remains explicit");
+assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, preset:1.5}}]}), /outside the supported PLCopen LD subset/, "fractional millisecond timer presets are rejected rather than rounded");
 assert.throws(() => createPlcopenXml(makeProjectFromExample(examples[5])), /outside the supported PLCopen LD subset/, "PLCopen export refuses LD SCALE instructions without silent loss");
 assert.throws(() => parsePlcopenXml("<!DOCTYPE project [<!ENTITY x 'x'>]><project/>", null), /unsafe/, "PLCopen import rejects DTD and entity declarations");
 function xmlTestNode(localName, attributes = {}, children = [], value = "") {
