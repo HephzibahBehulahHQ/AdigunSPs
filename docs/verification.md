@@ -359,3 +359,7 @@ A fresh tab opened the ordinary production root URL after the release and found 
 ## HMI primary pointer ownership — 2026-11-12
 
 HMI widget placement and palette drags now share one primary-pointer owner. Secondary or overlapping pointers cannot replace the active gesture, and a `pointercancel` for another pointer cannot discard a widget drag. Focused logic and UI-binding regression checks cover both conditions. This is automated coverage; native-device touch acceptance remains open.
+
+## PLCopen LD edge and storage modifiers — 2026-11-12
+
+PLCopen TC6 XML import/export maps rising/falling edge contacts to the LD model's `R_TRIG`/`F_TRIG` modes, and `storage="set|reset"` coils to the existing latch modes. Regression checks cover generated attributes, import mapping, scan behavior, and rejection of negated-edge combinations or unknown modifiers. A generated fixture passed the official PLCopen TC6 2.01 XSD. Import mapping is covered with a DOM-shaped test fixture; a browser file-import round-trip and vendor compatibility remain unverified. Timers, counters, multi-POU projects, and other editor languages remain unsupported by this interchange subset.
