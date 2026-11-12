@@ -63,7 +63,7 @@ Guide covers canvas, wiring, BOT and limits. Physical control unavailable.
 | Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
-| HMI widgets | Add, move, delete | Toolbox and canvas |
+| HMI widgets | Add; edit, move, delete | Left toolbox; right inspector |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
 | Simulated inputs, Outputs, Project tree | Set test inputs and navigate the open project | Left sidebar |
 | Help & docs | Open help and documentation | Footer |

@@ -177,6 +177,11 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 .editor-context-controls button{box-sizing:border-box;min-width:0;min-height:36px;width:100%;padding:6px;font-size:11px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
 .editor-context-group[data-editor-toolbox-mode="ST"] .editor-context-controls{grid-template-columns:minmax(0,1fr)}
 .editor-context-toolbox:empty{display:none}
+button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.hmi-widget.hmi-widget-selected{border-color:#12bfcf;box-shadow:0 0 0 2px #12bfcf66,0 5px 18px #0004}
+.hmi-widget-inspector .hmi-widget-controls{grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
+.hmi-widget-inspector .hmi-widget-controls>span{display:flex;gap:5px}
+.hmi-widget-inspector .hmi-widget-controls>span button{flex:1;min-width:0}
 #electricalPane.electrical-editor-pane{box-sizing:border-box;flex:1;min-height:0;height:auto;overflow:hidden;padding:0}
 #electricalPane>.electrical-pane{box-sizing:border-box;display:flex;flex-direction:column;gap:6px;height:100%;min-height:0;max-height:100%;padding:8px}
 #electricalPane .electrical-body{display:grid;grid-template-columns:minmax(0,1fr);gap:0;flex:1;min-height:0;min-width:0;overflow:hidden}
