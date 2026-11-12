@@ -1,3 +1,11 @@
+# P0 ACTIVE DIRECTIVE — ADIGUNSPS_UI_REBUILD_NOW
+
+**USER-AUTHORIZED IMMEDIATE PRIORITY — 2026-11-12.** At the next safe interruption boundary, stop unrelated feature work, preserve the current working tree and notes, and focus on the AdigunSPs UI/engineering-workspace rebuild. Do not discard unfinished changes or interrupt an atomic operation. This is a **rearrangement/rebuild of the interface only**. EVERY OTHER FUNCTION and engineering model must stay intact.
+
+**TRIGGER:** `ADIGUNSPS_UI_REBUILD_NOW` (also `SUPER_SAVE_ADIGUNSPS_UI_REBUILD`). When this trigger is given, read `docs/ui-redesign/ADIGUNSPS-UI-REBUILD-MASTER-PROMPT.md` and view `docs/ui-redesign/ADIGUNSPS-ENGINEERING-WORKSPACE-CONCEPT.svg`; use those as the accepted design specification. The user has directed implementation to start NOW; do not wait for new authorization to begin safe, reversible work.
+
+**NON-NEGOTIABLE:** no visual clutter, no overlapping menus or panels, canvas must remain usable; move controls into previously unused left/right zones; preserve LD/FBD/ST/SFC/HMI, electrical diagrams and wires, simulation, I/O, persistence, accounts, offline PWA, localization, BOT and safety boundaries. Use staged verified changes. Never silently force-push, remove features, corrupt project data, or claim unrun tests passed. Merge/deploy only after required checks and verified browser acceptance; retain rollback. This instruction is persisted in the repository but cannot forcibly interrupt a Codex process that has not read it.
+
 # AdigunSPs contribution notes
 
 - When adding or changing user-facing options, controls, or workflows, update `docs/HELP.md` and `docs/user-guide.md` in the same change.
