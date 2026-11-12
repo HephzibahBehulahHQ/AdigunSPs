@@ -5,3 +5,7 @@ export function hmiDragPosition(x, y, cellW, cellH, gapX = 12, gapY = 12, snap =
   const offsetY = snap ? 0 : Math.max(0, Math.min(cellH - 24, y - rowIndex * (cellH + gapY)));
   return { col:colIndex + 1, row:rowIndex + 1, offsetX, offsetY };
 }
+
+export function hmiPointerPosition(clientX, clientY, bounds, { scrollLeft = 0, scrollTop = 0, paddingLeft = 0, paddingTop = 0, cellW, cellH, gapX = 12, gapY = 12, snap = true }) {
+  return hmiDragPosition(clientX - bounds.left + scrollLeft - paddingLeft, clientY - bounds.top + scrollTop - paddingTop, cellW, cellH, gapX, gapY, snap);
+}
