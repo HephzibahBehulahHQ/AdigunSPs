@@ -81,6 +81,7 @@ When user-facing labels, options, or workflows change, update both `docs/HELP.md
 - FBD SCALE checks — validate finite nonzero raw ranges, convert raw values to engineering units, and clamp to the scaled output range.
 - HMI domain tests — passed for BOOL and numeric high/low threshold alarm raise/clear behavior, acknowledgement/shelving/suppression, recipe versioning/application, and invalid HMI role, priority, version, and value-type diagnostics.
 - HMI layout tests — verify grid snapping, free within-cell offsets, and board bounds; live pointer interaction remains unverified in a browser.
+- HMI widget fields, trends, states, and move/delete accessible names are localized in all four interfaces; source binding and locale completeness are tested. Runtime screen-reader behavior remains unverified.
 - Trend history tests — verify configurable ring-buffer trimming, numeric chart normalization, branded CSV metadata, UTC sample timestamps, and export wiring; retention is session-only and resets on reload.
 - Process model tests — tank fill/drain state, conveyor position, motor inertia, separate heater/cooler response and passive ambient loss, pump curve, and bounded PID output are covered by `npm test`.
 - Operations tests — simulated elapsed time, per-output runtime, user-entered load/tariff calculations, duty-threshold advisories, and four-locale branded CSV escaping are covered by `npm test`; they do not verify physical energy or equipment health.
