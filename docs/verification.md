@@ -334,3 +334,8 @@ After refreshing application files, a commented ladder downloaded from release e
 ### Production PLCopen re-import
 
 File → Import accepted the schema-validated production XML download and restored the Tag1 input and Tag2 output. The imported rung was not stepped in this browser check. Vendor-tool compatibility remains unverified.
+
+
+## Production HMI palette drag verification — 2026-11-12
+
+On production release `8dd563d`, I created a temporary BOOL `Tag1` input in the local Untitled project, dragged **＋ Switch** from the HMI toolbar onto the active screen with Snap enabled, and observed a second **Push button** bound to `Tag1`. Mouse-pointer placement passed. Touch dragging and broader browser QA remain unverified. The temporary test tag and two widgets remained in browser-local project data at verification time; no cloud project was saved.
