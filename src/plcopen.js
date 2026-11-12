@@ -11,7 +11,7 @@ function supportedRungs(project) {
   const declared = new Set((project.tags || []).map((tag) => tag.name));
   return project.rungs.map((rung, index) => {
     const paths = rung.branches?.length ? rung.branches : [rung.contacts || []];
-    if (!Array.isArray(paths) || paths.some((path) => !Array.isArray(path)) || !rung.coil || rung.timer || rung.counter || rung.scale || (rung.coilMode && rung.coilMode !== "normal") || paths.flat().some((contact) => !["NO", "NC"].includes(contact.mode))) {
+    if (!Array.isArray(paths) || paths.some((path) => !Array.isArray(path)) || !rung.coil || rung.timer || rung.counter || rung.scale || ![undefined, "normal", "set", "reset"].includes(rung.coilMode) || paths.flat().some((contact) => !["NO", "NC", "R_TRIG", "F_TRIG"].includes(contact.mode))) {
       throw new Error(`Network ${index + 1} uses instructions outside the supported PLCopen LD subset.`);
     }
     if (!declared.has(rung.coil) || paths.flat().some((contact) => !declared.has(contact.tag))) throw new Error(`Network ${index + 1} references an undeclared tag.`);
@@ -48,13 +48,15 @@ export function createPlcopenXml(project) {
       maxContacts = Math.max(maxContacts, path.length);
       path.forEach((contact, contactIndex) => {
         const localId = id++;
-        nodes.push(`<contact localId="${localId}" width="16" height="2"${contact.mode === "NC" ? ' negated="true"' : ""}><position x="${64 + contactIndex * 80}" y="${branchY}"/><connectionPointIn><relPosition x="0" y="1"/><connection refLocalId="${previous}"/></connectionPointIn><connectionPointOut><relPosition x="16" y="1"/></connectionPointOut><variable>${esc(contact.tag)}</variable></contact>`);
+        const contactAttrs = contact.mode === "NC" ? ' negated="true"' : contact.mode === "R_TRIG" ? ' edge="rising"' : contact.mode === "F_TRIG" ? ' edge="falling"' : "";
+        nodes.push(`<contact localId="${localId}" width="16" height="2"${contactAttrs}><position x="${64 + contactIndex * 80}" y="${branchY}"/><connectionPointIn><relPosition x="0" y="1"/><connection refLocalId="${previous}"/></connectionPointIn><connectionPointOut><relPosition x="16" y="1"/></connectionPointOut><variable>${esc(contact.tag)}</variable></contact>`);
         previous = localId;
       });
       tails.push(previous);
     });
     const coilId = id++;
-    nodes.push(`<coil localId="${coilId}" width="16" height="2"><position x="${64 + maxContacts * 80}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${tails.map((tail) => `<connection refLocalId="${tail}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
+    const storage = rung.coilMode === "set" || rung.coilMode === "reset" ? ` storage="${rung.coilMode}"` : "";
+    nodes.push(`<coil localId="${coilId}" width="16" height="2"${storage}><position x="${64 + maxContacts * 80}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${tails.map((tail) => `<connection refLocalId="${tail}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
     nodes.unshift(`<leftPowerRail localId="${rail}" width="4" height="${Math.max(8, (paths.length - 1) * 2 + 8)}"><position x="32" y="${y + 24}"/><connectionPointOut formalParameter="rail"><relPosition x="4" y="4"/></connectionPointOut></leftPowerRail>`);
     if (rung.comment) nodes.push(`<comment localId="${id++}" width="240" height="16"><position x="32" y="${y + (paths.length - 1) * 16}"/><content><xhtml:p>${esc(rung.comment)}</xhtml:p></content></comment>`);
     y += rungHeight;
@@ -76,6 +78,11 @@ function connectionRefs(node) {
   const points = children(node, "connectionPointIn"), connections = points.flatMap((point) => children(point, "connection"));
   if (!connections.length) throw new Error("PLCopen LD element has no incoming connection.");
   return connections.map((connection) => connection.getAttribute("refLocalId"));
+}
+function xmlBoolean(value, attribute) {
+  if (value === null || value === undefined || value === "false" || value === "0") return false;
+  if (value === "true" || value === "1") return true;
+  throw new Error(`PLCopen ${attribute} attribute must be a valid XML boolean.`);
 }
 
 export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
@@ -107,7 +114,8 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   }
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
   const coils = nodes.filter((node) => node.localName === "coil"), used = new Set(), rungs = coils.map((coil, index) => {
-    if (coil.getAttribute("negated") === "true" || coil.hasAttribute("edge") || coil.hasAttribute("storage")) throw new Error("PLCopen import supports normal coils only.");
+    const coilStorage = coil.getAttribute("storage") || "none";
+    if (xmlBoolean(coil.getAttribute("negated"), "coil negated") || (coil.getAttribute("edge") || "none") !== "none" || !["none", "set", "reset"].includes(coilStorage)) throw new Error("PLCopen import supports normal, set, and reset coils only.");
     const branches = connectionRefs(coil).map((startRef) => {
       const chain = [], visited = new Set(); let ref = startRef;
       while (true) {
@@ -117,10 +125,11 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
         if (!source) throw new Error("PLCopen LD references an unknown localId.");
         if (source.localName === "leftPowerRail") break;
         if (source.localName !== "contact") throw new Error("PLCopen LD has a connection outside the supported series or parallel contact paths.");
-        if (source.hasAttribute("edge") || source.hasAttribute("storage")) throw new Error("PLCopen import supports standard NO and NC contacts only.");
+        const edge = source.getAttribute("edge") || "none", storage = source.getAttribute("storage") || "none", negated = xmlBoolean(source.getAttribute("negated"), "contact negated");
+        if (!["none", "rising", "falling"].includes(edge) || storage !== "none" || (edge !== "none" && negated)) throw new Error("PLCopen import supports standard NO/NC contacts and non-negated rising/falling edge contacts only.");
         const tag = text(child(source, "variable")) || source.getAttribute("name");
         if (!declarations.has(tag)) throw new Error(`PLCopen contact references undeclared tag ${tag || "(unnamed)"}.`);
-        chain.push({ tag, mode:source.getAttribute("negated") === "true" ? "NC" : "NO" });
+        chain.push({ tag, mode:edge === "rising" ? "R_TRIG" : edge === "falling" ? "F_TRIG" : negated ? "NC" : "NO" });
         const refs = connectionRefs(source);
         if (refs.length !== 1) throw new Error("PLCopen import supports parallel series paths that merge at a coil; nested or converging branches are not imported.");
         ref = refs[0];
@@ -133,7 +142,7 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     if (new Set(ids).size !== ids.length || ids.some((id) => used.has(id))) throw new Error("PLCopen LD contact paths are shared; only independent series networks can be imported.");
     ids.forEach((id) => used.add(id));
     const coilY = Number(child(coil, "position")?.getAttribute("y")), comment = commentByY.get(String(coilY - 32));
-    return { id:`plcopen-rung-${index + 1}`, comment:comment || `Network ${index + 1}`, branches:branches.map((branch) => branch.contacts), coil:coilTag };
+    return { id:`plcopen-rung-${index + 1}`, comment:comment || `Network ${index + 1}`, branches:branches.map((branch) => branch.contacts), coil:coilTag, ...(coilStorage === "none" ? {} : { coilMode:coilStorage }) };
   });
   if (!rungs.length) throw new Error("PLCopen LD contains no output coils to import.");
   if (nodes.filter((node) => node.localName === "contact").some((node) => !used.has(node.getAttribute("localId")))) throw new Error("PLCopen LD contains contacts outside imported coil networks.");

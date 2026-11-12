@@ -104,6 +104,8 @@ assert.ok(plcopenXml.includes('xmlns="http://www.plcopen.org/xml/tc6_0201"') && 
 assert.ok(plcopenXml.includes('variable name="Start" address="%IX0.0"') && plcopenXml.includes('<BOOL/>') && plcopenXml.includes('<TIME/>') && plcopenXml.includes('value="T#1500ms"') && plcopenXml.includes('negated="true"'), "PLCopen LD export preserves declarations, addresses, initial values, and NC contacts");
 assert.match(plcopenXml, /<coil[^>]*>[\s\S]*?<connectionPointIn>[\s\S]*?<connection refLocalId="\d+"\/>[\s\S]*?<connection refLocalId="\d+"\/>[\s\S]*?<\/connectionPointIn>[\s\S]*?<variable>Lamp<\/variable>/, "PLCopen export preserves parallel OR branches by connecting each series path to the coil");
 assert.ok(plcopenXml.includes("AdigunSPs alias: Drive A"), "PLCopen export preserves app aliases in standard variable documentation");
+const plcopenModifierXml = createPlcopenXml({ ...plcopenProject, rungs:[{ id:"set-edge", branches:[[{ tag:"Start", mode:"R_TRIG" }]], coil:"Motor", coilMode:"set" }, { id:"reset-edge", branches:[[{ tag:"Stop", mode:"F_TRIG" }]], coil:"Motor", coilMode:"reset" }] });
+assert.ok(plcopenModifierXml.includes('edge="rising"') && plcopenModifierXml.includes('edge="falling"') && plcopenModifierXml.includes('storage="set"') && plcopenModifierXml.includes('storage="reset"'), "PLCopen export preserves LD edge contacts and set/reset coil modifiers");
 assert.throws(() => createPlcopenXml(defaultProject()), /outside the supported PLCopen LD subset/, "PLCopen export refuses unsupported timer networks without silent loss");
 assert.throws(() => createPlcopenXml(makeProjectFromExample(examples[5])), /outside the supported PLCopen LD subset/, "PLCopen export refuses LD SCALE instructions without silent loss");
 assert.throws(() => parsePlcopenXml("<!DOCTYPE project [<!ENTITY x 'x'>]><project/>", null), /unsafe/, "PLCopen import rejects DTD and entity declarations");
@@ -142,6 +144,26 @@ assert.equal(importedPlcopen.initialState.Delay, 1500, "PLCopen importer restore
 assert.deepEqual(importedPlcopen.rungs[0].branches, [[{ tag:"Start", mode:"NO" }, { tag:"Stop", mode:"NC" }], [{ tag:"Sensor", mode:"NO" }]], "PLCopen importer reconstructs parallel OR paths with their series contacts");
 assert.equal(importedPlcopen.rungs[0].comment, "Motor enable", "PLCopen importer restores network comments");
 assert.equal(importedPlcopen.tags.find((tag) => tag.name === "Motor").alias, "Drive A", "PLCopen importer restores aliases recorded in variable documentation");
+const modifierLd = [node("leftPowerRail", { localId:"1" }), node("contact", { localId:"2", edge:"rising" }, [cpIn(1), node("variable", {}, [], "Start")]), node("coil", { localId:"3", storage:"set" }, [cpIn(2), node("variable", {}, [], "Motor")]), node("contact", { localId:"4", edge:"falling" }, [cpIn(1), node("variable", {}, [], "Stop")]), node("coil", { localId:"5", storage:"reset" }, [cpIn(4), node("variable", {}, [], "Motor")])];
+const modifierRoot = node("project", {}, [node("contentHeader", { name:"Edge latch" }), node("types", {}, [node("pous", {}, [node("pou", { pouType:"program" }, [plcInterface, node("body", {}, [node("LD", {}, modifierLd)])])])])]); modifierRoot.namespaceURI = "http://www.plcopen.org/xml/tc6_0201";
+class PlcopenModifierDomParserStub { parseFromString() { return { documentElement:modifierRoot, getElementsByTagName:(name) => descendantsForTest(modifierRoot, name) }; } }
+const importedModifiers = parsePlcopenXml("<project/>", PlcopenModifierDomParserStub);
+assert.deepEqual(importedModifiers.rungs.map((rung) => [rung.branches[0][0].mode, rung.coilMode || "normal"]), [["R_TRIG", "set"], ["F_TRIG", "reset"]], "PLCopen import restores supported edge and storage modifiers");
+let modifierState = scan(importedModifiers, { Start:false, Stop:false }, {});
+modifierState = scan(importedModifiers, { Start:true, Stop:true }, modifierState);
+assert.equal(modifierState.outputs.Motor, true, "PLCopen rising-edge set coil latches its output");
+modifierState = scan(importedModifiers, { Start:true, Stop:false }, modifierState);
+assert.equal(modifierState.outputs.Motor, false, "PLCopen falling-edge reset coil clears the latched output");
+function parseModifierFixture(contactAttrs, coilAttrs = {}) {
+  const fixtureLd = [node("leftPowerRail", { localId:"1" }), node("contact", { localId:"2", ...contactAttrs }, [cpIn(1), node("variable", {}, [], "Start")]), node("coil", { localId:"3", ...coilAttrs }, [cpIn(2), node("variable", {}, [], "Motor")])];
+  const fixtureRoot = node("project", {}, [node("types", {}, [node("pous", {}, [node("pou", { pouType:"program" }, [plcInterface, node("body", {}, [node("LD", {}, fixtureLd)])])])])]); fixtureRoot.namespaceURI = "http://www.plcopen.org/xml/tc6_0201";
+  class FixtureParser { parseFromString() { return { documentElement:fixtureRoot, getElementsByTagName:(name) => descendantsForTest(fixtureRoot, name) }; } }
+  return parsePlcopenXml("<project/>", FixtureParser);
+}
+assert.throws(() => parseModifierFixture({ edge:"rising", negated:"true" }), /non-negated rising\/falling/);
+assert.throws(() => parseModifierFixture({ edge:"none", storage:"set" }), /non-negated rising\/falling/);
+assert.throws(() => parseModifierFixture({ edge:"sideways" }), /non-negated rising\/falling/);
+assert.throws(() => parseModifierFixture({ edge:"none" }, { storage:"toggle" }), /normal, set, and reset coils/);
 assert.deepEqual(Object.keys(applicationMenuLabels), ["en", "de", "yo", "pcm"], "application menu headings cover all supported locales");
 assert.ok(Object.values(applicationMenuLabels).every((labels) => Object.keys(labels).length === 13), "every locale has all application menu headings");
 assert.ok(["en", "de", "yo", "pcm"].every((locale) => createApplicationMenuEntries(locale).debug.some((entry) => entry.action === "standards")), "standards checker is available from Debug in all locales");
