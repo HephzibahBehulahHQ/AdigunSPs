@@ -2095,6 +2095,19 @@ function setupAdigunBotWindow() {
   $("#adigunBotWindow").querySelector("[data-window-resize]").setAttribute("aria-label",labels[4]);
   if(adigunBotWindow.isOpen())showAdigunAI();
 }
+function setupResponsiveGlobalCommandDocks() {
+  // Move already-bound real buttons, never clone or duplicate global commands.
+  const actions=["save","undo","redo","run"].map((key)=>document.querySelector(`.toolbar [data-action="${key}"]`)).filter(Boolean);
+  const palette=$("#paletteButton");
+  const moved=[...actions,palette].map((button)=>({button,parent:button.parentNode,next:button.nextSibling}));
+  const desktop=matchMedia("(min-width: 1440px)");
+  const position=()=>{
+    if(desktop.matches) { for(const button of actions) $("#globalQuickCommands").append(button); $("#menuCommandDock").append(palette); }
+    else { for(const {button,parent,next} of [...moved].reverse()) { if(next?.parentNode===parent) parent.insertBefore(button,next); else parent.append(button); } }
+  };
+  position(); desktop.addEventListener?.("change",position);
+}
+setupResponsiveGlobalCommandDocks();
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
 for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => $(".workspace").classList.remove("mobile-left-open", "mobile-right-open"));
 startAdigunCopilotObservers();

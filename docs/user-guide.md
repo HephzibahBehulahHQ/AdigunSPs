@@ -280,3 +280,7 @@ Select **Sync device** to send SYNC. A device acknowledgement starts a one-secon
 ## Electrical engineering workspace — docked tools and properties
 
 Select **Components** to open a large schematic viewport. The left project panel contains the **existing functional component picker, Place Component, Connect Terminals, Rotate, Duplicate, Delete, Validate, Simulate**, and the collapsible **519-entry manufacturer reference catalogue** (information only). The previously duplicate electrical properties panel is now docked inside the existing right **Properties** inspector; it still includes component fields, I/O mapping, manual simulated inputs, wire connections, validation and status. Use **Panel layout** to open or close side panels. On narrow screens the toolbox/inspector are available through the existing panel drawers. Menu-based I/O, simulation and other controls remain available. This is an interface rearrangement; it changes neither the PLC engine nor electrical simulation and is not a physical wiring design.
+
+### Wide-screen command relocation
+
+On screens at least 1440 pixels wide, the **existing** Save, Undo, Redo and Run buttons move from the long command toolbar into unused header space. The existing command-search button moves to the application-menu row. On smaller screens these same buttons return to their original locations; no duplicate controls are created, and original functions remain unchanged.

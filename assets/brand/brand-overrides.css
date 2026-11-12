@@ -176,3 +176,11 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 #electricalPane .electrical-safety{flex:none;margin:0;line-height:1.35;padding:6px 10px;font-size:10px}
 @media (min-width:1051px){.workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden){grid-template-columns:minmax(225px,260px) minmax(0,1fr) minmax(280px,325px)}}
 @media(max-width:760px){.workspace.electrical-workspace-active .electrical-toolbox-dock{padding:8px}.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{padding:5px}}
+
+/* Use the otherwise empty header/menu space for the same live global commands at wide widths. */
+.header-quick-commands{display:flex;align-items:center;gap:7px;margin-left:auto;flex:none;min-width:0}
+.header-quick-commands button{min-height:34px;max-width:160px;padding:6px 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:12px;white-space:nowrap}
+.header-quick-commands button[data-action="run"]{background:#12bfcf;border-color:#12bfcf;color:#06202b;font-weight:800}
+.menu-command-dock{display:flex;margin-left:auto;align-items:center;min-width:0}
+.menu-command-dock #paletteButton{font-size:15px;flex:none;min-height:25px;border:1px solid var(--line);border-radius:6px}
+@media(max-width:1439px){.header-quick-commands,.menu-command-dock{display:none}}

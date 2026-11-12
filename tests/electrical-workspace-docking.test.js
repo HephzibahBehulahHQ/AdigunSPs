@@ -9,3 +9,8 @@ assert.match(electrical,/inspectorHost\.replaceChildren\(inspector\)/);
 assert.match(css,/#electricalPane \.electrical-body\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
 assert.match(css,/\.workspace\.electrical-workspace-active \.inspector-content\{min-height:0;overflow:auto/);
 console.log("PASS: electrical workspace docking contracts");
+
+assert.match(html,/id="globalQuickCommands" class="header-quick-commands"/);
+assert.match(html,/id="menuCommandDock" class="menu-command-dock"/);
+assert.match(app,/function setupResponsiveGlobalCommandDocks\(\)/);
+assert.match(app,/\[\.\.\.moved\]\.reverse\(\)/);
