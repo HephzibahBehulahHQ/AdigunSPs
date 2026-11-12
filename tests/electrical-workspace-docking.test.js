@@ -13,4 +13,6 @@ console.log("PASS: electrical workspace docking contracts");
 assert.match(html,/id="globalQuickCommands" class="header-quick-commands"/);
 assert.match(html,/id="menuCommandDock" class="menu-command-dock"/);
 assert.match(app,/function setupResponsiveGlobalCommandDocks\(\)/);
-assert.match(app,/\[\.\.\.moved\]\.reverse\(\)/);\nassert.match(app,/matchMedia\("\(min-width: 1200px\)"\)/);\nassert.match(css,/@media\(max-width:1199px\)\{\.header-quick-commands,\.menu-command-dock\{display:none\}\}/);
+assert.match(app,/\[\.\.\.moved\]\.reverse\(\)/);
+assert.match(app,/matchMedia\("\(min-width: 1200px\)"\)/);
+assert.match(css,/@media\(max-width:1199px\)\{\.header-quick-commands,\.menu-command-dock\{display:none\}\}/);
