@@ -121,7 +121,7 @@ The HUD is educational: voltage, current, and motor RPM are not calculated. USB 
 
 1. Open **Tags and I/O** and create BOOL inputs `Start` and `Stop`, plus a BOOL output `Motor`.
 2. In **Program / Main**, add a rung with Start NO and Stop NC contacts in series. Add a parallel branch with Motor NO and Stop NC, then use Motor as the output coil.
-3. Open **Components** and add a PLC, contactor, and motor. Wire the educational path and map Motor output to the simulated load in its properties. Link an NO/NC auxiliary contact to its relay under **Associated coil**. A selector’s Position I joins 11–12; Position II joins 11–14. **Blow fuse (manual test)** trips a fuse; delete and replace it afterward. Breakers reset manually. Overcurrent is not modeled. Arrow keys move a focused component header; Shift moves five grid steps.
+3. In **Components**, add PLC, contactor and motor from the **left toolbox**, wire the educational path, and edit selections in **right Properties**. Manufacturer references remain informational. Link an NO/NC auxiliary contact to its relay under **Associated coil**. A selector’s Position I joins 11–12; Position II joins 11–14. **Blow fuse (manual test)** trips a fuse; delete and replace it afterward. Breakers reset manually. Overcurrent is not modeled. Arrow keys move a focused component header; Shift moves five grid steps.
 4. Set Start true and Stop false in **Simulated inputs**, then select **Run**. Relay/contactor coils glow when energized, and linked auxiliary symbols show their computed open/closed positions. Set Stop true to stop the simulated Boolean output; this does not verify real motor or safety wiring. See [COMPONENTS.md](COMPONENTS.md) for the model boundaries.
 
 ## Using Adigun BOT
@@ -195,7 +195,3 @@ Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms:
 Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
-
-## Electrical engineering workspace — docked tools and properties
-
-Select **Components** to open a large schematic viewport. The left project panel contains the **existing functional component picker, Place Component, Connect Terminals, Rotate, Duplicate, Delete, Validate, Simulate**, and the collapsible **519-entry manufacturer reference catalogue** (information only). The previously duplicate electrical properties panel is now docked inside the existing right **Properties** inspector; it still includes component fields, I/O mapping, manual simulated inputs, wire connections, validation and status. Use **Panel layout** to open or close side panels. On narrow screens the toolbox/inspector are available through the existing panel drawers. Menu-based I/O, simulation and other controls remain available. This is an interface rearrangement; it changes neither the PLC engine nor electrical simulation and is not a physical wiring design.
