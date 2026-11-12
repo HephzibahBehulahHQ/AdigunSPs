@@ -339,3 +339,7 @@ File → Import accepted the schema-validated production XML download and restor
 ## Production HMI palette drag verification — 2026-11-12
 
 On production release `8dd563d`, I created a temporary BOOL `Tag1` input in the local Untitled project, dragged **＋ Switch** from the HMI toolbar onto the active screen with Snap enabled, and observed a second **Push button** bound to `Tag1`. Mouse-pointer placement passed. Touch dragging and broader browser QA remain unverified. The temporary test tag and two widgets remained in browser-local project data at verification time; no cloud project was saved.
+
+## HMI QA project cleanup check — 2026-11-12
+
+In a new Chrome tab on the production origin, the local Untitled project reported 0 simulated inputs and outputs and the active HMI screen had no widgets. The temporary `Tag1` and two QA widgets from the earlier drag check were already absent, so no project data was deleted. The earlier pointer-drag verification remains recorded above.
