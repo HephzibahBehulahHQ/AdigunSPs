@@ -162,4 +162,3 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const name = child(root, "contentHeader")?.getAttribute("name") || "Imported PLCopen project";
   return { id:"", name, language:"en", editorType:"LD", task:{ name:"Main", mode:"cyclic", cycleMs:100 }, tags, io:{ inputs, outputs }, initialState, rungs };
 }
-
