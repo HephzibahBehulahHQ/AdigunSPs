@@ -723,9 +723,15 @@ function renderHmi() {
   root.querySelectorAll("[data-hmi-move]").forEach((button) => button.addEventListener("click", () => { const widget = model.widgets.find((item) => item.id === button.dataset.hmiId); if (!widget) return; pushHistory(); if (button.dataset.hmiMove === "up") widget.row = Math.max(1, widget.row - 1); if (button.dataset.hmiMove === "down") widget.row = Math.min(12, widget.row + 1); if (button.dataset.hmiMove === "left") widget.col = Math.max(1, widget.col - 1); if (button.dataset.hmiMove === "right") widget.col = Math.min(6, widget.col + 1); widget.offsetX = 0; widget.offsetY = 0; persist(); render(); }));
   root.querySelectorAll("[data-hmi-delete]").forEach((button) => button.addEventListener("click", () => { pushHistory(); model.widgets = model.widgets.filter((item) => item.id !== button.dataset.hmiDelete); render(); persist(); }));
   root.querySelectorAll("[data-hmi-toggle]").forEach((button) => button.addEventListener("click", () => { const widget = model.widgets.find((item) => item.id === button.dataset.hmiToggle); if (!widget || !tags.inputs.includes(widget.tag)) return; if (Object.hasOwn(forcedInputs, widget.tag)) { toast("Clear the forced value in Watch before using this switch"); return; } sim.values[widget.tag] = !Boolean(sim.values[widget.tag]); project.initialState ||= {}; project.initialState[widget.tag] = sim.values[widget.tag]; logEvent("hmi-input", `${widget.tag} set ${sim.values[widget.tag]}`); doScan(); persist(); }));
-  document.querySelectorAll("#hmiPane [data-hmi-add]").forEach((button) => { button.draggable = true; button.ondragstart = (event) => { event.dataTransfer.effectAllowed = "copy"; event.dataTransfer.setData("application/x-adigunsps-hmi-widget", button.dataset.hmiAdd); }; button.onclick = () => addHmiWidget(button.dataset.hmiAdd); });
-  root.ondragover = (event) => { if ([...event.dataTransfer.types].includes("application/x-adigunsps-hmi-widget")) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; } };
-  root.ondrop = (event) => { const type = event.dataTransfer.getData("application/x-adigunsps-hmi-widget"); if (!["switch", "lamp", "value", "trend"].includes(type)) return; event.preventDefault(); addHmiWidget(type, pointerPosition(event)); };
+  document.querySelectorAll("#hmiPane [data-hmi-add]").forEach((button) => {
+    let gesture = null, suppressClickUntil = 0;
+    button.draggable = false; button.style.touchAction = "none";
+    button.onpointerdown = (event) => { if (event.button !== 0) return; gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, moved:false }; button.setPointerCapture(event.pointerId); };
+    button.onpointermove = (event) => { if (!gesture || gesture.id !== event.pointerId) return; if (Math.abs(event.clientX-gesture.x)+Math.abs(event.clientY-gesture.y) > 6) gesture.moved = true; if (gesture.moved) event.preventDefault(); };
+    button.onpointerup = (event) => { if (!gesture || gesture.id !== event.pointerId) return; const moved = gesture.moved; gesture = null; if (!moved) return; suppressClickUntil = Date.now()+500; if (root.contains(document.elementFromPoint(event.clientX,event.clientY))) addHmiWidget(button.dataset.hmiAdd,pointerPosition(event)); };
+    button.onpointercancel = () => { gesture = null; };
+    button.onclick = () => { if (Date.now() < suppressClickUntil) return; addHmiWidget(button.dataset.hmiAdd); };
+  });
   renderHmiAlarms(); renderProcessPanel();
 }
 function showAlarmManager() {
