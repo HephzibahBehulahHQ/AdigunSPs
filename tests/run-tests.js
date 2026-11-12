@@ -109,13 +109,13 @@ assert.ok(plcopenModifierXml.includes('edge="rising"') && plcopenModifierXml.inc
 const plcopenTimerProject = {...defaultProject(), rungs:[{ id:"timer-rung", branches:[[{ tag:"Start", mode:"NO" }]], timer:{ tag:"DelayTimer", type:"TON", preset:1500, output:"DN" }, coil:"Lamp" }]};
 const plcopenTimerXml = createPlcopenXml(plcopenTimerProject);
 assert.ok(plcopenTimerXml.includes('<variable name="DelayTimer"><type><derived name="TON"/></type></variable>') && plcopenTimerXml.includes('typeName="TON" instanceName="DelayTimer"') && plcopenTimerXml.includes('<expression>T#1500ms</expression>'), "PLCopen TON export declares an instance and its TIME preset");
-assert.ok(plcopenTimerXml.includes('<block localId="4"') && plcopenTimerXml.includes('<connection refLocalId="4"/>') && plcopenTimerXml.includes('<variable formalParameter="Q"><connectionPointOut>'), "PLCopen TON Q pin is represented and the output coil receives the block result");
+assert.ok(plcopenTimerXml.includes('<block localId="4"') && plcopenTimerXml.includes('<connection refLocalId="4" formalParameter="Q"/>') && plcopenTimerXml.includes('<variable formalParameter="Q"><connectionPointOut>'), "PLCopen TON Q pin is represented and the output coil receives the block result");
 assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, type:"TOF"}}]}), /outside the supported PLCopen LD subset/, "non-TON timer export remains explicit");
 assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, preset:1.5}}]}), /outside the supported PLCopen LD subset/, "fractional millisecond timer presets are rejected rather than rounded");
 assert.throws(() => createPlcopenXml(makeProjectFromExample(examples[5])), /outside the supported PLCopen LD subset/, "PLCopen export refuses LD SCALE instructions without silent loss");
 assert.throws(() => parsePlcopenXml("<!DOCTYPE project [<!ENTITY x 'x'>]><project/>", null), /unsafe/, "PLCopen import rejects DTD and entity declarations");
 function xmlTestNode(localName, attributes = {}, children = [], value = "") {
-  const node = { localName, namespaceURI:null, children, parentElement:null, getAttribute:(name) => attributes[name] ?? null, hasAttribute:(name) => Object.hasOwn(attributes, name), getElementsByTagName:(name) => descendantsForTest(node, name) };
+  const node = { localName, namespaceURI:null, children, parentElement:null, getAttribute:(name) => attributes[name] ?? null, setAttribute:(name, value) => { attributes[name] = value; }, hasAttribute:(name) => Object.hasOwn(attributes, name), getElementsByTagName:(name) => descendantsForTest(node, name) };
   children.forEach((item) => { item.parentElement = node; });
   Object.defineProperty(node, "textContent", { get:() => value + children.map((item) => item.textContent).join("") });
   return node;
@@ -128,6 +128,16 @@ const plcInterface = node("interface", {}, [node("inputVars", {}, [plcVar("Start
 const plcRoot = node("project", {}, [node("contentHeader", { name:"Imported exercise" }), node("types", {}, [node("pous", {}, [node("pou", { pouType:"program" }, [plcInterface, node("body", {}, [node("LD", {}, plcLd)])])])])]); plcRoot.namespaceURI = "http://www.plcopen.org/xml/tc6_0200";
 class PlcopenDomParserStub { parseFromString() { return { documentElement:plcRoot, getElementsByTagName:(name) => descendantsForTest(plcRoot, name) }; } }
 const importedPlcopen = parsePlcopenXml("<project/>", PlcopenDomParserStub);
+const plcopenTonBlock = node("block", { localId:"4", typeName:"TON", instanceName:"DelayTimer" }, [node("inputVariables", {}, [node("variable", { formalParameter:"IN" }, [cpIn(2)]), node("variable", { formalParameter:"PT" }, [node("connectionPointIn", {}, [node("expression", {}, [], "T#1500ms")])])]), node("inOutVariables"), node("outputVariables", {}, [node("variable", { formalParameter:"Q" }, [node("connectionPointOut")])])]);
+const plcopenTonLd = [node("leftPowerRail", { localId:"1" }), node("contact", { localId:"2" }, [cpIn(1), node("variable", {}, [], "Start")]), plcopenTonBlock, node("coil", { localId:"3" }, [node("connectionPointIn", {}, [node("connection", { refLocalId:"4", formalParameter:"Q" })]), node("variable", {}, [], "Motor"), node("position", { y:"32" })])];
+const plcopenTonInterface = node("interface", {}, [node("inputVars", {}, [plcVar("Start", "BOOL", "%IX0.0", "inputVars", "FALSE")]), node("outputVars", {}, [plcVar("Motor", "BOOL", "%QX0.0", "outputVars")]), node("localVars", {}, [node("variable", { name:"DelayTimer" }, [node("type", {}, [node("derived", { name:"TON" })])])])]);
+const plcopenTonRoot = node("project", {}, [node("contentHeader", { name:"TON exercise" }), node("types", {}, [node("pous", {}, [node("pou", { pouType:"program" }, [plcopenTonInterface, node("body", {}, [node("LD", {}, plcopenTonLd)])])])])]); plcopenTonRoot.namespaceURI = "http://www.plcopen.org/xml/tc6_0201";
+class PlcopenTonDomParserStub { parseFromString() { return { documentElement:plcopenTonRoot, getElementsByTagName:(name) => descendantsForTest(plcopenTonRoot, name) }; } }
+const importedPlcopenTon = parsePlcopenXml("<project/>", PlcopenTonDomParserStub);
+assert.deepEqual(importedPlcopenTon.rungs[0].timer, { tag:"DelayTimer", type:"TON", preset:1500, output:"DN" }, "PLCopen TON import restores the instance and integer-millisecond preset");
+let tonState = scan(importedPlcopenTon, { Start:true }, {}, 750); assert.equal(tonState.outputs.Motor, false);
+tonState = scan(importedPlcopenTon, { Start:true }, tonState, 750); assert.equal(tonState.outputs.Motor, true, "imported TON Q drives the coil after its preset");
+plcopenTonBlock.setAttribute("typeName", "TOF"); assert.throws(() => parsePlcopenXml("<project/>", PlcopenTonDomParserStub), /TON blocks only/, "PLCopen timer import rejects unsupported timer types"); plcopenTonBlock.setAttribute("typeName", "TON");
 const plcPous = descendantsForTest(plcRoot, "pous")[0].children;
 plcPous.push(node("pou", {pouType:"functionBlock"}));
 try {

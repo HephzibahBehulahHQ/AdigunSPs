@@ -68,7 +68,7 @@ export function createPlcopenXml(project) {
     } else coilSource = tails;
     const storage = rung.coilMode === "set" || rung.coilMode === "reset" ? ` storage="${rung.coilMode}"` : "";
     const coilX = 64 + maxContacts * 80 + (rung.timer ? 80 : 0);
-    nodes.push(`<coil localId="${coilId}" width="16" height="2"${storage}><position x="${coilX}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${coilSource.map((source) => `<connection refLocalId="${source}"/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
+    nodes.push(`<coil localId="${coilId}" width="16" height="2"${storage}><position x="${coilX}" y="${y + 32 + (paths.length - 1) * 16}"/><connectionPointIn><relPosition x="0" y="1"/>${coilSource.map((source) => `<connection refLocalId="${source}"${source === timerId ? ' formalParameter="Q"' : ""}/>`).join("")}</connectionPointIn><variable>${esc(rung.coil)}</variable></coil>`);
     nodes.unshift(`<leftPowerRail localId="${rail}" width="4" height="${Math.max(8, (paths.length - 1) * 2 + 8)}"><position x="32" y="${y + 24}"/><connectionPointOut formalParameter="rail"><relPosition x="4" y="4"/></connectionPointOut></leftPowerRail>`);
     if (rung.comment) nodes.push(`<comment localId="${id++}" width="240" height="16"><position x="32" y="${y + (paths.length - 1) * 16}"/><content><xhtml:p>${esc(rung.comment)}</xhtml:p></content></comment>`);
     y += rungHeight;
@@ -86,8 +86,9 @@ function fromPlcAddress(address) {
   return String(address || "").replace(/^%([IQM])X/i, (_, area) => `${area.toUpperCase()}`);
 }
 function descendants(node, name) { return [...(node?.getElementsByTagName?.("*") || [])].filter((item) => item.localName === name); }
+function connectionNodes(node) { return children(node, "connectionPointIn").flatMap((point) => children(point, "connection")); }
 function connectionRefs(node) {
-  const points = children(node, "connectionPointIn"), connections = points.flatMap((point) => children(point, "connection"));
+  const connections = connectionNodes(node);
   if (!connections.length) throw new Error("PLCopen LD element has no incoming connection.");
   return connections.map((connection) => connection.getAttribute("refLocalId"));
 }
@@ -106,15 +107,22 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (pous.length > 1) throw new Error("PLCopen import supports one program POU. This file contains multiple POUs.");
   const pou = pous.find((node) => node.getAttribute("pouType") === "program" && child(child(node, "body"), "LD"));
   if (!pou) throw new Error("PLCopen import needs a program POU with a Ladder Diagram body.");
-  const ld = child(child(pou, "body"), "LD"), names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "comment"]);
+  const ld = child(child(pou, "body"), "LD"), names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "block", "comment"]);
   const nodes = [...ld.children].filter((node) => !["position"].includes(node.localName));
   if (nodes.some((node) => !names.has(node.localName))) throw new Error("PLCopen import found LD instructions outside the supported contact and coil subset.");
   const byId = new Map(nodes.filter((node) => node.hasAttribute("localId")).map((node) => [node.getAttribute("localId"), node]));
+  const blocks = nodes.filter((node) => node.localName === "block"), timerInstances = new Map();
+  for (const block of blocks) {
+    const name = block.getAttribute("instanceName");
+    if (block.getAttribute("typeName") !== "TON" || !name || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely named TON blocks only.");
+    timerInstances.set(name, block);
+  }
   const variableNodes = descendants(child(pou, "interface"), "variable"), tags = [], initialState = {};
-  const declarations = new Map();
+  const declarations = new Map(), timerDeclarations = new Set();
   for (const variable of variableNodes) {
-    const name = variable.getAttribute("name"), typeNode = child(child(variable, "type"), "BOOL") || child(child(variable, "type"), "INT") || child(child(variable, "type"), "REAL") || child(child(variable, "type"), "TIME");
+    const name = variable.getAttribute("name"), typeContainer = child(variable, "type"), typeNode = child(typeContainer, "BOOL") || child(typeContainer, "INT") || child(typeContainer, "REAL") || child(typeContainer, "TIME"), derived = child(typeContainer, "derived");
     const type = typeNode?.localName;
+    if (!type && name && derived?.getAttribute("name") === "TON" && timerInstances.has(name) && variable.parentElement?.localName === "localVars") { timerDeclarations.add(name); continue; }
     if (!name || !type || !TYPES.has(type)) throw new Error(`PLCopen tag ${name || "(unnamed)"} uses an unsupported data type.`);
     const address = fromPlcAddress(variable.getAttribute("address")), section = variable.parentElement?.localName;
     const tag = { name, type, ...(address ? { address } : {}), ...(section === "inputVars" ? { role:"input" } : section === "outputVars" ? { role:"output" } : {}) }, docs = descendants(child(variable, "documentation"), "p").map(text);
@@ -124,11 +132,25 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     const value = child(child(variable, "initialValue"), "simpleValue")?.getAttribute("value");
     if (value !== null && value !== undefined) initialState[name] = type === "BOOL" ? value.toUpperCase() === "TRUE" : type === "TIME" ? Number.parseFloat(value.replace(/^T#/, "")) || 0 : Number(value);
   }
+  if (timerInstances.size !== timerDeclarations.size || [...timerInstances.keys()].some((name) => !timerDeclarations.has(name)) || tags.some((tag) => timerInstances.has(tag.name))) throw new Error("PLCopen TON blocks need matching local instance declarations.");
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
-  const coils = nodes.filter((node) => node.localName === "coil"), used = new Set(), rungs = coils.map((coil, index) => {
+  const coils = nodes.filter((node) => node.localName === "coil"), used = new Set(), usedBlocks = new Set(), rungs = coils.map((coil, index) => {
     const coilStorage = coil.getAttribute("storage") || "none";
     if (xmlBoolean(coil.getAttribute("negated"), "coil negated") || (coil.getAttribute("edge") || "none") !== "none" || !["none", "set", "reset"].includes(coilStorage)) throw new Error("PLCopen import supports normal, set, and reset coils only.");
-    const branches = connectionRefs(coil).map((startRef) => {
+    const coilConnections = connectionNodes(coil);
+    let timer = null, branchRefs;
+    if (coilConnections.length === 1 && byId.get(coilConnections[0].getAttribute("refLocalId"))?.localName === "block") {
+      const block = byId.get(coilConnections[0].getAttribute("refLocalId")), instanceName = block.getAttribute("instanceName");
+      if (coilConnections[0].getAttribute("formalParameter") !== "Q" || !timerDeclarations.has(instanceName)) throw new Error("PLCopen TON coil input must connect to its declared Q output.");
+      const inputVars = children(child(block, "inputVariables"), "variable"), inPins = inputVars.filter((pin) => pin.getAttribute("formalParameter") === "IN"), ptPins = inputVars.filter((pin) => pin.getAttribute("formalParameter") === "PT"), outputVars = children(child(block, "outputVariables"), "variable");
+      if (inputVars.length !== 2 || inPins.length !== 1 || ptPins.length !== 1 || children(child(block, "inOutVariables"), "variable").length || outputVars.length !== 1 || outputVars[0].getAttribute("formalParameter") !== "Q") throw new Error("PLCopen TON import supports only IN/PT inputs and the Q output.");
+      const ptPoint = child(ptPins[0], "connectionPointIn"), ptExpression = text(child(ptPoint, "expression")), presetMatch = /^(?:T|TIME)#(\d+)ms$/i.exec(ptExpression);
+      if (children(ptPoint, "connection").length || !presetMatch || Number(presetMatch[1]) <= 0) throw new Error("PLCopen TON preset must be a positive integer-millisecond literal.");
+      branchRefs = connectionRefs(inPins[0]);
+      timer = { tag:instanceName, type:"TON", preset:Number(presetMatch[1]), output:"DN" };
+      usedBlocks.add(block.getAttribute("localId"));
+    } else branchRefs = connectionRefs(coil);
+    const branches = branchRefs.map((startRef) => {
       const chain = [], visited = new Set(); let ref = startRef;
       while (true) {
         if (visited.has(ref)) throw new Error("PLCopen LD contains a cyclic connection.");
@@ -154,11 +176,13 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     if (new Set(ids).size !== ids.length || ids.some((id) => used.has(id))) throw new Error("PLCopen LD contact paths are shared; only independent series networks can be imported.");
     ids.forEach((id) => used.add(id));
     const coilY = Number(child(coil, "position")?.getAttribute("y")), comment = commentByY.get(String(coilY - 32));
-    return { id:`plcopen-rung-${index + 1}`, comment:comment || `Network ${index + 1}`, branches:branches.map((branch) => branch.contacts), coil:coilTag, ...(coilStorage === "none" ? {} : { coilMode:coilStorage }) };
+    return { id:`plcopen-rung-${index + 1}`, comment:comment || `Network ${index + 1}`, branches:branches.map((branch) => branch.contacts), ...(timer ? { timer } : {}), coil:coilTag, ...(coilStorage === "none" ? {} : { coilMode:coilStorage }) };
   });
   if (!rungs.length) throw new Error("PLCopen LD contains no output coils to import.");
   if (nodes.filter((node) => node.localName === "contact").some((node) => !used.has(node.getAttribute("localId")))) throw new Error("PLCopen LD contains contacts outside imported coil networks.");
+  if (blocks.some((block) => !usedBlocks.has(block.getAttribute("localId")))) throw new Error("PLCopen LD contains TON blocks outside imported coil networks.");
   const inputs = tags.filter((tag) => tag.role === "input" || /^I\d/i.test(tag.address || "")).map((tag) => tag.name), outputs = tags.filter((tag) => tag.role === "output" || /^Q\d/i.test(tag.address || "")).map((tag) => tag.name);
   const name = child(root, "contentHeader")?.getAttribute("name") || "Imported PLCopen project";
   return { id:"", name, language:"en", editorType:"LD", task:{ name:"Main", mode:"cyclic", cycleMs:100 }, tags, io:{ inputs, outputs }, initialState, rungs };
 }
+
