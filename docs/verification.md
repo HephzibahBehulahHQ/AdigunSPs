@@ -343,3 +343,7 @@ On production release `8dd563d`, I created a temporary BOOL `Tag1` input in the 
 ## HMI QA project cleanup check — 2026-11-12
 
 In a new Chrome tab on the production origin, the local Untitled project reported 0 simulated inputs and outputs and the active HMI screen had no widgets. The temporary `Tag1` and two QA widgets from the earlier drag check were already absent, so no project data was deleted. The earlier pointer-drag verification remains recorded above.
+
+## Production narrow-viewport layout check — 2026-11-12
+
+At a 390 CSS-pixel responsive viewport in a fresh production browser tab, the document stayed 390 pixels wide while the 375-pixel toolbar viewport exposed 1,176 pixels of horizontally scrollable controls. The Untitled HMI remained empty. This responsive viewport override confirms layout containment and a scrollable toolbar, not native-device touch gestures, drawer operation, install behavior, or cross-browser compatibility.
