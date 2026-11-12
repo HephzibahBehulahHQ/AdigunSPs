@@ -35,11 +35,11 @@ Projects and inputs are left; the canvas fills the center; Properties, Watch, an
 1. Start the tour; reopen via **? → Safety and help → Start quick tour**.
 2. Use **Back/Next**; **Finish** exits.
 
-Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model limits. 1,000 examples pass checks. Physical control unavailable; devices are software models.
+Guide covers canvas, wiring, BOT and model limits. All 1,000 examples pass. Physical control unavailable.
 
 ## Navigating the interface
 
-**What you'll see:** The top menu bar shows File through Help; the toolbar directly below contains common project and simulation actions.
+**What you'll see:** File–Help menus remain reachable. At 1200 px, Save, Undo, Redo and Run move to the header.
 
 1. Click a top menu or toolbar control to open its menu or panel.
 2. Click outside or press Escape to close a menu; tap outside on touch.
@@ -59,7 +59,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 | Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
-| New, Examples, Save, Run, Step, Reset | Common project and simulation actions | Toolbar below menus |
+| New, Examples, Step, Reset | Project/simulation | Toolbar |\n| Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
 | HMI | Add/move/delete widgets | Toolbar and widget controls |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |

@@ -183,4 +183,4 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 .header-quick-commands button[data-action="run"]{background:#12bfcf;border-color:#12bfcf;color:#06202b;font-weight:800}
 .menu-command-dock{display:flex;margin-left:auto;align-items:center;min-width:0}
 .menu-command-dock #paletteButton{font-size:15px;flex:none;min-height:25px;border:1px solid var(--line);border-radius:6px}
-@media(max-width:1439px){.header-quick-commands,.menu-command-dock{display:none}}
+@media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}

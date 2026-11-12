@@ -2100,7 +2100,7 @@ function setupResponsiveGlobalCommandDocks() {
   const actions=["save","undo","redo","run"].map((key)=>document.querySelector(`.toolbar [data-action="${key}"]`)).filter(Boolean);
   const palette=$("#paletteButton");
   const moved=[...actions,palette].map((button)=>({button,parent:button.parentNode,next:button.nextSibling}));
-  const desktop=matchMedia("(min-width: 1440px)");
+  const desktop=matchMedia("(min-width: 1200px)");
   const position=()=>{
     if(desktop.matches) { for(const button of actions) $("#globalQuickCommands").append(button); $("#menuCommandDock").append(palette); }
     else { for(const {button,parent,next} of [...moved].reverse()) { if(next?.parentNode===parent) parent.insertBefore(button,next); else parent.append(button); } }
