@@ -198,3 +198,4 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .menu-command-dock #paletteButton{font-size:15px;flex:none;min-height:25px;border:1px solid var(--line);border-radius:6px}
 @media(min-width:1200px){.toolbar{display:none}}
 @media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}
+@media(min-width:761px) and (max-width:1050px){.topbar{gap:12px;padding-inline:12px}.top-actions{gap:7px}.top-actions>.icon-button{flex:0 0 32px;width:32px;height:32px}.top-actions>#languageButton{flex-basis:40px;width:40px}.save-state{margin-right:4px}}
