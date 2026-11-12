@@ -351,4 +351,4 @@ At a 390 CSS-pixel responsive viewport in a fresh production browser tab, the do
 
 ## Phone drawer close controls — 2026-11-12
 
-The 390-pixel production layout opened each side drawer, but each drawer covered the Panel layout launcher and had no visible close action. The app now places an accessible, localized close button inside each drawer and advances the offline shell cache to v140. Responsive selector, Help-guide, service-worker, and build checks pass. Post-deploy browser interaction and native-device touch behavior still need verification.
+The 390-pixel production layout opened each side drawer, but each drawer covered the Panel layout launcher and had no visible close action. The app now places an accessible, localized close button inside each drawer and advances the offline shell cache to v140. Responsive selector, Help-guide, service-worker, and build checks pass. After deployment, a cache-busted production tab at 390 CSS pixels opened and closed both drawers; native-device touch behavior still needs verification.
