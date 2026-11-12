@@ -650,6 +650,9 @@ assert.ok(app.includes("sortProjectsByRecent(await store.all())") && app.include
 assert.ok(serviceWorker.includes("./src/project-list.js"), "offline shell caches recent-project sorting");
 assert.ok(app.includes("hmiPointerPosition(event.clientX, event.clientY, bounds") && app.includes('$("#snapToggle").addEventListener("change"'), "HMI snap control changes placement and persists its preference");
 assert.ok(serviceWorker.includes("./src/hmi-layout.js"), "offline shell caches HMI layout positioning");
+const hmiAccessibilityKeys = ["widgetLabel","widgetTag","trendFor","moveUp","moveDown","moveLeft","moveRight","deleteWidget","on","off"];
+assert.ok(Object.values(hmiScreenCopy).every((locale)=>hmiAccessibilityKeys.every((key)=>typeof locale.a11y?.[key]==="string" && locale.a11y[key].length>0)), "each HMI accessibility label is translated");
+assert.ok(hmiAccessibilityKeys.every((key)=>app.includes("copy.a11y."+key)), "HMI widget fields, trends, move controls, and delete use localized accessible names");
 assert.ok(serviceWorker.includes("./src/hmi-copy.js"), "offline shell caches localized HMI screen and palette copy");
 assert.ok(serviceWorker.includes("./src/fbd-layout.js"), "offline shell caches FBD canvas positioning");
 assert.ok(serviceWorker.includes("./src/fbd-validation.js"), "offline shell caches per-block FBD validation");

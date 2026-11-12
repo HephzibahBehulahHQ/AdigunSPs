@@ -61,7 +61,7 @@ Topics cover canvas, Components/Examples, wiring, BOT, Run/Step/HUD, and model l
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
 | New, Examples, Save, Run, Step, Reset | Common project and simulation actions | Toolbar below menus |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
-| HMI buttons | Add or drag widgets | HMI toolbar |
+| HMI | Add/move/delete widgets | Toolbar and widget controls |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
 | Simulated inputs, Outputs, Project tree | Set test inputs and navigate the open project | Left sidebar |
 | Help & docs | Open help and documentation | Footer |
