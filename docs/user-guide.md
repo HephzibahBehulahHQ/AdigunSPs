@@ -283,7 +283,7 @@ Select **Components** to open a large schematic viewport. The left project panel
 
 ### Wide-screen command relocation
 
-On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run buttons move from the long command toolbar into unused header space. The existing command-search button moves to the application-menu row. On narrower screens these same buttons return to their original locations; no duplicate controls are created, and original functions remain unchanged.
+On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run buttons move from the long command toolbar into unused header space, and the remaining ribbon is hidden to give the editor more vertical room. Its file, edit, view, simulation, trace, and other actions remain available from the application menus and Ctrl/⌘+K command search. Simulation sound is under **Online → Toggle simulation sound**. The existing command-search button moves to the application-menu row. On narrower screens these same buttons return to their original locations; no duplicate controls are created, and original functions remain unchanged.
 
 ### Contextual editor tools
 

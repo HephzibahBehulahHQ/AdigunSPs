@@ -196,4 +196,5 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .header-quick-commands button[data-action="run"]{background:#12bfcf;border-color:#12bfcf;color:#06202b;font-weight:800}
 .menu-command-dock{display:flex;margin-left:auto;align-items:center;min-width:0}
 .menu-command-dock #paletteButton{font-size:15px;flex:none;min-height:25px;border:1px solid var(--line);border-radius:6px}
+@media(min-width:1200px){.toolbar{display:none}}
 @media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}

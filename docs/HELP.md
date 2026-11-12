@@ -115,7 +115,7 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
 ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling: **Project → Cyclic ST tasks**. See User Guide.
 
-4. A successful simulation shows changing outputs and HUD values. Select **♫ Sound off** to enable or disable local interface tones. A failed compile reports an error; fix the indicated source and compile again.
+4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. On wide screens, ribbon actions remain in menus and search. Fix reported compile errors.
 
 The HUD is educational: voltage, current, and motor RPM are not calculated. USB controls are under Hardware inventory / BOM.
 
