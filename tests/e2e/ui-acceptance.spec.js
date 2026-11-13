@@ -172,17 +172,20 @@ test("electrical wire endpoints track rotation and keyboard movement while selec
 
 
 test("side-panel layout changes do not mutate saved PLC or electrical project data", async ({ page }) => {
-  const readProjects = () => page.evaluate(() => new Promise((resolve, reject) => {
+  const readPersistedState = () => page.evaluate(() => new Promise((resolve, reject) => {
+    const guestDrafts=Object.keys(sessionStorage).filter(key=>key.startsWith("adigunsps-guest-draft-")).map(key=>[key,sessionStorage.getItem(key)]);
     const request=indexedDB.open("adigunsps-local");
     request.onerror=()=>reject(request.error);
     request.onsuccess=()=>{
-      const database=request.result, transaction=database.transaction("projects","readonly"), query=transaction.objectStore("projects").getAll();
-      query.onsuccess=()=>{database.close();resolve(query.result);};
+      const database=request.result;
+      if(!database.objectStoreNames.contains("projects")){database.close();resolve({guestDrafts,projects:[]});return;}
+      const transaction=database.transaction("projects","readonly"), query=transaction.objectStore("projects").getAll();
+      query.onsuccess=()=>{database.close();resolve({guestDrafts,projects:query.result});};
       query.onerror=()=>{database.close();reject(query.error);};
     };
   }));
-  const before = await readProjects();
-  expect(before.length).toBeGreaterThan(0);
+  const before = await readPersistedState();
+  expect(before.guestDrafts.length + before.projects.length).toBeGreaterThan(0);
 
   await page.locator("#panelLayoutButton").click();
   await expect(page.locator("#panelLeftToggle")).toBeChecked();
@@ -193,5 +196,5 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
   await expect(page.locator(".workspace")).toHaveClass(/panels-left-hidden/);
   await expect(page.locator(".workspace")).toHaveClass(/panels-right-hidden/);
 
-  await expect(await readProjects()).toEqual(before);
+  await expect(await readPersistedState()).toEqual(before);
 });
