@@ -106,6 +106,20 @@ test("electrical canvas keeps the connection legend visible beside its scrollabl
   const viewport = await page.locator(".electrical-board-wrap").boundingBox();
   expect(box && viewport && Math.abs(box.y + box.height - (viewport.y + viewport.height)) < 2).toBe(true);
 });
+test("Issues tab shows active-workspace validation and returns to properties", async ({ page }) => {
+  const issuesTab = page.locator("#issuesTab");
+  await issuesTab.click();
+  await expect(page.locator("#issuesContent")).toBeVisible();
+  await expect(page.locator("#issuesContent")).toContainText("Active workspace issues");
+  await expect(page.locator(".issues-count")).toHaveText(/\d+/);
+  await page.locator("#electricalTab").click();
+  await issuesTab.click();
+  await expect(page.locator("#issuesContent")).toContainText("Active workspace issues");
+  await expect(page.locator(".issues-count")).toHaveText(/\d+/);
+  await page.locator("#propertiesTab").click();
+  await expect(page.locator("#issuesContent")).toBeHidden();
+  await expect(page.locator("#inspectorContent")).toBeVisible();
+});
 test("electrical component search filters models and restores the full picker", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const search = page.locator("#electricalToolboxDock #electricalModelSearch");

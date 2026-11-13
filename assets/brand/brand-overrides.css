@@ -223,3 +223,14 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .electrical-canvas-legend .legend-signal{width:14px;height:2px;border-radius:0;background:#22d3ee}
 .electrical-canvas-legend .legend-edit{color:var(--muted,#9aa8b9)}
 @media(max-width:900px){.electrical-canvas-legend{gap:10px;overflow-x:auto;white-space:nowrap}.electrical-canvas-legend span{flex:0 0 auto}}
+/* Contextual validation view for the reference workspace inspector. */
+.issues-content{flex:1 1 auto;min-height:0;overflow:auto;padding:12px}
+#inspectorContent[hidden],#issuesContent[hidden]{display:none!important}
+.issues-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--line,#283344)}
+.issues-heading h3{margin:0;color:var(--text,#e9eef5);font-size:13px}
+.issues-count{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border:1px solid var(--line,#39485b);border-radius:11px;color:var(--muted,#9aa8b9);font-size:11px}
+.issues-count.has-errors{border-color:#a34b53;background:#3a2029;color:#ffc4c9}
+.issues-list{display:grid;gap:8px;margin:12px 0;padding:0;list-style:none}
+.issues-list li{display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px;align-items:start;padding:9px;border:1px solid var(--line,#283344);border-radius:6px;background:var(--panel,#111a28);font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.issues-list li strong{color:#e9b95c;font-size:10px}.issues-list li.error strong{color:#ff8c95}
+.issues-empty{margin:14px 0;color:var(--muted,#9aa8b9);font-size:12px}
