@@ -198,3 +198,57 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
 
   await expect(await readPersistedState()).toEqual(before);
 });
+
+test("workspace layout remains bounded across all locales, themes, and scaled text", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  await page.evaluate(() => { document.documentElement.style.fontSize = "125%"; });
+
+  for (const locale of ["en", "de", "yo", "pcm"]) {
+    for (let attempt = 0; attempt < 4 && (await page.locator("#languageButton").textContent())?.toLowerCase() !== locale; attempt++) {
+      await page.locator("#languageButton").click();
+    }
+    await expect(page.locator("#languageButton")).toHaveText(locale.toUpperCase());
+
+    for (const theme of ["dark", "light"]) {
+      await page.locator("#settingsButton").click();
+      await page.locator("#prefTheme").selectOption(theme);
+      await page.locator("#settingsDone").click();
+      await expect(page.locator("body")).toHaveAttribute("data-theme", theme);
+      await page.locator("#projectTitle").evaluate((element) => { element.textContent = "Workspace acceptance project — ".padEnd(64, "W"); });
+
+      for (const viewport of [{ width: 1894, height: 704, minBoardHeight: 300 }, { width: 390, height: 844, minBoardHeight: 200 }]) {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        if (viewport.width <= 760) {
+          await page.locator("#panelLayoutButton").click();
+          await expect(page.locator("#mobileProjectPanel")).toBeVisible();
+          await page.locator("#mobileProjectPanel").click();
+          await expect(page.locator(".workspace")).toHaveClass(/mobile-left-open/);
+        }
+
+        const metrics = await page.evaluate(() => {
+          const board = document.querySelector(".electrical-board-wrap");
+          const buttons = ["#projectMenu", "#accountButton", "#languageButton", "#settingsButton", "#paletteButton", "#helpButton"]
+            .map((selector) => document.querySelector(selector))
+            .filter((element) => element && element.getClientRects().length)
+            .map((element) => {
+              const rect = element.getBoundingClientRect();
+              return { selector:element.id, left:rect.left, right:rect.right, top:rect.top, bottom:rect.bottom };
+            });
+          const overlaps = [];
+          for (let i = 0; i < buttons.length; i++) for (let j = i + 1; j < buttons.length; j++) {
+            const a = buttons[i], b = buttons[j];
+            if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlaps.push([a.selector, b.selector]);
+          }
+          return { scrollWidth:document.documentElement.scrollWidth, boardHeight:board?.getBoundingClientRect().height ?? 0, buttons, overlaps };
+        });
+
+        expect(metrics.scrollWidth, `${locale}/${theme} at ${viewport.width}px has no horizontal page overflow`).toBeLessThanOrEqual(viewport.width);
+        expect(metrics.boardHeight, `${locale}/${theme} at ${viewport.width}px retains useful canvas height`).toBeGreaterThanOrEqual(viewport.minBoardHeight);
+        expect(metrics.buttons.every((button) => button.left >= 0 && button.right <= viewport.width), `${locale}/${theme} header controls stay within viewport`).toBe(true);
+        expect(metrics.overlaps, `${locale}/${theme} header controls do not overlap`).toEqual([]);
+        if (viewport.width <= 760) await page.locator('[data-mobile-drawer-close="left"]').click();
+      }
+    }
+  }
+});
+
