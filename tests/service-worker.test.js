@@ -40,7 +40,7 @@ context.caches.delete = async key => { removedCaches.push(key); return true; };
 let activation;
 handlers.get("activate")({ waitUntil: promise => { activation = promise; } });
 await activation;
-assert.deepEqual(removedCaches, ["adigunsps-shell-v141", "adigunsps-shell-v144"]);
+assert.deepEqual(removedCaches, ["adigunsps-shell-v141", "adigunsps-shell-v143"]);
 assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
 assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v144";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
