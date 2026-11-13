@@ -239,6 +239,21 @@ test("electrical duplicate placement avoids rotated component collisions", async
   expect(boxes.length).toBeGreaterThanOrEqual(3);
   expect(collisions).toEqual([]);
 });
+test("component toolbox uses the approved placement and wire labels without losing actions", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  const toolbox = page.locator("#electricalToolboxDock");
+  const place = toolbox.locator('[data-electrical-action="add"]');
+  const wire = toolbox.locator('[data-electrical-action="wire"]');
+  await expect(place).toContainText("Place component");
+  await expect(wire).toContainText("Connect wire");
+  await place.click();
+  await expect(page.locator("#electricalBoard [data-component-id]")).toHaveCount(1);
+  await page.locator("#languageButton").click();
+  await expect(place).toContainText("Komponente platzieren");
+  await expect(wire).toContainText("Draht verbinden");
+});
+
 test("electrical validation and simulation stay in the canvas action row", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const toolbox = page.locator("#electricalToolboxDock");
