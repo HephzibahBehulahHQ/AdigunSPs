@@ -8,10 +8,10 @@ assert.ok(app.includes('$("#workspaceBreadcrumb").textContent = ({en:"Main progr
 assert.match(css,/\.project-context-separator,\.workspace-breadcrumb\{display:none\}/);
 assert.match(html,/id="electricalTabLabel">Components \/ Schematic<\/span>/);
 assert.match(app,/en:"Components \/ Schematic",de:"Komponenten \/ Schaltplan",yo:"Àwọn component \/ àwòrán itanna",pcm:"Components \/ Schematic"/);
-assert.match(app,/en: \{ project:"PROJECT EXPLORER"/);
-assert.match(app,/de: \{ project:"PROJEKT-EXPLORER"/);
-assert.match(app,/yo: \{ project:"OLÙṢÀWÁRÍ IṢẸ́"/);
-assert.match(app,/pcm: \{ project:"PROJECT EXPLORER"/);
+assert.match(app,/en: \{ editorReady:"EDITOR READY".*project:"PROJECT EXPLORER"/);
+assert.match(app,/de: \{ editorReady:"EDITOR BEREIT".*project:"PROJEKT-EXPLORER"/);
+assert.match(app,/yo: \{ editorReady:"Ṣetan fún àtúnṣe".*project:"OLÙṢÀWÁRÍ IṢẸ́"/);
+assert.match(app,/pcm: \{ editorReady:"EDITOR READY".*project:"PROJECT EXPLORER"/);
 assert.match(app,/toolboxHost:\$\("#electricalToolboxDock"\),inspectorHost:\$\("#inspectorContent"\)/);
 assert.match(app,/classList\.toggle\("electrical-workspace-active", electrical\)/);
 assert.match(electrical,/workflows\.id="electricalLibraryWorkflows"/);
