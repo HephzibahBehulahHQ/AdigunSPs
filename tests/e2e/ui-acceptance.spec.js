@@ -74,6 +74,7 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
 });
 
+
 test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electrical actions", async ({ page }) => {
   const ladderRungs = page.locator("#ladderCanvas .rung");
   const initialRungs = await ladderRungs.count();
@@ -117,4 +118,3 @@ test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electri
   await page.locator('#electricalToolboxDock [data-electrical-action="simulate"]').click();
   await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
 });
-
