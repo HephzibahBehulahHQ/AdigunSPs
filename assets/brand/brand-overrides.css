@@ -276,3 +276,8 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 @media(max-width:1500px){.project-name{padding-left:0;border-left:0}.project-context-separator,.workspace-breadcrumb{display:none}}
 
 #electricalToolboxDock [data-electrical-action="add"]{text-transform:uppercase}
+
+.electrical-simulation-workflow{margin:0 0 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
+.electrical-simulation-workflow>summary{min-height:36px;padding:9px;color:var(--text);font-size:11px;cursor:pointer}
+.electrical-simulation-workflow-actions{padding:0 7px 5px}
+.electrical-simulation-workflow-actions [data-action="faults"]{width:100%}

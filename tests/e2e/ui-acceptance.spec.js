@@ -254,6 +254,21 @@ test("component toolbox uses the approved placement and wire labels without losi
   await expect(wire).toContainText("Draht verbinden");
 });
 
+test("electrical workflow disclosure reuses existing simulated inputs and fault injection", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const workflow = page.locator("#electricalSimulationWorkflow");
+  await expect(workflow.locator("summary")).toHaveText("Simulated I/O / faults");
+  await expect(workflow).not.toHaveAttribute("open", "");
+  await workflow.locator("summary").click();
+  const jump = workflow.locator("#electricalManualInputLink");
+  const faults = workflow.locator('[data-action="faults"]');
+  const manualInputs = page.locator("#electricalManualInputStates");
+  await expect(jump).toBeVisible();
+  await expect(faults).toBeVisible();
+  await jump.click();
+  await expect(manualInputs).toBeFocused();
+});
+
 test("electrical validation and simulation stay in the canvas action row", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const toolbox = page.locator("#electricalToolboxDock");
