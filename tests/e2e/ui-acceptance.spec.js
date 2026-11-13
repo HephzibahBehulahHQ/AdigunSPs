@@ -132,7 +132,9 @@ test("electrical canvas exposes the reference-aligned contextual title and actio
   await page.locator("#electricalTab").click();
   const context = page.locator("#electricalCanvasContext");
   await expect(context).toBeVisible();
-  await expect(context).toContainText("MAIN CIRCUIT");
+  const boardLabel = page.locator(".electrical-board-label");
+  await expect(boardLabel).toContainText("MAIN CIRCUIT");
+  await expect(boardLabel.locator(".electrical-safety-badge")).toHaveAttribute("aria-label", /Verify all device ratings/);
   const select = context.locator('[data-electrical-action="select"]');
   const wire = context.locator('[data-electrical-action="wire"]');
   await select.click();
