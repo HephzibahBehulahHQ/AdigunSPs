@@ -56,7 +56,7 @@ Editor tools follow LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run mov
 | Tools | Examples, ST compile, scenarios, estimates, Modbus simulator, Adigun BOT | Top menu bar |
 | Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
-| Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
+| Profile, EN, ⚙, search, ? | Account, language, settings, search, help | Header and menu row |
 | Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components / Schematic, HMI | Switch editor workspace | Tabs or project tree |
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
@@ -95,7 +95,7 @@ A command is an app action like adding a rung, opening a project, or running a s
 
 Commands include **New project** (start empty), **Project manager** (open saved work), **Example browser** (load a learning project), **Add rung**, **Add contact**, **Run**, **Step**, **Reset**, **Tags and I/O**, and **Safety and help**.
 
-**What you'll see:** Press **Ctrl+K** (or **⌘+K** on Mac), or click ⌕ **Command search**, to open the searchable command list.
+**What you'll see:** Press **Ctrl+K** (or **⌘+K** on Mac), or click **Search all commands** to open the command palette.
 
 1. Type a few letters in the search field.
 2. Select a result to run it. Search can also find projects, tags, and examples when you enter a search term.

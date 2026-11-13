@@ -221,7 +221,11 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .header-quick-commands button{min-height:34px;max-width:160px;padding:6px 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:12px;white-space:nowrap}
 .header-quick-commands button[data-action="run"]{background:#12bfcf;border-color:#12bfcf;color:#06202b;font-weight:800}
 .menu-command-dock{display:flex;margin-left:auto;align-items:center;min-width:0}
-.menu-command-dock #paletteButton{font-size:15px;flex:none;min-height:25px;border:1px solid var(--line);border-radius:6px}
+.menu-command-dock #paletteButton{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:min(242px,20vw);min-width:180px;min-height:28px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#0b1220);color:var(--muted,#9aa8b9);font-size:12px;text-align:left}
+.menu-command-dock #paletteButton .command-search-symbol{flex:none;font-size:16px;line-height:1}
+.menu-command-dock #paletteButton .command-search-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1399px){.menu-command-dock #paletteButton{width:170px;min-width:150px}}
+.top-actions #paletteButton .command-search-label{display:none}
 @media(min-width:1200px){.toolbar{display:none}}
 @media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}
 @media(min-width:761px) and (max-width:1050px){.topbar{gap:12px;padding-inline:12px}.top-actions{gap:7px}.top-actions>.icon-button{flex:0 0 32px;width:32px;height:32px}.top-actions>#languageButton{flex-basis:40px;width:40px}.save-state{margin-right:4px}}
