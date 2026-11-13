@@ -73,3 +73,48 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await page.locator("#electricalToolboxDock > .industrial-catalog > summary").click();
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
 });
+
+test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electrical actions", async ({ page }) => {
+  const ladderRungs = page.locator("#ladderCanvas .rung");
+  const initialRungs = await ladderRungs.count();
+  await page.locator('[data-action="add-rung"]').first().click();
+  await expect(ladderRungs).toHaveCount(initialRungs + 1);
+
+  await page.locator("#editorMode").selectOption("FBD");
+  const blocks = page.locator("#fbdBlocks .fbd-block");
+  const initialBlocks = await blocks.count();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="FBD"] [data-action="add-fbd-block"]').click();
+  await expect(blocks).toHaveCount(initialBlocks + 1);
+
+  await page.locator("#editorMode").selectOption("ST");
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="ST"] [data-action="compile-st"]').click();
+  await expect(page.locator("#compileState")).toHaveText("Compiled");
+
+  await page.locator("#editorMode").selectOption("SFC");
+  const steps = page.locator("#sfcChart .sfc-step");
+  const initialSteps = await steps.count();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="SFC"] [data-action="add-sfc-step"]').click();
+  await expect(steps).toHaveCount(initialSteps + 1);
+
+  await page.locator('[data-action="tags"]').click();
+  await page.locator("#addTag").click();
+  await page.locator('[data-tag-index="0"][data-field="role"]').selectOption("input");
+  await page.locator("#modal .modal-close").click();
+  await page.locator("#hmiTab").click();
+  const widgets = page.locator("#hmiBoard [data-hmi-widget]");
+  const initialWidgets = await widgets.count();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="HMI"] [data-hmi-add="switch"]').click();
+  await expect(widgets).toHaveCount(initialWidgets + 1);
+
+  await page.locator("#electricalTab").click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
+  await expect(components).toHaveCount(1);
+  await page.locator('#electricalToolboxDock [data-electrical-action="duplicate"]').click();
+  await expect(components).toHaveCount(2);
+  await page.locator('#electricalToolboxDock [data-electrical-action="delete"]').click();
+  await expect(components).toHaveCount(1);
+  await page.locator('#electricalToolboxDock [data-electrical-action="simulate"]').click();
+  await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
+});
+
