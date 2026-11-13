@@ -125,6 +125,15 @@ test("electrical canvas view controls zoom and grid without changing component g
   await expect(page.locator("[data-electrical-zoom]")).not.toHaveText("110%");
 });
 
+test("electrical validation and simulation stay in the canvas action row", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const toolbox = page.locator("#electricalToolboxDock");
+  const canvasActions = page.locator("#electricalCanvasContext");
+  await expect(toolbox.locator('[data-electrical-action="validate"]')).toBeHidden();
+  await expect(toolbox.locator('[data-electrical-action="simulate"]')).toBeHidden();
+  await expect(canvasActions.locator('[data-electrical-action="validate"]')).toBeVisible();
+  await expect(canvasActions.locator('[data-electrical-action="simulate"]')).toBeVisible();
+});
 test("electrical inspector identifies the selected component above its editable fields", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();

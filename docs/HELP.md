@@ -195,4 +195,4 @@ Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [co
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
 
-Canvas adds grid, fit, zoom, selection summary; Issues lists findings.
+Canvas keeps actions contextual, with grid, zoom, and selection summary.
