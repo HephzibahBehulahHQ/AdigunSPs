@@ -9,6 +9,9 @@ assert.match(electrical,/toolboxHost\.replaceChildren\(heading,\.\.\.\[toolbar,w
 assert.match(electrical,/heading\.className="electrical-toolbox-heading"/);
 assert.match(app,/workflowHost\.append\(faultsButton\)/);
 assert.match(electrical,/inspectorHost\.replaceChildren\(inspector\)/);
+assert.match(electrical,/class="electrical-safety-badge" title="\$\{escape\(t\.safety\)\}" aria-label="\$\{escape\(t\.safety\)\}"/);
+assert.doesNotMatch(electrical,/class="electrical-safety">/);
+assert.match(css,/\.electrical-canvas-heading \.electrical-safety-badge/);
 assert.match(css,/#electricalPane \.electrical-body\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
 assert.match(css,/\.workspace\.electrical-workspace-active \.inspector-content\{min-height:0;overflow:auto/);
 console.log("PASS: electrical workspace docking contracts");
