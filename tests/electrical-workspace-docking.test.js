@@ -3,6 +3,8 @@ import {readFileSync} from "node:fs";
 const html=readFileSync("index.html","utf8"),app=readFileSync("src/app.js","utf8"),electrical=readFileSync("src/electrical-ui.js","utf8"),menus=readFileSync("src/app-menus.js","utf8"),css=readFileSync("assets/brand/brand-overrides.css","utf8");
 assert.match(html,/id="electricalToolboxDock" class="electrical-toolbox-dock hidden"/);
 assert.match(html,/id="projectHeading">PROJECT EXPLORER<\/span>/);
+assert.match(html,/id="electricalTabLabel">Components \/ Schematic<\/span>/);
+assert.match(app,/en:"Components \/ Schematic",de:"Komponenten \/ Schaltplan",yo:"Àwọn component \/ àwòrán itanna",pcm:"Components \/ Schematic"/);
 assert.match(app,/en: \{ project:"PROJECT EXPLORER"/);
 assert.match(app,/de: \{ project:"PROJEKT-EXPLORER"/);
 assert.match(app,/yo: \{ project:"OLÙṢÀWÁRÍ IṢẸ́"/);
