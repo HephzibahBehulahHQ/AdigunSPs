@@ -125,6 +125,19 @@ test("electrical canvas view controls zoom and grid without changing component g
   await expect(page.locator("[data-electrical-zoom]")).not.toHaveText("110%");
 });
 
+test("electrical inspector identifies the selected component above its editable fields", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();
+  const component = page.locator("#electricalBoard [data-component-id]").first();
+  const reference = (await component.locator("[data-drag-component]").innerText()).split(" · ")[0];
+  const summary = page.locator("#inspectorContent .electrical-selected-component");
+  await expect(summary.locator("small")).toContainText("SELECTED COMPONENT");
+  await expect(summary.locator("h2")).toContainText(reference);
+  await expect(summary.locator("p")).toContainText("simulation model");
+  await expect(page.locator("#electricalProperties input[name=\"reference\"]")).toHaveValue(reference);
+  await expect(page.locator("#electricalProperties input[name=\"label\"]")).toBeVisible();
+});
+
 test("Issues tab shows active-workspace validation and returns to properties", async ({ page }) => {
   const issuesTab = page.locator("#issuesTab");
   await issuesTab.click();
