@@ -140,6 +140,29 @@ test("electrical inspector exposes live rotate, duplicate, and delete actions", 
   await page.locator("#inspectorContent .electrical-selected-actions [data-electrical-action=\"delete\"]").click();
   await expect(page.locator("#electricalBoard [data-component-id]")).toHaveCount(1);
 });
+
+test("electrical duplicate placement avoids rotated component collisions", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const add=page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  const rotate=page.locator('#electricalToolboxDock [data-electrical-action="rotate"]');
+  const duplicate=page.locator('#electricalToolboxDock [data-electrical-action="duplicate"]');
+  await add.click();
+  await rotate.click();
+  await duplicate.click();
+  await duplicate.click();
+
+  const boxes=await page.locator("#electricalBoard [data-component-id]").evaluateAll(nodes=>nodes.map(node=>{
+    const {left,top,right,bottom}=node.getBoundingClientRect();
+    return {left,top,right,bottom};
+  }));
+  const collisions=[];
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){
+    const a=boxes[i],b=boxes[j];
+    if(a.left<b.right-1&&a.right>b.left+1&&a.top<b.bottom-1&&a.bottom>b.top+1)collisions.push([i,j]);
+  }
+  expect(boxes.length).toBeGreaterThanOrEqual(3);
+  expect(collisions).toEqual([]);
+});
 test("electrical validation and simulation stay in the canvas action row", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const toolbox = page.locator("#electricalToolboxDock");
