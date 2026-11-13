@@ -106,6 +106,23 @@ test("electrical canvas keeps the connection legend visible beside its scrollabl
   const viewport = await page.locator(".electrical-board-wrap").boundingBox();
   expect(box && viewport && Math.abs(box.y + box.height - (viewport.y + viewport.height)) < 2).toBe(true);
 });
+test("electrical canvas view controls zoom and grid without changing component geometry", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const board = page.locator("#electricalBoard");
+  const component = page.locator("#electricalBoard [data-component-id]").first();
+  const initialLeft = await component.getAttribute("style");
+  await expect(page.locator("[data-electrical-action=\"grid\"]")).toBeVisible();
+  await expect(page.locator("[data-electrical-action=\"fit-view\"]")).toBeVisible();
+  await expect(page.locator("[data-electrical-zoom]")).toHaveText("100%");
+  await page.locator("[data-electrical-action=\"grid\"]").click();
+  await expect(board).toHaveClass(/no-grid/);
+  await page.locator("[data-electrical-action=\"zoom-in\"]").click();
+  await expect(page.locator("[data-electrical-zoom]")).toHaveText("110%");
+  expect(await component.getAttribute("style")).toBe(initialLeft);
+  await page.locator("[data-electrical-action=\"fit-view\"]").click();
+  await expect(page.locator("[data-electrical-zoom]")).not.toHaveText("110%");
+});
+
 test("Issues tab shows active-workspace validation and returns to properties", async ({ page }) => {
   const issuesTab = page.locator("#issuesTab");
   await issuesTab.click();
