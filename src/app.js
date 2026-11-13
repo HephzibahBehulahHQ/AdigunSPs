@@ -894,8 +894,8 @@ function applyWorkspaceView() {
   const hmi = workspaceView === "hmi", electrical = workspaceView === "electrical", other = hmi || electrical, mode = project.editorType || "LD", canvas = $("#canvasWrap"), wasCanvasHidden = canvas.classList.contains("hidden"); $("#gridSizeStatus").hidden = !electrical;
   $("#hmiPane").classList.toggle("hidden", !hmi); $("#electricalPane").classList.toggle("hidden", !electrical); $(".editor-area").classList.toggle("hmi-mode", hmi || electrical);
   $(".workspace").classList.toggle("electrical-workspace-active", electrical); $(".toolbar .zoom-tools")?.classList.toggle("hidden", electrical); $("#zoomFit")?.classList.toggle("hidden", electrical);
-  const offlineStatus=$(".offline-label"),statusHost=electrical?$(".statusbar-main") : $(".editor-footer");
-  if(offlineStatus&&statusHost&&offlineStatus.parentElement!==statusHost)statusHost.append(offlineStatus);
+  const offlineStatus=$(".offline-label"),statusHost=matchMedia("(min-width: 1200px)").matches?$("#globalQuickCommands"):(electrical?$(".statusbar-main"):$(".editor-footer"));
+  if(offlineStatus&&statusHost&&offlineStatus.parentElement!==statusHost){if(statusHost.id==="globalQuickCommands")statusHost.insertBefore(offlineStatus,statusHost.firstChild);else statusHost.append(offlineStatus);}
   $("#electricalToolboxDock").classList.toggle("hidden", !electrical);
   const faultsHome=$(".toolbar .sim-tools"),workflowHost=$("#electricalLibraryWorkflows"),workflowActions=$("#electricalSimulationWorkflowActions"),faultsButton=faultsHome?.querySelector('[data-action="faults"]')||workflowHost?.querySelector('[data-action="faults"]');
   if(faultsButton&&faultsHome&&workflowHost){if(electrical){if(workflowActions)workflowActions.append(faultsButton);else workflowHost.append(faultsButton);}else faultsHome.append(faultsButton);}
@@ -2138,13 +2138,13 @@ function setupAdigunBotWindow() {
 }
 function setupResponsiveGlobalCommandDocks() {
   // Move already-bound real buttons, never clone or duplicate global commands.
-  const actions=["save","undo","redo","run"].map((key)=>document.querySelector(`.toolbar [data-action="${key}"]`)).filter(Boolean);
-  const palette=$("#paletteButton");
+  const actions=["undo","redo","save","run"].map((key)=>document.querySelector(`.toolbar [data-action="${key}"]`)).filter(Boolean);
+  const palette=$("#paletteButton"),offline=$(".offline-label");
   const moved=[...actions,palette].map((button)=>({button,parent:button.parentNode,next:button.nextSibling}));
   const desktop=matchMedia("(min-width: 1200px)");
   const position=()=>{
-    if(desktop.matches) { for(const button of actions) $("#globalQuickCommands").append(button); $("#menuCommandDock").append(palette); }
-    else { for(const {button,parent,next} of [...moved].reverse()) { if(next?.parentNode===parent) parent.insertBefore(button,next); else parent.append(button); } }
+    if(desktop.matches) { const header=$("#globalQuickCommands"); for(const button of actions) header.append(button); header.insertBefore(offline,header.firstChild); $("#menuCommandDock").append(palette); }
+    else { for(const {button,parent,next} of [...moved].reverse()) { if(next?.parentNode===parent) parent.insertBefore(button,next); else parent.append(button); } const host=workspaceView==="electrical"?$(".statusbar-main"):$(".editor-footer"); if(offline&&host&&offline.parentElement!==host)host.append(offline); }
   };
   position(); desktop.addEventListener?.("change",position);
 }

@@ -34,6 +34,14 @@ test("status strip shows editor and PLC state, local autosave setting, and elect
   await expect(page.locator("#autosaveStatus")).toHaveText("Autosave off");
 });
 
+test("global header places offline readiness before Undo, Redo, Save, and Run", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await expect(page.locator("#offlineLabel")).toHaveText("Offline ready");
+  const state=await page.evaluate(()=>({inHeader:document.querySelector("#offlineLabel").closest("#globalQuickCommands")!==null,commandOrder:[...document.querySelectorAll("#globalQuickCommands button")].map(button=>button.dataset.action)}));
+  expect(state.inHeader).toBe(true);
+  expect(state.commandOrder).toEqual(["undo","redo","save","run"]);
+});
+
 test("fresh AdigunSPs workspaces use the approved dark interface by default", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-theme", "dark");
 });
@@ -83,18 +91,18 @@ test("electrical workspace uses one compact status row and docks the bot without
   await expect(page.locator(".corporate-footer")).toBeHidden();
   const electricalLayout=await page.evaluate(()=>{
     const box=(selector)=>{const r=document.querySelector(selector).getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height}};
-    return {status:box(".statusbar"),bot:box(".floating-bot"),board:box(".electrical-board-wrap"),offlineInStatus:document.querySelector("#offlineLabel").closest(".statusbar")!==null};
+    return {status:box(".statusbar"),bot:box(".floating-bot"),board:box(".electrical-board-wrap"),offlineInHeader:document.querySelector("#offlineLabel").closest("#globalQuickCommands")!==null};
   });
   expect(electricalLayout.status.height).toBe(35);
   expect(electricalLayout.bot.top).toBeGreaterThanOrEqual(electricalLayout.status.top);
   expect(electricalLayout.bot.bottom).toBeLessThanOrEqual(electricalLayout.status.bottom+1);
   expect(electricalLayout.board.bottom).toBeLessThanOrEqual(electricalLayout.status.top);
-  expect(electricalLayout.offlineInStatus).toBe(true);
+  expect(electricalLayout.offlineInHeader).toBe(true);
 
   await page.locator("#logicTab").click();
   await expect(page.locator(".editor-footer")).toBeVisible();
   await expect(page.locator(".corporate-footer")).toBeVisible();
-  expect(await page.locator("#offlineLabel").evaluate((node)=>node.closest(".editor-footer")!==null)).toBe(true);
+  expect(await page.locator("#offlineLabel").evaluate((node)=>node.closest("#globalQuickCommands")!==null)).toBe(true);
 });
 
 test("electrical workspace stays usable without overlap at required viewports", async ({ page }) => {

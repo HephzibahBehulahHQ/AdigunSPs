@@ -285,7 +285,7 @@ Select **Electrical schematic** in the **Project Explorer** or **Components / Sc
 
 ### Status strip
 
-The bottom bar shows the editor-ready marker, simulated PLC state, scan time, cycle count and task cycle. **Local autosave active** reflects the autosave setting; when autosave is disabled, it reads **Autosave off**. In Electrical schematic, the status strip also shows **Grid: 20 px** and **Educational simulation · no hardware connected**. This is a simulation boundary, not a hardware connection.
+The bottom bar shows the editor-ready marker, simulated PLC state, scan time, cycle count and task cycle. **Local autosave active** reflects the autosave setting; when autosave is disabled, it reads **Autosave off**. In Electrical schematic, the status strip also shows **Grid: 20 px** and **Educational simulation · no hardware connected**. Offline readiness stays in the top bar. This is a simulation boundary, not a hardware connection.
 
 ### Wide-screen command relocation
 
