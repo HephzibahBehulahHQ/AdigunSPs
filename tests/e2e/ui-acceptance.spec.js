@@ -99,8 +99,20 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator("#electricalToolboxDock .electrical-toolbox-heading span")).toHaveText("ACTIVE");
   await expect(page.locator("#electricalToolboxDock .electrical-toolbar [data-electrical-action]")).toHaveCount(8);
   await expect(page.locator('#electricalToolboxDock [data-electrical-action="select"]')).toHaveAttribute("aria-pressed", "true");
-  await page.locator("#electricalToolboxDock > .industrial-catalog > summary").click();
+  await expect(page.locator("#electricalLibraryWorkflows > h2")).toHaveText("LIBRARY & WORKFLOWS");
+  await page.locator("#electricalLibraryWorkflows .electrical-library-link").click();
+  await expect(page.locator("#electricalPalette")).toBeFocused();
+  await expect(page.locator('#electricalLibraryWorkflows [data-action="faults"]')).toBeVisible();
+  await expect(page.locator("#electricalLibraryWorkflows .industrial-catalog > summary")).toContainText("Manufacturer references");
+  await page.locator("#electricalLibraryWorkflows .industrial-catalog > summary").click();
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
+  await page.locator('#electricalLibraryWorkflows [data-action="faults"]').click();
+  await expect(page.locator("#modal")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#modal")).toBeHidden();
+  await page.locator("#logicTab").click();
+  await expect(page.locator('.toolbar .sim-tools [data-action="faults"]')).toHaveCount(1);
+  await expect(page.locator('#electricalLibraryWorkflows [data-action="faults"]')).toHaveCount(0);
 });
 
 test("electrical canvas exposes the reference-aligned contextual title and actions", async ({ page }) => {

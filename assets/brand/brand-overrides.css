@@ -169,6 +169,10 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 .electrical-toolbox-dock .electrical-toolbar button{min-width:0;width:100%;min-height:37px;padding:6px 5px;white-space:normal;overflow-wrap:anywhere;font-size:11px;line-height:1.3}
 .electrical-toolbox-dock .electrical-toolbar [data-electrical-action="select"][aria-pressed="true"]{border-color:#0bd4e3;background:#0f3c49;color:#d9faff;box-shadow:inset 0 0 0 1px #0bd4e388}
 .electrical-toolbox-dock .electrical-toolbar [data-electrical-action="add"]{grid-column:1/-1}
+.electrical-library-workflows{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.electrical-library-workflows>h2{margin:0 0 9px;padding:0 7px;color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.electrical-library-workflows .electrical-library-link,.electrical-library-workflows [data-action="faults"]{box-sizing:border-box;display:flex;align-items:center;justify-content:flex-start;gap:7px;width:100%;min-height:36px;margin:0 0 8px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:11px;text-align:left}
+.electrical-library-workflows .electrical-library-link:hover,.electrical-library-workflows .electrical-library-link:focus-visible,.electrical-library-workflows [data-action="faults"]:hover,.electrical-library-workflows [data-action="faults"]:focus-visible{border-color:#0bd4e3;background:#0f3c49;color:#d9faff}
 .electrical-toolbox-dock .industrial-catalog{margin:12px 0 0;max-width:100%;min-width:0;overflow-wrap:anywhere;font-size:11px}
 .electrical-toolbox-dock .industrial-catalog input{min-width:0;width:100%;box-sizing:border-box}
 .electrical-toolbox-dock .industrial-catalog form{min-width:0;max-width:100%;display:flex;flex-direction:column;gap:7px}
