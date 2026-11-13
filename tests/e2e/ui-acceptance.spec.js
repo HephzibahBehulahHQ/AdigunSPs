@@ -51,8 +51,8 @@ test("command search matches the labeled reference field and opens the existing 
   expect((await search.boundingBox()).width).toBeGreaterThanOrEqual(180);
   await search.click();
   await expect(page.locator("#paletteSearch")).toBeVisible();
-  await page.locator("#paletteSearch").fill("Electrical schematic");
-  await expect(page.locator("#paletteResults")).toContainText("Electrical schematic");
+  await page.locator("#paletteSearch").fill("New project");
+  await expect(page.locator("#paletteResults")).toContainText("New project");
   await page.keyboard.press("Escape");
   await page.locator("#languageButton").click();
   await expect(page.getByRole("button", { name: "Befehle suchen" })).toBeVisible();
