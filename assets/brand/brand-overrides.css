@@ -191,6 +191,14 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 #electricalPane .electrical-safety{flex:none;margin:0;line-height:1.35;padding:6px 10px;font-size:10px}
 @media (min-width:1051px){.workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden){grid-template-columns:minmax(225px,260px) minmax(0,1fr) minmax(280px,325px)}}
 @media(max-width:760px){.workspace.electrical-workspace-active .electrical-toolbox-dock{padding:8px}.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{padding:5px}}
+.electrical-inspector-section{min-width:0;border:1px solid var(--line,#39485b);border-radius:7px;background:var(--surface,#0b1220)}
+.electrical-inspector-section>summary{display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 9px;color:var(--text,#e9eef5);font-size:11px;font-weight:700;cursor:pointer;list-style:none}
+.electrical-inspector-section>summary::-webkit-details-marker{display:none}
+.electrical-inspector-section>summary::before{content:"›";color:#22d3ee;font-size:16px;line-height:1;transform:rotate(0deg);transition:transform .15s ease}
+.electrical-inspector-section[open]>summary::before{transform:rotate(90deg)}
+.electrical-inspector-section>summary span{flex:1;min-width:0}
+.electrical-inspector-section>summary b{color:#86efac;font-size:10px;font-weight:700;white-space:nowrap}
+.electrical-inspector-section[open]>:not(summary){margin-right:9px;margin-left:9px}
 
 /* Use the otherwise empty header/menu space for the same live global commands at wide widths. */
 .header-quick-commands{display:flex;align-items:center;gap:7px;margin-left:auto;flex:none;min-width:0}
