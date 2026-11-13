@@ -6,7 +6,7 @@ assert.match(html,/id="projectHeading">PROJECT EXPLORER<\/span>/);
 assert.match(app,/en: \{ project:"PROJECT EXPLORER"/);
 assert.match(app,/de: \{ project:"PROJEKT-EXPLORER"/);
 assert.match(app,/yo: \{ project:"OLÙṢÀWÁRÍ IṢẸ́"/);
-assert.match(app,/pcm: \{ project:"PROJECT EXPLORER"/); class="electrical-toolbox-dock hidden"/);
+assert.match(app,/pcm: \{ project:"PROJECT EXPLORER"/);
 assert.match(app,/toolboxHost:\$\("#electricalToolboxDock"\),inspectorHost:\$\("#inspectorContent"\)/);
 assert.match(app,/classList\.toggle\("electrical-workspace-active", electrical\)/);
 assert.match(electrical,/workflows\.id="electricalLibraryWorkflows"/);
