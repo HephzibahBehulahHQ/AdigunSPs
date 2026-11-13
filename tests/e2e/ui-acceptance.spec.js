@@ -17,6 +17,23 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#modal")).toBeHidden();
 });
 
+test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");
+  await expect(page.locator("#plcPrefix")).toHaveText("PLC:");
+  await expect(page.locator("#scanTimeLabel")).toHaveText("Scan:");
+  await expect(page.locator("#autosaveStatus")).toHaveText("Local autosave active");
+  await expect(page.locator("#gridSizeStatus")).toBeHidden();
+  await page.locator('[data-project-view="electrical"]').click();
+  await expect(page.locator("#gridSizeStatus")).toHaveText("Grid: 20 px");
+  await expect(page.locator("#gridSizeStatus")).toBeVisible();
+  await page.locator("#settingsButton").click();
+  await expect(page.locator("#prefAutosave")).toBeChecked();
+  await page.locator("#prefAutosave").uncheck();
+  await page.locator("#settingsDone").click();
+  await expect(page.locator("#autosaveStatus")).toHaveText("Autosave off");
+});
+
 test("fresh AdigunSPs workspaces use the approved dark interface by default", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-theme", "dark");
 });
