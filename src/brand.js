@@ -55,6 +55,7 @@ export function brandPresentation(language = "en", theme = "dark", productId = b
     productIcon: product.icons[theme === "light" ? "light512" : "dark512"],
     divisionName: brand.division.name,
     divisionLabel: `${brand.division.prefix[language] || brand.division.prefix.en} ${brand.division.name.toUpperCase()}`,
+    workspaceLabel: "PLC / SPS ENGINEERING STUDIO",
     splash: product.splash[theme === "light" ? "light" : "dark"],
     attribution: brand.attribution[language] || brand.attribution.en,
     description: brand.description[language] || brand.description.en,
