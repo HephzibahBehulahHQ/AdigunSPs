@@ -69,7 +69,8 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(hmiTools.locator("[data-hmi-add]:visible")).toHaveCount(4);
 
   await page.locator("#electricalTab").click();
-  await expect(page.locator("#electricalToolboxDock .electrical-toolbar [data-electrical-action]")).toHaveCount(7);
+  await expect(page.locator("#electricalToolboxDock .electrical-toolbar [data-electrical-action]")).toHaveCount(8);
+  await expect(page.locator('#electricalToolboxDock [data-electrical-action="select"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator("#electricalToolboxDock > .industrial-catalog > summary").click();
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
 });
@@ -133,7 +134,19 @@ test("electrical wire endpoints track rotation and keyboard movement while selec
   const componentIds = await components.evaluateAll(nodes => nodes.map(node => node.dataset.componentId));
   const terminals = await Promise.all(componentIds.map(id => page.locator('[data-terminal-component="' + id + '"]').first().getAttribute("data-terminal")));
 
-  await page.locator('#electricalToolboxDock [data-electrical-action="wire"]').click();
+  const wireTool = page.locator('#electricalToolboxDock [data-electrical-action="wire"]');
+  const selectTool = page.locator('#electricalToolboxDock [data-electrical-action="select"]');
+  await expect(selectTool).toHaveAttribute("aria-pressed", "true");
+  await wireTool.click();
+  await expect(wireTool).toHaveAttribute("aria-pressed", "true");
+  await selectTool.click();
+  await expect(wireTool).toHaveAttribute("aria-pressed", "false");
+  await wireTool.click();
+  await page.locator('[data-terminal-component="' + componentIds[0] + '"][data-terminal="' + terminals[0] + '"]').click();
+  await selectTool.click();
+  await page.locator('[data-terminal-component="' + componentIds[1] + '"][data-terminal="' + terminals[1] + '"]').click();
+  await expect(page.locator("#electricalBoard .electrical-wire")).toHaveCount(0);
+  await wireTool.click();
   await page.locator('[data-terminal-component="' + componentIds[0] + '"][data-terminal="' + terminals[0] + '"]').click();
   await page.locator('[data-terminal-component="' + componentIds[1] + '"][data-terminal="' + terminals[1] + '"]').click();
   const wire = page.locator("#electricalBoard .electrical-wire");
