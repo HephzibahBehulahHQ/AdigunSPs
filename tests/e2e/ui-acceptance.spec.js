@@ -21,6 +21,19 @@ test("fresh AdigunSPs workspaces use the approved dark interface by default", as
   await expect(page.locator("body")).toHaveAttribute("data-theme", "dark");
 });
 
+test("project explorer switches between the existing logic, electrical, and HMI workspaces", async ({ page }) => {
+  await page.locator('[data-project-view="electrical"]').click();
+  await expect(page.locator("#electricalPane")).toBeVisible();
+  await expect(page.locator('[data-project-view="electrical"]')).toHaveAttribute("aria-current", "page");
+  await page.locator('[data-project-view="hmi"]').click();
+  await expect(page.locator("#hmiPane")).toBeVisible();
+  await expect(page.locator('[data-project-view="hmi"]')).toHaveAttribute("aria-current", "page");
+  await page.locator('[data-project-view="logic"]').click();
+  await expect(page.locator("#ladderCanvas")).toBeVisible();
+  await expect(page.locator('[data-project-view="logic"]')).toHaveAttribute("aria-current", "page");
+  await expect(page.locator('.toolbar [data-action="examples"]')).toHaveCount(1);
+});
+
 test("electrical workspace uses one compact status row and docks the bot without hiding editor status elsewhere", async ({ page }) => {
   await page.setViewportSize({ width:1894, height:850 });
   await page.locator("#electricalTab").click();
