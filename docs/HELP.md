@@ -194,3 +194,5 @@ Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms:
 Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
+
+Electrical canvas actions appear above: Select, Connect, Validate, Simulate.

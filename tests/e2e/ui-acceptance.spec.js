@@ -79,6 +79,22 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
 });
 
+test("electrical canvas exposes the reference-aligned contextual title and actions", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const context = page.locator("#electricalCanvasContext");
+  await expect(context).toBeVisible();
+  await expect(context).toContainText("MAIN CIRCUIT");
+  const select = context.locator('[data-electrical-action="select"]');
+  const wire = context.locator('[data-electrical-action="wire"]');
+  await select.click();
+  await expect(select).toHaveAttribute("aria-pressed", "true");
+  await wire.click();
+  await expect(wire).toHaveAttribute("aria-pressed", "true");
+  await wire.click();
+  await expect(wire).toHaveAttribute("aria-pressed", "false");
+  await context.locator('[data-electrical-action="validate"]').click();
+  await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
+});
 test("electrical component search filters models and restores the full picker", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const search = page.locator("#electricalToolboxDock #electricalModelSearch");
@@ -143,7 +159,7 @@ test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electri
   expect(firstPair[0].right + 8 <= firstPair[1].left || firstPair[1].right + 8 <= firstPair[0].left || firstPair[0].bottom + 8 <= firstPair[1].top || firstPair[1].bottom + 8 <= firstPair[0].top).toBe(true);
   await page.locator('#electricalToolboxDock [data-electrical-action="delete"]').click();
   await expect(components).toHaveCount(1);
-  await page.locator('#electricalToolboxDock [data-electrical-action="simulate"]').click();
+  await page.locator('#electricalCanvasContext [data-electrical-action="simulate"]').click();
   await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
 });
 
