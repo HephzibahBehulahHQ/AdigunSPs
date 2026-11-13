@@ -195,4 +195,4 @@ Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [co
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
 
-Electrical canvas shows its title, actions, and connection legend.
+Electrical canvas shows title, actions, legend; Issues lists current findings.

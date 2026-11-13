@@ -294,3 +294,5 @@ The left project panel now shows the existing actions for the active editor: Add
 The Components canvas places its circuit title and **Select**, **Connect terminals**, **Validate**, and **Simulate** actions immediately above the drawing. Use the left toolbox for model search, placement, move, rotation, duplication, deletion, and manufacturer references.
 
 The schematic's visible legend identifies terminal markers, connected signals, and the left toolbox location for editing wires. It does not validate real-world wiring.
+
+The right inspector's **Issues** tab lists current validation findings for the active workspace. In Components it uses the electrical diagram validator; other editors use project validation. **Properties** returns to the selected component or instruction. **Watch** retains the existing simulated-value and force controls.

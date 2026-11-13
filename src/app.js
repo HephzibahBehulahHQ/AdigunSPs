@@ -12,7 +12,7 @@ import { evaluateAlarms, createAlarm, setAlarmState, saveRecipe, applyRecipe, ca
 import { stepProcesses, defaultProcessModel } from "./process.js";
 import { brand, brandPresentation } from "./brand.js";
 import { resolveTheme } from "./theme.js";
-import { simulateElectricalDiagram } from "./electrical.js";
+import { simulateElectricalDiagram, validateElectricalDiagram } from "./electrical.js";
 import { countProjectMatches } from "./project-search.js";
 import { searchExamples } from "./example-search.js";
 import { renderProcessTwin } from "./process-view.js";
@@ -411,12 +411,24 @@ function setupFbdPanning() {
   window.addEventListener("keydown", (event) => { if (event.code === "Space" && !editable(event.target)) { panSpaceHeld = true; pane.classList.add("pan-enabled"); event.preventDefault(); } });
   window.addEventListener("keyup", (event) => { if (event.code === "Space") { panSpaceHeld = false; pane.classList.remove("pan-enabled"); } });
 }
+function renderIssuesPanel() {
+  const panel = $("#issuesContent");
+  if (!panel || !project) return;
+  const issues = workspaceView === "electrical"
+    ? validateElectricalDiagram(project.electrical || { components:[], wires:[] }, project.tags || [])
+    : validateProject(project);
+  const errors = issues.filter((issue) => issue.level === "error").length;
+  const title = ({ en:"Active workspace issues", de:"Probleme im aktiven Arbeitsbereich", yo:"Àwọn ìṣòro iṣẹ́ tó ṣí sílẹ̀", pcm:"Active workspace issues" })[language];
+  const empty = ({ en:"No issues found for the active workspace.", de:"Keine Probleme im aktiven Arbeitsbereich gefunden.", yo:"A kò rí ìṣòro nínú iṣẹ́ tó ṣí sílẹ̀.", pcm:"No issues found for the active workspace." })[language];
+  panel.innerHTML = `<div class="issues-heading"><h3>${escapeHtml(title)}</h3><span class="issues-count ${errors ? "has-errors" : ""}">${issues.length}</span></div>${issues.length ? `<ul class="issues-list">${issues.map((issue) => `<li class="${issue.level === "error" ? "error" : "warning"}"><strong>${escapeHtml(issue.level === "error" ? "ERROR" : "WARNING")}</strong><span>${escapeHtml(issue.message)}</span></li>`).join("")}</ul>` : `<p class="issues-empty">${escapeHtml(empty)}</p>`}`;
+}
 function renderDiagnostics() {
   const issues = validateProject(project), errors = issues.filter((issue) => issue.level === "error").length;
   const badge = $("#diagnosticSummary"), state = $("#logicValidationState");
   badge.textContent = errors ? `${errors} ERROR${errors === 1 ? "" : "S"}` : issues.length ? `${issues.length} WARNING${issues.length === 1 ? "" : "S"}` : "ALL GOOD";
   badge.classList.toggle("diagnostic-error", errors > 0); state.textContent = errors ? "Needs attention" : issues.length ? "Review" : "Ready";
   badge.onclick = () => { modal("Logic validation", `<div class="modal-body">${issues.length ? issues.map((issue) => `<div class="validation-item ${issue.level}">${escapeHtml(issue.message)}</div>`).join("") : '<div class="validation-item ok">No project errors found.</div>'}</div>`); };
+  renderIssuesPanel();
 }
 function scrollToRung(index) {
   const canvas = $("#ladderCanvas"), wrap = $("#canvasWrap"), rung = canvas.querySelector(`[data-rung="${index}"]`);
@@ -1978,6 +1990,7 @@ function action(name) {
   if (name === "new") { void (async () => { if (!(await confirmProjectChange())) return; project = emptyProject(); project.lastOpenedAt = Date.now(); stopSimulation(); await persist(false, true, { markDirty:false, markSaved:true }); render(); })(); } else if (name === "examples") showExamples(); else if (name === "import") importProject(); else if (name === "export") exportProject(); else if (name === "add-rung") addRung(); else if (name === "add-contact") { if (selection?.rung != null) rungAction("add", selection.rung); else addRung(); } else if (name === "undo") undo(); else if (name === "redo") redo(); else if (name === "run") runSimulation(); else if (name === "pause") { if (runTimer) { clearInterval(runTimer); runTimer = null; logEvent("pause", "Simulation paused"); addNarratorEntry("Simulation paused; outputs retain their current simulated state."); window.adigunPaused = true; updateSimulationHud(); updateStatus(); } } else if (name === "step") { if (runTimer) return; addNarratorEntry("Single PLC scan requested."); doScan(); } else if (name === "stop") { stopSimulation(); toast(t("resetDone")); } else if (name === "sound") { soundEnabled = !soundEnabled; const button = $("#soundToggle"); button.setAttribute("aria-pressed", String(soundEnabled)); button.textContent = soundEnabled ? "♫ Sound on" : "♫ Sound off"; if (soundEnabled) { playSimulationTone("click"); button.title = "Turn simulation sounds off"; } else button.title = "Turn simulation sounds on"; updateMotorHum(); } else if (name === "zoom-in") setZoom(zoom + 10); else if (name === "zoom-out") setZoom(zoom - 10); else if (name === "grid") { grid = !grid; $("#canvasWrap").classList.toggle("no-grid", !grid); $("#gridToggle").classList.toggle("active", grid); } else if (name === "projects") showProjects(); else if (name === "tags") showTags(); else if (name === "help") showHelp();
 }
 function applyLocale() {
+  $("#issuesTab").textContent = ({ en:"ISSUES", de:"PROBLEME", yo:"ÌṢÒRO", pcm:"ISSUES" })[language];
   for (const button of document.querySelectorAll("[data-app-menu]")) button.textContent = applicationMenuLabels[language]?.[button.dataset.appMenu] || applicationMenuLabels.en[button.dataset.appMenu];
   const panelTitle = ({ en:"Panel layout", de:"Panelanordnung", yo:"Ìṣètò pánẹ́lì", pcm:"Panel layout" })[language]; $("#panelLayoutButton").title = panelTitle; $("#panelLayoutButton").setAttribute("aria-label", panelTitle);
   const drawerCloseLabels = { left:{en:"Close project panel",de:"Projektbereich schließen",yo:"Pa pánẹ́lì iṣẹ́",pcm:"Close project panel"}, right:{en:"Close inspector panel",de:"Inspektorbereich schließen",yo:"Pa pánẹ́lì olùṣàyẹ̀wò",pcm:"Close inspector panel"} };
@@ -2148,6 +2161,16 @@ function setupContextualEditorToolbox() {
 setupContextualEditorToolbox();
 setupResponsiveGlobalCommandDocks();
 applyPanelLayout(); $("#panelLayoutButton").addEventListener("click", showPanelLayout);
+function selectInspectorTab(tab) {
+  const issues = tab === "issues";
+  $("#propertiesTab").classList.toggle("active", !issues);
+  $("#issuesTab").classList.toggle("active", issues);
+  $("#inspectorContent").hidden = issues;
+  $("#issuesContent").hidden = !issues;
+  if (issues) renderIssuesPanel();
+}
+$("#propertiesTab").addEventListener("click", () => selectInspectorTab("properties"));
+$("#issuesTab").addEventListener("click", () => selectInspectorTab("issues"));
 for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => $(".workspace").classList.remove("mobile-left-open", "mobile-right-open"));
 startAdigunCopilotObservers();
 init().then(setupAdigunBotWindow);

@@ -65,8 +65,9 @@
     </section>
 
     <aside class="sidebar right-sidebar">
-      <div class="inspector-tabs"><button class="active" id="propertiesTab">PROPERTIES</button><button data-action="watch" id="watchTab">WATCH</button><button type="button" class="mobile-panel-close" data-mobile-drawer-close="right" aria-label="Close inspector panel" title="Close inspector panel">×</button></div>
+      <div class="inspector-tabs"><button class="active" id="propertiesTab">PROPERTIES</button><button data-action="watch" id="watchTab">WATCH</button><button id="issuesTab" type="button">ISSUES</button><button type="button" class="mobile-panel-close" data-mobile-drawer-close="right" aria-label="Close inspector panel" title="Close inspector panel">×</button></div>
       <div id="inspectorContent" class="inspector-content"><div class="empty-inspector"><div class="inspector-icon">⌘</div><b>Instruction properties</b><p>Select a contact or coil in the ladder to edit its tag and behavior.</p></div></div>
+      <section id="issuesContent" class="issues-content" aria-label="Active workspace validation issues" hidden></section>
       <section class="diagnostic-panel"><div class="panel-heading"><span id="diagnosticsHeading">DIAGNOSTICS</span><span class="diagnostic-ok" id="diagnosticSummary">CHECKING</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Logic validation</span><span class="muted" id="logicValidationState">Ready</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Simulation engine</span><span class="muted">Ready</span></div><div class="diagnostic-line"><span class="diagnostic-check">✓</span><span>Project storage</span><span class="muted">Local</span></div></section>
       <div class="version-card"><span id="versionProductName">AdigunSPs</span><div>v0.1 · Educational</div></div>
     </aside>
