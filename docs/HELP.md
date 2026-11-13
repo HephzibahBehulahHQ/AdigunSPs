@@ -62,7 +62,7 @@ The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Ru
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
 | HMI widgets | Add; edit, move, delete | Left toolbox; right inspector |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
-| Simulated inputs, Outputs, Project tree | Set test inputs and navigate the open project | Left sidebar |
+| Simulated inputs, Outputs, Project Explorer | Set test inputs and navigate the open project | Left sidebar |
 | Help & docs | Open help and documentation | Footer |
 
 **What you'll see:** A dialog has a **Close** or × control; the editor tabs include **Program / Main**.
