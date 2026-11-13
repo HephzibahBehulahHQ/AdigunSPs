@@ -92,6 +92,7 @@ test("electrical workspace stays usable without overlap at required viewports", 
 });
 
 test("contextual toolboxes keep the existing editor actions reachable", async ({ page }) => {
+  await expect(page.locator("#electricalTab")).toHaveAttribute("aria-label", "Components / Schematic");
   const logicTab = page.locator("#logicTab");
   const mode = page.locator("#editorMode");
   for (const editor of ["LD", "FBD", "ST", "SFC"]) {

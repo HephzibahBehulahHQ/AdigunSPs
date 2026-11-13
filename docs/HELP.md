@@ -37,7 +37,7 @@ Project and tools: left; canvas: center; Properties/Watch/Diagnostics: right; ru
 
 ## Navigating the interface
 
-The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run move to the header. Components filters generic models by category, name, or ID; clear its search to restore all. Manufacturer references are informational. Physical control unavailable.
+Editor tools follow LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run move to header. Components filters generic models by category, name, or ID; clear its search to restore all. Manufacturer references are informational. Physical control unavailable.
 
 1. Click a top menu or toolbar control to open its menu or panel.
 2. Click outside or press Escape to close a menu; tap outside on touch.
@@ -58,7 +58,7 @@ The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Ru
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
 | Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
-| Program / Main, Components, HMI | Switch editor workspace | Tabs or project tree |
+| Program / Main, Components / Schematic, HMI | Switch editor workspace | Tabs or project tree |
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
 | HMI widgets | Add; edit, move, delete | Left toolbox; right inspector |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
