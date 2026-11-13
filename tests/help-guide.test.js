@@ -16,6 +16,8 @@ for (const section of ["getting-started", "taking-the-onboarding-tour", "navigat
 }
 for (const [, anchor] of guide.matchAll(/\]\(#([^)]+)\)/g)) assert.ok(rendered.includes(`id="${anchor}"`), `Help contents target ${anchor} exists`);
 assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the requested word limit");
+assert.match(guide,/PLC\/scan\/cycle\/autosave/);
+assert.match(userGuide,/### Status strip[\s\S]*Grid: 20 px[\s\S]*no hardware connected/);
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
 assert.match(guide, /select the profile icon[\s\S]*?labelled \*\*Sign in\*\*[\s\S]*?\*\*Account\*\*/i, "Help identifies the current profile icon labels");
 assert.match(guide, /email and password[\s\S]*?Create account[\s\S]*?Forgot password/i, "Help explains password sign-in and signup confirmation");
