@@ -284,3 +284,5 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 /* Match the approved engineering status strip while keeping diagnostics readable. */
 .statusbar-main{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}.statusbar-main>span{flex:0 0 auto}.statusbar-main>.status-spacer{flex:1 1 auto;min-width:12px}.editor-ready-status{color:#86efac;font-weight:700;letter-spacing:.04em}.editor-ready-status .status-indicator{background:#86efac}
 @media(max-width:700px){.statusbar-main>#gridSizeStatus,.statusbar-main>#educationalStatus{display:none}.statusbar-main>.status-spacer{min-width:2px}}
+
+.header-quick-commands button[data-action="run"]{min-width:210px;max-width:210px;text-transform:uppercase}
