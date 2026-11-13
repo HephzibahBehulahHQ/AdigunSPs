@@ -42,6 +42,16 @@ test("global header places offline readiness before Undo, Redo, Save, and Run", 
   expect(state.commandOrder).toEqual(["undo","redo","save","run"]);
 });
 
+test("global Run action matches the reference simulation label without losing its command", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  const run=page.locator("#globalQuickCommands [data-action=\"run\"]");
+  await expect(run).toBeVisible();
+  await expect(run).toHaveAttribute("aria-label","Run simulation");
+  await expect(run.locator("span")).toHaveText("Run simulation");
+  await expect(run).toHaveCSS("text-transform","uppercase");
+  expect((await run.boundingBox()).width).toBe(210);
+});
+
 test("fresh AdigunSPs workspaces use the approved dark interface by default", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-theme", "dark");
 });
