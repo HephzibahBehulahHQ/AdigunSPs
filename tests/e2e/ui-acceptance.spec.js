@@ -44,6 +44,20 @@ test("project header shows the reference breadcrumb at desktop widths and locali
   await expect(page.locator("#workspaceBreadcrumb")).toBeHidden();
 });
 
+test("command search matches the labeled reference field and opens the existing searchable palette", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  const search = page.getByRole("button", { name: "Search all commands" });
+  await expect(search).toBeVisible();
+  expect((await search.boundingBox()).width).toBeGreaterThanOrEqual(180);
+  await search.click();
+  await expect(page.locator("#paletteSearch")).toBeVisible();
+  await page.locator("#paletteSearch").fill("New project");
+  await expect(page.locator("#paletteResults")).toContainText("New project");
+  await page.keyboard.press("Escape");
+  await page.locator("#languageButton").click();
+  await expect(page.getByRole("button", { name: "Befehle suchen" })).toBeVisible();
+});
+
 test("electrical workspace uses one compact status row and docks the bot without hiding editor status elsewhere", async ({ page }) => {
   await page.setViewportSize({ width:1894, height:850 });
   await page.locator("#electricalTab").click();
