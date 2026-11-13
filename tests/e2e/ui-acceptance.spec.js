@@ -138,8 +138,11 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator("#electricalToolboxDock .electrical-toolbar [data-electrical-action]")).toHaveCount(8);
   await expect(page.locator('#electricalToolboxDock [data-electrical-action="select"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#electricalLibraryWorkflows > h2")).toHaveText("LIBRARY & WORKFLOWS");
-  await page.locator("#electricalLibraryWorkflows .electrical-library-link").click();
+  await page.locator("#electricalLibraryWorkflows > .electrical-library-link").click();
   await expect(page.locator("#electricalPalette")).toBeFocused();
+  const simulatedWorkflow = page.locator("#electricalSimulationWorkflow");
+  await expect(simulatedWorkflow.locator("summary")).toHaveText("Simulated I/O / faults");
+  await simulatedWorkflow.locator("summary").click();
   await expect(page.locator('#electricalLibraryWorkflows [data-action="faults"]')).toBeVisible();
   await expect(page.locator("#electricalLibraryWorkflows .industrial-catalog > summary")).toContainText("Manufacturer references");
   await page.locator("#electricalLibraryWorkflows .industrial-catalog > summary").click();
