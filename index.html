@@ -87,6 +87,17 @@
   <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
   <script src="runtime-config.js"></script>
   <script src="vendor/supabase.js"></script>
+  <script>
+    try {
+      const preferenceKey = "adigun-preferences";
+      const saved = JSON.parse(localStorage.getItem(preferenceKey) || "{}");
+      const preferences = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+      if (!Object.prototype.hasOwnProperty.call(preferences, "theme")) {
+        preferences.theme = "dark";
+        localStorage.setItem(preferenceKey, JSON.stringify(preferences));
+      }
+    } catch {}
+  </script>
   <script type="module" src="src/app.js"></script>
 </body>
 </html>

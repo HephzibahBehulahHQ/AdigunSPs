@@ -17,6 +17,10 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#modal")).toBeHidden();
 });
 
+test("fresh AdigunSPs workspaces use the approved dark interface by default", async ({ page }) => {
+  await expect(page.locator("body")).toHaveAttribute("data-theme", "dark");
+});
+
 test("electrical workspace stays usable without overlap at required viewports", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await expect(page.locator("#electricalBoard")).toBeVisible();
