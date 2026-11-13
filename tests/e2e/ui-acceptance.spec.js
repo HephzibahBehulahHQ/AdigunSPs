@@ -34,6 +34,16 @@ test("project explorer switches between the existing logic, electrical, and HMI 
   await expect(page.locator('.toolbar [data-action="examples"]')).toHaveCount(1);
 });
 
+test("project header shows the reference breadcrumb at desktop widths and localizes it", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await expect(page.locator("#projectTitle")).toBeVisible();
+  await expect(page.locator("#workspaceBreadcrumb")).toHaveText("Main program");
+  await page.locator("#languageButton").click();
+  await expect(page.locator("#workspaceBreadcrumb")).toHaveText("Hauptprogramm");
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await expect(page.locator("#workspaceBreadcrumb")).toBeHidden();
+});
+
 test("electrical workspace uses one compact status row and docks the bot without hiding editor status elsewhere", async ({ page }) => {
   await page.setViewportSize({ width:1894, height:850 });
   await page.locator("#electricalTab").click();
