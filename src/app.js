@@ -897,6 +897,8 @@ function applyWorkspaceView() {
   const offlineStatus=$(".offline-label"),statusHost=electrical?$(".statusbar-main") : $(".editor-footer");
   if(offlineStatus&&statusHost&&offlineStatus.parentElement!==statusHost)statusHost.append(offlineStatus);
   $("#electricalToolboxDock").classList.toggle("hidden", !electrical);
+  const faultsHome=$(".toolbar .sim-tools"),workflowHost=$("#electricalLibraryWorkflows"),faultsButton=faultsHome?.querySelector('[data-action="faults"]')||workflowHost?.querySelector('[data-action="faults"]');
+  if(faultsButton&&faultsHome&&workflowHost){if(electrical)workflowHost.append(faultsButton);else faultsHome.append(faultsButton);}
   const editorToolbox = $("#editorToolboxDock"), toolboxMode = hmi ? "HMI" : electrical ? "ELECTRICAL" : mode;
   editorToolbox.classList.toggle("hidden", electrical);
   for (const group of editorToolbox.querySelectorAll("[data-editor-toolbox-mode]")) group.hidden = group.dataset.editorToolboxMode !== toolboxMode;
