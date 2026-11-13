@@ -29,7 +29,7 @@ test("project explorer switches between the existing logic, electrical, and HMI 
   await expect(page.locator("#hmiPane")).toBeVisible();
   await expect(page.locator('[data-project-view="hmi"]')).toHaveAttribute("aria-current", "page");
   await page.locator('[data-project-view="logic"]').click();
-  await expect(page.locator("#ladderCanvas")).toBeVisible();
+  await expect(page.locator("#logicTab")).toHaveClass(/active/);
   await expect(page.locator('[data-project-view="logic"]')).toHaveAttribute("aria-current", "page");
   await expect(page.locator('.toolbar [data-action="examples"]')).toHaveCount(1);
 });
