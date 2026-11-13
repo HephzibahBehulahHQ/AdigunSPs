@@ -292,3 +292,5 @@ On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run 
 The left project panel now shows the existing actions for the active editor: Add contact/Rung for LD, Add block for FBD, Compile for ST, Add step/Transition for SFC, and Switch/Lamp/Value/Trend for HMI. The original button elements and actions are reused. HMI screen selection, naming, alarms, processes, and history tools remain in the HMI editor row.
 
 The Components canvas places its circuit title and **Select**, **Connect terminals**, **Validate**, and **Simulate** actions immediately above the drawing. Use the left toolbox for model search, placement, move, rotation, duplication, deletion, and manufacturer references.
+
+The schematic's visible legend identifies terminal markers, connected signals, and the left toolbox location for editing wires. It does not validate real-world wiring.

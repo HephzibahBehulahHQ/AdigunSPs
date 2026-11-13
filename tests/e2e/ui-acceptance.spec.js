@@ -95,6 +95,17 @@ test("electrical canvas exposes the reference-aligned contextual title and actio
   await context.locator('[data-electrical-action="validate"]').click();
   await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
 });
+test("electrical canvas keeps the connection legend visible beside its scrollable drawing", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const legend = page.locator(".electrical-canvas-legend");
+  await expect(legend).toBeVisible();
+  await expect(legend).toContainText("Terminal connection");
+  await expect(legend).toContainText("Connected signal");
+  await expect(page.locator(".electrical-board-scroll #electricalBoard")).toBeVisible();
+  const box = await legend.boundingBox();
+  const viewport = await page.locator(".electrical-board-wrap").boundingBox();
+  expect(box && viewport && Math.abs(box.y + box.height - (viewport.y + viewport.height)) < 2).toBe(true);
+});
 test("electrical component search filters models and restores the full picker", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const search = page.locator("#electricalToolboxDock #electricalModelSearch");
