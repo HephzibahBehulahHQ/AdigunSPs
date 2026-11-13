@@ -26,7 +26,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
 3. Select the profile icon labelled **Sign in** or **Account**, enter email and password, then **Create account** or **Sign in**. Confirm registration by email. Use **Forgot password?** for recovery.
 
-Project and tools: left; canvas: center; Properties/Watch/Diagnostics: right; run/status: footer. The bottom status strip shows the editor-ready marker, simulated PLC state, scan time, cycle/task details, and autosave state. In Electrical schematic it also shows **Grid: 20 px** and **Educational simulation · no hardware connected**. The grid label only appears in that workspace; the education message confirms that no physical hardware is connected.
+Footer: editor-ready, PLC/scan/cycle/autosave; electrical view adds grid and no-hardware status.
 
 ## Taking the onboarding tour
 
