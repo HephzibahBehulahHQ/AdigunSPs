@@ -35,15 +35,13 @@ Project and tools: left; canvas: center; Properties/Watch/Diagnostics: right; ru
 1. Start the tour; reopen via **? → Safety and help → Start quick tour**.
 2. Use **Back/Next**; **Finish** exits.
 
-Guide covers canvas, wiring, BOT and limits. Physical control unavailable.
-
 ## Navigating the interface
 
-**What you'll see:** Menus stay reachable. The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo and Run move to the header.
+The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run move to the header. Components filters generic models by category, name, or ID; clear its search to restore all. Manufacturer references are informational. Physical control unavailable.
 
 1. Click a top menu or toolbar control to open its menu or panel.
 2. Click outside or press Escape to close a menu; tap outside on touch.
-3. Select **Help** to read this guide. Use the **Safety and help** icon (?) for safety notes and the guided tour; **External resources** remains available below this guide.
+3. Select **Help** to read this guide. Use **Safety and help** (?) for safety notes and the tour; **External resources** remains below.
 
 | Menu / icon | What it does | Where it is |
 | --- | --- | --- |
@@ -59,7 +57,6 @@ Guide covers canvas, wiring, BOT and limits. Physical control unavailable.
 | Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
-| New, Examples, Step, Reset | Project/simulation | Toolbar |
 | Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |

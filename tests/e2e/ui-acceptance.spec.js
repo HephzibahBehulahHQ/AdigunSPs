@@ -75,6 +75,26 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
 });
 
+test("electrical component search filters models and restores the full picker", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const search = page.locator("#electricalToolboxDock #electricalModelSearch");
+  const palette = page.locator("#electricalToolboxDock #electricalPalette");
+  const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  await expect(search).toBeVisible();
+  const allModels = await palette.locator("option").count();
+  await search.fill("motor");
+  await expect(palette.locator("option")).toHaveCount(2);
+  await expect(add).toBeEnabled();
+  await search.fill("no-model-can-match-this");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await expect(palette.locator("option")).toHaveText("No matching model.");
+  await expect(palette).toBeDisabled();
+  await expect(add).toBeDisabled();
+  await search.fill("");
+  await expect(palette.locator("option")).toHaveCount(allModels);
+  await expect(add).toBeEnabled();
+});
+
 
 test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electrical actions", async ({ page }) => {
   const ladderRungs = page.locator("#ladderCanvas .rung");
