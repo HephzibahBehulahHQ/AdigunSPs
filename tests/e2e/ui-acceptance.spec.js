@@ -169,3 +169,32 @@ test("electrical wire endpoints track rotation and keyboard movement while selec
   await expect(wire).toHaveAttribute("data-wire-id", wireId);
   await assertWireMatchesPorts();
 });
+
+
+test("side-panel layout changes do not mutate saved PLC or electrical project data", async ({ page }) => {
+  const readPersistedState = () => page.evaluate(() => new Promise((resolve, reject) => {
+    const guestDrafts=Object.keys(sessionStorage).filter(key=>key.startsWith("adigunsps-guest-draft-")).map(key=>[key,sessionStorage.getItem(key)]);
+    const request=indexedDB.open("adigunsps-local");
+    request.onerror=()=>reject(request.error);
+    request.onsuccess=()=>{
+      const database=request.result;
+      if(!database.objectStoreNames.contains("projects")){database.close();resolve({guestDrafts,projects:[]});return;}
+      const transaction=database.transaction("projects","readonly"), query=transaction.objectStore("projects").getAll();
+      query.onsuccess=()=>{database.close();resolve({guestDrafts,projects:query.result});};
+      query.onerror=()=>{database.close();reject(query.error);};
+    };
+  }));
+  const before = await readPersistedState();
+  expect(before.guestDrafts.length + before.projects.length).toBeGreaterThan(0);
+
+  await page.locator("#panelLayoutButton").click();
+  await expect(page.locator("#panelLeftToggle")).toBeChecked();
+  await expect(page.locator("#panelRightToggle")).toBeChecked();
+  await page.locator("#panelLeftToggle").uncheck();
+  await page.locator("#panelRightToggle").uncheck();
+  await page.locator("#modal .modal-close").click();
+  await expect(page.locator(".workspace")).toHaveClass(/panels-left-hidden/);
+  await expect(page.locator(".workspace")).toHaveClass(/panels-right-hidden/);
+
+  await expect(await readPersistedState()).toEqual(before);
+});
