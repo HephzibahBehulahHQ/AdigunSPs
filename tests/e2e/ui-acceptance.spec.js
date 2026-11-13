@@ -109,7 +109,9 @@ test("electrical canvas keeps the connection legend visible beside its scrollabl
 test("electrical canvas view controls zoom and grid without changing component geometry", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const board = page.locator("#electricalBoard");
+  await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();
   const component = page.locator("#electricalBoard [data-component-id]").first();
+  await expect(component).toBeVisible();
   const initialLeft = await component.getAttribute("style");
   await expect(page.locator("[data-electrical-action=\"grid\"]")).toBeVisible();
   await expect(page.locator("[data-electrical-action=\"fit-view\"]")).toBeVisible();
