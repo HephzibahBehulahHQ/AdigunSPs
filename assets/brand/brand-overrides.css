@@ -202,3 +202,14 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 @media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}
 @media(min-width:761px) and (max-width:1050px){.topbar{gap:12px;padding-inline:12px}.top-actions{gap:7px}.top-actions>.icon-button{flex:0 0 32px;width:32px;height:32px}.top-actions>#languageButton{flex-basis:40px;width:40px}.save-state{margin-right:4px}}
 @media(min-width:761px){.topbar>.project-name{min-width:0;flex:0 1 auto}.project-name button{min-width:0;max-width:clamp(120px,18vw,280px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+/* Reference-aligned electrical canvas title and compact contextual actions. */
+.electrical-canvas-context{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:6px 8px;border:1px solid var(--line,#283344);border-radius:8px;background:var(--panel,#111a28)}
+.electrical-canvas-heading{display:grid;grid-template-columns:auto auto;align-items:center;gap:3px 8px;min-width:0}
+.electrical-canvas-heading h2{grid-column:1/-1;overflow:hidden;margin:0;color:var(--text,#e9eef5);font-size:14px;text-overflow:ellipsis;white-space:nowrap}
+.electrical-canvas-heading h2 span{color:var(--muted,#9aa8b9);font-weight:400}
+.electrical-canvas-heading strong{color:#22d3ee;font-size:10px;letter-spacing:.06em}
+.electrical-canvas-heading small{color:var(--muted,#9aa8b9);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.electrical-canvas-actions{display:flex;flex:0 0 auto;gap:7px}
+.electrical-canvas-actions button{min-height:34px;padding:6px 12px;white-space:nowrap}
+.electrical-toolbox-dock .electrical-toolbar .electrical-advanced-action{display:none}
+@media(max-width:1050px){.electrical-canvas-context{align-items:flex-start;flex-direction:column}.electrical-canvas-actions{width:100%;flex-wrap:wrap}.electrical-canvas-actions button{flex:1 1 auto}}
