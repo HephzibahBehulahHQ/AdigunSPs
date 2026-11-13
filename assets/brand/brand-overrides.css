@@ -113,7 +113,7 @@ body[data-theme="light"] {
 .electrical-channel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0;padding:7px;border:1px solid var(--line,#39485b);border-radius:6px}
 .electrical-channel legend{padding:0 4px;color:var(--text,#eef3f8);font:700 10px ui-monospace,Consolas,monospace}
 .electrical-channel .electrical-field{min-width:0}.electrical-channel .electrical-field select,.electrical-channel .electrical-field input{min-width:0;width:100%}
-.electrical-empty{position:absolute;left:50%;top:40%;width:260px;padding:14px;border:1px dashed #64748b;border-radius:8px;color:var(--muted,#9aa8b9);font-size:12px;text-align:center;transform:translateX(-50%)}
+.electrical-empty{position:absolute;z-index:4;left:50%;top:50%;width:min(260px,calc(100% - 24px));padding:14px;border:1px dashed #64748b;border-radius:8px;color:var(--muted,#9aa8b9);font-size:12px;text-align:center;transform:translate(-50%,-50%);pointer-events:none}
 .electrical-inspector{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;padding:12px;border:1px solid var(--line,#283344);border-radius:10px;background:var(--panel,#111a28)}
 .electrical-inspector h3{margin:4px 0;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#22d3ee}
 .electrical-field input,.electrical-field select{box-sizing:border-box;width:100%;min-width:0}
