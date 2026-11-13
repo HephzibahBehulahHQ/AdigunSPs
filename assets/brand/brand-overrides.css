@@ -194,6 +194,14 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 #electricalPane .electrical-safety{flex:none;margin:0;line-height:1.35;padding:6px 10px;font-size:10px}
 @media (min-width:1051px){.workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden){grid-template-columns:minmax(225px,260px) minmax(0,1fr) minmax(280px,325px)}}
 @media(max-width:760px){.workspace.electrical-workspace-active .electrical-toolbox-dock{padding:8px}.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{padding:5px}}
+@media(min-width:761px){
+  .workspace.electrical-workspace-active .editor-footer{display:none}
+  .workspace.electrical-workspace-active~.statusbar{box-sizing:border-box;height:35px;min-height:35px;flex-direction:row;align-items:center;gap:0;padding:0 12px}
+  .workspace.electrical-workspace-active~.statusbar .statusbar-main{box-sizing:border-box;height:35px;min-height:35px;gap:14px;padding-right:220px}
+  .workspace.electrical-workspace-active~.statusbar .footer-company-brand,.workspace.electrical-workspace-active~.statusbar #languageStatus,.workspace.electrical-workspace-active~.statusbar .corporate-footer{display:none}
+  .workspace.electrical-workspace-active~.statusbar .offline-label{display:flex;align-items:center;gap:6px}
+  .workspace.electrical-workspace-active~.floating-bot{right:17px;bottom:2px;box-sizing:border-box;width:205px;height:31px;min-height:31px;justify-content:center;padding:0 8px;border-radius:6px;box-shadow:none;z-index:5999}
+}
 .electrical-inspector-section{min-width:0;border:1px solid var(--line,#39485b);border-radius:7px;background:var(--surface,#0b1220)}
 .electrical-inspector-section>summary{display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 9px;color:var(--text,#e9eef5);font-size:11px;font-weight:700;cursor:pointer;list-style:none}
 .electrical-inspector-section>summary::-webkit-details-marker{display:none}

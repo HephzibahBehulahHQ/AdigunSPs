@@ -21,6 +21,28 @@ test("fresh AdigunSPs workspaces use the approved dark interface by default", as
   await expect(page.locator("body")).toHaveAttribute("data-theme", "dark");
 });
 
+test("electrical workspace uses one compact status row and docks the bot without hiding editor status elsewhere", async ({ page }) => {
+  await page.setViewportSize({ width:1894, height:850 });
+  await page.locator("#electricalTab").click();
+  await expect(page.locator("#offlineLabel")).toBeVisible();
+  await expect(page.locator(".editor-footer")).toBeHidden();
+  await expect(page.locator(".corporate-footer")).toBeHidden();
+  const electricalLayout=await page.evaluate(()=>{
+    const box=(selector)=>{const r=document.querySelector(selector).getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height}};
+    return {status:box(".statusbar"),bot:box(".floating-bot"),board:box(".electrical-board-wrap"),offlineInStatus:document.querySelector("#offlineLabel").closest(".statusbar")!==null};
+  });
+  expect(electricalLayout.status.height).toBe(35);
+  expect(electricalLayout.bot.top).toBeGreaterThanOrEqual(electricalLayout.status.top);
+  expect(electricalLayout.bot.bottom).toBeLessThanOrEqual(electricalLayout.status.bottom+1);
+  expect(electricalLayout.board.bottom).toBeLessThanOrEqual(electricalLayout.status.top);
+  expect(electricalLayout.offlineInStatus).toBe(true);
+
+  await page.locator("#logicTab").click();
+  await expect(page.locator(".editor-footer")).toBeVisible();
+  await expect(page.locator(".corporate-footer")).toBeVisible();
+  expect(await page.locator("#offlineLabel").evaluate((node)=>node.closest(".editor-footer")!==null)).toBe(true);
+});
+
 test("electrical workspace stays usable without overlap at required viewports", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await expect(page.locator("#electricalBoard")).toBeVisible();
