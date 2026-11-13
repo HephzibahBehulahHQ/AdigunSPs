@@ -156,6 +156,9 @@ body[data-theme="light"] .field-help,body[data-theme="light"] .modal-close,body[
 
 /* P0: live electrical tools and contextual inspector dock beside the circuit, never over it. */
 .electrical-toolbox-dock{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 10px;border-bottom:1px solid var(--line)}
+.electrical-toolbox-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:0 7px}
+.electrical-toolbox-heading h2{margin:0;color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.electrical-toolbox-heading>span{padding:3px 7px;border:1px solid #0b9eab;border-radius:6px;background:#0e3540;color:#22d3ee;font-size:9px;font-weight:800;letter-spacing:.05em}
 .workspace.electrical-workspace-active .left-sidebar>.side-card{display:none}
 .workspace.electrical-workspace-active .inspector-content{min-height:0;overflow:auto;padding:8px}
 .workspace.electrical-workspace-active .inspector-content>.electrical-inspector{box-sizing:border-box;width:100%;min-width:0;min-height:0;max-height:none;overflow:visible;border:0;border-radius:0;background:transparent;padding:8px}

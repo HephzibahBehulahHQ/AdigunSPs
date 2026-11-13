@@ -127,6 +127,7 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       while(details.nextSibling&&!(details.nextSibling.nodeType===1&&(details.nextSibling.matches("h3")||details.nextSibling.classList.contains("electrical-status"))))details.append(details.nextSibling);
     };
     if(inspector){
+      inspector.querySelector(":scope > h3")?.remove();
       const headings=[...inspector.querySelectorAll(":scope > h3")];
       const connectionsHeading=headings.find((heading)=>heading.textContent.startsWith(`${t.connections} ·`));
       const validationHeading=headings.find((heading)=>heading.textContent===t.validate);
@@ -183,7 +184,9 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
     // Port already-bound controls, not clones: existing tool actions and properties retain listeners.
     if (toolboxHost) {
       const toolbar=root.querySelector(".electrical-toolbar"),catalog=root.querySelector(".industrial-catalog");
-      toolboxHost.replaceChildren(...[toolbar,catalog].filter(Boolean));
+      const heading=document.createElement("div"),title=document.createElement("h2"),active=document.createElement("span");
+      heading.className="electrical-toolbox-heading";title.textContent=language==="de"?"KOMPONENTENWERKZEUGE":language==="yo"?"ÀWỌN Ọ̀RỌ̀ COMPONENT":"COMPONENT TOOLS";active.textContent=language==="de"?"AKTIV":language==="yo"?"Ń ṢIṢẸ́":"ACTIVE";heading.append(title,active);
+      toolboxHost.replaceChildren(heading,...[toolbar,catalog].filter(Boolean));
     }
     if (inspectorHost) {
       const inspector=root.querySelector(".electrical-inspector");

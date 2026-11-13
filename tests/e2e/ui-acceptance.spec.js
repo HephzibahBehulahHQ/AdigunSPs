@@ -73,6 +73,8 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(hmiTools.locator("[data-hmi-add]:visible")).toHaveCount(4);
 
   await page.locator("#electricalTab").click();
+  await expect(page.locator("#electricalToolboxDock .electrical-toolbox-heading h2")).toHaveText("COMPONENT TOOLS");
+  await expect(page.locator("#electricalToolboxDock .electrical-toolbox-heading span")).toHaveText("ACTIVE");
   await expect(page.locator("#electricalToolboxDock .electrical-toolbar [data-electrical-action]")).toHaveCount(8);
   await expect(page.locator('#electricalToolboxDock [data-electrical-action="select"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator("#electricalToolboxDock > .industrial-catalog > summary").click();
@@ -205,6 +207,8 @@ test("electrical inspector identifies the selected component above its editable 
   const component = page.locator("#electricalBoard [data-component-id]").first();
   const reference = (await component.locator("[data-drag-component]").innerText()).split(" · ")[0];
   const summary = page.locator("#inspectorContent .electrical-selected-component");
+  await expect(page.locator("#propertiesTab")).toHaveText("PROPERTIES");
+  await expect(page.locator("#inspectorContent .electrical-inspector > h3").filter({hasText:"Properties"})).toHaveCount(0);
   await expect(summary.locator("small")).toContainText("SELECTED COMPONENT");
   await expect(summary.locator("h2")).toContainText(reference);
   await expect(summary.locator("p")).toContainText("simulation model");
