@@ -213,3 +213,13 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .electrical-canvas-actions button{min-height:34px;padding:6px 12px;white-space:nowrap}
 .electrical-toolbox-dock .electrical-toolbar .electrical-advanced-action{display:none}
 @media(max-width:1050px){.electrical-canvas-context{align-items:flex-start;flex-direction:column}.electrical-canvas-actions{width:100%;flex-wrap:wrap}.electrical-canvas-actions button{flex:1 1 auto}}
+/* Keep the scrollable engineering drawing above its always-visible connection key. */
+.electrical-board-wrap{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#electricalPane .electrical-board-wrap{overflow:hidden}
+.electrical-board-scroll{flex:1 1 auto;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain}
+.electrical-canvas-legend{display:flex;flex:0 0 auto;align-items:center;gap:18px;min-height:32px;padding:0 14px;border-top:1px solid var(--line,#283344);background:var(--surface,#0b1220);color:var(--muted,#9aa8b9);font-size:10px}
+.electrical-canvas-legend span{display:inline-flex;align-items:center;gap:7px;min-width:0}
+.electrical-canvas-legend i{display:inline-block;flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:#78b9c8}
+.electrical-canvas-legend .legend-signal{width:14px;height:2px;border-radius:0;background:#22d3ee}
+.electrical-canvas-legend .legend-edit{color:var(--muted,#9aa8b9)}
+@media(max-width:900px){.electrical-canvas-legend{gap:10px;overflow-x:auto;white-space:nowrap}.electrical-canvas-legend span{flex:0 0 auto}}
