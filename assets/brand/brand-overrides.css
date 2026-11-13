@@ -196,7 +196,7 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 #electricalPane>.electrical-pane{box-sizing:border-box;display:flex;flex-direction:column;gap:6px;height:100%;min-height:0;max-height:100%;padding:8px}
 #electricalPane .electrical-body{display:grid;grid-template-columns:minmax(0,1fr);gap:0;flex:1;min-height:0;min-width:0;overflow:hidden}
 #electricalPane .electrical-board-wrap{height:100%;min-height:0;min-width:0;box-sizing:border-box;overflow:auto;overscroll-behavior:contain}
-@media(max-width:600px){.electrical-canvas-heading{grid-template-columns:auto minmax(0,1fr)}.electrical-canvas-heading .electrical-safety-badge{grid-column:1/-1;justify-self:start}}
+
 @media (min-width:1051px){.workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden){grid-template-columns:minmax(225px,260px) minmax(0,1fr) minmax(280px,325px)}}
 @media(max-width:760px){.workspace.electrical-workspace-active .electrical-toolbox-dock{padding:8px}.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{padding:5px}}
 @media(min-width:761px){
@@ -228,11 +228,11 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 @media(min-width:761px){.topbar>.project-name{min-width:0;flex:0 1 auto}.project-name button{min-width:0;max-width:clamp(120px,18vw,280px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 /* Reference-aligned electrical canvas title and compact contextual actions. */
 .electrical-canvas-context{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:6px 8px;border:1px solid var(--line,#283344);border-radius:8px;background:var(--panel,#111a28)}
-.electrical-canvas-heading{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:3px 8px;min-width:0}
-.electrical-canvas-heading h2{grid-column:1/-1;overflow:hidden;margin:0;color:var(--text,#e9eef5);font-size:14px;text-overflow:ellipsis;white-space:nowrap}
+.electrical-canvas-heading{display:flex;align-items:center;gap:8px;min-width:0}
+.electrical-canvas-heading h2{min-width:0;overflow:hidden;margin:0;color:var(--text,#e9eef5);font-size:14px;text-overflow:ellipsis;white-space:nowrap}
 .electrical-canvas-heading h2 span{color:var(--muted,#9aa8b9);font-weight:400}
 .electrical-canvas-heading strong{color:#22d3ee;font-size:10px;letter-spacing:.06em}
-.electrical-canvas-heading small{color:var(--muted,#9aa8b9);font-size:10px;text-transform:uppercase;letter-spacing:.04em}.electrical-canvas-heading .electrical-safety-badge{justify-self:end;max-width:100%;overflow:hidden;padding:4px 8px;border:1px solid #275262;border-radius:5px;background:#102b3b;color:#9bd7e4;font-size:9px;font-weight:700;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}
+.electrical-canvas-heading small{color:var(--muted,#9aa8b9);font-size:10px;text-transform:uppercase;letter-spacing:.04em}.electrical-board-wrap{position:relative}.electrical-board-label{position:absolute;z-index:2;top:14px;left:18px;right:18px;display:flex;align-items:center;gap:10px;min-width:0;pointer-events:none}.electrical-board-label>strong{color:#e0edf3;font-size:15px;font-weight:750}.electrical-board-label>span{overflow:hidden;color:#82aabe;font-size:10px;font-weight:700;letter-spacing:.04em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}.electrical-board-label .electrical-safety-badge{max-width:52%;overflow:hidden;margin-left:auto;padding:4px 8px;border:1px solid #275262;border-radius:5px;background:#102b3b;color:#9bd7e4;font-size:9px;font-weight:700;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}@media(max-width:600px){.electrical-board-label{top:8px;left:10px;right:10px;gap:6px}.electrical-board-label>span{display:none}.electrical-board-label .electrical-safety-badge{max-width:62%;padding:3px 6px;font-size:8px}}
 .electrical-canvas-actions{display:flex;flex:0 0 auto;gap:7px}
 .electrical-canvas-actions button{min-height:34px;padding:6px 12px;white-space:nowrap}
 .electrical-toolbox-dock .electrical-toolbar .electrical-advanced-action{display:none}
