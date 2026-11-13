@@ -111,8 +111,11 @@ test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electri
   const components = page.locator("#electricalBoard [data-component-id]");
   await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
   await expect(components).toHaveCount(1);
+  await page.locator('#electricalToolboxDock [data-electrical-action="rotate"]').click();
   await page.locator('#electricalToolboxDock [data-electrical-action="duplicate"]').click();
   await expect(components).toHaveCount(2);
+  const firstPair = await components.evaluateAll(nodes => nodes.map(node => { const {left,top,right,bottom}=node.getBoundingClientRect();return {left,top,right,bottom}; }));
+  expect(firstPair[0].right + 8 <= firstPair[1].left || firstPair[1].right + 8 <= firstPair[0].left || firstPair[0].bottom + 8 <= firstPair[1].top || firstPair[1].bottom + 8 <= firstPair[0].top).toBe(true);
   await page.locator('#electricalToolboxDock [data-electrical-action="delete"]').click();
   await expect(components).toHaveCount(1);
   await page.locator('#electricalToolboxDock [data-electrical-action="simulate"]').click();
