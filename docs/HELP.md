@@ -58,7 +58,7 @@ The left toolbox follows LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Ru
 | Help | Safety/help and external resources | Top menu bar |
 | Profile, EN, ⚙, ⌕, ? icons | Account access, language, settings, command search, safety/help | Top-right product bar |
 | Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
-| Program / Main, Components, HMI | Switch editor workspace | Tabs above the editor |
+| Program / Main, Components, HMI | Switch editor workspace | Tabs or project tree |
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
 | HMI widgets | Add; edit, move, delete | Left toolbox; right inspector |
 | Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
