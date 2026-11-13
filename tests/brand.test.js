@@ -47,7 +47,7 @@ for (const selector of [".electrical-component-head", ".electrical-port", ".elec
 assert.ok(brandCss.includes('body[data-theme="light"] .context-menu button{color:var(--text)}') && brandCss.includes('body[data-theme="light"] .context-menu button.danger{color:#991b1b}'), "context-menu commands and danger actions remain readable in the light theme");
 for (const selector of [".app-menus button", ".tool-group button", ".panel-heading", ".tree-project", ".tree-item", ".sidebar-footer", ".editor-tabs .tab", ".editor-opts", ".field", ".field-help", ".modal-close", ".io-modal-grid h3"]) assert.ok(brandCss.includes(`body[data-theme=\"light\"] ${selector}`), `application chrome and dialogs ${selector} have explicit light-theme text colors`);
 for (const [foreground, background, surface] of [["#152136", "#edf2f1", "context-menu"], ["#334155", "#ffffff", "application chrome"], ["#475569", "#ffffff", "dialog labels"], ["#991b1b", "#edf2f1", "danger menu command"]]) assert.ok(contrastRatio(foreground, background) >= 4.5, `${surface} meets the WCAG AA normal-text contrast target`);
-for (const id of ["headerCorporateLogo", "headerProductName", "headerDivisionLabel", "footerCorporateLogo", "footerBrandAttribution", "corporateFooterLinks", "footerHelpLink", "footerYear", "printCorporateLogo", "printProductName", "printDivisionLabel", "printBrandAttributionText", "adigunAiButton"]) assert.ok(html.includes(`id="${id}"`), `${id} identity surface`);
+for (const id of ["headerProductName", "headerDivisionLabel", "footerCorporateLogo", "footerBrandAttribution", "corporateFooterLinks", "footerHelpLink", "footerYear", "printCorporateLogo", "printProductName", "printDivisionLabel", "printBrandAttributionText", "adigunAiButton"]) assert.ok(html.includes(`id="${id}"`), `${id} identity surface`);
 assert.ok(html.includes('class="floating-bot"') && html.includes("Adigun BOT"), "floating assistant launcher is present");
 assert.ok(app.includes("image.src = presentation.companyLogo") && app.includes("presentation.divisionLabel"), "runtime consumes central corporate and division identity");
 assert.ok(app.includes("for (const item of brand.company.links)") && app.includes("link.rel = \"noopener noreferrer\"") && app.includes("new Date().getFullYear()"), "footer renders approved links safely and the current year");
@@ -56,7 +56,8 @@ const personalProfileLabels = { en:"personal", de:"persönlich", yo:"ti ẹni k�
 for (const locale of ["en", "de", "yo", "pcm"]) assert.ok(ui[locale].footerHelp && ui[locale].footerLinks && ui[locale].linkedinPersonal.includes(personalProfileLabels[locale]), `${locale} company/support and personal-profile labels are localized`);
 assert.ok(app.includes('document.documentElement.lang = { en:"en", de:"de", yo:"yo", pcm:"pcm" }[language]'), "the document language identifies Nigerian Pidgin as pcm");
 assert.ok(app.includes('src="${presentation.companyLogo}"') && app.includes("${presentation.productName}"), "onboarding and About use separate company mark and product text");
-assert.ok(!html.includes('id="productLogo"') && !html.includes("company-wordmark-dark.svg"), "header uses one corporate logo and a text product wordmark");
+assert.ok(html.includes('class="brand-mark" aria-hidden="true">HB</span>') && html.includes("PLC / SPS ENGINEERING STUDIO") && html.includes('id="footerCorporateLogo"'), "compact engineering-studio brand sits in the header while the corporate logo remains in the footer");
+assert.ok(!html.includes('id="productLogo"') && !html.includes("company-wordmark-dark.svg"), "header uses the compact HB mark and a text product wordmark");
 
 const localizedManifestNames = new Set();
 for (const language of ["en", "de", "yo", "pcm"]) {
