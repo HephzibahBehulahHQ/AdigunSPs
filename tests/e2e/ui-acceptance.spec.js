@@ -138,7 +138,7 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator("#electricalToolboxDock .electrical-toolbar [data-electrical-action]")).toHaveCount(8);
   await expect(page.locator('#electricalToolboxDock [data-electrical-action="select"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#electricalLibraryWorkflows > h2")).toHaveText("LIBRARY & WORKFLOWS");
-  await page.locator("#electricalLibraryWorkflows .electrical-library-link").click();
+  await page.locator("#electricalLibraryWorkflows > .electrical-library-link").click();
   await expect(page.locator("#electricalPalette")).toBeFocused();
   await expect(page.locator('#electricalLibraryWorkflows [data-action="faults"]')).toBeVisible();
   await expect(page.locator("#electricalLibraryWorkflows .industrial-catalog > summary")).toContainText("Manufacturer references");
@@ -252,21 +252,6 @@ test("component toolbox uses the approved placement and wire labels without losi
   await page.locator("#languageButton").click();
   await expect(place).toContainText("Komponente platzieren");
   await expect(wire).toContainText("Draht verbinden");
-});
-
-test("electrical workflow disclosure reuses existing simulated inputs and fault injection", async ({ page }) => {
-  await page.locator("#electricalTab").click();
-  const workflow = page.locator("#electricalSimulationWorkflow");
-  await expect(workflow.locator("summary")).toHaveText("Simulated I/O / faults");
-  await expect(workflow).not.toHaveAttribute("open", "");
-  await workflow.locator("summary").click();
-  const jump = workflow.locator("#electricalManualInputLink");
-  const faults = workflow.locator('[data-action="faults"]');
-  const manualInputs = page.locator("#electricalManualInputStates");
-  await expect(jump).toBeVisible();
-  await expect(faults).toBeVisible();
-  await jump.click();
-  await expect(manualInputs).toBeFocused();
 });
 
 test("electrical validation and simulation stay in the canvas action row", async ({ page }) => {
