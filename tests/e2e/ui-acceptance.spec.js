@@ -121,3 +121,51 @@ test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electri
   await page.locator('#electricalToolboxDock [data-electrical-action="simulate"]').click();
   await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
 });
+
+
+test("electrical wire endpoints track rotation and keyboard movement while selection and focus persist", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  await add.click();
+  await add.click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  await expect(components).toHaveCount(2);
+  const componentIds = await components.evaluateAll(nodes => nodes.map(node => node.dataset.componentId));
+  const terminals = await Promise.all(componentIds.map(id => page.locator('[data-terminal-component="' + id + '"]').first().getAttribute("data-terminal")));
+
+  await page.locator('#electricalToolboxDock [data-electrical-action="wire"]').click();
+  await page.locator('[data-terminal-component="' + componentIds[0] + '"][data-terminal="' + terminals[0] + '"]').click();
+  await page.locator('[data-terminal-component="' + componentIds[1] + '"][data-terminal="' + terminals[1] + '"]').click();
+  const wire = page.locator("#electricalBoard .electrical-wire");
+  await expect(wire).toHaveCount(1);
+  const wireId = await wire.getAttribute("data-wire-id");
+
+  const assertWireMatchesPorts = async () => {
+    const result = await page.evaluate(({ componentIds, terminals }) => {
+      const board=document.querySelector("#electricalBoard"), boardRect=board.getBoundingClientRect(), path=board.querySelector(".electrical-wire"), match=path?.getAttribute("d")?.match(/^M(-?[\d.]+) (-?[\d.]+)H(-?[\d.]+)V(-?[\d.]+)H(-?[\d.]+)$/);
+      const ports=componentIds.map((id,index)=>{const button=[...board.querySelectorAll("[data-terminal-component]")].find(item=>item.dataset.terminalComponent===id&&item.dataset.terminal===terminals[index]),rect=button.getBoundingClientRect();return [rect.left+rect.width/2-boardRect.left,rect.top+rect.height/2-boardRect.top];});
+      return { match:Boolean(match), pathEnds:match?[[Number(match[1]),Number(match[2])],[Number(match[5]),Number(match[4])]]:[], ports };
+    }, { componentIds, terminals });
+    expect(result.match).toBe(true);
+    for (let index=0;index<2;index++) {
+      expect(Math.abs(result.pathEnds[index][0]-result.ports[index][0])).toBeLessThan(1.5);
+      expect(Math.abs(result.pathEnds[index][1]-result.ports[index][1])).toBeLessThan(1.5);
+    }
+  };
+  await assertWireMatchesPorts();
+
+  const originalPath = await wire.getAttribute("d");
+  await components.nth(1).click();
+  await page.locator('#electricalToolboxDock [data-electrical-action="rotate"]').click();
+  await expect(wire).not.toHaveAttribute("d", originalPath);
+  await assertWireMatchesPorts();
+
+  const movedPath = await wire.getAttribute("d");
+  const head = page.locator('[data-drag-component="' + componentIds[1] + '"]');
+  await head.focus();
+  await head.press("ArrowRight");
+  await expect(wire).not.toHaveAttribute("d", movedPath);
+  await expect(page.locator('[data-drag-component="' + componentIds[1] + '"]')).toBeFocused();
+  await expect(wire).toHaveAttribute("data-wire-id", wireId);
+  await assertWireMatchesPorts();
+});
