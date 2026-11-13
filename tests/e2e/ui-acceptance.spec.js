@@ -149,6 +149,33 @@ test("electrical validation and simulation stay in the canvas action row", async
   await expect(canvasActions.locator('[data-electrical-action="validate"]')).toBeVisible();
   await expect(canvasActions.locator('[data-electrical-action="simulate"]')).toBeVisible();
 });
+
+test("electrical inspector disclosures retain terminal details when validation rerenders", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  await add.click();
+  await add.click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  const ids = [await components.nth(0).getAttribute("data-component-id"),await components.nth(1).getAttribute("data-component-id")];
+  const terminals = await page.locator(`[data-terminal-component="${ids[0]}"]`).evaluateAll(nodes=>nodes.map(node=>node.dataset.terminal));
+  await page.locator('#electricalCanvasContext [data-electrical-action="wire"]').click();
+  await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="${terminals[0]}"]`).click();
+  const secondTerminal = await page.locator(`[data-terminal-component="${ids[1]}"]`).first().getAttribute("data-terminal");
+  await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${secondTerminal}"]`).click();
+
+  const connections = page.locator('#inspectorContent details[data-inspector-section="connections"]');
+  const diagnostics = page.locator('#inspectorContent details[data-inspector-section="diagnostics"]');
+  await expect(connections.locator("summary")).toContainText("Terminal connections");
+  await expect(connections.locator("summary")).toContainText("1");
+  await expect(connections).not.toHaveAttribute("open", "");
+  await expect(diagnostics.locator("summary")).toContainText("Validation & diagnostics");
+  await connections.locator("summary").click();
+  await expect(connections.locator(".electrical-wire-row")).toHaveCount(1);
+  await page.locator('#electricalCanvasContext [data-electrical-action="validate"]').click();
+  await expect(connections).toHaveAttribute("open", "");
+  await expect(connections.locator(".electrical-wire-row")).toHaveCount(1);
+  await expect(page.locator("#inspectorContent .electrical-status")).toBeVisible();
+});
 test("electrical inspector identifies the selected component above its editable fields", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();
