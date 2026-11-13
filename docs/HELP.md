@@ -195,4 +195,4 @@ Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [co
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
 
-Canvas keeps actions contextual, with grid, zoom, and selection summary.
+Canvas/inspector actions include component editing; grid and zoom stay contextual.

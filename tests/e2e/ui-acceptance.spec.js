@@ -125,6 +125,21 @@ test("electrical canvas view controls zoom and grid without changing component g
   await expect(page.locator("[data-electrical-zoom]")).not.toHaveText("110%");
 });
 
+test("electrical inspector exposes live rotate, duplicate, and delete actions", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();
+  const actions = page.locator("#inspectorContent .electrical-selected-actions");
+  const component = page.locator("#electricalBoard [data-component-id]").first();
+  await expect(actions.locator('[data-electrical-action="rotate"]')).toBeVisible();
+  await expect(actions.locator('[data-electrical-action="duplicate"]')).toBeVisible();
+  await expect(actions.locator('[data-electrical-action="delete"]')).toBeVisible();
+  await actions.locator('[data-electrical-action="rotate"]').click();
+  await expect(component).toHaveAttribute("style", /rotate\(90deg\)/);
+  await actions.locator('[data-electrical-action="duplicate"]').click();
+  await expect(page.locator("#electricalBoard [data-component-id]")).toHaveCount(2);
+  await page.locator("#inspectorContent .electrical-selected-actions [data-electrical-action=\"delete\"]").click();
+  await expect(page.locator("#electricalBoard [data-component-id]")).toHaveCount(1);
+});
 test("electrical validation and simulation stay in the canvas action row", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const toolbox = page.locator("#electricalToolboxDock");
