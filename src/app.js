@@ -894,6 +894,8 @@ function applyWorkspaceView() {
   const hmi = workspaceView === "hmi", electrical = workspaceView === "electrical", other = hmi || electrical, mode = project.editorType || "LD", canvas = $("#canvasWrap"), wasCanvasHidden = canvas.classList.contains("hidden");
   $("#hmiPane").classList.toggle("hidden", !hmi); $("#electricalPane").classList.toggle("hidden", !electrical); $(".editor-area").classList.toggle("hmi-mode", hmi || electrical);
   $(".workspace").classList.toggle("electrical-workspace-active", electrical); $(".toolbar .zoom-tools")?.classList.toggle("hidden", electrical); $("#zoomFit")?.classList.toggle("hidden", electrical);
+  const offlineStatus=$(".offline-label"),statusHost=electrical?$(".statusbar-main") : $(".editor-footer");
+  if(offlineStatus&&statusHost&&offlineStatus.parentElement!==statusHost)statusHost.append(offlineStatus);
   $("#electricalToolboxDock").classList.toggle("hidden", !electrical);
   const editorToolbox = $("#editorToolboxDock"), toolboxMode = hmi ? "HMI" : electrical ? "ELECTRICAL" : mode;
   editorToolbox.classList.toggle("hidden", electrical);
