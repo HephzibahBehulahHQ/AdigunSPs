@@ -119,6 +119,13 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.ok(root.innerHTML.includes("Phoenix Contact PT 2,5-PE product data"));assert.match(electricalSymbolSvg(terminal),/>PE</);
   assert.ok(root.innerHTML.includes("Physical grounding, DIN-rail bonding and current carrying capacity are not simulated"));
 }
+{
+  const contact=createElectricalComponent("siemens3SU1400NOContact",1),peers=contact.terminals.map((_,index)=>createElectricalComponent("terminal",index+1,360,120+index*100)),diagram={components:[contact,...peers],wires:[]};
+  assert.equal(contact.manufacturer,"Siemens");assert.equal(contact.partNumber,"3SU1400-1AA10-1BA0");assert.deepEqual(contact.terminals,["3","4"]);
+  for(let index=0;index<contact.terminals.length;index++){const pin=contact.terminals[index],result=connectElectricalTerminals(diagram,{componentId:contact.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`terminal ${pin} is individually connectable`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:contact.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
