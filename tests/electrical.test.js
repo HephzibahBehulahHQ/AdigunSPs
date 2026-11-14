@@ -13,6 +13,21 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.equal(electricalWirePath(wire,[source,destination,obstacle]),"M80 232L80 180L640 180L640 232","an automatic cable takes a clear corridor around an unrelated component instead of crossing its card");
 }
 {
+  const source=createElectricalComponent("supply24vdc",1,20,200),destination=createElectricalComponent("supply24vdc",2,1000,200),obstacles=[];
+  for(const x of [160,280])for(const y of [0,80,160])obstacles.push(createElectricalComponent("pilotLamp",obstacles.length+1,x,y));
+  for(const x of [440,560,680])for(const y of [240,320,400,480,560])obstacles.push(createElectricalComponent("pilotLamp",obstacles.length+1,x,y));
+  const wire={from:{componentId:source.id,terminal:"+"},to:{componentId:destination.id,terminal:"−"}};
+  const path=electricalWirePath(wire,[source,destination,...obstacles]);
+  assert.ok(path,"automatic routing finds a path through a multi-wall component maze");
+  const points=[...path.matchAll(/[ML](-?[0-9.]+) (-?[0-9.]+)/gu)].map((match)=>({x:Number(match[1]),y:Number(match[2])}));
+  assert.ok(points.length>=4,"the grid route adds multiple orthogonal segments");
+  const bounds=obstacles.map(item=>({left:item.x,top:item.y,right:item.x+120,bottom:item.y+80})),segments=points.slice(1).map((point,index)=>[points[index],point]);
+  for(const [first,second] of segments)for(const box of bounds){
+    const crossing=first.y===second.y?first.y>box.top-12&&first.y<box.bottom+12&&Math.max(Math.min(first.x,second.x),box.left-12)<Math.min(Math.max(first.x,second.x),box.right+12):first.x>box.left-12&&first.x<box.right+12&&Math.max(Math.min(first.y,second.y),box.top-12)<Math.min(Math.max(first.y,second.y),box.bottom+12);
+    assert.equal(crossing,false,"automatic maze routing never crosses an unrelated component");
+  }
+}
+{
   const psu=createElectricalComponent("sitopPSU100C",1),sensor=createElectricalComponent("ifmPN2070",1);
   assert.deepEqual(psu.terminals,["L","N","PE","+","−A","−B"]);
   assert.equal(psu.manufacturer,"Siemens");assert.equal(psu.partNumber,"6EP1332-5BA00");assert.equal(psu.ratedCurrentA,2.5);
