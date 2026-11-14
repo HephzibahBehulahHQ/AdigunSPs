@@ -417,6 +417,18 @@ assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {Scale
   assert.ok(root.innerHTML.includes("Siemens SIRIUS 3RV2011-1JA10 data sheet"));assert.match(electricalSymbolSvg(breaker),/3RV2 · 3 POLE/);assert.match(electricalSymbolSvg(breaker),/I&gt;/);
 }
 
+{
+  const first=createElectricalComponent("pilotLamp",1,120,120),overlapping=createElectricalComponent("pilotLamp",2,180,120),touching=createElectricalComponent("pilotLamp",3,240,120);
+  const diagram={components:[first,overlapping],wires:[]};
+  const issue=validateElectricalDiagram(diagram).find((item)=>item.code==="electrical-component-overlap");
+  assert.equal(issue?.level,"warning","saved component overlaps are surfaced as non-destructive diagnostics");
+  assert.match(issue.message,/H1 and H2/u,"the warning identifies the overlapping references");
+  const touchingOnly=validateElectricalDiagram({components:[first,touching],wires:[]});
+  assert.equal(touchingOnly.some((item)=>item.code==="electrical-component-overlap"),false,"cards that only touch are not reported as overlapping");
+  const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  assert.ok(root.innerHTML.includes("Overlapping component cards: H1 and H2"),"the existing schematic diagnostics list displays overlap references");
+}
 console.log("PASS: generic industrial categories, digital and scalar analog I/O paths, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
 
 

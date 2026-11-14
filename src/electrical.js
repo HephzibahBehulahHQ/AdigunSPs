@@ -199,6 +199,12 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   return { components, wires, inputStates: { ...initialState } };
 }
 
+export function electricalComponentBounds(component,x=component?.x,y=component?.y) {
+  const spec=electricalComponentCatalog[component?.type],layout=spec?.terminalLayout||spec?.terminals||[],height=Math.max(80,32+Math.ceil(layout.length/2)*22),angle=Number(component?.rotation||0)*Math.PI/180,cos=Math.round(Math.cos(angle)),sin=Math.round(Math.sin(angle)),originX=Number(x),originY=Number(y);
+  const corners=[[0,0],[120,0],[120,height],[0,height]].map(([cx,cy])=>[60+(cx-60)*cos-(cy-40)*sin,40+(cx-60)*sin+(cy-40)*cos]);
+  return {left:originX+Math.min(...corners.map(point=>point[0])),top:originY+Math.min(...corners.map(point=>point[1])),right:originX+Math.max(...corners.map(point=>point[0])),bottom:originY+Math.max(...corners.map(point=>point[1]))};
+}
+
 export function validateElectricalDiagram(diagram, projectTags = []) {
   const issues = [], components = Array.isArray(diagram?.components) ? diagram.components : [], wires = Array.isArray(diagram?.wires) ? diagram.wires : [];
   const ids = new Set(), references = new Set(), endpoints = new Set(), mappedAddresses = new Set();
@@ -235,6 +241,27 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
     }
     for (const terminal of spec.terminals) endpoints.add(`${component.id}:${terminal}`);
   }
+  const spatialCells=new Map(),placed=[];
+  for(const component of components) {
+    if(!electricalComponentCatalog[component.type]||!Number.isFinite(Number(component.x))||!Number.isFinite(Number(component.y)))continue;
+    const bounds=electricalComponentBounds(component);
+    if(Object.values(bounds).some((value)=>!Number.isFinite(value)))continue;
+    placed.push({component,bounds});
+  }
+  const overlapPairs=[];let additionalOverlaps=false;const cellSize=120,maxOverlapPairs=6;
+  overlapScan: for(let index=0;index<placed.length;index++) {
+    const current=placed[index],minX=Math.floor(current.bounds.left/cellSize),maxX=Math.floor(current.bounds.right/cellSize),minY=Math.floor(current.bounds.top/cellSize),maxY=Math.floor(current.bounds.bottom/cellSize),candidates=new Set();
+    for(let x=minX;x<=maxX;x++)for(let y=minY;y<=maxY;y++)for(const candidate of spatialCells.get(`${x},${y}`)||[])candidates.add(candidate);
+    for(const candidateIndex of candidates) {
+      const prior=placed[candidateIndex],a=prior.bounds,b=current.bounds;
+      if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top) {
+        if(overlapPairs.length===maxOverlapPairs){additionalOverlaps=true;break overlapScan;}
+        overlapPairs.push([prior.component,current.component]);
+      }
+    }
+    for(let x=minX;x<=maxX;x++)for(let y=minY;y<=maxY;y++){const key=`${x},${y}`,bucket=spatialCells.get(key)||[];bucket.push(index);spatialCells.set(key,bucket);}
+  }
+  if(overlapPairs.length)issues.unshift({level:"warning",code:"electrical-component-overlap",message:`Overlapping component cards: ${overlapPairs.map(([a,b])=>`${a.reference||a.id} and ${b.reference||b.id}`).join("; ")}.${additionalOverlaps?" Additional overlaps may exist.":" Move the listed components apart before wiring."}`});
   const completeWires=wires.filter((wire)=>wire?.from&&wire?.to&&!wire.draft),seenWires = new Set();
   for (const wire of wires) {
     if(wire?.draft===true&&!wire.to){const endpoint=`${wire.from?.componentId}:${wire.from?.terminal}`;if(!endpoints.has(endpoint))issues.push({level:"error",code:"electrical-wire-endpoint",message:`Wire ${wire.id||"(missing)"} references a missing source terminal.`});if(wire.waypoints!==undefined&&(!Array.isArray(wire.waypoints)||wire.waypoints.length>200||wire.waypoints.some((point)=>!Number.isFinite(Number(point?.x))||!Number.isFinite(Number(point?.y))||Number(point.x)<0||Number(point.x)>2200||Number(point.y)<0||Number(point.y)>1400)))issues.push({level:"error",code:"electrical-wire-route",message:`Wire ${wire.id||"(missing)"} has invalid route points.`});if(wire.end&&(!Number.isFinite(Number(wire.end.x))||!Number.isFinite(Number(wire.end.y))||Number(wire.end.x)<0||Number(wire.end.x)>2200||Number(wire.end.y)<0||Number(wire.end.y)>1400))issues.push({level:"error",code:"electrical-wire-route",message:`Wire ${wire.id||"(missing)"} has an invalid free endpoint.`});issues.push({level:"warning",code:"electrical-wire-draft",message:`Wire ${wire.id||"(draft)"} is paused before reaching a destination terminal.`});continue;}
