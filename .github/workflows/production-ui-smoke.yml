@@ -1,0 +1,49 @@
+name: Verify deployed AdigunSPs UI
+
+on:
+  workflow_run:
+    workflows: ["Deploy AdigunSPs to GitHub Pages"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  production-ui:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out deployed source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare screenshot output
+        run: mkdir -p artifacts
+
+      - name: Verify production workspace and capture screenshot
+        env:
+          ADIGUNSP_BASE_URL: https://adigunsps.hephzibahbehulah.com
+          ADIGUNSP_SCREENSHOT_PATH: artifacts/adigunsps-production-1894x850.png
+        run: npx playwright test --grep "1894px electrical workspace geometry"
+
+      - name: Upload production screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adigunsps-production-ui-${{ github.event.workflow_run.head_sha }}
+          path: artifacts/adigunsps-production-1894x850.png
+          if-no-files-found: warn
