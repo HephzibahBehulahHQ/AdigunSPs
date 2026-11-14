@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 18730)
-Total output lines: 486
-
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentBounds, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
@@ -185,7 +182,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.equal(contact.manufacturer,"Siemens");assert.equal(contact.partNumber,"3SU1400-1AA10-1BA0");assert.equal(electricalComponentCatalog[contact.type].kind,"contact");assert.equal(contact.normallyClosed,false);assert.deepEqual(contact.terminals,["3","4"]);
   for(let index=0;index<contact.terminals.length;index++){const pin=contact.terminals[index],result=connectElectricalTerminals(diagram,{componentId:contact.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`terminal ${pin} is individually connectable`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:contact.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
-  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("data-electrical-input=\"S1\""),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
+  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("data-electrical-input=\\"S1\\""),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
 }
 {
   const supply=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU1400NOContact",1,320,80),lamp=createElectricalComponent("pilotLamp",1,560,80),diagram={components:[supply,contact,lamp],wires:[]};
@@ -234,7 +231,104 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.deepEqual(diagram.wires[0].from,{componentId:source.id,terminal:"+"});assert.deepEqual(diagram.wires[0].to,{componentId:lamp.id,terminal:"X1"});assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:180}],"compatible endpoint IDs and the hand-routed cable remain intact");
   const unsupported=replaceElectricalComponent(diagram,lamp.id,"siemensS71212CG2");assert.equal(unsupported.ok,false,"replacement refuses to orphan an unsupported pin");assert.match(unsupported.error,/X1/u);assert.equal(diagram.components[1].type,"pilotLamp","a rejected replacement leaves the component and wire untouched");
   const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1,360,120);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
-  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalU…2730 tokens truncated…"pilotLamp",1,340,103),tag:"Lamp"};
+  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
+}
+{
+  const source=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1,360,240),diagram={components:[source,lamp],wires:[]};
+  const wire=connectElectricalTerminals(diagram,{componentId:source.id,terminal:"+"},{componentId:lamp.id,terminal:"X1"},[{x:240,y:180}]);assert.equal(wire.ok,true);diagram.wires.push(wire.wire);
+  const result=replaceElectricalComponent(diagram,lamp.id,"siemens3SU1152AmberIndicator");assert.equal(result.ok,true,"a part with the same named terminal connections can replace the selected part");assert.equal(result.component.id,lamp.id);assert.equal(result.component.type,"siemens3SU1152AmberIndicator");assert.equal(result.component.x,lamp.x);assert.equal(result.component.y,lamp.y);assert.equal(result.component.reference,"H1");
+  assert.deepEqual(diagram.wires[0].from,{componentId:source.id,terminal:"+"});assert.deepEqual(diagram.wires[0].to,{componentId:lamp.id,terminal:"X1"});assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:180}],"compatible endpoint IDs and the hand-routed cable remain intact");
+  const unsupported=replaceElectricalComponent(diagram,lamp.id,"siemensS71212CG2");assert.equal(unsupported.ok,false,"replacement refuses to orphan an unsupported pin");assert.match(unsupported.error,/X1/u);assert.equal(diagram.components[1].type,"pilotLamp","a rejected replacement leaves the component and wire untouched");
+  const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1,360,120);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
+  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
+}
+{
+  const compact=createElectricalComponent("pilotLamp",1,360,120),neighbor=createElectricalComponent("pilotLamp",2,360,220),diagram={components:[compact,neighbor],wires:[]};
+  const blocked=replaceElectricalComponent(diagram,compact.id,"siemensS71212CG2");
+  assert.equal(blocked.ok,false,"a taller replacement cannot overlap a nearby component");assert.match(blocked.error,/Move nearby components/u);assert.equal(diagram.components[0].type,"pilotLamp","rejected replacement leaves the existing device unchanged");
+  const clearNeighbor=createElectricalComponent("pilotLamp",3,700,220),clearDiagram={components:[compact,clearNeighbor],wires:[]},allowed=replaceElectricalComponent(clearDiagram,compact.id,"siemensS71212CG2");
+  assert.equal(allowed.ok,true,"a larger multi-pin replacement remains available when it fits");assert.equal(allowed.component.id,compact.id);
+}
+for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
+  const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
+  const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
+  for(const [x,y]of [[0,0],[120,0],[120,height],[0,height]]){
+    const px=component.x+60+(x-60)*Math.cos(r)-(y-40)*Math.sin(r),py=component.y+40+(x-60)*Math.sin(r)+(y-40)*Math.cos(r);
+    assert.ok(px>=-1e-6&&px<=2200+1e-6&&py>=-1e-6&&py<=1400+1e-6,`${type} at ${rotation}° stays inside canvas`);
+  }
+}
+{
+  const lamp=createElectricalComponent("siemens3SU1152AmberIndicator",1,360,120),supply=createElectricalComponent("supply24vdc",1),diagram={components:[lamp,supply],wires:[]};
+  assert.equal(lamp.manufacturer,"Siemens");assert.equal(lamp.partNumber,"3SU1152-6AA00-1AA0");assert.equal(lamp.ratedVoltageV,24);assert.deepEqual(lamp.terminals,["X1","X2"]);
+  for(const [from,to]of [[{componentId:supply.id,terminal:"+"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}]]){const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true);diagram.wires.push(result.wire);}
+  assert.equal(simulateElectricalDiagram(diagram).energized[lamp.id],true,"the sourced indicator displays the existing ideal on/off DC load state");
+  const root={dataset:{selectedComponent:lamp.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of lamp.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is individually connectable`);
+  assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 data sheet"));assert.match(electricalSymbolSvg(lamp),/24 V AC\/DC/);
+  assert.ok(root.innerHTML.includes("does not model AC operation, LED polarity, current, brightness, photometry or protection"));
+}
+{
+  const component=createElectricalComponent("pilotLamp",1,20,20),listeners={};
+  let history=0,changes=0,focus=0;
+  const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>{listeners[name]=handler;},focus:()=>{focus++;}};
+  const root={dataset:{},innerHTML:"",querySelector:(selector)=>selector.startsWith("[data-drag-component=")?head:null,querySelectorAll:(selector)=>selector==="[data-drag-component]"?[head]:[]};
+  const previousCss=globalThis.CSS;
+  globalThis.CSS={escape:value=>value};
+  try {
+    renderElectricalWorkspace(root,{tags:[],electrical:{components:[component],wires:[]}},{onBeforeChange:()=>history++,onChange:()=>changes++});
+    const press=(key,shiftKey=false)=>listeners.keydown({key,shiftKey,preventDefault(){},stopPropagation(){}});
+    press("ArrowRight");assert.equal(component.x,40,"arrow moves one grid step");
+    press("ArrowDown",true);assert.equal(component.y,120,"Shift moves five grid steps");
+    press("ArrowLeft",true);assert.equal(component.x,0,"keyboard movement stays inside the canvas origin");
+    assert.equal(history,3,"each keyboard move records undo history");
+    assert.equal(changes,3,"each keyboard move persists its change");
+    assert.equal(focus,3,"focus returns to the moved component header");
+    press("Enter");assert.equal(changes,3,"unrelated keys do not move components");
+    listeners.click({detail:0});
+    assert.equal(root.dataset.selectedComponent,component.id,"keyboard activation opens the component properties");
+    assert.equal(changes,3,"keyboard selection does not mark the project changed");
+    assert.equal(focus,4,"keyboard selection keeps focus on the component header");
+  } finally { if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss; }
+}
+for (const [type,allowed,rejected] of [["digitalInputModule4","Digital","Analog"],["analogInputModule2","Analog","Digital"]]) {
+  const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[{name:"Digital",type:"BOOL",role:"input"},{name:"Analog",type:"REAL",role:"input"}],electrical:{components:[createElectricalComponent(type,1)],wires:[]}});
+  assert.ok(root.innerHTML.includes(`value="${allowed}"`),`${type} offers compatible tags`);
+  assert.ok(!root.innerHTML.includes(`value="${rejected}"`),`${type} excludes incompatible tag types`);
+}
+for (const language of ["en","de","yo","pcm"]) for (const tripped of [false,true]) {
+  const fuse={...createElectricalComponent("fuse",1),tripped};
+  const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[],electrical:{components:[fuse],wires:[]}},{language});
+  assert.ok(root.innerHTML.includes('name="tripped"'),`${language} fuse properties render`);
+  assert.equal(root.innerHTML.includes("checked disabled"),tripped,`${language} blown fuse cannot be reset`);
+}
+for(const [type,spec]of Object.entries(electricalComponentCatalog).filter(([,item])=>Boolean(item.source?.url))){
+  const component=createElectricalComponent(type,1),warnings=validateElectricalDiagram({components:[component],wires:[]}).filter(issue=>issue.code==="electrical-unverified-device");
+  assert.equal(warnings.length,0,`${type} manufacturer identity is trusted when its catalog source and identifiers match`);
+  const edited={...component,manufacturer:"Unverified manufacturer"};
+  assert.ok(validateElectricalDiagram({components:[edited],wires:[]}).some(issue=>issue.code==="electrical-unverified-device"),`${type} warns after its sourced manufacturer identity is changed`);
+}
+const helpGuide=readFileSync(new URL("../docs/HELP.md",import.meta.url),"utf8");
+const userGuide=readFileSync(new URL("../docs/user-guide.md",import.meta.url),"utf8");
+assert.match(electricalUiSource,/name="coilRef"/u,"auxiliary-contact properties expose a coil association control");
+assert.match(electricalUiSource,/coilRef\)\)\.map/u,"linked auxiliary contacts are removed from manual input controls");
+assert.match(electricalUiSource,/previousReference!==selected\.reference/u,"renaming a coil updates linked auxiliary contacts");
+assert.equal((electricalUiSource.match(/coilLink:/gu)||[]).length,4,"coil association labels are localized in all supported languages");
+assert.equal((electricalUiSource.match(/contactClosedState:"/gu)||[]).length,4,"live contact state labels are localized in all supported languages");
+assert.equal((electricalUiSource.match(/fuseReplaceHint:"/gu)||[]).length,4,"fuse replacement guidance is localized in all supported languages");
+assert.match(electricalUiSource,/selected\.tripped\?"checked disabled"/u,"blown fuses cannot be cleared from the property editor");
+assert.ok(helpGuide.includes("delete and replace it")&&userGuide.includes("Blow fuse (manual test)"),"Help and user guide explain fuse replacement behavior");
+assert.match(electricalUiSource,/data-contact-state=/u,"schematic controls expose computed open/closed contact state accessibly");
+
+const supply = createElectricalComponent("supply24vdc",1,103,103);
+const fuse = createElectricalComponent("fuse",1);
+const blownFuse = updateElectricalComponentProperties(fuse,{tripped:true});
+assert.equal(blownFuse.tripped,true,"the fuse test trip opens the replaceable fuse element");
+assert.equal(updateElectricalComponentProperties(blownFuse,{tripped:false}).tripped,true,"a blown fuse stays open until it is replaced");
+assert.equal(createElectricalComponent("fuse",2).tripped,false,"a newly added replacement fuse starts intact");
+const button = {...createElectricalComponent("pushbuttonNO",1,220,103),tag:"Start"};
+const lamp = {...createElectricalComponent("pilotLamp",1,340,103),tag:"Lamp"};
 const diagram = {components:[supply,button,lamp],wires:[]};
 for (const [from,to] of [
   [{componentId:supply.id,terminal:"+"},{componentId:button.id,terminal:"13"}],
@@ -387,6 +481,5 @@ assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {Scale
   assert.ok(root.innerHTML.includes("Overlapping component cards: H1 and H2"),"the existing schematic diagnostics list displays overlap references");
 }
 console.log("PASS: generic industrial categories, digital and scalar analog I/O paths, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
-
 
 

@@ -329,4 +329,3 @@ The right inspector's **Issues** tab lists current validation findings for the a
 The Siemens SIMATIC S7-1200 G2 CPU 1212C DC/DC/DC (6ES7212-1AG50-0XB0) is available as a source-backed schematic reference with 24 individually connectable X80, X10, and X11 terminal pins. Hover or focus each pin to read its connector pin and signal assignment from the Siemens system manual. This reference is not connected to Program Main I/O and does not simulate PLC or I/O behavior; the existing generic PLC simulation remains available separately.
 
 To replace a selected schematic component, choose the new model in the left **Component Tools** palette and select **Replace model** in the component inspector. Compatible terminal identities keep their cable endpoints and routed bends. If any connected terminal is not present on the new model, the editor refuses the replacement and asks you to disconnect or rewire those terminals first; use Undo to reverse a successful replacement.
-

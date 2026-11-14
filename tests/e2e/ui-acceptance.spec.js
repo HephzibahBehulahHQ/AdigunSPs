@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 18634)
-Total output lines: 1179
-
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
@@ -553,7 +550,153 @@ test("electrical inspector disclosures retain terminal details when validation r
   await expect(connections.locator(".electrical-wire-row")).toHaveCount(1);
   await page.locator('#electricalCanvasContext [data-electrical-action="validate"]').click();
   await expect(connections).toHaveAttribute("open", "");
-  await expect(connections.locator(…2634 tokens truncated…1]),Number(match[2])],[Number(match[5]),Number(match[4])]]:[], ports };
+  await expect(connections.locator(".electrical-wire-row")).toHaveCount(1);
+  await expect(page.locator("#inspectorContent .electrical-status")).toBeVisible();
+});
+test("electrical inspector identifies the selected component above its editable fields", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();
+  const component = page.locator("#electricalBoard [data-component-id]").first();
+  const reference = (await component.locator("[data-drag-component]").innerText()).split(" · ")[0];
+  const summary = page.locator("#inspectorContent .electrical-selected-component");
+  await expect(page.locator("#propertiesTab")).toHaveText("PROPERTIES");
+  await expect(page.locator("#inspectorContent .electrical-inspector > h3").filter({hasText:"Properties"})).toHaveCount(0);
+  await expect(summary.locator("small")).toContainText("SELECTED COMPONENT");
+  await expect(summary.locator("h2")).toContainText(reference);
+  await expect(summary.locator("p")).toContainText("simulation model");
+  await expect(page.locator("#electricalProperties input[name=\"reference\"]")).toHaveValue(reference);
+  await expect(page.locator("#electricalProperties input[name=\"label\"]")).toBeVisible();
+});
+
+test("Issues tab shows active-workspace validation and returns to properties", async ({ page }) => {
+  const issuesTab = page.locator("#issuesTab");
+  await issuesTab.click();
+  await expect(page.locator("#issuesContent")).toBeVisible();
+  await expect(page.locator("#issuesContent")).toContainText("Active workspace issues");
+  await expect(page.locator(".issues-count")).toHaveText(/\d+/);
+  await page.locator("#electricalTab").click();
+  await issuesTab.click();
+  await expect(page.locator("#issuesContent")).toContainText("Active workspace issues");
+  await expect(page.locator(".issues-count")).toHaveText(/\d+/);
+  await page.locator("#propertiesTab").click();
+  await expect(page.locator("#issuesContent")).toBeHidden();
+  await expect(page.locator("#inspectorContent")).toBeVisible();
+});
+test("electrical component search filters models and restores the full picker", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const search = page.locator("#electricalToolboxDock #electricalModelSearch");
+  const palette = page.locator("#electricalToolboxDock #electricalPalette");
+  const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  await expect(search).toBeVisible();
+  const allModels = await palette.locator("option").count();
+  await search.fill("motor");
+  await expect(palette.locator("option")).toHaveCount(5);
+  await expect(palette.locator("option").filter({ hasText: "WEG W22 IE2 motor" })).toHaveCount(1);
+  await expect(add).toBeEnabled();
+  await search.fill("no-model-can-match-this");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await expect(palette.locator("option")).toHaveText("No matching model.");
+  await expect(palette).toBeDisabled();
+  await expect(add).toBeDisabled();
+  await search.fill("");
+  await expect(palette.locator("option")).toHaveCount(allModels);
+  await expect(add).toBeEnabled();
+});
+
+
+test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electrical actions", async ({ page }) => {
+  const ladderRungs = page.locator("#ladderCanvas .rung");
+  const initialRungs = await ladderRungs.count();
+  await page.locator('[data-action="add-rung"]').first().click();
+  await expect(ladderRungs).toHaveCount(initialRungs + 1);
+
+  await page.locator("#editorMode").selectOption("FBD");
+  const blocks = page.locator("#fbdBlocks .fbd-block");
+  const initialBlocks = await blocks.count();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="FBD"] [data-action="add-fbd-block"]').click();
+  await expect(blocks).toHaveCount(initialBlocks + 1);
+
+  await page.locator("#editorMode").selectOption("ST");
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="ST"] [data-action="compile-st"]').click();
+  await expect(page.locator("#compileState")).toHaveText("Compiled");
+
+  await page.locator("#editorMode").selectOption("SFC");
+  const steps = page.locator("#sfcChart .sfc-step");
+  const initialSteps = await steps.count();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="SFC"] [data-action="add-sfc-step"]').click();
+  await expect(steps).toHaveCount(initialSteps + 1);
+
+  await page.locator('[data-action="tags"]').click();
+  await page.locator("#addTag").click();
+  await page.locator('[data-tag-index="0"][data-field="role"]').selectOption("input");
+  await page.locator("#modal .modal-close").click();
+  await page.locator("#hmiTab").click();
+  const widgets = page.locator("#hmiBoard [data-hmi-widget]");
+  const initialWidgets = await widgets.count();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="HMI"] [data-hmi-add="switch"]').click();
+  await expect(widgets).toHaveCount(initialWidgets + 1);
+
+  await page.locator("#electricalTab").click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
+  await expect(components).toHaveCount(1);
+  await page.locator('#electricalToolboxDock [data-electrical-action="rotate"]').click();
+  await page.locator('#electricalToolboxDock [data-electrical-action="duplicate"]').click();
+  await expect(components).toHaveCount(2);
+  const firstPair = await components.evaluateAll(nodes => nodes.map(node => { const {left,top,right,bottom}=node.getBoundingClientRect();return {left,top,right,bottom}; }));
+  expect(firstPair[0].right + 8 <= firstPair[1].left || firstPair[1].right + 8 <= firstPair[0].left || firstPair[0].bottom + 8 <= firstPair[1].top || firstPair[1].bottom + 8 <= firstPair[0].top).toBe(true);
+  await page.locator('#electricalToolboxDock [data-electrical-action="delete"]').click();
+  await expect(components).toHaveCount(1);
+  await page.locator('#electricalCanvasContext [data-electrical-action="simulate"]').click();
+  await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
+});
+
+
+test("selected schematic components can be replaced while compatible routed wires stay connected", async ({ page }) => {
+  await page.setViewportSize({width:1900,height:1100});
+  await page.locator("#electricalTab").click();
+  const palette=page.locator("#electricalToolboxDock #electricalPalette"),add=page.locator('#electricalToolboxDock [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
+  await add.click();await palette.selectOption("pilotLamp");await add.click();await expect(components).toHaveCount(2);
+  const ids=await components.evaluateAll(nodes=>nodes.map(node=>node.dataset.componentId)),wireTool=page.locator('#electricalToolboxDock [data-electrical-action="wire"]');
+  await wireTool.click();await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="+"]`).click();await page.locator("#electricalBoard").click({position:{x:500,y:300}});await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="X1"]`).click();
+  const wire=page.locator("#electricalBoard .electrical-wire");await expect(wire).toHaveCount(1);const wireId=await wire.getAttribute("data-wire-id");await expect(wire).toHaveAttribute("d",/L500 300/u);
+  await palette.selectOption("siemens3SU1152AmberIndicator");await page.locator('#inspectorContent [data-electrical-action="replace"]').click();
+  await expect(page.locator(`[data-component-id="${ids[1]}"]`)).toHaveAttribute("data-component-type","siemens3SU1152AmberIndicator");await expect(page.locator("#electricalBoard .electrical-component")).toHaveCount(2);await expect(wire).toHaveAttribute("data-wire-id",wireId);await expect(wire).toHaveAttribute("d",/L500 300/u);
+});
+test("electrical wire endpoints track rotation and keyboard movement while selection and focus persist", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  await add.click();
+  await add.click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  await expect(components).toHaveCount(2);
+  const componentIds = await components.evaluateAll(nodes => nodes.map(node => node.dataset.componentId));
+  const terminals = await Promise.all(componentIds.map(id => page.locator('[data-terminal-component="' + id + '"]').first().getAttribute("data-terminal")));
+
+  const wireTool = page.locator('#electricalToolboxDock [data-electrical-action="wire"]');
+  const selectTool = page.locator('#electricalToolboxDock [data-electrical-action="select"]');
+  await expect(selectTool).toHaveAttribute("aria-pressed", "true");
+  await wireTool.click();
+  await expect(wireTool).toHaveAttribute("aria-pressed", "true");
+  await selectTool.click();
+  await expect(wireTool).toHaveAttribute("aria-pressed", "false");
+  await wireTool.click();
+  await page.locator('[data-terminal-component="' + componentIds[0] + '"][data-terminal="' + terminals[0] + '"]').click();
+  await selectTool.click();
+  await page.locator('[data-terminal-component="' + componentIds[1] + '"][data-terminal="' + terminals[1] + '"]').click();
+  await expect(page.locator("#electricalBoard .electrical-wire")).toHaveCount(0);
+  await wireTool.click();
+  await page.locator('[data-terminal-component="' + componentIds[0] + '"][data-terminal="' + terminals[0] + '"]').click();
+  await page.locator('[data-terminal-component="' + componentIds[1] + '"][data-terminal="' + terminals[1] + '"]').click();
+  const wire = page.locator("#electricalBoard .electrical-wire");
+  await expect(wire).toHaveCount(1);
+  const wireId = await wire.getAttribute("data-wire-id");
+
+  const assertWireMatchesPorts = async () => {
+    const result = await page.evaluate(({ componentIds, terminals }) => {
+      const board=document.querySelector("#electricalBoard"), boardRect=board.getBoundingClientRect(), path=board.querySelector(".electrical-wire"), match=path?.getAttribute("d")?.match(/^M(-?[\d.]+) (-?[\d.]+)H(-?[\d.]+)V(-?[\d.]+)H(-?[\d.]+)$/);
+      const ports=componentIds.map((id,index)=>{const button=[...board.querySelectorAll("[data-terminal-component]")].find(item=>item.dataset.terminalComponent===id&&item.dataset.terminal===terminals[index]),rect=button.getBoundingClientRect();return [rect.left+rect.width/2-boardRect.left,rect.top+rect.height/2-boardRect.top];});
+      return { match:Boolean(match), pathEnds:match?[[Number(match[1]),Number(match[2])],[Number(match[5]),Number(match[4])]]:[], ports };
     }, { componentIds, terminals });
     expect(result.match).toBe(true);
     for (let index=0;index<2;index++) {
@@ -1005,6 +1148,7 @@ test("real multi-pin schematic models recover from example-style overlap without
   await expect(wire).toHaveAttribute("d",/L700 460/);
 });
 
+
 test("source-backed Siemens NO contact manually switches its wired simulation load", async ({ page }) => {
   const project = {
     name:"Siemens contact simulation fixture", rungs:[], tags:[], io:{inputs:[],outputs:[]}, initialState:{},
@@ -1033,4 +1177,3 @@ test("source-backed Siemens NO contact manually switches its wired simulation lo
   await expect(contact).toHaveAttribute("data-contact-state","closed");
   await expect(lamp).toHaveClass(/energized/);
 });
-
