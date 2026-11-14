@@ -1043,7 +1043,7 @@ test("electrical component replacement keeps compatible wires and rejects incomp
   const wireId = await wire.getAttribute("data-wire-id");
   const route = await wire.getAttribute("d");
   await page.locator("#electricalSelection").selectOption(fuseId);
-  const replace = page.locator('#inspectorContent [data-electrical-action="replace"]');
+  const replace = page.getByRole("button", { name: "Replace component", exact: true });
   await expect(replace).toBeVisible();
   await palette.selectOption("pilotLamp");
   await replace.click();
