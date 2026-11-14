@@ -87,11 +87,12 @@ export function connectElectricalTerminals(diagram, from, to) {
   return { ok:true, wire:{ id:crypto.randomUUID(), from:{...from}, to:{...to} } };
 }
 
-export function moveElectricalComponent(component, x, y) {
+export function moveElectricalComponent(component, x, y, {snap=true} = {}) {
   const height=Math.max(80,32+Math.ceil((component.terminals?.length||0)/2)*22);
   const angle=(component.rotation||0)*Math.PI/180,cos=Math.round(Math.cos(angle)),sin=Math.round(Math.sin(angle));
   const corners=[[0,0],[120,0],[120,height],[0,height]].map(([cx,cy])=>[60+(cx-60)*cos-(cy-40)*sin,40+(cx-60)*sin+(cy-40)*cos]);
-  const clamp=(value,axis,size)=>Math.max(Math.ceil(-Math.min(...corners.map(p=>p[axis]))/20)*20,Math.min(Math.floor((size-Math.max(...corners.map(p=>p[axis])))/20)*20,Math.round(Number(value)/20)*20));
+  const step=snap?20:1;
+  const clamp=(value,axis,size)=>Math.max(Math.ceil(-Math.min(...corners.map(p=>p[axis]))/step)*step,Math.min(Math.floor((size-Math.max(...corners.map(p=>p[axis])))/step)*step,Math.round(Number(value)/step)*step));
   return { ...component, x:clamp(x,0,2200), y:clamp(y,1,1400) };
 }
 export function rotateElectricalComponent(component, degrees = 90) {
