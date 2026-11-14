@@ -651,6 +651,17 @@ test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electri
 });
 
 
+test("selected schematic components can be replaced while compatible routed wires stay connected", async ({ page }) => {
+  await page.setViewportSize({width:1900,height:1100});
+  await page.locator("#electricalTab").click();
+  const palette=page.locator("#electricalToolboxDock #electricalPalette"),add=page.locator('#electricalToolboxDock [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
+  await add.click();await palette.selectOption("pilotLamp");await add.click();await expect(components).toHaveCount(2);
+  const ids=await components.evaluateAll(nodes=>nodes.map(node=>node.dataset.componentId)),wireTool=page.locator('#electricalToolboxDock [data-electrical-action="wire"]');
+  await wireTool.click();await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="+"]`).click();await page.locator("#electricalBoard").click({position:{x:500,y:300}});await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="X1"]`).click();
+  const wire=page.locator("#electricalBoard .electrical-wire");await expect(wire).toHaveCount(1);const wireId=await wire.getAttribute("data-wire-id");await expect(wire).toHaveAttribute("d",/L500 300/u);
+  await palette.selectOption("siemens3SU1152AmberIndicator");await page.locator('#inspectorContent [data-electrical-action="replace"]').click();
+  await expect(page.locator(`[data-component-id="${ids[1]}"]`)).toHaveAttribute("data-component-type","siemens3SU1152AmberIndicator");await expect(page.locator("#electricalBoard .electrical-component")).toHaveCount(2);await expect(wire).toHaveAttribute("data-wire-id",wireId);await expect(wire).toHaveAttribute("d",/L500 300/u);
+});
 test("electrical wire endpoints track rotation and keyboard movement while selection and focus persist", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');

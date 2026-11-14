@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, replaceElectricalComponent, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
 import { electricalSimulationStatus, electricalSymbolSvg, electricalWirePath, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
@@ -151,6 +151,24 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const pin of cpu.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered individually`);
   assert.ok(root.innerHTML.includes("X10 physical pin 1 · digital input DI a.0"),"pin tooltip exposes manufacturer connector and signal mapping");assert.match(electricalSymbolSvg(cpu),/CPU 1212C/u);assert.match(electricalSymbolSvg(cpu),/X80/u);assert.ok(root.innerHTML.includes("Siemens S7-1200 G2 System Manual · CPU 1212C terminal assignments"));
   assert.ok(validateElectricalDiagram(diagram).every((issue)=>issue.level!=="error"),"the source-backed terminals connect without invalid endpoint errors");
+}
+{
+  const source=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1,360,240),diagram={components:[source,lamp],wires:[]};
+  const wire=connectElectricalTerminals(diagram,{componentId:source.id,terminal:"+"},{componentId:lamp.id,terminal:"X1"},[{x:240,y:180}]);assert.equal(wire.ok,true);diagram.wires.push(wire.wire);
+  const result=replaceElectricalComponent(diagram,lamp.id,"siemens3SU1152AmberIndicator");assert.equal(result.ok,true,"a part with the same named terminal connections can replace the selected part");assert.equal(result.component.id,lamp.id);assert.equal(result.component.type,"siemens3SU1152AmberIndicator");assert.equal(result.component.x,lamp.x);assert.equal(result.component.y,lamp.y);assert.equal(result.component.reference,"H1");
+  assert.deepEqual(diagram.wires[0].from,{componentId:source.id,terminal:"+"});assert.deepEqual(diagram.wires[0].to,{componentId:lamp.id,terminal:"X1"});assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:180}],"compatible endpoint IDs and the hand-routed cable remain intact");
+  const unsupported=replaceElectricalComponent(diagram,lamp.id,"siemensS71212CG2");assert.equal(unsupported.ok,false,"replacement refuses to orphan an unsupported pin");assert.match(unsupported.error,/X1/u);assert.equal(diagram.components[1].type,"pilotLamp","a rejected replacement leaves the component and wire untouched");
+  const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
+  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
+}
+{
+  const source=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1,360,240),diagram={components:[source,lamp],wires:[]};
+  const wire=connectElectricalTerminals(diagram,{componentId:source.id,terminal:"+"},{componentId:lamp.id,terminal:"X1"},[{x:240,y:180}]);assert.equal(wire.ok,true);diagram.wires.push(wire.wire);
+  const result=replaceElectricalComponent(diagram,lamp.id,"siemens3SU1152AmberIndicator");assert.equal(result.ok,true,"a part with the same named terminal connections can replace the selected part");assert.equal(result.component.id,lamp.id);assert.equal(result.component.type,"siemens3SU1152AmberIndicator");assert.equal(result.component.x,lamp.x);assert.equal(result.component.y,lamp.y);assert.equal(result.component.reference,"H1");
+  assert.deepEqual(diagram.wires[0].from,{componentId:source.id,terminal:"+"});assert.deepEqual(diagram.wires[0].to,{componentId:lamp.id,terminal:"X1"});assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:180}],"compatible endpoint IDs and the hand-routed cable remain intact");
+  const unsupported=replaceElectricalComponent(diagram,lamp.id,"siemensS71212CG2");assert.equal(unsupported.ok,false,"replacement refuses to orphan an unsupported pin");assert.match(unsupported.error,/X1/u);assert.equal(diagram.components[1].type,"pilotLamp","a rejected replacement leaves the component and wire untouched");
+  const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
+  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
 }
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
