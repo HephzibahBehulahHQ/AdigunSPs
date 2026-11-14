@@ -875,3 +875,19 @@ test("1894px electrical workspace geometry matches the approved reference", asyn
     status:{x:0,y:815,width:1894,height:35},
   });
 });
+
+test("Snap remains visible and operable in compact desktop view toolbars", async ({ page }) => {
+  for (const viewport of [{ width:1366, height:768 }, { width:1280, height:800 }]) {
+    await page.setViewportSize(viewport);
+    await page.locator("#electricalTab").click();
+    const snap = page.locator(".electrical-view-tools [data-electrical-action=\"snap\"]");
+    await expect(snap, `Snap control is visible at ${viewport.width}px`).toBeVisible();
+    await expect(snap).toHaveAttribute("aria-pressed", "true");
+    await snap.click();
+    await expect(snap).toHaveAttribute("aria-pressed", "false");
+    await expect(snap).toContainText("Snap off");
+    await snap.click();
+    await expect(snap).toHaveAttribute("aria-pressed", "true");
+    await expect(snap).toContainText("Snap on");
+  }
+});
