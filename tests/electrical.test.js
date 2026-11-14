@@ -289,6 +289,16 @@ const openAnalogInput=structuredClone(analogDiagram);openAnalogInput.wires=openA
 assert.equal(simulateElectricalDiagram(openAnalogInput,{RawAI:250},{}).inputs.RawAI,0,"disconnected analog input resolves to a safe zero instead of passing through its raw numeric source");
 const openAnalogOutput=structuredClone(analogDiagram);openAnalogOutput.wires=openAnalogOutput.wires.filter((wire)=>wire.to.componentId!==analogIndicator.id||wire.to.terminal!=="SIG+");
 assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {ScaledValue:25}).analogOutputs,"ScaledValue"),false,"disconnected analog output is not delivered to its indicator");
+{
+  const breaker=createElectricalComponent("siemensSirius3RV20111JA10",1),expected=["1/L1","3/L2","5/L3","2/T1","4/T2","6/T3"];
+  assert.equal(breaker.manufacturer,"Siemens");assert.equal(breaker.partNumber,"3RV2011-1JA10");assert.deepEqual(breaker.terminals,expected);
+  const peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,360,120+index*100)),diagram={components:[breaker,...peers],wires:[]};
+  for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:breaker.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is a connectable breaker terminal`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:breaker.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as its own connectable pin`);
+  assert.ok(root.innerHTML.includes("Siemens SIRIUS 3RV2011-1JA10 data sheet"));assert.match(electricalSymbolSvg(breaker),/3RV2 · 3 POLE/);assert.match(electricalSymbolSvg(breaker),/I&gt;/);
+}
+
 console.log("PASS: generic industrial categories, digital and scalar analog I/O paths, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
 
 
