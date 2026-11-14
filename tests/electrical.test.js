@@ -8,6 +8,11 @@ import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
 {
+  const component=createElectricalComponent("pilotLamp",1,120,120);
+  assert.deepEqual([moveElectricalComponent(component,137,143).x,moveElectricalComponent(component,137,143).y],[140,140],"component movement snaps to the grid by default");
+  assert.deepEqual([moveElectricalComponent(component,137,143,{snap:false}).x,moveElectricalComponent(component,137,143,{snap:false}).y],[137,143],"the explicit snap-off view state permits pixel movement");
+}
+{
   const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},boardEvents={},card={style:{}};
   const source=createElectricalComponent("supply24vdc",1,600,200),wire={id:"drag-wire",from:{componentId:component.id,terminal:"X1"},to:{componentId:source.id,terminal:"+"}},wireAttributes={};
   const originalEndpoints=structuredClone(wire);
