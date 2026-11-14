@@ -1082,8 +1082,8 @@ test("imported overlapping schematic components can be dragged clear without los
   const wire = page.locator('#electricalBoard [data-wire-id="legacy-wire"]');
   await expect(component).toBeVisible();
   await expect(wire).toHaveAttribute("d", /L240 400/);
-  const header = page.locator('[data-drag-component="moved"]');
-  const start = await header.boundingBox();
+  const symbol = component.locator(".electrical-symbol");
+  const start = await symbol.boundingBox();
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.mouse.move(start.x + start.width / 2 + 420, start.y + start.height / 2);
