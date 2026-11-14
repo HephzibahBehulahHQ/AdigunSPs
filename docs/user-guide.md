@@ -318,5 +318,7 @@ The Siemens SIRIUS ACT 3SU1400-1AA10-1BA0 reference is a separate normally-open 
 
 The Phoenix Contact PT 2,5 feed-through terminal (3209510) has two individually connectable conductor ports. Its official data sheet lists 800 V nominal voltage and 24 A nominal current; physical installation and current-carrying performance are not modeled.
 
+The WEG W22XB-C reference shows the manufacturer-documented six-lead U1/V1/W1 and U2/V2/W2 motor terminal board. The inspector links the connection manual; this family reference has no order-specific ratings and does not model motor physics, star/delta links or hazardous-area compliance.
+
 The right inspector's **Issues** tab lists current validation findings for the active workspace. In Components it uses the electrical diagram validator; other editors use project validation. **Properties** returns to the selected component or instruction. **Watch** retains the existing simulated-value and force controls. Selected electrical components also expose their existing rotate, duplicate, and delete actions in the inspector. Terminal connections and validation diagnostics are grouped in expandable sections; opening a section is preserved while the inspector refreshes.
 

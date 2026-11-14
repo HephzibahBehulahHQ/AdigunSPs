@@ -79,6 +79,7 @@ export function electricalSymbolSvg(component) {
     case "buzzer":body=`${line(4,22,30,22)}<path d="M30 17h8l11-9v28l-11-9h-8z" ${common}/><path d="M56 15q12 7 0 14m5-19q17 12 0 24" ${common}/>${line(74,22,92,22)}`;break;
     case "heaterElement":body=`${line(4,22,24,22)}<rect x="24" y="9" width="48" height="26" ${common}/><path d="M29 27q5-16 10 0t10 0t10 0t10 0" ${common}/>${line(72,22,92,22)}`;break;
     case "solenoidValve":body=`${line(4,22,31,22)}<rect x="31" y="11" width="34" height="22" ${common}/>${text(48,25,"Y",11)}${line(65,22,92,22)}${text(48,7,"A1",6)}${text(48,40,"A2",6)}`;break;
+    case "wegW22XBCMotor":body=`${line(4,22,31,22)}<circle cx="48" cy="22" r="17" ${common}/>${text(48,25,"M",12)}${line(65,22,92,22)}${text(48,5,"WEG W22XB-C · 6 LEAD",5)}`;break;
     case "singlePhaseMotor":case "threePhaseMotor":body=`${line(4,22,31,22)}<circle cx="48" cy="22" r="17" ${common}/>${text(48,25,"M",12)}${line(65,22,92,22)}${text(48,5,component.type==="singlePhaseMotor"?"1~":"3~",7)}`;break;
     case "phoenixPT25FeedThrough":body=`${line(4,22,31,22)}<rect x="31" y="12" width="34" height="20" ${common}/>${line(38,22,58,22)}${line(65,22,92,22)}${text(48,9,"PT 2,5",6)}${text(48,28,"24 A",6)}`;break;
     case "terminal":body=`${line(4,22,31,22)}<rect x="31" y="12" width="34" height="20" ${common}/>${line(38,22,58,22)}${line(65,22,92,22)}${text(48,9,"X",7)}`;break;

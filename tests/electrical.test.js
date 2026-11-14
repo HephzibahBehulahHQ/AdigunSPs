@@ -133,6 +133,13 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const root={dataset:{selectedComponent:terminal.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of terminal.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("Phoenix Contact PT 2,5 product data"));assert.match(electricalSymbolSvg(terminal),/PT 2,5/);
 }
+{
+  const motor=createElectricalComponent("wegW22XBCMotor",1),expected=["U1","V1","W1","U2","V2","W2"],peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,400,120+index*90)),diagram={components:[motor,...peers],wires:[]};
+  assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"W22XB-C · frame 315–500 family reference");assert.deepEqual(motor.terminals,expected);
+  for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:motor.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is an individually wireable winding terminal`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:motor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("WEG W22XB-C motor instruction manual · connection diagrams"));assert.match(electricalSymbolSvg(motor),/WEG W22XB-C · 6 LEAD/);
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
