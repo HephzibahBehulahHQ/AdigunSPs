@@ -309,4 +309,7 @@ To draw a routed wire, choose **Connect wire**, select its starting terminal, an
 
 The placeable Siemens SITOP PSU100C (6EP1332-5BA00) and ifm PN2070 are source-linked schematic references with individually connectable, manufacturer-documented terminal identities. Their symbols and pin maps do not imply simulated device behavior: the PSU's AC/DC conversion and current limiting, and the PN2070's pressure, analogue and IO-Link behavior are not modeled. Their manufacturer source and limitations appear in the selected-component inspector.
 
+The Siemens SIRIUS 3RT2017-1WB41 contactor reference provides separate terminals for its three main poles, 13/14 auxiliary NO contact, and A1+/A2− coil. Its official data sheet is linked in the inspector. Device-specific coil, power switching and ratings are not simulated or implied by the editable symbol.
+
 The right inspector's **Issues** tab lists current validation findings for the active workspace. In Components it uses the electrical diagram validator; other editors use project validation. **Properties** returns to the selected component or instruction. **Watch** retains the existing simulated-value and force controls. Selected electrical components also expose their existing rotate, duplicate, and delete actions in the inspector. Terminal connections and validation diagnostics are grouped in expandable sections; opening a section is preserved while the inspector refreshes.
+

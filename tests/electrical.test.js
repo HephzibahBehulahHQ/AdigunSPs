@@ -32,6 +32,17 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.match(electricalUiSource,/Click the canvas to add route bends/u);
 }
 {
+  const contactor=createElectricalComponent("siemensSirius3RT20171WB41",1),expected=["1/L1","3/L2","5/L3","13","A1+","2/T1","4/T2","6/T3","14","A2−"];
+  assert.equal(contactor.manufacturer,"Siemens");assert.equal(contactor.partNumber,"3RT2017-1WB41");assert.deepEqual(contactor.terminals,expected);
+  const diagram={components:[contactor,createElectricalComponent("pilotLamp",1,360,120)],wires:[]};
+  for(const pin of expected){const peer=createElectricalComponent("terminal",diagram.components.length,600,120+diagram.wires.length*120);diagram.components.push(peer);const result=connectElectricalTerminals(diagram,{componentId:contactor.id,terminal:pin},{componentId:peer.id,terminal:"1"});assert.equal(result.ok,true,`${pin} is a connectable manufacturer terminal`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:contactor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is displayed as its own terminal`);
+  assert.ok(root.innerHTML.includes("Siemens SIRIUS 3RT2017-1WB41 data sheet"));
+  assert.ok(root.innerHTML.includes("does not model validated coil voltage, power switching, contact ratings, or device performance"));
+  assert.match(electricalSymbolSvg(contactor),/3RT20 · 3 NO/);
+}
+{
   const component=createElectricalComponent("pilotLamp",1,120,120);
   assert.deepEqual([moveElectricalComponent(component,137,143).x,moveElectricalComponent(component,137,143).y],[140,140],"component movement snaps to the grid by default");
   assert.deepEqual([moveElectricalComponent(component,137,143,{snap:false}).x,moveElectricalComponent(component,137,143,{snap:false}).y],[137,143],"the explicit snap-off view state permits pixel movement");
@@ -279,4 +290,5 @@ assert.equal(simulateElectricalDiagram(openAnalogInput,{RawAI:250},{}).inputs.Ra
 const openAnalogOutput=structuredClone(analogDiagram);openAnalogOutput.wires=openAnalogOutput.wires.filter((wire)=>wire.to.componentId!==analogIndicator.id||wire.to.terminal!=="SIG+");
 assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {ScaledValue:25}).analogOutputs,"ScaledValue"),false,"disconnected analog output is not delivered to its indicator");
 console.log("PASS: generic industrial categories, digital and scalar analog I/O paths, grid placement, wiring, coil-driven contactor poles, motor state, PLC mapping validation, and JSON persistence");
+
 
