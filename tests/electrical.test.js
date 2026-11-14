@@ -149,6 +149,16 @@ for(const type of Object.keys(electricalComponentCatalog))for(const rotation of 
   }
 }
 {
+  const lamp=createElectricalComponent("siemens3SU1152AmberIndicator",1,360,120),supply=createElectricalComponent("supply24vdc",1),diagram={components:[lamp,supply],wires:[]};
+  assert.equal(lamp.manufacturer,"Siemens");assert.equal(lamp.partNumber,"3SU1152-6AA00-1AA0");assert.equal(lamp.ratedVoltageV,24);assert.deepEqual(lamp.terminals,["X1","X2"]);
+  for(const [from,to]of [[{componentId:supply.id,terminal:"+"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}]]){const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true);diagram.wires.push(result.wire);}
+  assert.equal(simulateElectricalDiagram(diagram).energized[lamp.id],true,"the sourced indicator displays the existing ideal on/off DC load state");
+  const root={dataset:{selectedComponent:lamp.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of lamp.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is individually connectable`);
+  assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 data sheet"));assert.match(electricalSymbolSvg(lamp),/24 V AC\/DC/);
+  assert.ok(root.innerHTML.includes("does not model AC operation, LED polarity, current, brightness, photometry or protection"));
+}
+{
   const component=createElectricalComponent("pilotLamp",1,20,20),listeners={};
   let history=0,changes=0,focus=0;
   const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>{listeners[name]=handler;},focus:()=>{focus++;}};
@@ -184,7 +194,7 @@ for (const language of ["en","de","yo","pcm"]) for (const tripped of [false,true
   assert.ok(root.innerHTML.includes('name="tripped"'),`${language} fuse properties render`);
   assert.equal(root.innerHTML.includes("checked disabled"),tripped,`${language} blown fuse cannot be reset`);
 }
-for(const [type,spec]of Object.entries(electricalComponentCatalog).filter(([,item])=>item.kind==="device-reference")){
+for(const [type,spec]of Object.entries(electricalComponentCatalog).filter(([,item])=>Boolean(item.source?.url))){
   const component=createElectricalComponent(type,1),warnings=validateElectricalDiagram({components:[component],wires:[]}).filter(issue=>issue.code==="electrical-unverified-device");
   assert.equal(warnings.length,0,`${type} manufacturer identity is trusted when its catalog source and identifiers match`);
   const edited={...component,manufacturer:"Unverified manufacturer"};
