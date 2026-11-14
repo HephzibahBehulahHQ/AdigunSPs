@@ -1,12 +1,26 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentBounds, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
 import { electricalSimulationStatus, electricalSymbolSvg, electricalWirePath, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
+import { examples } from "../src/examples.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+{
+  const collisions=[];
+  for(const example of examples){
+    const project=makeProjectFromExample(example),components=project.electrical.components;
+    const bounds=components.map(electricalComponentBounds);
+    for(let first=0;first<components.length;first++)for(let second=first+1;second<components.length;second++){
+      const a=bounds[first],b=bounds[second];
+      if(a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)collisions.push(`${example.id} ${example.title.en}: ${components[first].reference} / ${components[second].reference}`);
+    }
+  }
+  assert.deepEqual(collisions,[],"all generated example schematics place component cards without overlap");
+}
+
 {
   const source=createElectricalComponent("supply24vdc",1,80,200),destination=createElectricalComponent("supply24vdc",2,520,200),obstacle=createElectricalComponent("pilotLamp",1,300,200);
   const wire={from:{componentId:source.id,terminal:"+"},to:{componentId:destination.id,terminal:"−"}};
