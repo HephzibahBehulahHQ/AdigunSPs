@@ -27,6 +27,8 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
 
+Header: RUN SIMULATION.
+
 ## Taking the onboarding tour
 
 **What you'll see:** Welcome offers **Start quick tour** or **Continue**.
