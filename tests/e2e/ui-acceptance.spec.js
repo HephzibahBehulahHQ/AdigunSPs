@@ -664,3 +664,32 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
   }
 });
 
+
+test("all application menus stay reachable within desktop viewports", async ({ page }) => {
+  const expectedKeys = ["file","edit","view","project","plc","ioTags","programs","online","debug","tools","window","settings","help"];
+  for (const viewport of [{ width:1894, height:850 }, { width:1366, height:768 }]) {
+    await page.setViewportSize(viewport);
+    const actualKeys = await page.locator(".app-menus [data-app-menu]").evaluateAll((buttons) => buttons.map((button) => button.dataset.appMenu));
+    expect(actualKeys).toEqual(expectedKeys);
+
+    for (const key of expectedKeys) {
+      await page.locator(`[data-app-menu="${key}"]`).click();
+      const menu = page.locator("#contextMenu");
+      await expect(menu, `${key} menu opens at ${viewport.width}px`).toBeVisible();
+      if (key === "help") {
+        await expect(menu.locator(".help-guide-content")).toBeVisible();
+      } else {
+        await expect(menu.getByRole("menuitem").first()).toBeVisible();
+        expect(await menu.getByRole("menuitem").count(), `${key} menu has actions`).toBeGreaterThan(0);
+      }
+      const bounds = await menu.boundingBox();
+      expect(bounds, `${key} menu has visible geometry`).not.toBeNull();
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.y).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height);
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+    }
+  }
+});
