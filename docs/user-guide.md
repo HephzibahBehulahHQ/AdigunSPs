@@ -301,6 +301,8 @@ The left project panel now shows the existing actions for the active editor: Add
 
 The Components canvas places its circuit title and **Select**, **Connect terminals**, **Validate**, and **Simulate** actions immediately above the drawing. Use the left toolbox for model search, placement, move, rotation, duplication, and manufacturer references. Delete a selected component in the right **Properties** inspector. Validation and simulation stay in the canvas action row; the left toolbox contains component-editing commands.
 
+Generated example schematics use separated component positions so terminal controls remain visible. Drag a component by its header; the canvas captures the pointer during movement. You can also select its header and use arrow keys, with Shift moving five grid steps. The selected component is raised above neighboring symbols so it can be repositioned if a saved diagram overlaps.
+
 The schematic's visible legend identifies terminal markers, connected signals, and the left toolbox location for editing wires. It does not validate real-world wiring. The inspector identifies the selected reference and catalog category above the editable component fields.
 
 The placeable Siemens SITOP PSU100C (6EP1332-5BA00) and ifm PN2070 are source-linked schematic references with individually connectable, manufacturer-documented terminal identities. Their symbols and pin maps do not imply simulated device behavior: the PSU's AC/DC conversion and current limiting, and the PN2070's pressure, analogue and IO-Link behavior are not modeled. Their manufacturer source and limitations appear in the selected-component inspector.

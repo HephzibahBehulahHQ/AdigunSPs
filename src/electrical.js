@@ -119,20 +119,20 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
     const component = createElectricalComponent(type, sequence, x, y); component.tag = tag; components.push(component); return component;
   };
   const wire = (a, at, b, bt) => { const result = connectElectricalTerminals({ components, wires }, { componentId: a.id, terminal: at }, { componentId: b.id, terminal: bt }); if (!result.ok) throw new Error(result.error); wires.push(result.wire); };
-  const supply = add("supply24vdc", 80, 80), plc = add("genericPlc24v4di4do", 300, 80), positiveRail=add("dcPowerRail",180,80),returnRail=add("dcPowerRail",440,80);
+  const supply = add("supply24vdc", 80, 80), plc = add("genericPlc24v4di4do", 520, 80), positiveRail=add("dcPowerRail",300,80),returnRail=add("dcPowerRail",740,80);
   wire(supply, "+", positiveRail, "1"); wire(supply, "−", returnRail, "1"); wire(positiveRail,"2",plc,"L+"); wire(returnRail,"2",plc,"M");
-  const plcEarth=add("protectiveEarth",300,160); wire(plc,"PE",plcEarth,"PE");
+  const plcEarth=add("protectiveEarth",520,280); wire(plc,"PE",plcEarth,"PE");
   const boolInputs = (tags || []).filter((tag) => tag.role === "input" && tag.type === "BOOL");
   boolInputs.slice(0, 4).forEach((tag, index) => {
-    const button = add("pushbuttonNO", 80, 240 + index * 120, tag.name); plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
+    const button = add("pushbuttonNO", 80, 300 + index * 120, tag.name); plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
     wire(positiveRail, String(index+3), button, "13"); wire(button, "14", plc, `I${index + 1}`);
     if (initialState[tag.name]) button.closed = true;
   });
   const boolOutputs = (tags || []).filter((tag) => tag.role === "output" && tag.type === "BOOL");
   boolOutputs.slice(0, 4).forEach((tag, index) => {
-    const type=electricalComponentCatalog[outputLoadTypes[tag.name]]?.kind ? outputLoadTypes[tag.name] : "pilotLamp", load = add(type, 560, 240 + index * 120, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
+    const type=electricalComponentCatalog[outputLoadTypes[tag.name]]?.kind ? outputLoadTypes[tag.name] : "pilotLamp", load = add(type, 960, 300 + index * 160, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
     if (type === "threePhaseMotor") {
-      const contactor=add("contactor3P",720,240+index*180), phaseSource=add("supply3phase",80,900+index*220);
+      const contactor=add("contactor3P",1180,300+index*200), phaseSource=add("supply3phase",80+index*220,1140);
       wire(plc,`Q${index+1}`,contactor,"A1"); wire(contactor,"A2",returnRail,String(index+3));
       for(const [phase,mainIn,mainOut,motorPin] of [["L1","1L1","2T1","U1"],["L2","3L2","4T2","V1"],["L3","5L3","6T3","W1"]]) { wire(phaseSource,phase,contactor,mainIn); wire(contactor,mainOut,load,motorPin); }
       wire(phaseSource,"PE",load,"PE");
@@ -140,21 +140,21 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   });
   const analogInputs = (tags || []).filter((tag) => tag.role === "input" && ["INT", "REAL"].includes(tag.type));
   if (analogInputs.length) {
-    const module = add("analogInputModule2", 300, 640);
+    const module = add("analogInputModule2", 520, 800);
     wire(returnRail,"7",module,"MANA");
     analogInputs.slice(0, 2).forEach((tag, index) => {
       module.ioMap[`AI${index + 1}`] = { tag: tag.name, address: /^IW\d+$/.test(tag.address||"")?tag.address:`IW${index * 2}` };
-      const source=add("analogSignalSource",80,680+index*80,tag.name);
+      const source=add("analogSignalSource",80,800+index*100,tag.name);
       wire(source,"SIG+",module,`AI${index+1}+`); wire(source,"SIG−",module,`AI${index+1}−`);
     });
   }
   const analogOutputs = (tags || []).filter((tag) => tag.role === "output" && ["INT", "REAL"].includes(tag.type));
   if (analogOutputs.length) {
-    const module = add("analogOutputModule2", 560, 640);
+    const module = add("analogOutputModule2", 960, 800);
     wire(returnRail,"8",module,"MANA");
     analogOutputs.slice(0, 2).forEach((tag, index) => {
       module.ioMap[`AQ${index + 1}`] = { tag: tag.name, address: /^QW\d+$/.test(tag.address||"")?tag.address:`QW${index * 2}` };
-      const indicator=add("analogSignalIndicator",760,680+index*80,tag.name);
+      const indicator=add("analogSignalIndicator",1180,840+index*100,tag.name);
       wire(module,`AQ${index+1}+`,indicator,"SIG+"); wire(module,`AQ${index+1}−`,indicator,"SIG−");
     });
   }

@@ -34,13 +34,15 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},boardEvents={},card={style:{}};
   const source=createElectricalComponent("supply24vdc",1,600,200),wire={id:"drag-wire",from:{componentId:component.id,terminal:"X1"},to:{componentId:source.id,terminal:"+"}},wireAttributes={};
   const originalEndpoints=structuredClone(wire);
+  let capturedPointer=null;
   const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>headEvents[name]=handler,setPointerCapture(){}};
-  const board={getBoundingClientRect:()=>({left:-300,top:-200}),addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:s=>s.startsWith("[data-wire-id=")?{setAttribute:(name,value)=>wireAttributes[name]=value}:card};
+  const board={getBoundingClientRect:()=>({left:-300,top:-200}),setPointerCapture:id=>capturedPointer=id,addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:s=>s.startsWith("[data-wire-id=")?{setAttribute:(name,value)=>wireAttributes[name]=value}:card};
   const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:[]};
   const previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
   try{
     renderElectricalWorkspace(root,{tags:[],electrical:{components:[component,source],wires:[wire]}});
     headEvents.pointerdown({button:0,clientX:-80,clientY:10,pointerId:1,preventDefault(){}});
+    assert.equal(capturedPointer,1,"the board captures drag pointers so move events reach the editor canvas");
     boardEvents.pointermove({clientX:-80,clientY:10});
     assert.deepEqual([component.x,component.y],[200,200],"drag starts without jumping on a scrolled canvas");
     boardEvents.pointermove({clientX:-40,clientY:70});
@@ -219,6 +221,12 @@ assert.equal(floatingPlcIssues.some((issue)=>issue.message.includes("terminal I3
 const railOnly=createElectricalComponent("dcPowerRail",1);
 assert.equal(validateElectricalDiagram({components:[railOnly],wires:[]}).some((issue)=>issue.code==="electrical-floating-terminal"),false,"unused distribution rail taps are not reported as floating device terminals");
 const generatedElectrical=createExampleElectricalDiagram([{name:"Start",type:"BOOL",role:"input",address:"I0.0"},{name:"Lamp",type:"BOOL",role:"output",address:"Q0.0"}],{inputs:["Start"],outputs:["Lamp"]});
+{
+  const tags=["Start","Stop"].map((name,index)=>({name,type:"BOOL",role:"input",address:`I0.${index}`}));tags.push({name:"Lamp",type:"BOOL",role:"output",address:"Q0.0"});
+  const example=createExampleElectricalDiagram(tags,{inputs:["Start","Stop"],outputs:["Lamp"]});
+  const boxes=example.components.map(component=>({id:component.id,left:component.x,right:component.x+120,top:component.y,bottom:component.y+Math.max(80,32+Math.ceil(component.terminals.length/2)*22)}));
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++)assert.ok(boxes[i].right+12<=boxes[j].left||boxes[j].right+12<=boxes[i].left||boxes[i].bottom+12<=boxes[j].top||boxes[j].bottom+12<=boxes[i].top,"generated example cards leave clear space for pins and selection");
+}
 assert.equal(validateElectricalDiagram(generatedElectrical,[{name:"Start",type:"BOOL",role:"input"},{name:"Lamp",type:"BOOL",role:"output"}]).some((issue)=>issue.code==="electrical-floating-terminal"),false,"generated example schematics connect the PLC earth and omit warnings for unused channels and rail taps");
 const logicExample={title:{en:"Circuit integration"},tags:[{name:"Start",role:"input",type:"BOOL",address:"I0.0"},{name:"Lamp",role:"output",type:"BOOL",address:"Q0.0"}],io:{inputs:["Start"],outputs:["Lamp"]},initialState:{Start:false},logic:{rungs:[{contacts:[{tag:"Start",mode:"NO"}],coil:"Lamp"}]}};
 const logicProject=makeProjectFromExample(logicExample),plcOff=scan(logicProject,{Start:false},{}),circuitOff=simulateElectricalDiagram(logicProject.electrical,{Start:false},plcOff.outputs),plcOn=scan(logicProject,{Start:true},{}),circuitOn=simulateElectricalDiagram(logicProject.electrical,{Start:true},plcOn.outputs),mappedLamp=logicProject.electrical.components.find((item)=>item.tag==="Lamp");
