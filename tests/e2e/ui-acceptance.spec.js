@@ -715,7 +715,7 @@ test("1894px electrical workspace geometry matches the approved reference", asyn
   expect(layout).toEqual({
     topbar:{x:0,y:0,width:1894,height:50},
     menu:{x:0,y:50,width:1894,height:39},
-    tabs:{x:0,y:89,width:1555,height:52},
+    tabs:{x:270,y:89,width:1285,height:52},
     left:{x:0,y:89,width:270,height:726},
     right:{x:1555,y:89,width:339,height:726},
     board:{x:284,y:205,width:1260,height:601},
