@@ -1002,3 +1002,19 @@ test("Snap remains visible and operable in compact desktop view toolbars", async
     await expect(snap).toHaveAttribute("title", "Snap on");
   }
 });
+
+
+test("electrical wire endpoints can be reconnected without losing route bends", async ({ page }) => {
+  await page.setViewportSize({width:1900,height:1100});
+  await page.locator("#electricalTab").click();
+  const palette=page.locator("#electricalToolboxDock #electricalPalette"),add=page.locator('#electricalToolboxDock [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
+  await palette.selectOption("supply24vdc");await add.click();await add.click();await add.click();await expect(components).toHaveCount(3);
+  const ids=await components.evaluateAll(nodes=>nodes.map(node=>node.dataset.componentId)),pins=await Promise.all(ids.map(async id=>page.locator(`[data-terminal-component="${id}"]`).evaluateAll(nodes=>nodes.map(node=>node.dataset.terminal))));
+  const wireTool=page.locator('#electricalToolboxDock [data-electrical-action="wire"]'),board=page.locator("#electricalBoard");
+  await wireTool.click();await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="${pins[0][0]}"]`).click();await board.click({position:{x:500,y:300}});await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${pins[1][0]}"]`).click();
+  const wire=page.locator("#electricalBoard .electrical-wire").first(),wireId=await wire.getAttribute("data-wire-id");await expect(wire).toHaveAttribute("d",/L500 300/);
+  await page.locator(`#inspectorContent [data-select-wire="${wireId}"]`).click();await page.locator('#inspectorContent [data-electrical-action="rewire-from"]').click();
+  await page.locator(`[data-terminal-component="${ids[2]}"][data-terminal="${pins[2][0]}"]`).click();
+  await expect(wire).toHaveAttribute("data-wire-id",wireId);await expect(wire).toHaveAttribute("d",/L500 300/);
+  await expect(page.locator("#inspectorContent .electrical-wire-row").first()).toContainText("PS3");
+});
