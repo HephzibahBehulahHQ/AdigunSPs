@@ -590,7 +590,7 @@ test("electrical component search filters models and restores the full picker", 
   await expect(search).toBeVisible();
   const allModels = await palette.locator("option").count();
   await search.fill("motor");
-  await expect(palette.locator("option")).toHaveCount(3);
+  await expect(palette.locator("option")).toHaveCount(4);
   await expect(add).toBeEnabled();
   await search.fill("no-model-can-match-this");
   await expect(palette.locator("option")).toHaveCount(1);
