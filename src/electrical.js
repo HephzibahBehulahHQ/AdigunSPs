@@ -101,6 +101,16 @@ export function connectElectricalTerminals(diagram, from, to, waypoints = []) {
   return { ok:true, wire };
 }
 
+export function rewireElectricalTerminal(diagram, wireId, side, endpoint) {
+  const wire=(diagram.wires||[]).find((item)=>item.id===wireId);
+  if(!wire||wire.draft||!wire.to)return {ok:false,error:"Select a completed wire to reconnect."};
+  if(!["from","to"].includes(side))return {ok:false,error:"Choose the wire start or end terminal to reconnect."};
+  const from=side==="from"?endpoint:wire.from,to=side==="to"?endpoint:wire.to;
+  const check=connectElectricalTerminals({...diagram,wires:diagram.wires.filter((item)=>item.id!==wire.id)},from,to,wire.waypoints||[]);
+  if(!check.ok)return check;
+  return {ok:true,wire:{...wire,[side]:{...endpoint}}};
+}
+
 export function moveElectricalComponent(component, x, y, {snap=true} = {}) {
   const height=Math.max(80,32+Math.ceil((component.terminals?.length||0)/2)*22);
   const angle=(component.rotation||0)*Math.PI/180,cos=Math.round(Math.cos(angle)),sin=Math.round(Math.sin(angle));

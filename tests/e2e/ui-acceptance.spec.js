@@ -730,8 +730,8 @@ test("electrical canvas draws, edits, pauses, and resumes routed wires", async (
   const pins=await Promise.all(ids.map(async id=>page.locator(`[data-terminal-component="${id}"]`).evaluateAll(nodes=>nodes.map(node=>node.dataset.terminal))));
   const wireTool=page.locator('#electricalToolboxDock [data-electrical-action="wire"]'),board=page.locator("#electricalBoard");
   await wireTool.click();await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="${pins[0][0]}"]`).click();
-  await board.click({position:{x:500,y:300}});await expect(page.locator("#inspectorContent .electrical-status")).toContainText("Route point 1 added");await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${pins[1][0]}"]`).click();
-  const wire=page.locator("#electricalBoard .electrical-wire").first();await expect(wire).toHaveAttribute("d",/L500 300/);
+  await board.click({position:{x:500,y:300}});await expect(page.locator("#inspectorContent .electrical-status")).toContainText("Route point 1 added");await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${pins[1][0]}"]`).click();console.log("rewire-stage: initial cable drawn");
+  const wire=page.locator("#electricalBoard .electrical-wire").first();await expect(wire).toHaveAttribute("d",/L500 300/);console.log("rewire-stage: route exists");
   const wireId=await wire.getAttribute("data-wire-id"),boardBox=await board.boundingBox();await page.mouse.click(boardBox.x+400,boardBox.y+226);
   const bend=page.locator(`#electricalBoard [data-wire-waypoint="${wireId}"]`),box=await bend.boundingBox();expect(box).not.toBeNull();
   await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+40,box.y+box.height/2+40);await page.mouse.up();await expect(wire).toHaveAttribute("d",/L540 340/);
@@ -1001,4 +1001,24 @@ test("Snap remains visible and operable in compact desktop view toolbars", async
     await expect(snap).toHaveAttribute("aria-pressed", "true");
     await expect(snap).toHaveAttribute("title", "Snap on");
   }
+});
+
+
+test("electrical wire endpoints can be reconnected without losing route bends", async ({ page }) => {
+  await page.setViewportSize({width:1900,height:1100});
+  await page.locator("#electricalTab").click();
+  const palette=page.locator("#electricalToolboxDock #electricalPalette"),add=page.locator('#electricalToolboxDock [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
+  await palette.selectOption("supply24vdc");await add.click();await add.click();await add.click();await expect(components).toHaveCount(3);
+  const ids=await components.evaluateAll(nodes=>nodes.map(node=>node.dataset.componentId)),pins=await Promise.all(ids.map(async id=>page.locator(`[data-terminal-component="${id}"]`).evaluateAll(nodes=>nodes.map(node=>node.dataset.terminal))));
+  const wireTool=page.locator('#electricalToolboxDock [data-electrical-action="wire"]'),board=page.locator("#electricalBoard");
+  await wireTool.click();await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="${pins[0][0]}"]`).click();await board.click({position:{x:500,y:300}});await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${pins[1][0]}"]`).click();
+  const wire=page.locator("#electricalBoard .electrical-wire").first(),wireId=await wire.getAttribute("data-wire-id");await expect(wire).toHaveAttribute("d",/L500 300/);
+  const connections=page.locator('#inspectorContent details[data-inspector-section="connections"]');
+  await connections.locator("summary").click();
+  await expect(connections.locator(".electrical-wire-row")).toHaveCount(1);
+  await page.locator(`#inspectorContent [data-select-wire="${wireId}"]`).click();
+  await page.locator('#inspectorContent [data-electrical-action="rewire-from"]').click();
+  await page.locator(`[data-terminal-component="${ids[2]}"][data-terminal="${pins[2][0]}"]`).click();
+  await expect(wire).toHaveAttribute("data-wire-id",wireId);await expect(wire).toHaveAttribute("d",/L500 300/);
+  await expect(connections.locator(".electrical-wire-row").first()).toContainText("PS3");
 });
