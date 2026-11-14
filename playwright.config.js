@@ -1,7 +1,8 @@
 import { defineConfig } from "@playwright/test";
 
+const productionBaseURL = process.env.ADIGUNSP_BASE_URL?.replace(/\/+$/, "");
 const port = Number(process.env.ADIGUN_DEV_PORT || 8080);
-const baseURL = `http://127.0.0.1:${port}`;
+const baseURL = productionBaseURL || `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -17,10 +18,12 @@ export default defineConfig({
       ? { executablePath: process.env.ADIGUNSP_CHROME_PATH }
       : {}
   },
-  webServer: {
-    command: "npm run dev",
-    url: `${baseURL}/`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30000
-  }
+  ...(!productionBaseURL && {
+    webServer: {
+      command: "npm run dev",
+      url: `${baseURL}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30000
+    }
+  })
 });
