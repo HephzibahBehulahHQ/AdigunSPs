@@ -901,10 +901,17 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
   await expect(snap).not.toBeChecked();
   await snap.check();
   await expect(snap).toBeChecked();
+  await page.locator('[data-action="tags"]').click();
+  await page.locator("#addTag").click();
+  await page.locator('[data-tag-index="0"][data-field="role"]').selectOption("input");
+  await page.locator("#addTag").click();
+  await page.locator('[data-tag-index="1"][data-field="role"]').selectOption("output");
+  await page.locator("#modal .modal-close").click();
+  await page.locator("#hmiTab").click();
   const widgets = page.locator("#hmiBoard [data-hmi-widget]");
   for (const type of ["switch", "lamp", "value", "trend"]) {
     const count = await widgets.count();
-    await page.locator(`#editorToolboxDock [data-hmi-add="${type}"]`).click();
+    await page.locator(`#editorToolboxDock [data-editor-toolbox-mode="HMI"] [data-hmi-add="${type}"]`).click();
     await expect(widgets).toHaveCount(count + 1);
   }
   await page.locator("#processesButton").click();
