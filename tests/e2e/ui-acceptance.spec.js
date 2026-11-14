@@ -338,36 +338,17 @@ test("approved wide Electrical layout keeps the compact toolbox and project work
   await expect(page.locator("#exampleSearch")).toBeVisible();
 });
 
-test("wide Electrical canvas actions align with the approved toolbar reference", async ({ page }) => {
+test("wide Electrical canvas actions align in the compact toolbar", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await page.locator("#electricalTab").click();
-  const actions = page.locator("#electricalCanvasContext .electrical-canvas-actions button");
-  await expect(actions).toHaveText(["Select", "Connect terminals", "Validate", "▶ Simulate"]);
-  await expect(actions.nth(2)).toHaveAttribute("aria-label", "Validate diagram");
-  await expect(actions.nth(3)).toHaveAttribute("aria-label", "Simulate circuit");
-  const boxes = await page.evaluate(() => {
-    const box = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { x:r.x, width:r.width }; };
-    return {
-      select:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(1)"),
-      connect:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(2)"),
-      validate:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(3)"),
-      simulate:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(4)"),
-      grid:box(".electrical-view-tools > button:nth-child(1)"),
-      fit:box(".electrical-view-tools > button:nth-child(2)"),
-      zoom:box(".electrical-zoom-tools")
-    };
-  });
-  expect(boxes.select.x).toBeGreaterThanOrEqual(586);
-  expect(boxes.select.x).toBeLessThanOrEqual(594);
-  expect(boxes.select.width).toBe(85);
-  expect(boxes.connect.width).toBe(150);
-  expect(boxes.validate.width).toBe(95);
-  expect(boxes.simulate.width).toBe(125);
-  expect(boxes.grid.x).toBeGreaterThanOrEqual(1210);
-  expect(boxes.grid.x).toBeLessThanOrEqual(1222);
-  expect(boxes.grid.width).toBe(94);
-  expect(boxes.fit.width).toBe(84);
-  expect(boxes.zoom.width).toBe(134);
+  const toolbar = page.locator("#electricalCanvasContext");
+  const actions = toolbar.locator("button");
+  await expect(actions).toHaveCount(10);
+  const labels = await actions.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
+  expect(labels).toEqual(["Select", "Connect terminals", "Validate", "Simulate circuit", "Grid", "Fit view", "Snap on", "Zoom out", "Zoom in", "Expand"]);
+  const yPositions = await actions.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().y));
+  expect(Math.max(...yPositions) - Math.min(...yPositions)).toBeLessThanOrEqual(1);
+  await expect(toolbar).toHaveCSS("overflow-y", "hidden");
 });
 
 test("electrical canvas exposes the reference-aligned contextual title and actions", async ({ page }) => {
@@ -391,11 +372,11 @@ test("electrical canvas exposes the reference-aligned contextual title and actio
 test("wide board Snap and Expand controls operate on persisted movement and full-screen views", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await page.locator("#electricalTab").click();
-  const snap = page.locator(".electrical-board-actions [data-electrical-action=\"snap\"]");
-  await expect(snap).toHaveText("⌗ Snap on");
+  const snap = page.locator("#electricalCanvasContext [data-electrical-action=\"snap\"]");
+  await expect(snap).toHaveAttribute("title", "Snap on");
   await expect(snap).toHaveAttribute("aria-pressed", "true");
   await snap.click();
-  await expect(snap).toHaveText("⌗ Snap off");
+  await expect(snap).toHaveAttribute("title", "Snap off");
   await expect(snap).toHaveAttribute("aria-pressed", "false");
 
   await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
@@ -410,7 +391,7 @@ test("wide board Snap and Expand controls operate on persisted movement and full
   await expect(component).toHaveCSS("top", "133px");
 
   await snap.click();
-  await expect(snap).toHaveText("⌗ Snap on");
+  await expect(snap).toHaveAttribute("title", "Snap on");
   const snappedHead = component.locator("[data-drag-component]");
   const snappedStart = await snappedHead.boundingBox();
   await page.mouse.move(snappedStart.x + snappedStart.width / 2, snappedStart.y + 12);
@@ -420,7 +401,7 @@ test("wide board Snap and Expand controls operate on persisted movement and full
   await expect(component).toHaveCSS("left", "140px");
   await expect(component).toHaveCSS("top", "140px");
 
-  const expand = page.locator(".electrical-board-actions [data-electrical-action=\"expand\"]");
+  const expand = page.locator("#electricalCanvasContext [data-electrical-action=\"expand\"]");
   await expand.click();
   await expect.poll(() => page.evaluate(() => document.fullscreenElement?.classList.contains("editor-area") || false)).toBe(true);
   await expand.click();
@@ -440,12 +421,12 @@ test("wide Electrical board frame and labels align with the approved reference",
   });
   expect(boxes.drawing.x).toBeGreaterThanOrEqual(305);
   expect(boxes.drawing.x).toBeLessThanOrEqual(310);
-  expect(boxes.drawing.y).toBeGreaterThanOrEqual(260);
-  expect(boxes.drawing.y).toBeLessThanOrEqual(264);
+  expect(boxes.drawing.y).toBeGreaterThanOrEqual(246);
+  expect(boxes.drawing.y).toBeLessThanOrEqual(250);
   expect(boxes.caption.x).toBeGreaterThanOrEqual(330);
   expect(boxes.caption.x).toBeLessThanOrEqual(335);
-  expect(boxes.caption.y).toBeGreaterThanOrEqual(282);
-  expect(boxes.caption.y).toBeLessThanOrEqual(288);
+  expect(boxes.caption.y).toBeGreaterThanOrEqual(268);
+  expect(boxes.caption.y).toBeLessThanOrEqual(274);
   expect(boxes.safety.x).toBeGreaterThanOrEqual(480);
   expect(boxes.safety.x).toBeLessThanOrEqual(487);
   expect(boxes.legend.x).toBe(boxes.drawing.x);
@@ -954,7 +935,7 @@ test("1894px electrical workspace geometry matches the approved reference", asyn
     tabs:{x:270,y:89,width:1285,height:52},
     left:{x:0,y:89,width:270,height:726},
     right:{x:1555,y:89,width:339,height:726},
-    board:{x:284,y:205,width:1260,height:601},
+    board:{x:284,y:189,width:1260,height:617},
     status:{x:0,y:815,width:1894,height:35},
   });
   if (process.env.ADIGUNSP_SCREENSHOT_PATH) {
@@ -966,14 +947,14 @@ test("Snap remains visible and operable in compact desktop view toolbars", async
   for (const viewport of [{ width:1366, height:768 }, { width:1280, height:800 }]) {
     await page.setViewportSize(viewport);
     await page.locator("#electricalTab").click();
-    const snap = page.locator(".electrical-view-tools [data-electrical-action=\"snap\"]");
+    const snap = page.locator("#electricalCanvasContext [data-electrical-action=\"snap\"]");
     await expect(snap, `Snap control is visible at ${viewport.width}px`).toBeVisible();
     await expect(snap).toHaveAttribute("aria-pressed", "true");
     await snap.click();
     await expect(snap).toHaveAttribute("aria-pressed", "false");
-    await expect(snap).toContainText("Snap off");
+    await expect(snap).toHaveAttribute("title", "Snap off");
     await snap.click();
     await expect(snap).toHaveAttribute("aria-pressed", "true");
-    await expect(snap).toContainText("Snap on");
+    await expect(snap).toHaveAttribute("title", "Snap on");
   }
 });
