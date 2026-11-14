@@ -26,7 +26,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 2. Continue as guest. Guest access ends after four minutes; editing then pauses, and temporary work stays in this tab.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
-Header: offline, Undo/Redo/Save, RUN SIMULATION; footer: editor/PLC/scan; schematic adds grid. In the electrical schematic, **Grid 20** toggles the grid, **Fit view** fits the canvas, and **Snap on/off** enables or disables 20 px movement increments for dragging and arrow-key moves. The Snap setting is saved with the project. On wide screens, **Expand** toggles full-screen editor mode; press Escape to exit.
+Header: Undo/Redo/Save/Run; footer: PLC/scan; schematic: Grid/Fit/zoom/Snap (grid/free)/Expand (full screen).
 
 ## Taking the onboarding tour
 
