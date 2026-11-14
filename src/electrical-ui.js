@@ -63,7 +63,48 @@ export function electricalWirePath(wire,components) {
   for(let y=0;y<=1400;y+=20)addCandidate([{x:x1,y},{x:x2,y}]);
   candidates.sort((first,second)=>first.cost-second.cost);
   const route=candidates[0]?.route;
-  return route?[`M${route[0].x} ${route[0].y}`,...route.slice(1).map(point=>`L${point.x} ${point.y}`)].join(""):`M${x1} ${y1}H${defaultX}V${y2}H${x2}`;
+  if(route)return [`M${route[0].x} ${route[0].y}`,...route.slice(1).map(point=>`L${point.x} ${point.y}`)].join("");
+
+  const minX=Math.min(-20,Math.floor(Math.min(x1,x2)/20)*20),maxX=Math.max(2220,Math.ceil(Math.max(x1,x2)/20)*20);
+  const minY=Math.min(-20,Math.floor(Math.min(y1,y2)/20)*20),maxY=Math.max(1420,Math.ceil(Math.max(y1,y2)/20)*20);
+  const xs=new Set([x1,x2]),ys=new Set([y1,y2]);
+  for(let x=minX;x<=maxX;x+=20)xs.add(x);
+  for(let y=minY;y<=maxY;y+=20)ys.add(y);
+  for(const box of obstacles){xs.add(box.left-gap);xs.add(box.right+gap);ys.add(box.top-gap);ys.add(box.bottom+gap);}
+  const xValues=[...xs].sort((first,second)=>first-second),yValues=[...ys].sort((first,second)=>first-second),width=xValues.length;
+  const startX=xValues.indexOf(x1),startY=yValues.indexOf(y1),goalX=xValues.indexOf(x2),goalY=yValues.indexOf(y2);
+  const inside=(x,y)=>obstacles.some(box=>x>box.left-gap&&x<box.right+gap&&y>box.top-gap&&y<box.bottom+gap);
+  const startNode=startY*width+startX,goalNode=goalY*width+goalX,startState=startNode*3+2,distances=new Map([[startState,0]]),previous=new Map(),heap=[];
+  const push=(item)=>{let index=heap.length;heap.push(item);while(index){const parent=(index-1)>>1;if(heap[parent][0]<=item[0])break;heap[index]=heap[parent];index=parent;}heap[index]=item;};
+  const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let index=0;while(true){let child=index*2+1;if(child>=heap.length)break;if(child+1<heap.length&&heap[child+1][0]<heap[child][0])child++;if(heap[child][0]>=last[0])break;heap[index]=heap[child];index=child;}heap[index]=last;}return first;};
+  push([Math.abs(x2-x1)+Math.abs(y2-y1),0,startState]);
+  let goalState=-1;
+  while(heap.length){
+    const [,cost,state]=pop();if(cost!==distances.get(state))continue;
+    const node=Math.floor(state/3),direction=state%3,xi=node%width,yi=Math.floor(node/width),x=xValues[xi],y=yValues[yi];
+    if(node===goalNode){goalState=state;break;}
+    const neighbors=[];
+    if(xi>0)neighbors.push([node-1,0,xValues[xi-1],y]);
+    if(xi+1<width)neighbors.push([node+1,0,xValues[xi+1],y]);
+    if(yi>0)neighbors.push([node-width,1,x,yValues[yi-1]]);
+    if(yi+1<yValues.length)neighbors.push([node+width,1,x,yValues[yi+1]]);
+    for(const [nextNode,nextDirection,nextX,nextY] of neighbors){
+      if(inside(nextX,nextY)||blocked({x,y},{x:nextX,y:nextY}))continue;
+      const nextState=nextNode*3+nextDirection,nextCost=cost+Math.abs(nextX-x)+Math.abs(nextY-y)+(direction!==2&&direction!==nextDirection?24:0);
+      if(nextCost>=(distances.get(nextState)??Infinity))continue;
+      distances.set(nextState,nextCost);previous.set(nextState,state);
+      push([nextCost+Math.abs(x2-nextX)+Math.abs(y2-nextY),nextCost,nextState]);
+    }
+  }
+  if(goalState<0)return "";
+  const points=[];
+  for(let state=goalState;state!==undefined;state=previous.get(state)){
+    const node=Math.floor(state/3);points.push({x:xValues[node%width],y:yValues[Math.floor(node/width)]});
+    if(state===startState)break;
+  }
+  points.reverse();
+  const compact=points.filter((point,index)=>index===0||index===points.length-1||((point.x!==points[index-1].x||point.x!==points[index+1].x)&&(point.y!==points[index-1].y||point.y!==points[index+1].y)));
+  return [`M${compact[0].x} ${compact[0].y}`,...compact.slice(1).map(point=>`L${point.x} ${point.y}`)].join("");
 }
 export function electricalSymbolSvg(component) {
   const spec=electricalComponentCatalog[component.type],common='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"',line=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${common}/`,text=(x,y,value,size=8)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="currentColor" stroke="none">${escape(value)}</text>`;
