@@ -1097,3 +1097,49 @@ test("imported overlapping schematic components can be dragged clear without los
   await expect(wire).toHaveAttribute("data-wire-id", "legacy-wire");
   await expect(wire).toHaveAttribute("d", /L240 400/);
 });
+
+test("real multi-pin schematic models recover from example-style overlap without changing wires", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  const cpuTerminals=["X80-1","X80-2","X80-4","X80-5","X80-6",...Array.from({length:10},(_,i)=>`X10-${i+1}`),...Array.from({length:8},(_,i)=>`X11-${i+1}`)];
+  const project = {
+    name: "Imported pump schematic overlap fixture",
+    rungs: [], tags: [], io: { inputs: [], outputs: [] }, initialState: {},
+    electrical: {
+      components: [
+        { id:"ps1", type:"sitopPSU100C", reference:"PS1", label:"SITOP PSU100C", x:120, y:80, rotation:0, terminals:["L","N","PE","+","−A","−B"] },
+        { id:"xr1", type:"phoenixPT25FeedThrough", reference:"XR1", label:"PT 2,5 feed-through", x:300, y:80, rotation:0, terminals:["1","2"] },
+        { id:"plc1", type:"siemensS71212CG2", reference:"PLC1", label:"CPU 1212C G2", x:460, y:80, rotation:0, terminals:cpuTerminals },
+        { id:"xr2", type:"phoenixPT25FeedThrough", reference:"XR2", label:"PT 2,5 feed-through", x:800, y:80, rotation:0, terminals:["1","2"] },
+        { id:"pe1", type:"phoenixPT25PE", reference:"PE1", label:"PT 2,5-PE", x:480, y:210, rotation:0, terminals:["1","2"] },
+        { id:"s1", type:"siemens3SU1400NOContact", reference:"S1", label:"3SU1 NO contact", x:120, y:360, rotation:0, terminals:["3","4"] },
+        { id:"s2", type:"siemens3SU1400NOContact", reference:"S2", label:"3SU1 NO contact", x:120, y:520, rotation:0, terminals:["3","4"] },
+        { id:"h1", type:"siemens3SU1152AmberIndicator", reference:"H1", label:"3SU1152 indicator", x:1000, y:360, rotation:0, terminals:["X1","X2"] }
+      ],
+      wires: [
+        { id:"earth-lead", from:{componentId:"ps1",terminal:"PE"}, to:{componentId:"pe1",terminal:"1"}, waypoints:[{x:700,y:460}] },
+        { id:"run-signal", from:{componentId:"plc1",terminal:"X11-3"}, to:{componentId:"h1",terminal:"X1"}, waypoints:[{x:700,y:340}] }
+      ],
+      inputStates: {}
+    }
+  };
+  await page.locator("#fileInput").setInputFiles({ name:"pump-overlap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project)) });
+  await page.locator("#electricalTab").click();
+  const plc=page.locator('#electricalBoard [data-component-id="plc1"]');
+  const pe=page.locator('#electricalBoard [data-component-id="pe1"]');
+  const wire=page.locator('#electricalBoard [data-wire-id="earth-lead"]');
+  await expect(plc).toBeVisible();
+  await expect(pe).toBeVisible();
+  await expect(wire).toHaveAttribute("d", /L700 460/);
+  const plcBox=await plc.boundingBox(),peBox=await pe.boundingBox();
+  expect(plcBox.x<peBox.x+peBox.width&&plcBox.x+plcBox.width>peBox.x&&plcBox.y<peBox.y+peBox.height&&plcBox.y+plcBox.height>peBox.y, `expected initial PLC/PE overlap; plc=${JSON.stringify(plcBox)} pe=${JSON.stringify(peBox)} styles=${await plc.getAttribute("style")} | ${await pe.getAttribute("style")}`).toBe(true);
+  const symbol=pe.locator(".electrical-symbol"),start=await symbol.boundingBox();
+  await page.mouse.move(start.x+start.width/2,start.y+start.height/2);
+  await page.mouse.down();
+  await page.mouse.move(start.x+start.width/2+220,start.y+start.height/2+330,{steps:12});
+  await page.mouse.up();
+  const boxes=await page.locator("#electricalBoard [data-component-id]").evaluateAll(nodes=>nodes.map(node=>{const {left,top,right,bottom}=node.getBoundingClientRect();return {left,top,right,bottom};}));
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];expect(a.right+8<=b.left||b.right+8<=a.left||a.bottom+8<=b.top||b.bottom+8<=a.top).toBe(true);}
+  await expect(pe).toHaveAttribute("data-component-id","pe1");
+  await expect(wire).toHaveAttribute("data-wire-id","earth-lead");
+  await expect(wire).toHaveAttribute("d",/L700 460/);
+});
