@@ -25,6 +25,10 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const root={dataset:{selectedComponent:sensor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
   renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of [...psu.terminals,...sensor.terminals])assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as an individually connectable pin`);
+  assert.match(root.innerHTML,/data-terminal="−A"[^>]*aria-label="PS1 terminal − \(−A\): 0 V DC output terminal \(first of two\)"/u,"first negative output shows its physical mark and distinct internal identity");
+  assert.match(root.innerHTML,/data-terminal="−A"[^>]*>−<\/button>/u,"first negative output is visibly marked minus");
+  assert.match(root.innerHTML,/data-terminal="−B"[^>]*aria-label="PS1 terminal − \(−B\): 0 V DC output terminal \(second of two\)"/u,"second negative output shows its physical mark and distinct internal identity");
+  assert.match(root.innerHTML,/data-terminal="−B"[^>]*>−<\/button>/u,"second negative output is visibly marked minus");
   assert.ok(root.innerHTML.includes("ifm PN2070 data sheet"));
   assert.ok(root.innerHTML.includes("pressure measurement, analogue output and IO-Link behavior are not simulated"));
   const imported=normalizeImportedProject({name:"Routed schematic",rungs:[],tags:[],electrical:diagram});
