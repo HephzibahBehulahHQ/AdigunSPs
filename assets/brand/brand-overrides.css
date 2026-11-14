@@ -365,4 +365,9 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
   .workspace.electrical-workspace-active .electrical-view-tools > button:nth-child(1) { box-sizing: border-box; flex: 0 0 94px; width: 94px; }
   .workspace.electrical-workspace-active .electrical-view-tools > button:nth-child(2) { box-sizing: border-box; flex: 0 0 84px; width: 84px; }
   .workspace.electrical-workspace-active .electrical-zoom-tools { box-sizing: border-box; flex: 0 0 134px; width: 134px; }
+  .workspace.electrical-workspace-active .electrical-board-scroll { margin: 56px 22px 0; border: 1px solid var(--line,#283344); border-bottom: 0; border-radius: 8px 8px 0 0; }
+  .workspace.electrical-workspace-active .electrical-canvas-legend { box-sizing: border-box; height: 32px; min-height: 32px; margin: 0 22px 22px; border: 1px solid var(--line,#283344); border-radius: 0 0 8px 8px; }
+  .workspace.electrical-workspace-active .electrical-board-label { left: 28px; }
+  .workspace.electrical-workspace-active .electrical-board-label > span { position: absolute; top: 66px; left: 20px; }
+  .workspace.electrical-workspace-active .electrical-board-label .electrical-safety-badge { position: absolute; left: 171px; max-width: 291px; margin-left: 0; }
 }
