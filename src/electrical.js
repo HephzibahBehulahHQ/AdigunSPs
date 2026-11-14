@@ -140,6 +140,8 @@ export function replaceElectricalComponent(diagram, componentId, newType) {
   if(current.coilRef&&!(["auxiliaryNO","auxiliaryNC"].includes(newType)))return {ok:false,error:`Unlink ${current.reference} from its associated coil before replacing it with this model.`};
   const reference=nextElectricalReference(newType,others),sequence=Number(reference.slice(spec.prefix.length)),replacement=createElectricalComponent(newType,sequence,current.x,current.y);
   replacement.id=current.id;replacement.rotation=current.rotation||0;
+  const clearanceOverlap=(first,second)=>{const a=electricalComponentBounds(first),b=electricalComponentBounds(second),gap=12;return Math.max(0,Math.min(a.right,b.right+gap)-Math.max(a.left,b.left-gap))*Math.max(0,Math.min(a.bottom,b.bottom+gap)-Math.max(a.top,b.top-gap));};
+  if(others.some((other)=>clearanceOverlap(replacement,other)>clearanceOverlap(current,other)))return {ok:false,error:"Move nearby components before replacing this component; the replacement would create or worsen an overlap."};
   if(["auxiliaryNO","auxiliaryNC"].includes(newType))replacement.coilRef=current.coilRef||"";
   return {ok:true,component:replacement,previousReference:current.reference,referenceUpdates:linkedContacts.map((component)=>component.id)};
 }
