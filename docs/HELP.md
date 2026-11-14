@@ -40,6 +40,7 @@ Header: Undo/Redo/Save; RUN SIMULATION; schematic: Grid/Fit/zoom/Snap (grid/free
 On wide screens, Undo/Redo/Save/Run move to the header. Account is under Project; language and preferences under Settings; Help stays in Help. Component search filters models; clear it to restore all. Manufacturer references are informational; Physical control unavailable.
 
 1. Click a top menu or toolbar control to open its menu or panel.
+On the Components / Schematic and HMI canvases, editor actions use compact icons on one row. Hover or keyboard-focus an icon to read its name; the controls keep their existing actions.
 2. Click outside or press Escape to close a menu; tap outside on touch.
 3. Select **Help** to read this guide. Use **Safety and help** (?) for safety notes and the tour; **External resources** remains below.
 
