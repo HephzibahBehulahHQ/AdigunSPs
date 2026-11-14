@@ -315,3 +315,7 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 @media (min-width: 1200px) and (max-width: 1500px) {
   .top-actions #helpButton { display: none; }
 }
+
+/* Keep translated inspector tabs inside the fixed right dock at scaled text sizes. */
+.inspector-tabs { min-width: 0; max-width: 100%; overflow: hidden; }
+.inspector-tabs button { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
