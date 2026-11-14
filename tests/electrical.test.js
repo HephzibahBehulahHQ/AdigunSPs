@@ -140,6 +140,18 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const root={dataset:{selectedComponent:motor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("WEG W22XB-C motor instruction manual · connection diagrams"));assert.match(electricalSymbolSvg(motor),/WEG W22XB-C · 6 LEAD/);
 }
+{
+  const cpu=createElectricalComponent("siemensS71212CG2",1),generic=createElectricalComponent("genericPlc24v4di4do",1);
+  assert.equal(cpu.manufacturer,"Siemens");assert.equal(cpu.partNumber,"6ES7212-1AG50-0XB0");assert.equal(electricalComponentCatalog[cpu.type].kind,"device-reference");assert.equal(electricalComponentCatalog[generic.type].kind,"plc","the functional generic PLC remains unchanged");
+  assert.equal(cpu.terminals.length,24,"CPU terminal map covers X80(6), X10(10), and X11(8)");
+  assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X10-1"],"X10 physical pin 1 · digital input DI a.0");assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X10-2"],"X10 physical pin 2 · digital input DI a.5");assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X11-8"],"X11 physical pin 8 · digital output DQ a.5");
+  const peers=cpu.terminals.map((_,index)=>createElectricalComponent("supply24vdc",index+1,0,index*100)),diagram={components:[cpu,...peers],wires:[]};
+  for(const [index,pin]of cpu.terminals.entries()){const result=connectElectricalTerminals(diagram,{componentId:cpu.id,terminal:pin},{componentId:peers[index].id,terminal:"+"});assert.equal(result.ok,true,`${pin} is an independently connectable terminal`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:cpu.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of cpu.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered individually`);
+  assert.ok(root.innerHTML.includes("X10 physical pin 1 · digital input DI a.0"),"pin tooltip exposes manufacturer connector and signal mapping");assert.match(electricalSymbolSvg(cpu),/CPU 1212C/u);assert.match(electricalSymbolSvg(cpu),/X80/u);assert.ok(root.innerHTML.includes("Siemens S7-1200 G2 System Manual · CPU 1212C terminal assignments"));
+  assert.ok(validateElectricalDiagram(diagram).every((issue)=>issue.level!=="error"),"the source-backed terminals connect without invalid endpoint errors");
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
