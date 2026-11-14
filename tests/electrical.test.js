@@ -82,17 +82,18 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   if(previousCSS===undefined)delete globalThis.CSS;else globalThis.CSS=previousCSS;
 }
 {
-  const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},boardEvents={},card={style:{}};
+  const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},cardEvents={},boardEvents={};
   const source=createElectricalComponent("supply24vdc",1,600,200),wire={id:"drag-wire",from:{componentId:component.id,terminal:"X1"},to:{componentId:source.id,terminal:"+"}},wireAttributes={};
   const originalEndpoints=structuredClone(wire);
   let capturedPointer=null;
   const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>headEvents[name]=handler,setPointerCapture(){}};
+  const card={dataset:{componentId:component.id},style:{},addEventListener:(name,handler)=>cardEvents[name]=handler};
   const board={getBoundingClientRect:()=>({left:-300,top:-200}),setPointerCapture:id=>capturedPointer=id,addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:s=>s.startsWith("[data-wire-id=")?{setAttribute:(name,value)=>wireAttributes[name]=value}:card};
-  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:[]};
+  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:s===".electrical-component"?[card]:[]};
   const previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
   try{
     renderElectricalWorkspace(root,{tags:[],electrical:{components:[component,source],wires:[wire]}});
-    headEvents.pointerdown({button:0,clientX:-80,clientY:10,pointerId:1,preventDefault(){}});
+    cardEvents.pointerdown({button:0,clientX:-80,clientY:10,pointerId:1,target:{closest:()=>null},preventDefault(){}});
     assert.equal(capturedPointer,1,"the board captures drag pointers so move events reach the editor canvas");
     boardEvents.pointermove({clientX:-80,clientY:10});
     assert.deepEqual([component.x,component.y],[200,200],"drag starts without jumping on a scrolled canvas");
