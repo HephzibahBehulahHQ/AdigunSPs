@@ -202,6 +202,13 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
   assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
 }
+{
+  const compact=createElectricalComponent("pilotLamp",1,360,120),neighbor=createElectricalComponent("pilotLamp",2,360,220),diagram={components:[compact,neighbor],wires:[]};
+  const blocked=replaceElectricalComponent(diagram,compact.id,"siemensS71212CG2");
+  assert.equal(blocked.ok,false,"a taller replacement cannot overlap a nearby component");assert.match(blocked.error,/Move nearby components/u);assert.equal(diagram.components[0].type,"pilotLamp","rejected replacement leaves the existing device unchanged");
+  const clearNeighbor=createElectricalComponent("pilotLamp",3,700,220),clearDiagram={components:[compact,clearNeighbor],wires:[]},allowed=replaceElectricalComponent(clearDiagram,compact.id,"siemensS71212CG2");
+  assert.equal(allowed.ok,true,"a larger multi-pin replacement remains available when it fits");assert.equal(allowed.component.id,compact.id);
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
