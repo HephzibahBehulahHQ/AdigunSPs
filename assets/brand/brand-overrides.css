@@ -352,3 +352,17 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
   .workspace.electrical-workspace-active .sidebar-footer { box-sizing: border-box; flex: 0 0 32px; height: 32px; min-height: 32px; padding: 0 17px; }
   .workspace.electrical-workspace-active .sidebar-footer b { display: none; }
 }
+
+@media (min-width: 1501px) {
+  .workspace.electrical-workspace-active .electrical-canvas-context { justify-content: flex-start; padding-inline: 4px; }
+  .workspace.electrical-workspace-active .electrical-canvas-context { position: relative; }
+  .workspace.electrical-workspace-active .electrical-canvas-actions { position: absolute; left: 305px; top: 50%; margin-left: 0; transform: translateY(-50%); }
+  .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(1) { box-sizing: border-box; flex: 0 0 85px; width: 85px; }
+  .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(2) { box-sizing: border-box; flex: 0 0 150px; width: 150px; }
+  .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(3) { box-sizing: border-box; flex: 0 0 95px; width: 95px; }
+  .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(4) { box-sizing: border-box; flex: 0 0 125px; width: 125px; }
+  .workspace.electrical-workspace-active .electrical-view-tools { margin-left: auto; }
+  .workspace.electrical-workspace-active .electrical-view-tools > button:nth-child(1) { box-sizing: border-box; flex: 0 0 94px; width: 94px; }
+  .workspace.electrical-workspace-active .electrical-view-tools > button:nth-child(2) { box-sizing: border-box; flex: 0 0 84px; width: 84px; }
+  .workspace.electrical-workspace-active .electrical-zoom-tools { box-sizing: border-box; flex: 0 0 134px; width: 134px; }
+}

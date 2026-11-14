@@ -337,6 +337,38 @@ test("approved wide Electrical layout keeps the compact toolbox and project work
   await expect(page.locator("#exampleSearch")).toBeVisible();
 });
 
+test("wide Electrical canvas actions align with the approved toolbar reference", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  const actions = page.locator("#electricalCanvasContext .electrical-canvas-actions button");
+  await expect(actions).toHaveText(["Select", "Connect terminals", "Validate", "▶ Simulate"]);
+  await expect(actions.nth(2)).toHaveAttribute("aria-label", "Validate diagram");
+  await expect(actions.nth(3)).toHaveAttribute("aria-label", "Simulate circuit");
+  const boxes = await page.evaluate(() => {
+    const box = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { x:r.x, width:r.width }; };
+    return {
+      select:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(1)"),
+      connect:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(2)"),
+      validate:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(3)"),
+      simulate:box("#electricalCanvasContext .electrical-canvas-actions button:nth-child(4)"),
+      grid:box(".electrical-view-tools > button:nth-child(1)"),
+      fit:box(".electrical-view-tools > button:nth-child(2)"),
+      zoom:box(".electrical-zoom-tools")
+    };
+  });
+  expect(boxes.select.x).toBeGreaterThanOrEqual(586);
+  expect(boxes.select.x).toBeLessThanOrEqual(594);
+  expect(boxes.select.width).toBe(85);
+  expect(boxes.connect.width).toBe(150);
+  expect(boxes.validate.width).toBe(95);
+  expect(boxes.simulate.width).toBe(125);
+  expect(boxes.grid.x).toBeGreaterThanOrEqual(1210);
+  expect(boxes.grid.x).toBeLessThanOrEqual(1222);
+  expect(boxes.grid.width).toBe(94);
+  expect(boxes.fit.width).toBe(84);
+  expect(boxes.zoom.width).toBe(134);
+});
+
 test("electrical canvas exposes the reference-aligned contextual title and actions", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const context = page.locator("#electricalCanvasContext");
