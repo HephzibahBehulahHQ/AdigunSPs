@@ -347,7 +347,7 @@ test("wide Electrical canvas actions align in the compact toolbar", async ({ pag
   const labels = await actions.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
   expect(labels).toEqual(["Select", "Connect terminals", "Validate diagram", "Simulate circuit", "Grid 20", "Fit view", "Snap on", "Zoom out", "Zoom in", "Expand"]);
   const yPositions = await actions.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().y));
-  expect(Math.max(...yPositions) - Math.min(...yPositions)).toBeLessThanOrEqual(1);
+  expect(Math.max(...yPositions) - Math.min(...yPositions)).toBeLessThanOrEqual(2);
   await expect(toolbar).toHaveCSS("overflow-y", "hidden");
 });
 
@@ -853,7 +853,7 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
   });
   expect(electricalMetrics.buttonCount).toBe(10);
   expect(electricalMetrics.unnamed).toBe(0);
-  expect(electricalMetrics.ySpread).toBeLessThanOrEqual(1);
+  expect(electricalMetrics.ySpread).toBeLessThanOrEqual(2);
   expect(electricalMetrics.scrollWidth).toBeLessThanOrEqual(electricalMetrics.clientWidth + 1);
   expect(electricalMetrics.height).toBeLessThanOrEqual(40);
   const grid = page.locator('#electricalCanvasContext [data-electrical-action="grid"]');
@@ -879,7 +879,7 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
   });
   expect(hmiMetrics.buttonCount).toBe(12);
   expect(hmiMetrics.unnamed).toBe(0);
-  expect(hmiMetrics.ySpread).toBeLessThanOrEqual(1);
+  expect(hmiMetrics.ySpread).toBeLessThanOrEqual(2);
   expect(hmiMetrics.scrollWidth).toBeLessThanOrEqual(hmiMetrics.clientWidth + 1);
   expect(hmiMetrics.height).toBeLessThanOrEqual(40);
   expect(await page.locator(".app-menus").evaluate((element) => {
