@@ -286,3 +286,27 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 @media(max-width:700px){.statusbar-main>#gridSizeStatus,.statusbar-main>#educationalStatus{display:none}.statusbar-main>.status-spacer{min-width:2px}}
 
 @media(min-width:1501px){.header-quick-commands button[data-action="run"]{min-width:210px;max-width:210px;text-transform:uppercase}}@media(min-width:1200px) and (max-width:1500px){.header-quick-commands button[data-action="run"]{min-width:0;max-width:160px;text-transform:uppercase}}
+
+/* Match the approved 1894px workspace header and panel proportions. */
+@media (min-width: 1501px) {
+  .product-brand { flex: 0 0 354px; min-width: 354px; }
+  .product-brand strong { font-size: 20px; }
+  .product-brand small { font-size: 9px; }
+  .topbar > .project-name { flex: 0 1 360px; }
+  .topbar > .top-actions { display: none; }
+  .header-quick-commands > .offline-label { margin-right: 56px; }
+  .header-quick-commands button[data-action="undo"],
+  .header-quick-commands button[data-action="redo"] { min-width: 76px; }
+  .header-quick-commands button[data-action="save"] { min-width: 82px; }
+  .app-menus { height: 39px; }
+  .app-menus button { font-size: 13px; }
+  .editor-tabs, .editor-tabs .tab { height: 52px; }
+  .editor-tabs .tab { font-size: 14px; }
+  .inspector-tabs { height: 52px; flex: 0 0 52px; }
+  .inspector-tabs button { font-size: 12px; }
+  .left-sidebar .panel-heading { font-size: 11px; }
+  .workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden) {
+    grid-template-columns: minmax(270px, 270px) minmax(0, 1fr) minmax(339px, 339px);
+  }
+  #electricalPane > .electrical-pane { gap: 12px; padding: 0 11px 9px 14px; }
+}
