@@ -729,6 +729,10 @@ test("electrical canvas draws, edits, pauses, and resumes routed wires", async (
   const draft=page.locator("#electricalBoard .electrical-wire-draft-end");await expect(draft).toHaveCount(1);await expect(wireTool).toHaveText("Connect wire");
   await wireTool.click();await draft.click();await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${pins[1][1]}"]`).click();
   await expect(page.locator("#electricalBoard .electrical-wire-draft-end")).toHaveCount(0);await expect(page.locator("#electricalBoard .electrical-wire")).toHaveCount(2);
+  const firstBox=await components.nth(0).boundingBox(),secondHead=page.locator(`[data-drag-component="${ids[1]}"]`),secondHeadBox=await secondHead.boundingBox();
+  await page.mouse.move(secondHeadBox.x+secondHeadBox.width/2,secondHeadBox.y+secondHeadBox.height/2);await page.mouse.down();await page.mouse.move(firstBox.x+60,firstBox.y+16);await page.mouse.up();
+  const afterDrag=await components.evaluateAll(nodes=>nodes.map(node=>{const {left,top,right,bottom}=node.getBoundingClientRect();return {left,top,right,bottom};}));
+  expect(afterDrag[1].right+8<=afterDrag[0].left||afterDrag[0].right+8<=afterDrag[1].left||afterDrag[1].bottom+8<=afterDrag[0].top||afterDrag[0].bottom+8<=afterDrag[1].top).toBe(true);
 });
 
 
