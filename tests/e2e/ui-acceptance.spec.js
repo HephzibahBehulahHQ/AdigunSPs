@@ -1054,5 +1054,6 @@ test("electrical component replacement keeps compatible wires and rejects incomp
   await expect(page.locator("#electricalBoard [data-component-id=\"" + fuseId + "\"]")).toHaveAttribute("data-component-type", "terminal");
   await expect(page.locator("#electricalBoard .electrical-wire").first()).toHaveAttribute("data-wire-id", wireId);
   await expect(page.locator("#electricalBoard .electrical-wire").first()).toHaveAttribute("d", route);
-  await expect(page.locator("#inspectorContent .electrical-wire-row").first()).toContainText("X1.2");
+  const replacementReference = (await page.locator("#inspectorContent .electrical-selected-component h2").innerText()).split(" · ")[0];
+  await expect(page.locator("#inspectorContent .electrical-wire-row").first()).toContainText(`${replacementReference}.2`);
 });
