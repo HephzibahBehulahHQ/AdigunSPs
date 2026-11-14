@@ -387,6 +387,32 @@ test("electrical canvas exposes the reference-aligned contextual title and actio
   await context.locator('[data-electrical-action="validate"]').click();
   await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
 });
+test("wide Electrical board frame and labels align with the approved reference", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  const boxes = await page.evaluate(() => {
+    const box = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height, bottom:r.bottom }; };
+    return {
+      board:box(".electrical-board-wrap"), drawing:box(".electrical-board-scroll"),
+      legend:box(".electrical-canvas-legend"), title:box(".electrical-board-label > strong"),
+      caption:box(".electrical-board-label > span"), safety:box(".electrical-safety-badge")
+    };
+  });
+  expect(boxes.drawing.x).toBeGreaterThanOrEqual(305);
+  expect(boxes.drawing.x).toBeLessThanOrEqual(310);
+  expect(boxes.drawing.y).toBeGreaterThanOrEqual(260);
+  expect(boxes.drawing.y).toBeLessThanOrEqual(264);
+  expect(boxes.caption.x).toBeGreaterThanOrEqual(330);
+  expect(boxes.caption.x).toBeLessThanOrEqual(335);
+  expect(boxes.caption.y).toBeGreaterThanOrEqual(282);
+  expect(boxes.caption.y).toBeLessThanOrEqual(288);
+  expect(boxes.safety.x).toBeGreaterThanOrEqual(480);
+  expect(boxes.safety.x).toBeLessThanOrEqual(487);
+  expect(boxes.legend.x).toBe(boxes.drawing.x);
+  expect(boxes.legend.bottom).toBeGreaterThanOrEqual(780);
+  expect(boxes.legend.bottom).toBeLessThanOrEqual(786);
+});
+
 test("electrical canvas keeps the connection legend visible beside its scrollable drawing", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const legend = page.locator(".electrical-canvas-legend");
