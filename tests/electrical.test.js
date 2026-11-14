@@ -78,6 +78,8 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.deepEqual([component.x,component.y],[240,260],"drag follows pointer delta without double-counting canvas scroll");
     assert.equal(wireAttributes.d,"M240 292H420V232H600","wire geometry follows the component before pointer release");
     assert.deepEqual(wire,originalEndpoints,"drag preserves terminal connectivity");
+    boardEvents.pointermove({clientX:320,clientY:10});
+    assert.deepEqual([component.x,component.y],[240,260],"dragging onto another component preserves the last non-overlapping position");
     boardEvents.pointercancel();
     boardEvents.pointermove({clientX:100,clientY:200});
     assert.deepEqual([component.x,component.y],[240,260],"cancelled touch drag releases the component and ignores later pointer motion");
