@@ -80,6 +80,7 @@ export function electricalSymbolSvg(component) {
     case "heaterElement":body=`${line(4,22,24,22)}<rect x="24" y="9" width="48" height="26" ${common}/><path d="M29 27q5-16 10 0t10 0t10 0t10 0" ${common}/>${line(72,22,92,22)}`;break;
     case "solenoidValve":body=`${line(4,22,31,22)}<rect x="31" y="11" width="34" height="22" ${common}/>${text(48,25,"Y",11)}${line(65,22,92,22)}${text(48,7,"A1",6)}${text(48,40,"A2",6)}`;break;
     case "singlePhaseMotor":case "threePhaseMotor":body=`${line(4,22,31,22)}<circle cx="48" cy="22" r="17" ${common}/>${text(48,25,"M",12)}${line(65,22,92,22)}${text(48,5,component.type==="singlePhaseMotor"?"1~":"3~",7)}`;break;
+    case "phoenixPT25FeedThrough":body=`${line(4,22,31,22)}<rect x="31" y="12" width="34" height="20" ${common}/>${line(38,22,58,22)}${line(65,22,92,22)}${text(48,9,"PT 2,5",6)}${text(48,28,"24 A",6)}`;break;
     case "terminal":body=`${line(4,22,31,22)}<rect x="31" y="12" width="34" height="20" ${common}/>${line(38,22,58,22)}${line(65,22,92,22)}${text(48,9,"X",7)}`;break;
     case "dcPowerRail":body=`${line(5,13,91,13)}${[15,35,55,75].map((x)=>`${line(x,13,x,30)}<circle cx="${x}" cy="31" r="2" fill="currentColor"/>`).join("")}${text(48,40,"+24 V DC",7)}`;break;
     case "neutralRail":body=`${line(5,13,91,13)}${[15,35,55,75].map((x)=>`${line(x,13,x,30)}<circle cx="${x}" cy="31" r="2" fill="currentColor"/>`).join("")}${text(48,40,"N",8)}`;break;
