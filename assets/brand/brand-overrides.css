@@ -319,3 +319,35 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 /* Keep translated inspector tabs inside the fixed right dock at scaled text sizes. */
 .inspector-tabs { min-width: 0; max-width: 100%; overflow: hidden; }
 .inspector-tabs button { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Match the approved wide Electrical workspace while retaining every action in its menus/inspector. */
+@media (min-width: 1501px) {
+  .workspace.electrical-workspace-active .project-tree [data-action="examples"] { display: none; }
+  .workspace.electrical-workspace-active .editor-tabs { gap: 12px; }
+  .workspace.electrical-workspace-active .editor-tabs .tab { padding-inline: 21px; }
+  .workspace.electrical-workspace-active #logicTab { min-width: 258px; }
+  .workspace.electrical-workspace-active #electricalTab { min-width: 291px; }
+  .workspace.electrical-workspace-active #hmiTab { min-width: 124px; }
+  .workspace.electrical-workspace-active #panelLayoutButton,
+  .workspace.electrical-workspace-active #fullscreenButton,
+  .workspace.electrical-workspace-active #zoomFit { display: none; }
+  .workspace.electrical-workspace-active .electrical-toolbox-dock { padding: 41px 17px 12px; }
+  .workspace.electrical-workspace-active .electrical-toolbox-heading { margin-bottom: 9px; }
+  .workspace.electrical-workspace-active .electrical-toolbar { gap: 8px; }
+  .workspace.electrical-workspace-active .electrical-toolbar label { gap: 0; font-size: 0; line-height: 0; }
+  .workspace.electrical-workspace-active .electrical-toolbar label:nth-of-type(2) { grid-row: 2; margin-top: 3px; }
+  .workspace.electrical-workspace-active .electrical-toolbar input[type="search"] { height: 40px; min-height: 40px; font-size: 11px; line-height: normal; }
+  .workspace.electrical-workspace-active .electrical-toolbar select { height: 41px; min-height: 41px; font-size: 11px; }
+  .workspace.electrical-workspace-active .electrical-toolbar [data-electrical-action="add"] { grid-row: 3; min-height: 44px; height: 44px; margin-top: 4px; }
+  .workspace.electrical-workspace-active .electrical-toolbar [data-electrical-action="select"] { grid-row: 4; grid-column: 1; min-height: 42px; height: 42px; margin-top: 3px; }
+  .workspace.electrical-workspace-active .electrical-toolbar [data-electrical-action="wire"] { grid-row: 4; grid-column: 2; min-height: 42px; height: 42px; margin-top: 3px; }
+  .workspace.electrical-workspace-active .electrical-toolbar [data-electrical-action="rotate"] { grid-row: 5; grid-column: 1; }
+  .workspace.electrical-workspace-active .electrical-toolbar [data-electrical-action="duplicate"] { grid-row: 5; grid-column: 2; }
+  .workspace.electrical-workspace-active .electrical-toolbar [data-electrical-action="delete"] { display: none; }
+  .workspace.electrical-workspace-active .electrical-library-workflows { margin-top: 18px; padding-top: 12px; }
+  .workspace.electrical-workspace-active .industrial-catalog > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; list-style: none; }
+  .workspace.electrical-workspace-active .industrial-catalog > summary::-webkit-details-marker { display: none; }
+  .workspace.electrical-workspace-active .industrial-catalog > summary small { color: var(--muted); font-size: 11px; }
+  .workspace.electrical-workspace-active .sidebar-footer { box-sizing: border-box; flex: 0 0 32px; height: 32px; min-height: 32px; padding: 0 17px; }
+  .workspace.electrical-workspace-active .sidebar-footer b { display: none; }
+}
