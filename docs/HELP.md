@@ -23,8 +23,8 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 **What you'll see:** An untitled project, menus, canvas, side panels, and status.
 
 1. Open the AdigunSPs website in your browser.
-2. Select **Continue as guest** if the account screen appears. The top bar shows your four-minute guest-access countdown. When it expires, editing pauses until you sign in or create an account; your temporary work remains in the current tab.
-3. Select the profile icon labelled **Sign in** or **Account**, enter email and password, then **Create account** or **Sign in**. Confirm registration by email. Use **Forgot password?** for recovery.
+2. Continue as guest. Guest access ends after four minutes; editing then pauses, and temporary work stays in this tab.
+3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
 Header: offline, Undo/Redo/Save, RUN SIMULATION; footer: editor/PLC/scan; schematic adds grid.
 
@@ -37,7 +37,7 @@ Header: offline, Undo/Redo/Save, RUN SIMULATION; footer: editor/PLC/scan; schema
 
 ## Navigating the interface
 
-Editor tools follow LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run move to header. Components filters generic models by category, name, or ID; clear its search to restore all. Manufacturer references are informational. Physical control unavailable.
+On wide screens, Undo/Redo/Save/Run move to the header. Account is under Project; language and preferences under Settings; Help stays in Help. Component search filters models; clear it to restore all. Manufacturer references are informational; Physical control unavailable.
 
 1. Click a top menu or toolbar control to open its menu or panel.
 2. Click outside or press Escape to close a menu; tap outside on touch.
@@ -48,7 +48,7 @@ Editor tools follow LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run mov
 | File | New, examples, save/import/export, print, project manager | Top menu bar |
 | Edit | Undo/redo, copy/cut/paste rung, find and replace | Top menu bar |
 | View | Zoom, grid, panel layout, full screen | Top menu bar |
-| Project | Project manager, tags and I/O, hardware/device settings | Top menu bar |
+| Project | Project manager, tags and I/O, hardware/device settings, Account | Top menu bar |
 | PLC/SPS | I/O and simulation controls | Top menu bar |
 | I/O & Tags | Open I/O and tag tools | Top menu bar |
 | Programs | Choose LD, FBD, ST, or SFC | Top menu bar |
@@ -56,7 +56,9 @@ Editor tools follow LD/FBD/ST/SFC/HMI; at 1200 px, Save, Undo, Redo, and Run mov
 | Tools | Examples, ST compile, scenarios, estimates, Modbus simulator, Adigun BOT | Top menu bar |
 | Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
 | Help | Safety/help and external resources | Top menu bar |
-| Profile, EN, ⚙, search, ? | Account, language, settings, search, help | Header and menu row |
+| Account | Sign in, create account, guest work | Project menu |
+| Change language, preferences | Language and application settings | Settings menu |
+| Search all commands | Searchable command palette | Right side of menu row |
 | Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
 | Program / Main, Components / Schematic, HMI | Switch editor workspace | Tabs or project tree |
 | LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
