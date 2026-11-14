@@ -99,6 +99,7 @@ test("global header places offline readiness before Undo, Redo, Save, and Run", 
 test("wide workspace header matches the reference proportions and keeps secondary actions in menus", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await page.locator("#electricalTab").click();
+  await expect(page.locator(".electrical-empty")).toHaveCount(0);
   const layout = await page.evaluate(() => {
     const box = (selector) => {
       const rect = document.querySelector(selector).getBoundingClientRect();
