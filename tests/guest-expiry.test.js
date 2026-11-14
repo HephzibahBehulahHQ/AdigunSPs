@@ -17,7 +17,7 @@ assert.match(app, /sessionStorage\.setItem\(guestDraftStorageKey/);
 assert.match(app, /accountAccess !== "member"\) \{ showAccount\(\); return false; \}/, "permanent project export requires authentication");
 assert.match(app, /accountAccess === "guest-expired"/);
 assert.match(app, /guestExpiryNotice/);
-assert.match(guide, /four-minute guest-access countdown/i);
+assert.match(guide, /guest access ends after four minutes/i);
 assert.match(quickstart, /four minutes/i);
 assert.doesNotMatch(app, /5\s*\*\s*60_000/);
 console.log("PASS: server-issued four-minute guest expiry, immutable session records, temporary drafts, edit gate, and guide wording");
