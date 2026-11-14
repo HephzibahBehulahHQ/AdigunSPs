@@ -90,10 +90,16 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.equal(wireAttributes.d,"M240 292H420V232H600","wire geometry follows the component before pointer release");
     assert.deepEqual(wire,originalEndpoints,"drag preserves terminal connectivity");
     boardEvents.pointermove({clientX:320,clientY:10});
-    assert.deepEqual([component.x,component.y],[240,260],"dragging onto another component preserves the last non-overlapping position");
+    assert.deepEqual([component.x,component.y],[600,200],"drag may pass across another component on the way to an open position");
+    boardEvents.pointermove({clientX:520,clientY:10});
+    assert.deepEqual([component.x,component.y],[800,200],"drag reaches an open position beyond the intervening component");
+    boardEvents.pointerup();
+    assert.deepEqual([component.x,component.y],[800,200],"a clear destination is committed after crossing the intervening component");
+    headEvents.pointerdown({button:0,clientX:520,clientY:10,pointerId:2,preventDefault(){}});
+    boardEvents.pointermove({clientX:620,clientY:10});
     boardEvents.pointercancel();
     boardEvents.pointermove({clientX:100,clientY:200});
-    assert.deepEqual([component.x,component.y],[240,260],"cancelled touch drag releases the component and ignores later pointer motion");
+    assert.deepEqual([component.x,component.y],[800,200],"cancelled touch drag restores the last saved position and ignores later pointer motion");
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
 {
@@ -108,6 +114,8 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.equal(component.x,220,"overlap recovery may briefly increase one collision while reducing total collision area");
     events["board:pointermove"]({clientX:430,clientY:210});
     assert.equal(component.x,420,"a component overlapping several saved devices can be dragged completely clear");
+    events["board:pointerup"]();
+    assert.equal(component.x,420,"the recovered no-overlap position is committed on release");
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
 {
