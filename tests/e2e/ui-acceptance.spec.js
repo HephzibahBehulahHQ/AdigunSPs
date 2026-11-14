@@ -926,6 +926,8 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
     await page.locator(`#hmiPane [data-hmi-add="${type}"]`).click();
     await expect(widgets).toHaveCount(count + 1);
   }
+  await page.locator("#processesButton").click();
+  await expect(page.locator("#modal")).toBeVisible();
 });
 
 test("1894px electrical workspace geometry matches the approved reference", async ({ page }) => {
