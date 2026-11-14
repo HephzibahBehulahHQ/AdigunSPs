@@ -874,6 +874,9 @@ test("1894px electrical workspace geometry matches the approved reference", asyn
     board:{x:284,y:205,width:1260,height:601},
     status:{x:0,y:815,width:1894,height:35},
   });
+  if (process.env.ADIGUNSP_SCREENSHOT_PATH) {
+    await page.screenshot({ path: process.env.ADIGUNSP_SCREENSHOT_PATH });
+  }
 });
 
 test("Snap remains visible and operable in compact desktop view toolbars", async ({ page }) => {
