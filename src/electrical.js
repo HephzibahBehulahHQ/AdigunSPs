@@ -1,5 +1,7 @@
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
+  sitopPSU100C: { name:"Siemens SITOP PSU100C · 24 V / 2.5 A", category:"Power supplies", prefix:"PS", terminals:["L","N","PE","+","−A","−B"], terminalLabels:{"−A":"−","−B":"−"}, kind:"device-reference", manufacturer:"Siemens", partNumber:"6EP1332-5BA00", nominalVoltageV:24, ratedVoltageV:24, ratedCurrentA:2.5, source:{title:"SITOP PSU100C Operating Instructions",url:"https://support.industry.siemens.com/cs/attachments/65647808/PSU100C_Handbuch_englisch_en-US.pdf"}, terminalNotes:{L:"AC line",N:"AC neutral",PE:"Protective earth", "+":"24 V DC positive output","−A":"0 V DC output terminal (first of two)","−B":"0 V DC output terminal (second of two)"}, simulationLimitations:"Verified device identity and terminal map; input/output electrical behavior and current limiting are not modeled." },
+  ifmPN2070: { name:"ifm PN2070 pressure sensor · M12 4-pin", category:"Sensors", prefix:"B", terminals:["1","2","4","3"], kind:"device-reference", manufacturer:"ifm", partNumber:"PN-400-SER14-MFRKG/USI /V", source:{title:"ifm PN2070 data sheet",url:"https://media.ifm.com/dam/d61b3c6f-dc2b-4fe0-af49-278f0521b2d6/Original/PN2070-02_EN-GB.pdf"}, terminalNotes:{"1":"BN · L+","2":"WH · OUT2","4":"BK · OUT1 / IO-Link","3":"BU · L−"}, simulationLimitations:"Verified device identity and connector pin assignment; pressure measurement, analogue output and IO-Link behavior are not simulated." },
   singlePhaseSupply: { name:"Single-phase AC supply · L/N/PE model", category:"Power supplies", prefix:"G", terminals:["L","N","PE"], kind:"single-phase-source", nominalVoltageV:230 },
   supply3phase: { name:"three-phase supply (educational)", category:"Power supplies", prefix:"G", terminals:["L1","L2","L3","PE"], kind:"three-phase-source", nominalVoltageV:400 },
   genericPlc24v4di4do: { name:"24 V DC PLC · 4 DI / 4 DO", category:"PLC controllers", prefix:"PLC", terminals:["L+","M","PE","I1","I2","I3","I4","Q1","Q2","Q3","Q4"], kind:"plc", channels:{inputs:["I1","I2","I3","I4"],outputs:["Q1","Q2","Q3","Q4"]} },
@@ -65,8 +67,8 @@ export function createElectricalComponent(type, sequence, x = 120, y = 120) {
     id:crypto.randomUUID(), type, reference:`${spec.prefix}${sequence}`, label:spec.name,
     x:Math.round(x / 20) * 20, y:Math.round(y / 20) * 20, rotation:0,
     terminals:[...spec.terminals], tag:"", normallyClosed:Boolean(spec.normallyClosed),
-    nominalVoltageV:spec.nominalVoltageV ?? null, ratedVoltageV:null, ratedCurrentA:null,
-    manufacturer:"", partNumber:"", simulationOnly:true, ioMap,
+    nominalVoltageV:spec.nominalVoltageV ?? null, ratedVoltageV:spec.ratedVoltageV ?? null, ratedCurrentA:spec.ratedCurrentA ?? null,
+    manufacturer:spec.manufacturer||"", partNumber:spec.partNumber||"", productSource:spec.source?{...spec.source}:null, simulationOnly:true, ioMap,
     coilRef:"", closed:spec.kind === "manual-switch" ? Boolean(spec.initialClosed ?? (spec.normallyClosed ?? true)) : spec.kind === "junction", tripped:false,
     ...(spec.kind === "selector-switch" ? { selectorPosition:"I" } : {}),
     ...(spec.signalModel ? { signalModel:spec.signalModel, signalValue:null } : {}),

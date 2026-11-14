@@ -1,12 +1,14 @@
 # AdigunSPs component and instruction library
 
-The **Components** tab is an editable schematic workspace with terminal-level wires and Boolean/scalar simulation. Its devices are generic educational simulation models. They are not vendor-certified models, do not calculate electrical power/current or motor dynamics, and must not be used as a wiring or safety design. Manufacturer references in the product catalog are research entries, not selectable runtime devices.
+The **Components** tab is an editable schematic workspace with terminal-level wires and Boolean/scalar simulation. Its educational devices are not vendor-certified and must not be used as a wiring or safety design. The selectable Siemens SITOP PSU100C and ifm PN2070 entries below are source-backed schematic references with connectable pins; their electrical behavior is not simulated. Manufacturer catalog entries remain informational unless explicitly listed as placeable schematic references.
 
 ## Schematic components
 
 | Component | Function in this simulator | Example |
 | --- | --- | --- |
 | 24 V DC supply | Simulated positive and negative rails | Power a pushbutton and lamp circuit |
+| Siemens SITOP PSU100C (6EP1332-5BA00) | Source-backed schematic reference; L, N, PE, +, and two separately connectable 0 V terminals | Draw the documented 24 V / 2.5 A supply connections; behavior/current limiting are not simulated |
+| ifm PN2070 pressure sensor | Source-backed M12 four-pin schematic reference: 1 BN/L+, 2 WH/OUT2, 4 BK/OUT1, 3 BU/L− | Wire the documented supply and signal pins; pressure, analogue, and IO-Link behavior are not simulated |
 | Single-phase supply | L, N, and PE terminals; connectivity only | Draw a single-phase load path |
 | Three-phase supply | L1/L2/L3/PE connectivity | Draw a three-phase motor starter |
 | Generic PLC, 4 DI / 4 DO | Simulated Boolean input/output tag mapping | Map Start to I0.0 and Motor to Q0.0 |
@@ -40,7 +42,7 @@ The **Components** tab is an editable schematic workspace with terminal-level wi
 | Junction | Explicit wire split point | Branch a control signal |
 | Protective earth / ground common | Diagram connection node; no earth-fault analysis | Show the PE/common reference |
 
-References and component labels are unique within a project. Ratings shown for generic models are editable teaching values, not verified hardware specifications. The fuse model requires replacement after its test trip, but does not calculate current or thermal response. Use the separate manufacturer reference catalog to inspect source-backed products; those references do not run in the simulator.
+References and component labels are unique within a project. Ratings shown for generic models are editable teaching values, not verified hardware specifications. The two source-backed schematic references include manufacturer source links in the component properties and their pin markers. The fuse model requires replacement after its test trip, but does not calculate current or thermal response.
 
 ## PLC instructions
 

@@ -8,6 +8,24 @@ import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
 {
+  const psu=createElectricalComponent("sitopPSU100C",1),sensor=createElectricalComponent("ifmPN2070",1);
+  assert.deepEqual(psu.terminals,["L","N","PE","+","−A","−B"]);
+  assert.equal(psu.manufacturer,"Siemens");assert.equal(psu.partNumber,"6EP1332-5BA00");assert.equal(psu.ratedCurrentA,2.5);
+  assert.deepEqual(sensor.terminals,["1","2","4","3"]);
+  assert.equal(sensor.manufacturer,"ifm");assert.equal(sensor.partNumber,"PN-400-SER14-MFRKG/USI /V");
+  const diagram={components:[psu,sensor],wires:[]};
+  const connected=connectElectricalTerminals(diagram,{componentId:psu.id,terminal:"+"},{componentId:sensor.id,terminal:"1"});
+  assert.equal(connected.ok,true,"source-backed device pins support real endpoint connections");
+  diagram.wires.push(connected.wire);
+  assert.ok(!validateElectricalDiagram(diagram).some((issue)=>issue.level==="error"));
+  assert.match(electricalSymbolSvg(psu),/SITOP PSU100C/);assert.match(electricalSymbolSvg(sensor),/PN2070/);
+  const root={dataset:{selectedComponent:sensor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of [...psu.terminals,...sensor.terminals])assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as an individually connectable pin`);
+  assert.ok(root.innerHTML.includes("ifm PN2070 data sheet"));
+  assert.ok(root.innerHTML.includes("pressure measurement, analogue output and IO-Link behavior are not simulated"));
+}
+{
   const component=createElectricalComponent("pilotLamp",1,120,120);
   assert.deepEqual([moveElectricalComponent(component,137,143).x,moveElectricalComponent(component,137,143).y],[140,140],"component movement snaps to the grid by default");
   assert.deepEqual([moveElectricalComponent(component,137,143,{snap:false}).x,moveElectricalComponent(component,137,143,{snap:false}).y],[137,143],"the explicit snap-off view state permits pixel movement");
