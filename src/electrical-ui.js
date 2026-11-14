@@ -42,9 +42,28 @@ export function electricalWirePath(wire,components) {
   const [x1,y1]=terminalPosition(a,wire.from.terminal);
   if(wire.draft&&!wire.to){const x2=wire.end?.x??wire.waypoints?.at(-1)?.x??x1,y2=wire.end?.y??wire.waypoints?.at(-1)?.y??y1;return [`M${x1} ${y1}`,...(wire.waypoints||[]).map((point)=>`L${point.x} ${point.y}`),`L${x2} ${y2}`].join("");}
   const b=components.find(item=>item.id===wire.to?.componentId);if(!b)return "";
-  const [x2,y2]=terminalPosition(b,wire.to.terminal),mid=Math.round((x1+x2)/40)*20;
+  const [x2,y2]=terminalPosition(b,wire.to.terminal);
   if(wire.waypoints?.length)return [`M${x1} ${y1}`,...wire.waypoints.map((point)=>`L${point.x} ${point.y}`),`L${x2} ${y2}`].join("");
-  return `M${x1} ${y1}H${mid}V${y2}H${x2}`;
+  const obstacles=components.filter(item=>item.id!==a.id&&item.id!==b.id).map(item=>electricalComponentBounds(item));
+  const gap=12,blocked=(first,second)=>obstacles.some(box=>{
+    if(first.y===second.y)return first.y>box.top-gap&&first.y<box.bottom+gap&&Math.max(Math.min(first.x,second.x),box.left-gap)<Math.min(Math.max(first.x,second.x),box.right+gap);
+    if(first.x===second.x)return first.x>box.left-gap&&first.x<box.right+gap&&Math.max(Math.min(first.y,second.y),box.top-gap)<Math.min(Math.max(first.y,second.y),box.bottom+gap);
+    return true;
+  });
+  const candidates=[],addCandidate=points=>{
+    const route=[{x:x1,y:y1},...points,{x:x2,y:y2}],compact=route.filter((point,index)=>index===0||point.x!==route[index-1].x||point.y!==route[index-1].y);
+    if(compact.slice(1).some((point,index)=>blocked(compact[index],point)))return;
+    const length=compact.slice(1).reduce((sum,point,index)=>sum+Math.abs(point.x-compact[index].x)+Math.abs(point.y-compact[index].y),0);
+    candidates.push({route:compact,cost:length+Math.max(0,compact.length-2)*24});
+  };
+  const defaultX=Math.round((x1+x2)/40)*20;
+  addCandidate([{x:defaultX,y:y1},{x:defaultX,y:y2}]);
+  if(candidates.length)return `M${x1} ${y1}H${defaultX}V${y2}H${x2}`;
+  for(let x=0;x<=2200;x+=20)addCandidate([{x,y:y1},{x,y:y2}]);
+  for(let y=0;y<=1400;y+=20)addCandidate([{x:x1,y},{x:x2,y}]);
+  candidates.sort((first,second)=>first.cost-second.cost);
+  const route=candidates[0]?.route;
+  return route?[`M${route[0].x} ${route[0].y}`,...route.slice(1).map(point=>`L${point.x} ${point.y}`)].join(""):`M${x1} ${y1}H${defaultX}V${y2}H${x2}`;
 }
 export function electricalSymbolSvg(component) {
   const spec=electricalComponentCatalog[component.type],common='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"',line=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${common}/`,text=(x,y,value,size=8)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="currentColor" stroke="none">${escape(value)}</text>`;

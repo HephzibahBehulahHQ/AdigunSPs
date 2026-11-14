@@ -8,6 +8,11 @@ import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
 {
+  const source=createElectricalComponent("supply24vdc",1,80,200),destination=createElectricalComponent("supply24vdc",2,520,200),obstacle=createElectricalComponent("pilotLamp",1,300,200);
+  const wire={from:{componentId:source.id,terminal:"+"},to:{componentId:destination.id,terminal:"−"}};
+  assert.equal(electricalWirePath(wire,[source,destination,obstacle]),"M80 232L80 180L640 180L640 232","an automatic cable takes a clear corridor around an unrelated component instead of crossing its card");
+}
+{
   const psu=createElectricalComponent("sitopPSU100C",1),sensor=createElectricalComponent("ifmPN2070",1);
   assert.deepEqual(psu.terminals,["L","N","PE","+","−A","−B"]);
   assert.equal(psu.manufacturer,"Siemens");assert.equal(psu.partNumber,"6EP1332-5BA00");assert.equal(psu.ratedCurrentA,2.5);
