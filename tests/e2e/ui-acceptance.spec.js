@@ -848,6 +848,86 @@ test("all application menus stay reachable within desktop viewports", async ({ p
   }
 });
 
+test("canvas toolbars stay compact, accessible, single-line, and operational", async ({ page }) => {
+  await page.setViewportSize({ width:1894, height:850 });
+  const menuBefore = await page.locator(".app-menus").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)};
+  });
+  await page.locator("#electricalTab").click();
+  const electrical = page.locator("#electricalCanvasContext");
+  await expect(electrical).toBeVisible();
+  await expect(electrical.locator(".electrical-canvas-heading")).toHaveCount(0);
+  const electricalMetrics = await electrical.evaluate((row) => {
+    const buttons = [...row.querySelectorAll("button")];
+    const boxes = buttons.map((button) => button.getBoundingClientRect());
+    return {
+      buttonCount:buttons.length,
+      unnamed:buttons.filter((button) => !button.title || !button.getAttribute("aria-label")).length,
+      ySpread:boxes.length ? Math.max(...boxes.map((box) => box.y)) - Math.min(...boxes.map((box) => box.y)) : Infinity,
+      scrollWidth:row.scrollWidth,
+      clientWidth:row.clientWidth,
+      height:row.getBoundingClientRect().height
+    };
+  });
+  expect(electricalMetrics.buttonCount).toBe(10);
+  expect(electricalMetrics.unnamed).toBe(0);
+  expect(electricalMetrics.ySpread).toBeLessThanOrEqual(1);
+  expect(electricalMetrics.scrollWidth).toBeLessThanOrEqual(electricalMetrics.clientWidth + 1);
+  expect(electricalMetrics.height).toBeLessThanOrEqual(40);
+  const grid = page.locator('#electricalCanvasContext [data-electrical-action="grid"]');
+  await grid.click();
+  await expect(grid).toHaveAttribute("aria-pressed", "false");
+  await grid.click();
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+
+  await page.locator("#hmiTab").click();
+  const hmi = page.locator("#hmiPane .hmi-canvas-toolbar");
+  await expect(hmi).toBeVisible();
+  const hmiMetrics = await hmi.evaluate((row) => {
+    const buttons = [...row.querySelectorAll("button")];
+    const boxes = buttons.map((button) => button.getBoundingClientRect());
+    return {
+      buttonCount:buttons.length,
+      unnamed:buttons.filter((button) => !button.title || !button.getAttribute("aria-label")).length,
+      ySpread:boxes.length ? Math.max(...boxes.map((box) => box.y)) - Math.min(...boxes.map((box) => box.y)) : Infinity,
+      scrollWidth:row.scrollWidth,
+      clientWidth:row.clientWidth,
+      height:row.getBoundingClientRect().height
+    };
+  });
+  expect(hmiMetrics.buttonCount).toBe(12);
+  expect(hmiMetrics.unnamed).toBe(0);
+  expect(hmiMetrics.ySpread).toBeLessThanOrEqual(1);
+  expect(hmiMetrics.scrollWidth).toBeLessThanOrEqual(hmiMetrics.clientWidth + 1);
+  expect(hmiMetrics.height).toBeLessThanOrEqual(40);
+  expect(await page.locator(".app-menus").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)};
+  })).toEqual(menuBefore);
+  if (process.env.ADIGUNSP_HMI_SCREENSHOT_PATH) {
+    await page.screenshot({ path: process.env.ADIGUNSP_HMI_SCREENSHOT_PATH });
+  }
+
+  await page.once("dialog", (dialog) => dialog.accept("Secondary HMI"));
+  await page.locator("#addHmiScreen").click();
+  await expect(page.locator("#hmiScreenSelect option")).toHaveCount(2);
+  await page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#deleteHmiScreen").click();
+  await expect(page.locator("#hmiScreenSelect option")).toHaveCount(1);
+  const snap = page.locator("#snapToggle");
+  await snap.uncheck();
+  await expect(snap).not.toBeChecked();
+  await snap.check();
+  await expect(snap).toBeChecked();
+  const widgets = page.locator("#hmiBoard [data-hmi-widget]");
+  for (const type of ["switch", "lamp", "value", "trend"]) {
+    const count = await widgets.count();
+    await page.locator(`#hmiPane [data-hmi-add="${type}"]`).click();
+    await expect(widgets).toHaveCount(count + 1);
+  }
+});
+
 test("1894px electrical workspace geometry matches the approved reference", async ({ page }) => {
   await page.setViewportSize({ width:1894, height:850 });
   await page.locator("#electricalTab").click();
