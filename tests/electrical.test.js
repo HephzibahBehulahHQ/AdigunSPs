@@ -184,6 +184,12 @@ for (const language of ["en","de","yo","pcm"]) for (const tripped of [false,true
   assert.ok(root.innerHTML.includes('name="tripped"'),`${language} fuse properties render`);
   assert.equal(root.innerHTML.includes("checked disabled"),tripped,`${language} blown fuse cannot be reset`);
 }
+for(const [type,spec]of Object.entries(electricalComponentCatalog).filter(([,item])=>item.kind==="device-reference")){
+  const component=createElectricalComponent(type,1),warnings=validateElectricalDiagram({components:[component],wires:[]}).filter(issue=>issue.code==="electrical-unverified-device");
+  assert.equal(warnings.length,0,`${type} manufacturer identity is trusted when its catalog source and identifiers match`);
+  const edited={...component,manufacturer:"Unverified manufacturer"};
+  assert.ok(validateElectricalDiagram({components:[edited],wires:[]}).some(issue=>issue.code==="electrical-unverified-device"),`${type} warns after its sourced manufacturer identity is changed`);
+}
 const helpGuide=readFileSync(new URL("../docs/HELP.md",import.meta.url),"utf8");
 const userGuide=readFileSync(new URL("../docs/user-guide.md",import.meta.url),"utf8");
 assert.match(electricalUiSource,/name="coilRef"/u,"auxiliary-contact properties expose a coil association control");
