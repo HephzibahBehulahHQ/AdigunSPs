@@ -19,7 +19,7 @@ assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the r
 assert.match(guide,/RUN SIMULATION/);
 assert.match(userGuide,/### Status strip[\s\S]*Grid: 20 px[\s\S]*no hardware connected/);
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
-assert.match(guide, /select the profile icon[\s\S]*?labelled \*\*Sign in\*\*[\s\S]*?\*\*Account\*\*/i, "Help identifies the current profile icon labels");
+assert.match(guide, /\*\*Project → Account\*\*/, "Help identifies the wide-screen Account menu path");
 assert.match(guide, /email and password[\s\S]*?Create account[\s\S]*?Forgot password/i, "Help explains password sign-in and signup confirmation");
 assert.doesNotMatch(guide, /enter the email code|open the sign-in link/i, "Help does not describe the retired OTP/magic-link login flow");
 assert.match(userGuide, /## Account access and guest work[\s\S]*?Forgot password[\s\S]*?reset-password[\s\S]*?four minutes/i, "User Guide explains password login, recovery, and guest access");

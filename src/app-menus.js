@@ -23,7 +23,7 @@ const menuActions = {
   file:[["new","new"],["examples","examples"],["save","save"],["saveLocal","save-local"],["openLocal","open-local"],["saveAs","save-as"],["import","import"],["export","export"],["exportXml","export-plcopen"],["print","print"],["projects","projects"]],
   edit:[["undo","undo"],["redo","redo"],["copy","copy"],["cut","cut"],["paste","paste"],["find","find"]],
   view:[["zoomIn","zoom-in"],["zoomOut","zoom-out"],["grid","grid"],["panel","panel-layout"],["fullscreen","fullscreen"]],
-  project:[["projects","projects"],["tags","tags"],["hardware","hardware-inventory"],["device","device-configuration"],["settings","settings"],["cyclicTasks","cyclic-tasks"]],
+  project:[["projects","projects"],["tags","tags"],["hardware","hardware-inventory"],["device","device-configuration"],["settings","settings"],["cyclicTasks","cyclic-tasks"],["account","account"]],
   plc:[["io","io"],["run","run"],["pause","pause"],["step","step"],["reset","stop"]],
   ioTags:[["io","io"],["tags","tags"]],
   programs:[["mixedPrograms","mixed-programs"],["programList","st-programs"],["modeLD","mode-LD"],["modeFBD","mode-FBD"],["modeST","mode-ST"],["functions","st-functions"],["functionBlocks","st-function-blocks"],["modeSFC","mode-SFC"]],
@@ -35,8 +35,10 @@ const menuActions = {
   help:[["help","help"],["resources","resources"]]
 };
 
+const accountLabels = { en:"Account", de:"Konto", yo:"Àkọọlẹ̀", pcm:"Account" };
+
 export function createApplicationMenuEntries(locale = "en") {
-  const labels = { ...(commandLabels[locale] || commandLabels.en), ...(localProjectLabels[locale] || localProjectLabels.en) };
+  const labels = { ...(commandLabels[locale] || commandLabels.en), ...(localProjectLabels[locale] || localProjectLabels.en), account:accountLabels[locale] || accountLabels.en };
   return Object.fromEntries(Object.entries(menuActions).map(([menu, entries]) => [menu, entries.map(([key, action]) => ({ label:labels[key], action }))]));
 }
 

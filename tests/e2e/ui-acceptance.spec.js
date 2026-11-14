@@ -10,6 +10,16 @@ const viewportCases = [
   { width: 390, height: 844, minBoardHeight: 200 }
 ];
 
+async function openSettings(page) {
+  await page.locator('[data-app-menu="settings"]').click();
+  await page.locator('#contextMenu [role="menuitem"]').first().click();
+}
+
+async function cycleLanguage(page) {
+  await page.locator('[data-app-menu="settings"]').click();
+  await page.locator('#contextMenu [role="menuitem"]').last().click();
+}
+
 test.beforeEach(async ({ page }) => {
   const user = {
     id: randomUUID(),
@@ -71,7 +81,7 @@ test("status strip shows editor and PLC state, local autosave setting, and elect
   await page.locator('[data-project-view="electrical"]').click();
   await expect(page.locator("#gridSizeStatus")).toHaveText("Grid: 20 px");
   await expect(page.locator("#gridSizeStatus")).toBeVisible();
-  await page.locator("#settingsButton").click();
+  await openSettings(page);
   await expect(page.locator("#prefAutosave")).toBeChecked();
   await page.locator("#prefAutosave").uncheck();
   await page.locator("#settingsDone").click();
@@ -84,6 +94,42 @@ test("global header places offline readiness before Undo, Redo, Save, and Run", 
   const state=await page.evaluate(()=>({inHeader:document.querySelector("#offlineLabel").closest("#globalQuickCommands")!==null,commandOrder:[...document.querySelectorAll("#globalQuickCommands button")].map(button=>button.dataset.action)}));
   expect(state.inHeader).toBe(true);
   expect(state.commandOrder).toEqual(["undo","redo","save","run"]);
+});
+
+test("wide workspace header matches the reference proportions and keeps secondary actions in menus", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  const layout = await page.evaluate(() => {
+    const box = (selector) => {
+      const rect = document.querySelector(selector).getBoundingClientRect();
+      return { x: Math.round(rect.x), width: Math.round(rect.width), height: Math.round(rect.height), right: Math.round(rect.right) };
+    };
+    return {
+      project: box(".project-name"),
+      commands: box("#globalQuickCommands"),
+      offline: box("#offlineLabel"),
+      menus: box(".app-menus"),
+      tabs: box(".editor-tabs"),
+      left: box(".left-sidebar"),
+      right: box(".right-sidebar"),
+      topActions: getComputedStyle(document.querySelector(".top-actions")).display,
+      commandLabels: [...document.querySelectorAll("#globalQuickCommands button")].map((button) => button.innerText.trim()),
+    };
+  });
+  expect(layout.project.x).toBeGreaterThanOrEqual(430);
+  expect(layout.project.x).toBeLessThanOrEqual(450);
+  expect(layout.offline.x).toBeGreaterThan(1200);
+  expect(layout.commands.right).toBeLessThanOrEqual(1876);
+  expect(layout.menus.height).toBe(39);
+  expect(layout.tabs.height).toBe(52);
+  expect(layout.left.width).toBe(270);
+  expect(layout.right.width).toBe(339);
+  expect(layout.topActions).toBe("none");
+  expect(layout.commandLabels).toEqual(["↶ Undo", "↷ Redo", "▣ Save", "▶ RUN SIMULATION"]);
+
+  await page.locator('[data-app-menu="project"]').click();
+  await page.getByRole("menuitem", { name: "Account", exact: true }).click();
+  await expect(page.locator("#modal")).toBeVisible();
 });
 
 test("global Run action matches the reference simulation label without losing its command", async ({ page }) => {
@@ -117,7 +163,7 @@ test("project header shows the reference breadcrumb at desktop widths and locali
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#projectTitle")).toBeVisible();
   await expect(page.locator("#workspaceBreadcrumb")).toHaveText("Main program");
-  await page.locator("#languageButton").click();
+  await cycleLanguage(page);
   await expect(page.locator("#workspaceBreadcrumb")).toHaveText("Hauptprogramm");
   await page.setViewportSize({ width: 1366, height: 768 });
   await expect(page.locator("#workspaceBreadcrumb")).toBeHidden();
@@ -133,7 +179,7 @@ test("command search matches the labeled reference field and opens the existing 
   await page.locator("#paletteSearch").fill("New project");
   await expect(page.locator("#paletteResults")).toContainText("New project");
   await page.keyboard.press("Escape");
-  await page.locator("#languageButton").click();
+  await cycleLanguage(page);
   await expect(page.getByRole("button", { name: "Befehle suchen" })).toBeVisible();
 });
 
@@ -331,7 +377,7 @@ test("component toolbox uses the approved placement and wire labels without losi
   await expect(wire).toContainText("Connect wire");
   await place.click();
   await expect(page.locator("#electricalBoard [data-component-id]")).toHaveCount(1);
-  await page.locator("#languageButton").click();
+  await cycleLanguage(page);
   await expect(place).toContainText("Komponente platzieren");
   await expect(wire).toContainText("Draht verbinden");
 });
@@ -564,7 +610,7 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
 
   for (const locale of ["en", "de", "yo", "pcm"]) {
     for (let attempt = 0; attempt < 4 && (await page.locator("#languageButton").textContent())?.toLowerCase() !== locale; attempt++) {
-      await page.locator("#languageButton").click();
+      await cycleLanguage(page);
     }
     await expect(page.locator("#languageButton")).toHaveText(locale.toUpperCase());
 
@@ -603,10 +649,11 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
             if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlaps.push([a.selector, b.selector]);
           }
           const emptyHintGeometry = { hint:hintRect && {left:hintRect.left,right:hintRect.right,top:hintRect.top,bottom:hintRect.bottom}, viewport:boardRect && {left:boardRect.left,right:boardRect.right,top:boardRect.top,bottom:boardRect.bottom}, className:emptyHint?.className };
-          return { scrollWidth:document.documentElement.scrollWidth, boardHeight:boardRect?.height ?? 0, emptyHintWithinViewport, emptyHintGeometry, buttons, overlaps };
+          const overflowNodes = [...document.querySelectorAll("body *")].map((element) => { const rect = element.getBoundingClientRect(); return { tag:element.tagName, id:element.id, className:String(element.className || ""), right:Math.round(rect.right), width:Math.round(rect.width) }; }).filter((element) => element.width > 0 && element.right > innerWidth + 1).slice(0, 12);
+          return { scrollWidth:document.documentElement.scrollWidth, boardHeight:boardRect?.height ?? 0, emptyHintWithinViewport, emptyHintGeometry, buttons, overlaps, overflowNodes };
         });
 
-        expect(metrics.scrollWidth, `${locale}/${theme} at ${viewport.width}px has no horizontal page overflow`).toBeLessThanOrEqual(viewport.width);
+        expect(metrics.scrollWidth, `${locale}/${theme} at ${viewport.width}px has no horizontal page overflow; elements beyond edge: ${JSON.stringify(metrics.overflowNodes)}`).toBeLessThanOrEqual(viewport.width);
         expect(metrics.boardHeight, `${locale}/${theme} at ${viewport.width}px retains useful canvas height`).toBeGreaterThanOrEqual(viewport.minBoardHeight);
         expect(metrics.emptyHintWithinViewport, `${locale}/${theme} at ${viewport.width}px keeps empty-canvas guidance in view: ${JSON.stringify(metrics.emptyHintGeometry)}`).toBe(true);
         expect(metrics.buttons.every((button) => button.left >= 0 && button.right <= viewport.width), `${locale}/${theme} header controls stay within viewport`).toBe(true);
