@@ -293,10 +293,11 @@ On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run 
 
 ### Contextual editor tools
 
-The left project panel now shows the existing actions for the active editor: Add contact/Rung for LD, Add block for FBD, Compile for ST, Add step/Transition for SFC, and Switch/Lamp/Value/Trend for HMI. The original button elements and actions are reused. HMI screen selection, naming, alarms, processes, and history tools remain in the HMI editor row.
+The left project panel now shows the existing actions for the active editor: Add contact/Rung for LD, Add block for FBD, Compile for ST, Add step/Transition for SFC, and Switch/Lamp/Value/Trend for HMI. The original button elements and actions are reused. HMI screen selection, naming, alarms, processes, and history tools remain in the HMI editor row. In the wide Electrical view, the redundant Example library tree row is hidden to keep the component workflows visible; **File → Example browser** remains available.
 
-The Components canvas places its circuit title and **Select**, **Connect terminals**, **Validate**, and **Simulate** actions immediately above the drawing. Use the left toolbox for model search, placement, move, rotation, duplication, deletion, and manufacturer references. Validation and simulation stay in the canvas action row; the left toolbox contains component-editing commands.
+The Components canvas places its circuit title and **Select**, **Connect terminals**, **Validate**, and **Simulate** actions immediately above the drawing. Use the left toolbox for model search, placement, move, rotation, duplication, and manufacturer references. Delete a selected component in the right **Properties** inspector. Validation and simulation stay in the canvas action row; the left toolbox contains component-editing commands.
 
 The schematic's visible legend identifies terminal markers, connected signals, and the left toolbox location for editing wires. It does not validate real-world wiring. The inspector identifies the selected reference and catalog category above the editable component fields.
 
 The right inspector's **Issues** tab lists current validation findings for the active workspace. In Components it uses the electrical diagram validator; other editors use project validation. **Properties** returns to the selected component or instruction. **Watch** retains the existing simulated-value and force controls. Selected electrical components also expose their existing rotate, duplicate, and delete actions in the inspector. Terminal connections and validation diagnostics are grouped in expandable sections; opening a section is preserved while the inspector refreshes.
+
