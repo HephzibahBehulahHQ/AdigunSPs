@@ -117,6 +117,22 @@ export function duplicateElectricalComponent(component, reference, offset = 40) 
   return { ...structuredClone(component), id:crypto.randomUUID(), reference, x:component.x + offset, y:component.y + offset };
 }
 
+export function replaceElectricalComponent(diagram, componentId, newType) {
+  const current=(diagram.components||[]).find((component)=>component.id===componentId),spec=electricalComponentCatalog[newType];
+  if(!current)return {ok:false,error:"Select an existing component to replace."};
+  if(!spec)return {ok:false,error:"Choose a supported component model from the toolbox."};
+  if(current.type===newType)return {ok:false,error:"Choose a different component model."};
+  const others=diagram.components.filter((component)=>component.id!==current.id),connectedTerminals=[...new Set((diagram.wires||[]).flatMap((wire)=>[wire.from,wire.to].filter((endpoint)=>endpoint?.componentId===current.id).map((endpoint)=>endpoint.terminal)))],unsupported=connectedTerminals.filter((terminal)=>!spec.terminals.includes(terminal));
+  if(unsupported.length)return {ok:false,error:`Disconnect or rewire ${unsupported.join(", ")} before replacing this component; the selected model has no matching terminal.`};
+  const linkedContacts=others.filter((component)=>component.coilRef===current.reference),replacementKeepsCoil=spec.kind==="contactor"||newType==="relayCoil";
+  if(linkedContacts.length&&!replacementKeepsCoil)return {ok:false,error:`Unlink the associated coil contacts from ${current.reference} before replacing it with this model.`};
+  if(current.coilRef&&!(["auxiliaryNO","auxiliaryNC"].includes(newType)))return {ok:false,error:`Unlink ${current.reference} from its associated coil before replacing it with this model.`};
+  const reference=nextElectricalReference(newType,others),sequence=Number(reference.slice(spec.prefix.length)),replacement=createElectricalComponent(newType,sequence,current.x,current.y);
+  replacement.id=current.id;replacement.rotation=current.rotation||0;
+  if(["auxiliaryNO","auxiliaryNC"].includes(newType))replacement.coilRef=current.coilRef||"";
+  return {ok:true,component:replacement,previousReference:current.reference,referenceUpdates:linkedContacts.map((component)=>component.id)};
+}
+
 export function updateElectricalComponentProperties(component, updates = {}) {
   const next = { ...component, ...updates };
   if (component.type === "fuse" && component.tripped) next.tripped = true;
