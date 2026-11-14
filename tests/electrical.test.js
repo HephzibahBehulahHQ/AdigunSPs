@@ -141,6 +141,14 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("WEG W22XB-C motor instruction manual · connection diagrams"));assert.match(electricalSymbolSvg(motor),/WEG W22XB-C · 6 LEAD/);
 }
 {
+  const motor=createElectricalComponent("wegW22IE2Motor",1),expected=["U1","V1","W1","U2","V2","W2","PE"],peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,400,120+index*90)),diagram={components:[motor,...peers],wires:[]};
+  assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"11673230");assert.equal(electricalComponentCatalog[motor.type].kind,"device-reference");assert.deepEqual(motor.terminals,expected);
+  for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:motor.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is an individually wireable motor terminal`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:motor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as a connectable motor terminal`);
+  assert.ok(root.innerHTML.includes("WEG W22 IE2 1.5 kW 4P 90L product 11673230"));assert.ok(root.innerHTML.includes("WEG safe-area motor installation manual · connections and grounding"));assert.match(electricalSymbolSvg(motor),/WEG W22 IE2 · 1.5 kW/);
+}
+{
   const cpu=createElectricalComponent("siemensS71212CG2",1),generic=createElectricalComponent("genericPlc24v4di4do",1);
   assert.equal(cpu.manufacturer,"Siemens");assert.equal(cpu.partNumber,"6ES7212-1AG50-0XB0");assert.equal(electricalComponentCatalog[cpu.type].kind,"device-reference");assert.equal(electricalComponentCatalog[generic.type].kind,"plc","the functional generic PLC remains unchanged");
   assert.equal(cpu.terminals.length,24,"CPU terminal map covers X80(6), X10(10), and X11(8)");
