@@ -412,3 +412,9 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .workspace.electrical-workspace-active #electricalCanvasContext .electrical-view-tools{position:static;left:auto;top:auto;transform:none;margin-left:0}
 .workspace.electrical-workspace-active #electricalCanvasContext .electrical-canvas-actions button:nth-child(n),
 .workspace.electrical-workspace-active #electricalCanvasContext .electrical-view-tools>button{box-sizing:border-box;flex:0 0 30px;width:30px;min-width:30px}
+
+/* Keep the two action groups in the same flow as the compact canvas toolbar. */
+#electricalCanvasContext .electrical-canvas-actions,
+#electricalCanvasContext .electrical-view-tools{position:static!important;inset:auto!important;transform:none!important;margin:0!important;align-self:center}
+#electricalCanvasContext .electrical-canvas-actions button:nth-child(n),
+#electricalCanvasContext .electrical-view-tools>button{flex:0 0 30px!important;width:30px!important;min-width:30px!important}
