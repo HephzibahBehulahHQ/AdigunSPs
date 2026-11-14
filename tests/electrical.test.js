@@ -107,7 +107,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.deepEqual([component.x,component.y],[800,200],"drag reaches an open position beyond the intervening component");
     boardEvents.pointerup();
     assert.deepEqual([component.x,component.y],[800,200],"a clear destination is committed after crossing the intervening component");
-    headEvents.pointerdown({button:0,clientX:520,clientY:10,pointerId:2,preventDefault(){}});
+    cardEvents.pointerdown({button:0,clientX:520,clientY:10,pointerId:2,target:{closest:()=>null},preventDefault(){}});
     boardEvents.pointermove({clientX:620,clientY:10});
     boardEvents.pointercancel();
     boardEvents.pointermove({clientX:100,clientY:200});
