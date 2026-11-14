@@ -281,6 +281,56 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await expect(page.locator('#electricalLibraryWorkflows [data-action="faults"]')).toHaveCount(0);
 });
 
+test("approved wide Electrical layout keeps the compact toolbox and project workflows in view", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  await expect(page.locator('.project-tree [data-action="examples"]')).toBeHidden();
+  await expect(page.locator("#electricalModelSearch")).toHaveAttribute("placeholder", "Find component or instruction");
+  await expect(page.locator("#electricalPalette")).toBeVisible();
+  await expect(page.locator('#electricalToolboxDock [data-electrical-action="delete"]')).toBeHidden();
+  await expect(page.locator("#electricalLibraryWorkflows > .electrical-library-link")).toBeVisible();
+  await expect(page.locator("#electricalLibraryWorkflows .industrial-catalog > summary")).toBeInViewport();
+  await expect(page.locator("#electricalSimulationWorkflow > summary")).toBeInViewport();
+
+  const positions = await page.evaluate(() => {
+    const y = (selector) => document.querySelector(selector).getBoundingClientRect().y;
+    return {
+      search: y("#electricalModelSearch"), palette: y("#electricalPalette"),
+      place: y('#electricalToolboxDock [data-electrical-action="add"]'),
+      select: y('#electricalToolboxDock [data-electrical-action="select"]'),
+      rotate: y('#electricalToolboxDock [data-electrical-action="rotate"]'),
+      library: y("#electricalLibraryWorkflows > h2"),
+      manufacturer: y("#electricalLibraryWorkflows .industrial-catalog > summary"),
+      faults: y("#electricalSimulationWorkflow > summary")
+    };
+  });
+  expect(positions.search).toBeGreaterThanOrEqual(371);
+  expect(positions.search).toBeLessThanOrEqual(383);
+  expect(positions.palette).toBeGreaterThanOrEqual(420);
+  expect(positions.palette).toBeLessThanOrEqual(437);
+  expect(positions.place).toBeGreaterThanOrEqual(473);
+  expect(positions.place).toBeLessThanOrEqual(490);
+  expect(positions.select).toBeGreaterThanOrEqual(528);
+  expect(positions.select).toBeLessThanOrEqual(545);
+  expect(positions.rotate).toBeGreaterThanOrEqual(578);
+  expect(positions.rotate).toBeLessThanOrEqual(595);
+  expect(positions.library).toBeLessThan(690);
+  expect(positions.manufacturer).toBeLessThan(760);
+  expect(positions.faults).toBeLessThan(800);
+
+  await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
+  const inspectorDelete = page.locator('#inspectorContent [data-electrical-action="delete"]');
+  await expect(inspectorDelete).toBeVisible();
+  await inspectorDelete.click();
+  await expect(page.locator("#electricalBoard [data-component-id]")).toHaveCount(0);
+
+  await page.locator('[data-app-menu="file"]').click();
+  const exampleMenuItem = page.getByRole("menuitem", { name: "Example browser", exact: true });
+  await expect(exampleMenuItem).toBeVisible();
+  await exampleMenuItem.click();
+  await expect(page.locator("#exampleSearch")).toBeVisible();
+});
+
 test("electrical canvas exposes the reference-aligned contextual title and actions", async ({ page }) => {
   await page.locator("#electricalTab").click();
   const context = page.locator("#electricalCanvasContext");
@@ -722,3 +772,4 @@ test("1894px electrical workspace geometry matches the approved reference", asyn
     status:{x:0,y:815,width:1894,height:35},
   });
 });
+
