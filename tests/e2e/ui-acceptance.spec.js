@@ -387,6 +387,45 @@ test("electrical canvas exposes the reference-aligned contextual title and actio
   await context.locator('[data-electrical-action="validate"]').click();
   await expect(page.locator("#inspectorContent .electrical-status")).not.toBeEmpty();
 });
+test("wide board Snap and Expand controls operate on persisted movement and full-screen views", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  const snap = page.locator(".electrical-board-actions [data-electrical-action=\"snap\"]");
+  await expect(snap).toHaveText("⌗ Snap on");
+  await expect(snap).toHaveAttribute("aria-pressed", "true");
+  await snap.click();
+  await expect(snap).toHaveText("⌗ Snap off");
+  await expect(snap).toHaveAttribute("aria-pressed", "false");
+
+  await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
+  const component = page.locator("#electricalBoard [data-component-id]").first();
+  const head = component.locator("[data-drag-component]");
+  const start = await head.boundingBox();
+  await page.mouse.move(start.x + start.width / 2, start.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + 13, start.y + 25);
+  await page.mouse.up();
+  await expect(component).toHaveCSS("left", "133px");
+  await expect(component).toHaveCSS("top", "133px");
+
+  await snap.click();
+  await expect(snap).toHaveText("⌗ Snap on");
+  const snappedHead = component.locator("[data-drag-component]");
+  const snappedStart = await snappedHead.boundingBox();
+  await page.mouse.move(snappedStart.x + snappedStart.width / 2, snappedStart.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(snappedStart.x + snappedStart.width / 2 + 7, snappedStart.y + 19);
+  await page.mouse.up();
+  await expect(component).toHaveCSS("left", "140px");
+  await expect(component).toHaveCSS("top", "140px");
+
+  const expand = page.locator(".electrical-board-actions [data-electrical-action=\"expand\"]");
+  await expand.click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement?.classList.contains("editor-area") || false)).toBe(true);
+  await expand.click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
+});
+
 test("wide Electrical board frame and labels align with the approved reference", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await page.locator("#electricalTab").click();
