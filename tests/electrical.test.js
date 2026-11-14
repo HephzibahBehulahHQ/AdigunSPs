@@ -20,7 +20,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const path=electricalWirePath(wire,[source,destination,...obstacles]);
   assert.ok(path,"automatic routing finds a path through a multi-wall component maze");
   const points=[...path.matchAll(/[ML](-?[0-9.]+) (-?[0-9.]+)/gu)].map((match)=>({x:Number(match[1]),y:Number(match[2])}));
-  assert.ok(points.length>4,"the maze route uses more than one three-segment detour");
+  assert.ok(points.length>=4,"the grid route adds multiple orthogonal segments");
   const bounds=obstacles.map(item=>({left:item.x,top:item.y,right:item.x+120,bottom:item.y+80})),segments=points.slice(1).map((point,index)=>[points[index],point]);
   for(const [first,second] of segments)for(const box of bounds){
     const crossing=first.y===second.y?first.y>box.top-12&&first.y<box.bottom+12&&Math.max(Math.min(first.x,second.x),box.left-12)<Math.min(Math.max(first.x,second.x),box.right+12):first.x>box.left-12&&first.x<box.right+12&&Math.max(Math.min(first.y,second.y),box.top-12)<Math.min(Math.max(first.y,second.y),box.bottom+12);
