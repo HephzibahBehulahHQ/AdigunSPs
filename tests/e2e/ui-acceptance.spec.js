@@ -345,7 +345,7 @@ test("wide Electrical canvas actions align in the compact toolbar", async ({ pag
   const actions = toolbar.locator("button");
   await expect(actions).toHaveCount(10);
   const labels = await actions.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
-  expect(labels).toEqual(["Select", "Connect terminals", "Validate", "Simulate circuit", "Grid", "Fit view", "Snap on", "Zoom out", "Zoom in", "Expand"]);
+  expect(labels).toEqual(["Select", "Connect terminals", "Validate diagram", "Simulate circuit", "Grid 20", "Fit view", "Snap on", "Zoom out", "Zoom in", "Expand"]);
   const yPositions = await actions.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().y));
   expect(Math.max(...yPositions) - Math.min(...yPositions)).toBeLessThanOrEqual(1);
   await expect(toolbar).toHaveCSS("overflow-y", "hidden");
