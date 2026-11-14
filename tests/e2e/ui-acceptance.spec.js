@@ -1022,3 +1022,37 @@ test("electrical wire endpoints can be reconnected without losing route bends", 
   await expect(wire).toHaveAttribute("data-wire-id",wireId);await expect(wire).toHaveAttribute("d",/L500 300/);
   await expect(connections.locator(".electrical-wire-row").first()).toContainText("PS3");
 });
+
+test("electrical component replacement keeps compatible wires and rejects incompatible terminals", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator("#electricalTab").click();
+  const palette = page.locator("#electricalToolboxDock #electricalPalette");
+  const add = page.locator('#electricalToolboxDock [data-electrical-action="add"]');
+  await palette.selectOption("fuse");
+  await add.click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  const fuseId = await components.nth(0).getAttribute("data-component-id");
+  await palette.selectOption("terminal");
+  await add.click();
+  const terminalId = await components.nth(1).getAttribute("data-component-id");
+  const wireTool = page.locator('#electricalToolboxDock [data-electrical-action="wire"]');
+  await wireTool.click();
+  await page.locator(`[data-terminal-component="${fuseId}"][data-terminal="2"]`).click();
+  await page.locator(`[data-terminal-component="${terminalId}"][data-terminal="1"]`).click();
+  const wire = page.locator("#electricalBoard .electrical-wire").first();
+  const wireId = await wire.getAttribute("data-wire-id");
+  const route = await wire.getAttribute("d");
+  await page.locator("#electricalSelection").selectOption(fuseId);
+  const replace = page.locator('#inspectorContent [data-electrical-action="replace"]');
+  await expect(replace).toBeVisible();
+  await palette.selectOption("pilotLamp");
+  await replace.click();
+  await expect(page.locator("#electricalBoard [data-component-id=\"" + fuseId + "\"]")).toHaveAttribute("data-component-type", "fuse");
+  await expect(page.locator("#inspectorContent .electrical-status")).toContainText("Disconnect or rewire 2");
+  await palette.selectOption("terminal");
+  await replace.click();
+  await expect(page.locator("#electricalBoard [data-component-id=\"" + fuseId + "\"]")).toHaveAttribute("data-component-type", "terminal");
+  await expect(page.locator("#electricalBoard .electrical-wire").first()).toHaveAttribute("data-wire-id", wireId);
+  await expect(page.locator("#electricalBoard .electrical-wire").first()).toHaveAttribute("d", route);
+  await expect(page.locator("#inspectorContent .electrical-wire-row").first()).toContainText("X1.2");
+});
