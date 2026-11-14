@@ -110,6 +110,15 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.equal(component.x,100,"an overlap-recovery drag cannot increase the existing collision");
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
+{
+  const terminal=createElectricalComponent("phoenixPT25PE",1),other=createElectricalComponent("terminal",1,360,120),diagram={components:[terminal,other],wires:[]};
+  assert.equal(terminal.manufacturer,"Phoenix Contact");assert.equal(terminal.partNumber,"3209536");assert.deepEqual(terminal.terminals,["1","2"]);
+  for(const pin of terminal.terminals){const peer=createElectricalComponent("terminal",diagram.components.length,600,200+diagram.wires.length*100);diagram.components.push(peer);const result=connectElectricalTerminals(diagram,{componentId:terminal.id,terminal:pin},{componentId:peer.id,terminal:"1"});assert.equal(result.ok,true,`PE conductor connection ${pin} is individually connectable`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:terminal.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of terminal.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`PE connection ${pin} appears as a connectable pin`);
+  assert.ok(root.innerHTML.includes("Phoenix Contact PT 2,5-PE product data"));assert.match(electricalSymbolSvg(terminal),/>PE</);
+  assert.ok(root.innerHTML.includes("Physical grounding, DIN-rail bonding and current carrying capacity are not simulated"));
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
