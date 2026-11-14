@@ -1013,8 +1013,12 @@ test("electrical wire endpoints can be reconnected without losing route bends", 
   const wireTool=page.locator('#electricalToolboxDock [data-electrical-action="wire"]'),board=page.locator("#electricalBoard");
   await wireTool.click();await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="${pins[0][0]}"]`).click();await board.click({position:{x:500,y:300}});await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="${pins[1][0]}"]`).click();
   const wire=page.locator("#electricalBoard .electrical-wire").first(),wireId=await wire.getAttribute("data-wire-id");await expect(wire).toHaveAttribute("d",/L500 300/);
-  await page.locator(`#inspectorContent [data-select-wire="${wireId}"]`).click();console.log("rewire-stage: selected wire row");await page.locator('#inspectorContent [data-electrical-action="rewire-from"]').click();console.log("rewire-stage: entered endpoint mode");
-  await page.locator(`[data-terminal-component="${ids[2]}"][data-terminal="${pins[2][0]}"]`).click();console.log("rewire-stage: replacement terminal selected");
+  const connections=page.locator('#inspectorContent details[data-inspector-section="connections"]');
+  await connections.locator("summary").click();
+  await expect(connections.locator(".electrical-wire-row")).toHaveCount(1);
+  await page.locator(`#inspectorContent [data-select-wire="${wireId}"]`).click();
+  await page.locator('#inspectorContent [data-electrical-action="rewire-from"]').click();
+  await page.locator(`[data-terminal-component="${ids[2]}"][data-terminal="${pins[2][0]}"]`).click();
   await expect(wire).toHaveAttribute("data-wire-id",wireId);await expect(wire).toHaveAttribute("d",/L500 300/);
-  await expect(page.locator("#inspectorContent .electrical-wire-row").first()).toContainText("PS3");
+  await expect(connections.locator(".electrical-wire-row").first()).toContainText("PS3");
 });
