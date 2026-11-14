@@ -312,5 +312,7 @@ The placeable Siemens SITOP PSU100C (6EP1332-5BA00) and ifm PN2070 are source-li
 The Siemens SIRIUS 3RT2017-1WB41 contactor reference provides separate terminals for its three main poles, 13/14 auxiliary NO contact, and A1+/A2− coil. Its official data sheet is linked in the inspector. Device-specific coil, power switching and ratings are not simulated or implied by the editable symbol.
 
 The Siemens SIRIUS 3RV2011-1JA10 motor-protection breaker reference provides individually connectable 1/L1–2/T1, 3/L2–4/T2 and 5/L3–6/T3 poles. Its official data sheet is linked in the inspector; thermal/magnetic trip settings and protective performance are not simulated.
+The Phoenix Contact PT 2,5-PE (3209536) is a manufacturer-backed protective-conductor terminal with two individually connectable conductor points. Its product data is linked in the inspector; physical grounding, DIN-rail bonding and current capacity are outside the simulation.
+
 The right inspector's **Issues** tab lists current validation findings for the active workspace. In Components it uses the electrical diagram validator; other editors use project validation. **Properties** returns to the selected component or instruction. **Watch** retains the existing simulated-value and force controls. Selected electrical components also expose their existing rotate, duplicate, and delete actions in the inspector. Terminal connections and validation diagnostics are grouped in expandable sections; opening a section is preserved while the inspector refreshes.
 
