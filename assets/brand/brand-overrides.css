@@ -378,3 +378,49 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
   .workspace.electrical-workspace-active .electrical-board-actions { position: absolute; top: -2px; right: 4px; display: flex; }
   .workspace.electrical-workspace-active .electrical-view-tools [data-electrical-action="snap"] { display: none; }
 }
+
+
+/* Compact canvas command rows; the global File/Edit menu bar is intentionally untouched. */
+.electrical-canvas-context{box-sizing:border-box;display:flex;flex-flow:row nowrap;align-items:center;justify-content:flex-start;gap:4px;width:100%;min-width:0;height:36px;min-height:36px;padding:2px 4px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin}
+.electrical-canvas-context .electrical-canvas-actions,.electrical-canvas-context .electrical-view-tools{display:flex;flex:0 0 auto;flex-flow:row nowrap;align-items:center;gap:4px;width:auto}
+.electrical-canvas-context .electrical-canvas-actions button,.electrical-canvas-context .electrical-view-tools>button{box-sizing:border-box;display:inline-flex;flex:0 0 30px;align-items:center;justify-content:center;width:30px;min-width:30px;height:28px;min-height:28px;padding:0;font-size:11px;line-height:1;white-space:nowrap}
+.electrical-canvas-context .electrical-zoom-tools{box-sizing:border-box;height:28px;gap:2px;padding:1px 3px}
+.electrical-canvas-context .electrical-zoom-tools button{flex-basis:24px;width:24px;min-width:24px}
+.electrical-canvas-context .electrical-zoom-tools output{min-width:34px;font-size:9px}
+.electrical-canvas-context button:focus-visible{outline:2px solid #22d3ee;outline-offset:1px}
+@media(max-width:1050px){.electrical-canvas-context{flex-direction:row;align-items:center;flex-wrap:nowrap;overflow-x:auto}.electrical-canvas-context .electrical-canvas-actions,.electrical-canvas-context .electrical-view-tools{width:auto;flex-wrap:nowrap}}
+@media(max-width:760px){.electrical-canvas-context{gap:3px;padding-right:2px;padding-left:2px}.electrical-canvas-context .electrical-canvas-actions,.electrical-canvas-context .electrical-view-tools{gap:3px}}
+
+/* HMI commands share one compact, scrollable row and leave the remaining height to its canvas. */
+.hmi-pane{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;overflow:hidden}
+.hmi-pane .hmi-canvas-toolbar{box-sizing:border-box;display:flex;flex:0 0 36px;flex-flow:row nowrap;align-items:center;gap:4px;width:100%;height:36px;min-width:0;margin:0;padding:3px 4px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:thin}
+.hmi-pane .hmi-canvas-toolbar>label{display:flex;flex:0 0 auto;flex-direction:row;align-items:center;gap:3px;font-size:8px;letter-spacing:.03em;white-space:nowrap}
+.hmi-pane .hmi-canvas-toolbar #hmiScreenSelect{box-sizing:border-box;flex:0 0 auto;width:clamp(90px,7vw,115px);min-width:90px;max-width:115px;height:26px;padding:0 5px;font-size:9px}
+.hmi-pane .hmi-canvas-toolbar #hmiTitle{box-sizing:border-box;flex:0 0 auto;width:clamp(80px,8vw,125px);min-width:80px;max-width:125px;height:26px;padding:0 5px;font-size:9px}
+.hmi-pane .hmi-canvas-toolbar .hmi-toolbar-icon{box-sizing:border-box;display:inline-grid;flex:0 0 29px;place-items:center;width:29px;min-width:29px;height:28px;min-height:28px;margin:0;padding:0;font-size:12px;line-height:1;letter-spacing:0;white-space:nowrap}
+.hmi-pane .hmi-canvas-toolbar .hmi-toolbar-icon span,.hmi-pane .hmi-canvas-toolbar #snapLabelText{margin:0;line-height:1}
+.hmi-pane .hmi-canvas-toolbar #snapLabel{gap:3px;font-size:8px;letter-spacing:0}
+.hmi-pane .hmi-canvas-toolbar #snapToggle{box-sizing:border-box;flex:0 0 14px;width:14px;min-width:14px;height:14px;margin:0;padding:0}
+.hmi-pane .hmi-canvas-toolbar .safety-chip{flex:0 0 auto;margin:0 0 0 4px;font-size:7px;letter-spacing:.03em;white-space:nowrap}
+.hmi-pane .hmi-canvas-toolbar span{margin-right:0}
+.hmi-pane .hmi-canvas-toolbar button:focus-visible,.hmi-pane .hmi-canvas-toolbar input:focus-visible,.hmi-pane .hmi-canvas-toolbar select:focus-visible{outline:2px solid #22d3ee;outline-offset:1px}
+.hmi-pane .hmi-board{flex:1 1 auto;min-width:0;min-height:0;width:100%}
+@media(max-width:760px){.hmi-pane .hmi-canvas-toolbar{gap:3px;padding-right:2px;padding-left:2px}}
+
+/* Neutralize legacy wide-layout positioning for the compact canvas toolbar. */
+.workspace.electrical-workspace-active #electricalCanvasContext .electrical-canvas-actions,
+.workspace.electrical-workspace-active #electricalCanvasContext .electrical-view-tools{position:static;left:auto;top:auto;transform:none;margin-left:0}
+.workspace.electrical-workspace-active #electricalCanvasContext .electrical-canvas-actions button:nth-child(n),
+.workspace.electrical-workspace-active #electricalCanvasContext .electrical-view-tools>button{box-sizing:border-box;flex:0 0 30px;width:30px;min-width:30px}
+
+/* Keep the two action groups in the same flow as the compact canvas toolbar. */
+#electricalCanvasContext .electrical-canvas-actions,
+#electricalCanvasContext .electrical-view-tools{position:static!important;inset:auto!important;transform:none!important;margin:0!important;align-self:center}
+#electricalCanvasContext .electrical-canvas-actions button:nth-child(n),
+#electricalCanvasContext .electrical-view-tools>button{flex:0 0 30px!important;width:30px!important;min-width:30px!important}
+
+.electrical-canvas-context .electrical-canvas-primary-tools,
+.electrical-canvas-context .electrical-canvas-secondary-tools{position:static;display:flex;flex:0 0 auto;flex-flow:row nowrap;align-items:center;gap:4px;width:auto;margin:0;transform:none}
+.electrical-canvas-context .electrical-canvas-primary-tools button,
+.electrical-canvas-context .electrical-canvas-secondary-tools>button{box-sizing:border-box;display:inline-flex;flex:0 0 30px;align-items:center;justify-content:center;width:30px;min-width:30px;height:28px;min-height:28px;margin:0;padding:0;font-size:11px;line-height:1;white-space:nowrap}
+@media(max-width:1050px){.electrical-canvas-context .electrical-canvas-primary-tools,.electrical-canvas-context .electrical-canvas-secondary-tools{width:auto;flex-wrap:nowrap}}

@@ -26,7 +26,8 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 2. Continue as guest. Guest access ends after four minutes; editing then pauses, and temporary work stays in this tab.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
-Header: Undo/Redo/Save; RUN SIMULATION; schematic: Grid/Fit/zoom/Snap (grid/free)/Expand (full screen).
+
+Header: RUN SIMULATION.
 
 ## Taking the onboarding tour
 
@@ -40,8 +41,9 @@ Header: Undo/Redo/Save; RUN SIMULATION; schematic: Grid/Fit/zoom/Snap (grid/free
 On wide screens, Undo/Redo/Save/Run move to the header. Account is under Project; language and preferences under Settings; Help stays in Help. Component search filters models; clear it to restore all. Manufacturer references are informational; Physical control unavailable.
 
 1. Click a top menu or toolbar control to open its menu or panel.
+Components / Schematic and HMI actions use compact icons; hover or focus to read names.
 2. Click outside or press Escape to close a menu; tap outside on touch.
-3. Select **Help** to read this guide. Use **Safety and help** (?) for safety notes and the tour; **External resources** remains below.
+3. Select **Help** for this guide, safety notes, the tour, and external resources.
 
 | Menu / icon | What it does | Where it is |
 | --- | --- | --- |
