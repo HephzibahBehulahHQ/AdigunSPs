@@ -300,6 +300,7 @@ test("approved wide Electrical layout keeps the compact toolbox and project work
       select: y('#electricalToolboxDock [data-electrical-action="select"]'),
       rotate: y('#electricalToolboxDock [data-electrical-action="rotate"]'),
       library: y("#electricalLibraryWorkflows > h2"),
+      generic: y("#electricalLibraryWorkflows > .electrical-library-link"),
       manufacturer: y("#electricalLibraryWorkflows .industrial-catalog > summary"),
       faults: y("#electricalSimulationWorkflow > summary")
     };
@@ -314,9 +315,14 @@ test("approved wide Electrical layout keeps the compact toolbox and project work
   expect(positions.select).toBeLessThanOrEqual(545);
   expect(positions.rotate).toBeGreaterThanOrEqual(578);
   expect(positions.rotate).toBeLessThanOrEqual(595);
-  expect(positions.library).toBeLessThan(690);
-  expect(positions.manufacturer).toBeLessThan(760);
-  expect(positions.faults).toBeLessThan(800);
+  expect(positions.library).toBeGreaterThanOrEqual(651);
+  expect(positions.library).toBeLessThanOrEqual(663);
+  expect(positions.generic).toBeGreaterThanOrEqual(674);
+  expect(positions.generic).toBeLessThanOrEqual(686);
+  expect(positions.manufacturer).toBeGreaterThanOrEqual(714);
+  expect(positions.manufacturer).toBeLessThanOrEqual(726);
+  expect(positions.faults).toBeGreaterThanOrEqual(752);
+  expect(positions.faults).toBeLessThanOrEqual(764);
 
   await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
   const inspectorDelete = page.locator('#inspectorContent [data-electrical-action="delete"]');
