@@ -115,13 +115,13 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
 {
-  const component=createElectricalComponent("pilotLamp",1,200,200),obstacleAhead=createElectricalComponent("pilotLamp",2,280,260),obstacleBehind=createElectricalComponent("pilotLamp",3,140,200),events={},card={style:{}};
+  const component=createElectricalComponent("pilotLamp",1,200,200),obstacleAhead=createElectricalComponent("pilotLamp",2,280,260),obstacleBehind=createElectricalComponent("pilotLamp",3,140,200),events={},card={dataset:{componentId:""},style:{},addEventListener:(name,handler)=>events[`card:${name}`]=handler};card.dataset.componentId=component.id;
   const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>events[`head:${name}`]=handler,setPointerCapture(){}};
   const board={getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},addEventListener:(name,handler)=>events[`board:${name}`]=handler,querySelector:()=>card};
-  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:[]},previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
+  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:s===".electrical-component"?[card]:[]},previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
   try{
     renderElectricalWorkspace(root,{tags:[],electrical:{components:[component,obstacleAhead,obstacleBehind],wires:[]}});
-    events["head:pointerdown"]({button:0,clientX:210,clientY:210,pointerId:9,preventDefault(){}});
+    events["card:pointerdown"]({button:0,clientX:210,clientY:210,pointerId:9,target:{closest:()=>null},preventDefault(){}});
     events["board:pointermove"]({clientX:230,clientY:210});
     assert.equal(component.x,220,"overlap recovery may briefly increase one collision while reducing total collision area");
     events["board:pointermove"]({clientX:430,clientY:210});
