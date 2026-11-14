@@ -179,10 +179,16 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 }
 {
   const contact=createElectricalComponent("siemens3SU1400NOContact",1),peers=contact.terminals.map((_,index)=>createElectricalComponent("terminal",index+1,360,120+index*100)),diagram={components:[contact,...peers],wires:[]};
-  assert.equal(contact.manufacturer,"Siemens");assert.equal(contact.partNumber,"3SU1400-1AA10-1BA0");assert.deepEqual(contact.terminals,["3","4"]);
+  assert.equal(contact.manufacturer,"Siemens");assert.equal(contact.partNumber,"3SU1400-1AA10-1BA0");assert.equal(electricalComponentCatalog[contact.type].kind,"contact");assert.equal(contact.normallyClosed,false);assert.deepEqual(contact.terminals,["3","4"]);
   for(let index=0;index<contact.terminals.length;index++){const pin=contact.terminals[index],result=connectElectricalTerminals(diagram,{componentId:contact.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`terminal ${pin} is individually connectable`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:contact.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
-  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
+  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes('data-electrical-input="S1"'),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
+}
+{
+  const supply=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU1400NOContact",1,320,80),lamp=createElectricalComponent("pilotLamp",1,560,80),diagram={components:[supply,contact,lamp],wires:[]};
+  for(const [from,to] of [[{componentId:supply.id,terminal:"+"},{componentId:contact.id,terminal:"3"}],[{componentId:contact.id,terminal:"4"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}]]){const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true,"manufacturer-marked NO contact terminals wire into a circuit");diagram.wires.push(result.wire);}
+  assert.equal(simulateElectricalDiagram(diagram,{[contact.reference]:false}).energized[lamp.id],false,"the unactuated normally-open contact leaves its load off");
+  const closed=simulateElectricalDiagram(diagram,{[contact.reference]:true});assert.equal(closed.energized[lamp.id],true,"manual simulation input closes the Siemens NO path and powers its wired load");assert.equal(closed.componentStates[contact.id].contactClosed,true);
 }
 {
   const terminal=createElectricalComponent("phoenixPT25FeedThrough",1),peers=[createElectricalComponent("terminal",1,360,120),createElectricalComponent("terminal",2,360,260)],diagram={components:[terminal,...peers],wires:[]};

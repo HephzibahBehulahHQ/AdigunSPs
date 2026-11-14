@@ -1147,3 +1147,33 @@ test("real multi-pin schematic models recover from example-style overlap without
   await expect(wire).toHaveAttribute("data-wire-id","earth-lead");
   await expect(wire).toHaveAttribute("d",/L700 460/);
 });
+
+
+test("source-backed Siemens NO contact manually switches its wired simulation load", async ({ page }) => {
+  const project = {
+    name:"Siemens contact simulation fixture", rungs:[], tags:[], io:{inputs:[],outputs:[]}, initialState:{},
+    electrical:{
+      components:[
+        {id:"ps1",type:"supply24vdc",reference:"PS1",label:"24 V DC supply",x:80,y:80,rotation:0,terminals:["+","−"]},
+        {id:"s1",type:"siemens3SU1400NOContact",reference:"S1",label:"Siemens 3SU1400 NO contact",x:320,y:80,rotation:0,terminals:["3","4"]},
+        {id:"h1",type:"pilotLamp",reference:"H1",label:"Pilot lamp",x:560,y:80,rotation:0,terminals:["X1","X2"]}
+      ],
+      wires:[
+        {id:"feed",from:{componentId:"ps1",terminal:"+"},to:{componentId:"s1",terminal:"3"}},
+        {id:"switched",from:{componentId:"s1",terminal:"4"},to:{componentId:"h1",terminal:"X1"}},
+        {id:"return",from:{componentId:"h1",terminal:"X2"},to:{componentId:"ps1",terminal:"−"}}
+      ],
+      inputStates:{}
+    }
+  };
+  await page.locator("#fileInput").setInputFiles({name:"siemens-contact.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(project))});
+  await page.locator("#electricalTab").click();
+  await page.locator('#electricalCanvasContext [data-electrical-action="simulate"]').click();
+  const contactInput=page.locator('[data-electrical-input="S1"]'),contact=page.locator('#electricalBoard [data-component-id="s1"]'),lamp=page.locator('#electricalBoard [data-component-id="h1"]');
+  await expect(contactInput).toBeVisible();
+  await expect(contact).toHaveAttribute("data-contact-state","open");
+  await expect(lamp).not.toHaveClass(/energized/);
+  await contactInput.check();
+  await expect(contact).toHaveAttribute("data-contact-state","closed");
+  await expect(lamp).toHaveClass(/energized/);
+});
