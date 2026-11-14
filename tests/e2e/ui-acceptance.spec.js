@@ -1130,7 +1130,7 @@ test("real multi-pin schematic models recover from example-style overlap without
   await expect(plc).toBeVisible();
   await expect(pe).toBeVisible();
   await expect(wire).toHaveAttribute("d", /L700 460/);
-  const diagnostics=page.locator("#electricalBoard").locator("xpath=ancestor::div[contains(@class,\"electrical-pane\")]").locator("details[data-inspector-section=\"diagnostics\"]");
+  const diagnostics=page.locator(".electrical-inspector details[data-inspector-section=\"diagnostics\"]");
   await expect(diagnostics.locator("summary")).toContainText(/warning/i);
   await diagnostics.locator("summary").click();
   await expect(diagnostics).toContainText("Overlapping component cards: PLC1 and PE1");
