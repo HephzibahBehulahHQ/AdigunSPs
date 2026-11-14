@@ -355,7 +355,7 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 
 @media (min-width: 1501px) {
   .workspace.electrical-workspace-active .electrical-canvas-context { justify-content: flex-start; padding-inline: 4px; }
-  .workspace.electrical-workspace-active .electrical-canvas-actions { margin-left: 83px; }
+  .workspace.electrical-workspace-active .electrical-canvas-actions { margin-left: 70px; }
   .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(1) { box-sizing: border-box; flex: 0 0 85px; width: 85px; }
   .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(2) { box-sizing: border-box; flex: 0 0 150px; width: 150px; }
   .workspace.electrical-workspace-active .electrical-canvas-actions button:nth-child(3) { box-sizing: border-box; flex: 0 0 95px; width: 95px; }
