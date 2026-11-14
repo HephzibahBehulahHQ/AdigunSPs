@@ -693,3 +693,32 @@ test("all application menus stay reachable within desktop viewports", async ({ p
     }
   }
 });
+
+test("1894px electrical workspace geometry matches the approved reference", async ({ page }) => {
+  await page.setViewportSize({ width:1894, height:850 });
+  await page.locator("#electricalTab").click();
+  const layout = await page.evaluate(() => {
+    const box = (selector) => {
+      const rect = document.querySelector(selector).getBoundingClientRect();
+      return { x:Math.round(rect.x), y:Math.round(rect.y), width:Math.round(rect.width), height:Math.round(rect.height) };
+    };
+    return {
+      topbar:box(".topbar"),
+      menu:box(".app-menus"),
+      tabs:box(".editor-tabs"),
+      left:box(".left-sidebar"),
+      right:box(".right-sidebar"),
+      board:box(".electrical-board-wrap"),
+      status:box(".statusbar"),
+    };
+  });
+  expect(layout).toEqual({
+    topbar:{x:0,y:0,width:1894,height:50},
+    menu:{x:0,y:50,width:1894,height:39},
+    tabs:{x:0,y:89,width:1555,height:52},
+    left:{x:0,y:89,width:270,height:726},
+    right:{x:1555,y:89,width:339,height:726},
+    board:{x:284,y:205,width:1260,height:601},
+    status:{x:0,y:815,width:1894,height:35},
+  });
+});
