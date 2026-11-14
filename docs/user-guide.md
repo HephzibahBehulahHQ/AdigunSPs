@@ -24,7 +24,7 @@ On first use, the welcome popup explains the workspace and offers **Start quick 
 
 ## Account access and guest work
 
-Select the profile icon in the top bar to open the account panel. Enter your email and password, then choose **Sign in**. To register, enter your details and choose **Create account**; confirm your address using the email before signing in. Select **Forgot password?** below the password field to request a recovery email; open it, set and confirm your new password on the **Reset password** page at `/reset-password`, and return to sign in. Expired recovery links can be replaced by requesting another email.
+Open **Project → Account** to open the account panel. Enter your email and password, then choose **Sign in**. To register, enter your details and choose **Create account**; confirm your address using the email before signing in. Select **Forgot password?** below the password field to request a recovery email; open it, set and confirm your new password on the **Reset password** page at `/reset-password`, and return to sign in. Expired recovery links can be replaced by requesting another email.
 
 Guest access lasts four minutes. After it expires, editing pauses; temporary work remains in the current browser tab. Signed-in users can save a cloud copy from the account panel; guest work is temporary and is not uploaded.
 
@@ -289,7 +289,7 @@ The bottom bar shows the editor-ready marker, simulated PLC state, scan time, cy
 
 ### Wide-screen command relocation
 
-On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run simulation buttons move from the long command toolbar into unused header space, and the remaining ribbon is hidden to give the editor more vertical room. Its file, edit, view, simulation, trace, and other actions remain available from the application menus and Ctrl/⌘+K command search. Simulation sound is under **Online → Toggle simulation sound**. The existing command-search button moves to the application-menu row and appears as **Search all commands**; selecting it opens the existing searchable command palette. On narrower screens these same buttons return to their original locations; no duplicate controls are created, and original functions remain unchanged.
+On screens at least 1200 pixels wide, the **existing** Save, Undo, Redo and Run simulation buttons move from the long command toolbar into unused header space, and the remaining ribbon is hidden to give the editor more vertical room. Its file, edit, view, simulation, trace, and other actions remain available from the application menus and Ctrl/⌘+K command search. Simulation sound is under **Online → Toggle simulation sound**. The existing command-search button moves to the application-menu row and appears as **Search all commands**; selecting it opens the existing searchable command palette. On screens at least 1501 pixels wide, use **Project → Account**, **Settings → Change language / Project task and preferences**, and **Help** for the account, language, preferences, and help controls previously shown as header icons. At narrower sizes the direct controls remain available. No original functions are removed.
 
 ### Contextual editor tools
 
