@@ -1057,3 +1057,43 @@ test("electrical component replacement keeps compatible wires and rejects incomp
   const replacementReference = (await page.locator("#inspectorContent .electrical-selected-component h2").innerText()).split(" · ")[0];
   await expect(page.locator("#inspectorContent .electrical-wire-row").first()).toContainText(`${replacementReference}.2`);
 });
+
+test("imported overlapping schematic components can be dragged clear without losing wires", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  const project = {
+    name: "Legacy overlap recovery fixture",
+    rungs: [],
+    tags: [],
+    io: { inputs: [], outputs: [] },
+    initialState: {},
+    electrical: {
+      components: [
+        { id: "moved", type: "pilotLamp", reference: "H1", label: "Moved lamp", x: 200, y: 200, rotation: 0, terminals: ["X1", "X2"] },
+        { id: "ahead", type: "pilotLamp", reference: "H2", label: "Obstacle ahead", x: 280, y: 260, rotation: 0, terminals: ["X1", "X2"] },
+        { id: "behind", type: "pilotLamp", reference: "H3", label: "Obstacle behind", x: 140, y: 200, rotation: 0, terminals: ["X1", "X2"] }
+      ],
+      wires: [{ id: "legacy-wire", from: { componentId: "moved", terminal: "X1" }, to: { componentId: "ahead", terminal: "X1" }, waypoints: [{ x: 240, y: 400 }] }],
+      inputStates: {}
+    }
+  };
+  await page.locator("#fileInput").setInputFiles({ name: "legacy-overlap.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(project)) });
+  await page.locator("#electricalTab").click();
+  const component = page.locator('#electricalBoard [data-component-id="moved"]');
+  const wire = page.locator('#electricalBoard [data-wire-id="legacy-wire"]');
+  await expect(component).toBeVisible();
+  await expect(wire).toHaveAttribute("d", /L240 400/);
+  const header = page.locator('[data-drag-component="moved"]');
+  const start = await header.boundingBox();
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + 420, start.y + start.height / 2);
+  await page.mouse.up();
+  const boxes = await page.locator("#electricalBoard [data-component-id]").evaluateAll(nodes => nodes.map(node => { const { left, top, right, bottom } = node.getBoundingClientRect(); return { left, top, right, bottom }; }));
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const a = boxes[i], b = boxes[j];
+    expect(a.right + 8 <= b.left || b.right + 8 <= a.left || a.bottom + 8 <= b.top || b.bottom + 8 <= a.top).toBe(true);
+  }
+  await expect(component).toHaveAttribute("data-component-id", "moved");
+  await expect(wire).toHaveAttribute("data-wire-id", "legacy-wire");
+  await expect(wire).toHaveAttribute("d", /L240 400/);
+});
