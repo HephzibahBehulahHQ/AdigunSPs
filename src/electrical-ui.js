@@ -58,6 +58,7 @@ export function electricalWirePath(wire,components) {
   };
   const defaultX=Math.round((x1+x2)/40)*20;
   addCandidate([{x:defaultX,y:y1},{x:defaultX,y:y2}]);
+  if(candidates.length)return `M${x1} ${y1}H${defaultX}V${y2}H${x2}`;
   for(let x=0;x<=2200;x+=20)addCandidate([{x,y:y1},{x,y:y2}]);
   for(let y=0;y<=1400;y+=20)addCandidate([{x:x1,y},{x:x2,y}]);
   candidates.sort((first,second)=>first.cost-second.cost);
