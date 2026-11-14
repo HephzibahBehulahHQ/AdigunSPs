@@ -26,7 +26,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 2. Continue as guest. Guest access ends after four minutes; editing then pauses, and temporary work stays in this tab.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
-Header: offline, Undo/Redo/Save, RUN SIMULATION; footer: editor/PLC/scan; schematic adds grid.
+Header: Undo/Redo/Save; RUN SIMULATION; schematic: Grid/Fit/zoom/Snap (grid/free)/Expand (full screen).
 
 ## Taking the onboarding tour
 
