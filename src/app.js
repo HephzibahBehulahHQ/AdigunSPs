@@ -1974,6 +1974,7 @@ function action(name) {
   if (name === "hardware-inventory") { showHardwareInventory(); return; }
   if (name === "device-configuration") { showDeviceConfiguration(); return; }
   if (name === "language") { $("#languageButton").click(); return; }
+  if (name === "account") { showAccount(); return; }
   if (name.startsWith("mode-")) { const mode = name.slice(5); $("#editorMode").value = mode; setEditorMode(mode); return; }
   if (name === "settings") { showSettings(); return; }
   if (name === "record") { toggleTraceRecording(); return; }
@@ -2003,6 +2004,14 @@ function applyLocale() {
   $("#operationsButton").textContent = operationsCopy[language].button; $("#operationsButton").title = operationsCopy[language].title;
   const electricalTabLabel = ({en:"Components / Schematic",de:"Komponenten / Schaltplan",yo:"Àwọn component / àwòrán itanna",pcm:"Components / Schematic"})[language]; $("#electricalTabLabel").textContent = electricalTabLabel; $("#electricalTab").setAttribute("aria-label",electricalTabLabel);
   const commandSearchLabel = ({en:"Search all commands",de:"Befehle suchen",yo:"Wá gbogbo àṣẹ",pcm:"Find all commands"})[language]; $("#paletteButtonLabel").textContent = commandSearchLabel; $("#paletteButton").setAttribute("aria-label",commandSearchLabel); $("#paletteButton").title = commandSearchLabel;
+  const quickCommandLabels = { en:{undo:"Undo",redo:"Redo"}, de:{undo:"Rückgängig",redo:"Wiederholen"}, yo:{undo:"Yí padà",redo:"Tún ṣe"}, pcm:{undo:"Undo",redo:"Redo"} }[language];
+  for (const [name, icon] of [["undo","↶"],["redo","↷"]]) {
+    const button = document.querySelector(`#globalQuickCommands [data-action="${name}"]`) || document.querySelector(`.toolbar [data-action="${name}"]`);
+    if (!button) continue;
+    button.innerHTML = `${icon} <span>${quickCommandLabels[name]}</span>`;
+    button.setAttribute("aria-label", quickCommandLabels[name]);
+    button.title = `${quickCommandLabels[name]} (Ctrl+${name === "undo" ? "Z" : "Y"})`;
+  }
   const projectViewLabels = {en:{electrical:"Electrical schematic",hmi:"HMI screens"},de:{electrical:"Elektrischer Schaltplan",hmi:"HMI-Bildschirme"},yo:{electrical:"Àwòrán itanna",hmi:"Àwọn ojú ìfihàn HMI"},pcm:{electrical:"Electrical schematic",hmi:"HMI screens"}}[language]; $("#electricalTreeLabel").textContent=projectViewLabels.electrical; $("#hmiTreeLabel").textContent=projectViewLabels.hmi;
   const chrome = {
     en: { editorReady:"EDITOR READY", plcPrefix:"PLC:", gridStatus:"Grid: 20 px", educationalFooter:"Educational simulation · no hardware connected", project:"PROJECT EXPLORER", inputs:"SIMULATED INPUTS", outputs:"OUTPUTS", properties:"PROPERTIES", watch:"WATCH", status:"Project saved on this device", offline:"Offline ready", program:"Program Main [LD]", tags:"Tags & I/O", library:"Example library", education:"Educational simulation only", hardware:"No hardware connected", routine:"Main routine", snap:"Snap", minimap:"Minimap", commands:"commands", scanTime:"Scan:", cycle:"Cycle", new:t("new"), examples:t("examples"), save:t("save"), saveAs:t("saveAs"), import:t("import"), export:t("export"), run:t("run"), pause:t("pause"), step:t("step"), stop:t("reset"), contact:t("addContact"), rung:t("addRung") },
