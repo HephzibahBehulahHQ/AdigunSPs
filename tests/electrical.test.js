@@ -170,7 +170,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 {
   const cpu=createElectricalComponent("siemensS71212CG2",1),generic=createElectricalComponent("genericPlc24v4di4do",1);
   assert.equal(cpu.manufacturer,"Siemens");assert.equal(cpu.partNumber,"6ES7212-1AG50-0XB0");assert.equal(electricalComponentCatalog[cpu.type].kind,"device-reference");assert.equal(electricalComponentCatalog[generic.type].kind,"plc","the functional generic PLC remains unchanged");
-  assert.equal(cpu.terminals.length,24,"CPU terminal map covers X80(6), X10(10), and X11(8)");
+  assert.equal(cpu.terminals.length,23,"CPU has 5 assigned X80 terminals, 10 X10 terminals, and 8 X11 terminals");assert.equal(electricalComponentCatalog[cpu.type].terminalLayout.length,24,"physical layout still shows all X80(6), X10(10), and X11(8) positions");assert.equal(cpu.terminals.includes("X80-3"),false,"unassigned X80 pin 3 is not connectable");
   assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X10-1"],"X10 physical pin 1 · digital input DI a.0");assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X10-2"],"X10 physical pin 2 · digital input DI a.5");assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X11-8"],"X11 physical pin 8 · digital output DQ a.5");
   const peers=cpu.terminals.map((_,index)=>createElectricalComponent("supply24vdc",index+1,0,index*100)),diagram={components:[cpu,...peers],wires:[]};
   for(const [index,pin]of cpu.terminals.entries()){const result=connectElectricalTerminals(diagram,{componentId:cpu.id,terminal:pin},{componentId:peers[index].id,terminal:"+"});assert.equal(result.ok,true,`${pin} is an independently connectable terminal`);diagram.wires.push(result.wire);}

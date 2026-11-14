@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { connectElectricalTerminals, createElectricalComponent, electricalComponentCatalog, simulateElectricalDiagram } from "../src/electrical.js";
-import { electricalSymbolSvg } from "../src/electrical-ui.js";
+import { electricalSymbolSvg, renderElectricalWorkspace } from "../src/electrical-ui.js";
 
 function circuit(switchType, loadType, options = {}) {
   const { signal, ...overrides } = options;
@@ -36,4 +36,17 @@ assert.equal(Object.values(circuit("temperatureSwitchNC","heaterElement",{signal
 assert.equal(Object.values(circuit("emergencyStopNC","buzzer",{closed:true,tripped:false}).energized)[0],true,"latched E-stop conducts before actuation");
 assert.equal(Object.values(circuit("emergencyStopNC","buzzer",{closed:true,tripped:true}).energized)[0],false,"latched E-stop remains open after trip");
 assert.equal(Object.values(circuit("pushbuttonNO","heaterElement",{signal:true}).energized)[0],true,"pushbutton input controls a connected heater model");
+{
+  const cpu=createElectricalComponent("siemensS71212CG2",1);
+  const source=createElectricalComponent("supply24vdc",1);
+  const spec=electricalComponentCatalog[cpu.type];
+  assert.deepEqual(spec.terminalLayout.slice(0,6),["X80-1","X80-2","X80-3","X80-4","X80-5","X80-6"],"all six physical X80 positions remain visible in manufacturer order");
+  assert.equal(cpu.terminals.includes("X80-3"),false,"unassigned physical position is not a wireable component terminal");
+  assert.equal(connectElectricalTerminals({components:[cpu,source],wires:[]},{componentId:cpu.id,terminal:"X80-3"},{componentId:source.id,terminal:"+"}).ok,false,"an unassigned X80 position cannot start a wire");
+  const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
+  renderElectricalWorkspace(root,{tags:[],electrical:{components:[cpu,source],wires:[]}});
+  assert.match(root.innerHTML,/physical position X80-3 is unassigned and cannot be wired/u,"unassigned position is visibly explained");
+  assert.doesNotMatch(root.innerHTML,/data-terminal="X80-3"/u,"unassigned position has no wire interaction");
+  assert.match(root.innerHTML,/data-terminal="X80-4"/u,"assigned X80 positions remain connectable");
+}
 console.log("PASS: added supply, maintained switches, sensor contacts, latched E-stop, neutral/common rails, buzzer, heater, symbols, terminals, and circuit behavior");
