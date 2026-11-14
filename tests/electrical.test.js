@@ -96,6 +96,20 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     assert.deepEqual([component.x,component.y],[240,260],"cancelled touch drag releases the component and ignores later pointer motion");
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
+{
+  const component=createElectricalComponent("pilotLamp",1,200,200),obstacle=createElectricalComponent("pilotLamp",2,260,200),events={},card={style:{}};
+  const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>events[`head:${name}`]=handler,setPointerCapture(){}};
+  const board={getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},addEventListener:(name,handler)=>events[`board:${name}`]=handler,querySelector:()=>card};
+  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-drag-component]"?[head]:[]},previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
+  try{
+    renderElectricalWorkspace(root,{tags:[],electrical:{components:[component,obstacle],wires:[]}});
+    events["head:pointerdown"]({button:0,clientX:210,clientY:210,pointerId:9,preventDefault(){}});
+    events["board:pointermove"]({clientX:110,clientY:210});
+    assert.equal(component.x,100,"a component in an imported overlap can be dragged outward to clear it");
+    events["board:pointermove"]({clientX:250,clientY:210});
+    assert.equal(component.x,100,"an overlap-recovery drag cannot increase the existing collision");
+  }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
