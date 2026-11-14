@@ -195,8 +195,9 @@ Co-pilot never auto-saves. Draft saves require sign-in; checks do not certify wi
 
 Recipes: name and save; **Review inputs** then **Apply inputs**. Numeric alarms: threshold/hysteresis. Opening projects clears simulation/forces/replay.
 
-Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs. No safety certification.
+Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [company admin](https://admin.hephzibahbehulah.com/) support independent decisions. **Import approved copy** never applies inputs.
 
-**Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work. Tabs scroll.
+**Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work.
 
-Canvas/inspector actions include component editing; grid and zoom stay contextual.
+Canvas tools, grid, and zoom are contextual.
+Device sources and simulation limits appear in Properties.
