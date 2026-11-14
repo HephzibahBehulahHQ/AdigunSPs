@@ -19,7 +19,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const wire={from:{componentId:source.id,terminal:"+"},to:{componentId:destination.id,terminal:"−"}};
   const path=electricalWirePath(wire,[source,destination,...obstacles]);
   assert.ok(path,"automatic routing finds a path through a multi-wall component maze");
-  const points=[...path.matchAll(/[ML](-?\\d+(?:\\.\\d+)?) (-?\\d+(?:\\.\\d+)?)/gu)].map((match)=>({x:Number(match[1]),y:Number(match[2])}));
+  const points=[...path.matchAll(/[ML](-?[0-9.]+) (-?[0-9.]+)/gu)].map((match)=>({x:Number(match[1]),y:Number(match[2])}));
   assert.ok(points.length>4,"the maze route uses more than one three-segment detour");
   const bounds=obstacles.map(item=>({left:item.x,top:item.y,right:item.x+120,bottom:item.y+80})),segments=points.slice(1).map((point,index)=>[points[index],point]);
   for(const [first,second] of segments)for(const box of bounds){
