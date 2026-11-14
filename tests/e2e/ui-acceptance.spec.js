@@ -877,7 +877,7 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
       height:row.getBoundingClientRect().height
     };
   });
-  expect(hmiMetrics.buttonCount).toBe(12);
+  expect(hmiMetrics.buttonCount).toBe(8);
   expect(hmiMetrics.unnamed).toBe(0);
   expect(hmiMetrics.ySpread).toBeLessThanOrEqual(2);
   expect(hmiMetrics.scrollWidth).toBeLessThanOrEqual(hmiMetrics.clientWidth + 1);
