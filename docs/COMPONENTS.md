@@ -2,6 +2,8 @@
 
 The **Components** tab is an editable schematic workspace with terminal-level wires and Boolean/scalar simulation. Its educational devices are not vendor-certified and must not be used as a wiring or safety design. The selectable Siemens SITOP PSU100C and ifm PN2070 entries below are source-backed schematic references with connectable pins; their electrical behavior is not simulated. Manufacturer catalog entries remain informational unless explicitly listed as placeable schematic references.
 
+For a routed cable, choose **Connect wire**, pick a source terminal, add bends by clicking the canvas, and select a destination terminal. Select a wire in Properties to drag its saved bends or press Delete on a focused bend to remove it. Pause a cable with the same **Pause wire** control and resume from its free-end marker. Paused drafts persist but are ignored by circuit simulation until completed.
+
 ## Schematic components
 
 | Component | Function in this simulator | Example |

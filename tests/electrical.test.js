@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
-import { electricalSimulationStatus, electricalSymbolSvg, renderElectricalWorkspace } from "../src/electrical-ui.js";
+import { electricalSimulationStatus, electricalSymbolSvg, electricalWirePath, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
@@ -14,8 +14,11 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.deepEqual(sensor.terminals,["1","2","4","3"]);
   assert.equal(sensor.manufacturer,"ifm");assert.equal(sensor.partNumber,"PN-400-SER14-MFRKG/USI /V");
   const diagram={components:[psu,sensor],wires:[]};
-  const connected=connectElectricalTerminals(diagram,{componentId:psu.id,terminal:"+"},{componentId:sensor.id,terminal:"1"});
+  const connected=connectElectricalTerminals(diagram,{componentId:psu.id,terminal:"+"},{componentId:sensor.id,terminal:"1"},[{x:240,y:160},{x:360,y:160}]);
   assert.equal(connected.ok,true,"source-backed device pins support real endpoint connections");
+  assert.deepEqual(connected.wire.waypoints,[{x:240,y:160},{x:360,y:160}]);
+  assert.match(electricalWirePath(connected.wire,diagram.components),/L240 160L360 160/u,"manual route bends are rendered in order");
+  assert.equal(connectElectricalTerminals(diagram,{componentId:psu.id,terminal:"N"},{componentId:sensor.id,terminal:"2"},[{x:2201,y:20}]).ok,false,"route points outside the board are rejected");
   diagram.wires.push(connected.wire);
   assert.ok(!validateElectricalDiagram(diagram).some((issue)=>issue.level==="error"));
   assert.match(electricalSymbolSvg(psu),/SITOP PSU100C/);assert.match(electricalSymbolSvg(sensor),/PN2070/);
@@ -24,11 +27,37 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const pin of [...psu.terminals,...sensor.terminals])assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as an individually connectable pin`);
   assert.ok(root.innerHTML.includes("ifm PN2070 data sheet"));
   assert.ok(root.innerHTML.includes("pressure measurement, analogue output and IO-Link behavior are not simulated"));
+  const imported=normalizeImportedProject({name:"Routed schematic",rungs:[],tags:[],electrical:diagram});
+  assert.deepEqual(imported.electrical.wires[0].waypoints,connected.wire.waypoints,"waypoints survive project import normalization");
+  assert.match(electricalUiSource,/Click the canvas to add route bends/u);
 }
 {
   const component=createElectricalComponent("pilotLamp",1,120,120);
   assert.deepEqual([moveElectricalComponent(component,137,143).x,moveElectricalComponent(component,137,143).y],[140,140],"component movement snaps to the grid by default");
   assert.deepEqual([moveElectricalComponent(component,137,143,{snap:false}).x,moveElectricalComponent(component,137,143,{snap:false}).y],[137,143],"the explicit snap-off view state permits pixel movement");
+}
+{
+  const supply=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1,600,120),wireActions={},terminalActions={},boardActions={},handleActions={},pathAttributes={},resumeActions={};
+  const handle={dataset:{wireWaypoint:"",waypointIndex:"0"},setAttribute:(name,value)=>pathAttributes[`handle:${name}`]=value,addEventListener:(name,handler)=>handleActions[name]=handler};
+  const resumeEnd={dataset:{resumeWire:""},addEventListener:(name,handler)=>resumeActions[name]=handler};
+  const wireSelect={dataset:{selectWire:""},addEventListener:(name,handler)=>wireActions[`select:${name}`]=handler};
+  const board={getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},addEventListener:(name,handler)=>boardActions[name]=handler,querySelector:(selector)=>selector.startsWith("[data-wire-id=")?{setAttribute:(name,value)=>pathAttributes[name]=value}:selector.startsWith("[data-wire-waypoint=")?handle:null};
+  const wireButton={dataset:{electricalAction:"wire"},addEventListener:(name,handler)=>wireActions[name]=handler};
+  const pins=[{dataset:{terminalComponent:supply.id,terminal:"+"},addEventListener:(name,handler)=>terminalActions.from=handler},{dataset:{terminalComponent:lamp.id,terminal:"X1"},addEventListener:(name,handler)=>terminalActions.to=handler}];
+  const root={dataset:{},innerHTML:"",querySelector:(selector)=>selector==="#electricalBoard"?board:null,querySelectorAll:(selector)=>selector==="[data-electrical-action]"?[wireButton]:selector==="[data-terminal-component]"?pins:selector==="[data-select-wire]"?[wireSelect]:selector==="[data-wire-waypoint]"?[handle]:selector==="[data-resume-wire]"?[resumeEnd]:[]};
+  const diagram={components:[supply,lamp],wires:[]};
+  const previousCSS=globalThis.CSS;globalThis.CSS={escape:value=>value};
+  renderElectricalWorkspace(root,{tags:[],electrical:diagram});wireActions.click();terminalActions.from();boardActions.click({clientX:240,clientY:200,target:{closest:()=>null}});terminalActions.to();
+  assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:200}],"clicking the canvas adds a visible persistent bend between connected terminals");
+  assert.ok(root.innerHTML.includes("L240 200"),"the completed connection displays the user-drawn route");
+  wireSelect.dataset.selectWire=diagram.wires[0].id;handle.dataset.wireWaypoint=diagram.wires[0].id;wireActions["select:click"]();handleActions.pointerdown({button:0,pointerId:4,preventDefault(){},stopPropagation(){}});boardActions.pointermove({clientX:320,clientY:280});boardActions.pointerup();
+  assert.deepEqual(diagram.wires[0].waypoints,[{x:320,y:280}],"selected wire bends can be dragged to new canvas positions");
+  handleActions.keydown({key:"Delete",preventDefault(){}});assert.equal(diagram.wires[0].waypoints.length,0,"route bends can be removed from the keyboard");
+  pins[0].dataset.terminal="−";pins[1].dataset.terminal="X2";wireActions.click();terminalActions.from();boardActions.click({clientX:420,clientY:340,target:{closest:()=>null}});wireActions.click();
+  const paused=diagram.wires.find((wire)=>wire.draft);assert.ok(paused,"the existing Connect wire control pauses and persists an unfinished cable");assert.ok(root.innerHTML.includes("electrical-wire-draft-end"),"the paused cable exposes a visible free-end resume handle");assert.ok(!validateElectricalDiagram(diagram).some((issue)=>issue.level==="error"),"a paused cable is not mistaken for a broken complete connection");assert.equal(simulateElectricalDiagram(diagram).energized[lamp.id],false,"paused draft cables are excluded from simulated connectivity");
+  const pausedImport=normalizeImportedProject({name:"Paused wire",rungs:[],tags:[],electrical:diagram});assert.equal(pausedImport.electrical.wires.find((wire)=>wire.draft).waypoints[0].x,420,"paused routes survive project import normalization");
+  wireActions.click();resumeEnd.dataset.resumeWire=paused.id;resumeActions.click();terminalActions.to();assert.ok(!diagram.wires.some((wire)=>wire.draft),"resuming to a destination terminal completes and replaces the draft cable");assert.deepEqual(diagram.wires.find((wire)=>wire.from.terminal==="−").waypoints,[{x:420,y:340}],"resume preserves the hand-drawn path");
+  if(previousCSS===undefined)delete globalThis.CSS;else globalThis.CSS=previousCSS;
 }
 {
   const component=createElectricalComponent("pilotLamp",1,200,200),headEvents={},boardEvents={},card={style:{}};

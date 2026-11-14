@@ -199,5 +199,5 @@ Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [co
 
 **Alarm history:** 100/500/2000 events; export first. AI errors: unchanged work.
 
-Canvas tools, grid, and zoom are contextual.
+Bends: click to add; drag, delete, pause, resume.
 Device sources and simulation limits appear in Properties.

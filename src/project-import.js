@@ -171,7 +171,9 @@ function validateOptionalProjectData(project) {
       if (!linked) fail(`electrical component ${index + 1} references a missing or unsupported coil.`);
     }
     for (const [index, wire] of diagram.wires.entries()) {
-      if (!isRecord(wire) || !isRecord(wire.from) || !isRecord(wire.to)) fail(`electrical wire ${index + 1} has invalid endpoints.`);
+      if (!isRecord(wire) || !isRecord(wire.from) || (wire.draft !== true && !isRecord(wire.to))) fail(`electrical wire ${index + 1} has invalid endpoints.`);
+      if (wire.waypoints !== undefined && (!Array.isArray(wire.waypoints) || wire.waypoints.length > 200 || wire.waypoints.some((point) => !isRecord(point) || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.x > 2200 || point.y < 0 || point.y > 1400))) fail(`electrical wire ${index + 1} has invalid route points.`);
+      if(wire.draft===true){if(wire.to!==null&&wire.to!==undefined)fail(`electrical wire ${index+1} draft must not have a destination terminal.`);requireString(wire.from.componentId,`electrical wire ${index+1} has an invalid source component reference.`);requireString(wire.from.terminal,`electrical wire ${index+1} has an invalid source terminal reference.`);if(!componentsById.has(wire.from.componentId)||!componentTerminals.get(wire.from.componentId).has(wire.from.terminal))fail(`electrical wire ${index+1} references an unknown source terminal.`);if(wire.end!==undefined&&(!isRecord(wire.end)||!Number.isFinite(wire.end.x)||!Number.isFinite(wire.end.y)||wire.end.x<0||wire.end.x>2200||wire.end.y<0||wire.end.y>1400))fail(`electrical wire ${index+1} has an invalid free endpoint.`);continue;}
       for (const endpoint of [wire.from, wire.to]) {
         requireString(endpoint.componentId, `electrical wire ${index + 1} has an invalid component reference.`);
         requireString(endpoint.terminal, `electrical wire ${index + 1} has an invalid terminal reference.`);

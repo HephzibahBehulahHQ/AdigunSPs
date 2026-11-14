@@ -75,18 +75,21 @@ export function createElectricalComponent(type, sequence, x = 120, y = 120) {
   };
 }
 
-export function connectElectricalTerminals(diagram, from, to) {
+export function connectElectricalTerminals(diagram, from, to, waypoints = []) {
   const components = new Map((diagram.components || []).map((component) => [component.id, component]));
   const valid = (endpoint) => {
     const component = components.get(endpoint?.componentId);
     return component && (component.terminals || []).includes(endpoint.terminal);
   };
   if (!valid(from) || !valid(to)) return { ok:false, error:"A wire endpoint must reference an existing component terminal." };
+  if (!Array.isArray(waypoints) || waypoints.length > 200 || waypoints.some((point) => !Number.isFinite(Number(point?.x)) || !Number.isFinite(Number(point?.y)) || Number(point.x) < 0 || Number(point.x) > 2200 || Number(point.y) < 0 || Number(point.y) > 1400)) return { ok:false, error:"Wire route points must be finite canvas coordinates." };
   if (from.componentId === to.componentId && from.terminal === to.terminal) return { ok:false, error:"A terminal cannot be connected to itself." };
   const key = (endpoint) => `${endpoint.componentId}:${endpoint.terminal}`;
-  if ((diagram.wires || []).some((wire) => key(wire.from) === key(from) || key(wire.to) === key(from) || key(wire.from) === key(to) || key(wire.to) === key(to))) return { ok:false, error:"A terminal already has a wire. Add an explicit junction or distribution rail for branches." };
-  if ((diagram.wires || []).some((wire) => (key(wire.from) === key(from) && key(wire.to) === key(to)) || (key(wire.from) === key(to) && key(wire.to) === key(from)))) return { ok:false, error:"These terminals are already connected." };
-  return { ok:true, wire:{ id:crypto.randomUUID(), from:{...from}, to:{...to} } };
+  if ((diagram.wires || []).some((wire) => wire.to && !wire.draft && (key(wire.from) === key(from) || key(wire.to) === key(from) || key(wire.from) === key(to) || key(wire.to) === key(to)))) return { ok:false, error:"A terminal already has a wire. Add an explicit junction or distribution rail for branches." };
+  if ((diagram.wires || []).some((wire) => wire.to && !wire.draft && ((key(wire.from) === key(from) && key(wire.to) === key(to)) || (key(wire.from) === key(to) && key(wire.to) === key(from))))) return { ok:false, error:"These terminals are already connected." };
+  const wire={ id:crypto.randomUUID(), from:{...from}, to:{...to} };
+  if(waypoints.length)wire.waypoints=waypoints.map(({x,y})=>({x:Math.round(Number(x)),y:Math.round(Number(y))}));
+  return { ok:true, wire };
 }
 
 export function moveElectricalComponent(component, x, y, {snap=true} = {}) {
@@ -196,14 +199,16 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
     }
     for (const terminal of spec.terminals) endpoints.add(`${component.id}:${terminal}`);
   }
-  const seenWires = new Set();
+  const completeWires=wires.filter((wire)=>wire?.from&&wire?.to&&!wire.draft),seenWires = new Set();
   for (const wire of wires) {
+    if(wire?.draft===true&&!wire.to){const endpoint=`${wire.from?.componentId}:${wire.from?.terminal}`;if(!endpoints.has(endpoint))issues.push({level:"error",code:"electrical-wire-endpoint",message:`Wire ${wire.id||"(missing)"} references a missing source terminal.`});if(wire.waypoints!==undefined&&(!Array.isArray(wire.waypoints)||wire.waypoints.length>200||wire.waypoints.some((point)=>!Number.isFinite(Number(point?.x))||!Number.isFinite(Number(point?.y))||Number(point.x)<0||Number(point.x)>2200||Number(point.y)<0||Number(point.y)>1400)))issues.push({level:"error",code:"electrical-wire-route",message:`Wire ${wire.id||"(missing)"} has invalid route points.`});if(wire.end&&(!Number.isFinite(Number(wire.end.x))||!Number.isFinite(Number(wire.end.y))||Number(wire.end.x)<0||Number(wire.end.x)>2200||Number(wire.end.y)<0||Number(wire.end.y)>1400))issues.push({level:"error",code:"electrical-wire-route",message:`Wire ${wire.id||"(missing)"} has an invalid free endpoint.`});issues.push({level:"warning",code:"electrical-wire-draft",message:`Wire ${wire.id||"(draft)"} is paused before reaching a destination terminal.`});continue;}
     const from = `${wire.from?.componentId}:${wire.from?.terminal}`, to = `${wire.to?.componentId}:${wire.to?.terminal}`;
     if (!endpoints.has(from) || !endpoints.has(to)) issues.push({level:"error",code:"electrical-wire-endpoint",message:`Wire ${wire.id || "(missing)"} references a missing terminal.`});
     if (from === to) issues.push({level:"error",code:"electrical-wire-self",message:"A wire cannot connect a terminal to itself."});
+    if(wire.waypoints!==undefined&&(!Array.isArray(wire.waypoints)||wire.waypoints.length>200||wire.waypoints.some((point)=>!Number.isFinite(Number(point?.x))||!Number.isFinite(Number(point?.y))||Number(point.x)<0||Number(point.x)>2200||Number(point.y)<0||Number(point.y)>1400)))issues.push({level:"error",code:"electrical-wire-route",message:`Wire ${wire.id||"(missing)"} has invalid route points.`});
     const normalized = [from,to].sort().join("|");
     if (seenWires.has(normalized)) issues.push({level:"error",code:"electrical-wire-duplicate",message:"Duplicate terminal connection."}); else seenWires.add(normalized);
-    for (const endpoint of [from,to]) { const count=wires.filter((item)=>`${item.from?.componentId}:${item.from?.terminal}`===endpoint||`${item.to?.componentId}:${item.to?.terminal}`===endpoint).length;if(count>1)issues.push({level:"error",code:"electrical-terminal-branch",message:`${endpoint} has multiple wires; branch through an explicit junction.`}); }
+    for (const endpoint of [from,to]) { const count=completeWires.filter((item)=>`${item.from?.componentId}:${item.from?.terminal}`===endpoint||`${item.to?.componentId}:${item.to?.terminal}`===endpoint).length;if(count>1)issues.push({level:"error",code:"electrical-terminal-branch",message:`${endpoint} has multiple wires; branch through an explicit junction.`}); }
   }
   for (const component of components) {
     const spec = electricalComponentCatalog[component.type]; if (!spec) continue;
@@ -218,7 +223,7 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
       if (spec.kind === "digital-output-module" && !hasMappedChannel(spec.channels?.outputs)) continue;
       if (spec.kind === "analog-input-module" && !hasMappedChannel(spec.channels?.analogInputs)) continue;
       if (spec.kind === "analog-output-module" && !hasMappedChannel(spec.channels?.analogOutputs)) continue;
-      if (!wires.some((wire) => (wire.from?.componentId === component.id && wire.from?.terminal === terminal) || (wire.to?.componentId === component.id && wire.to?.terminal === terminal))) issues.push({level:"warning",code:"electrical-floating-terminal",message:`${component.reference || component.id} terminal ${terminal} is not wired.`});
+      if (!completeWires.some((wire) => (wire.from?.componentId === component.id && wire.from?.terminal === terminal) || (wire.to?.componentId === component.id && wire.to?.terminal === terminal))) issues.push({level:"warning",code:"electrical-floating-terminal",message:`${component.reference || component.id} terminal ${terminal} is not wired.`});
     }
   }
   return issues;
