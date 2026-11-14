@@ -371,3 +371,10 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
   .workspace.electrical-workspace-active .electrical-board-label > span { position: absolute; top: 66px; left: 20px; }
   .workspace.electrical-workspace-active .electrical-board-label .electrical-safety-badge { position: absolute; left: 171px; max-width: 291px; margin-left: 0; }
 }
+.electrical-board-actions { display: none; align-items: center; gap: 8px; pointer-events: auto; }
+.electrical-board-actions button:nth-child(1) { box-sizing: border-box; width: 92px; min-width: 92px; min-height: 30px; }
+.electrical-board-actions button:nth-child(2) { box-sizing: border-box; width: 102px; min-width: 102px; min-height: 30px; }
+@media (min-width: 1501px) {
+  .workspace.electrical-workspace-active .electrical-board-actions { position: absolute; top: -2px; right: 4px; display: flex; }
+  .workspace.electrical-workspace-active .electrical-view-tools [data-electrical-action="snap"] { display: none; }
+}
