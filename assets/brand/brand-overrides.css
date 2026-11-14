@@ -418,3 +418,9 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 #electricalCanvasContext .electrical-view-tools{position:static!important;inset:auto!important;transform:none!important;margin:0!important;align-self:center}
 #electricalCanvasContext .electrical-canvas-actions button:nth-child(n),
 #electricalCanvasContext .electrical-view-tools>button{flex:0 0 30px!important;width:30px!important;min-width:30px!important}
+
+.electrical-canvas-context .electrical-canvas-primary-tools,
+.electrical-canvas-context .electrical-canvas-secondary-tools{position:static;display:flex;flex:0 0 auto;flex-flow:row nowrap;align-items:center;gap:4px;width:auto;margin:0;transform:none}
+.electrical-canvas-context .electrical-canvas-primary-tools button,
+.electrical-canvas-context .electrical-canvas-secondary-tools>button{box-sizing:border-box;display:inline-flex;flex:0 0 30px;align-items:center;justify-content:center;width:30px;min-width:30px;height:28px;min-height:28px;margin:0;padding:0;font-size:11px;line-height:1;white-space:nowrap}
+@media(max-width:1050px){.electrical-canvas-context .electrical-canvas-primary-tools,.electrical-canvas-context .electrical-canvas-secondary-tools{width:auto;flex-wrap:nowrap}}
