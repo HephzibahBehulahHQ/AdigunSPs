@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 
 const viewportCases = [
   { width: 1894, height: 704, minBoardHeight: 300 },
@@ -10,6 +11,49 @@ const viewportCases = [
 ];
 
 test.beforeEach(async ({ page }) => {
+  const user = {
+    id: randomUUID(),
+    aud: "authenticated",
+    role: "authenticated",
+    email: "",
+    is_anonymous: true,
+    app_metadata: { provider: "anonymous", providers: ["anonymous"] },
+    user_metadata: {},
+    created_at: new Date().toISOString(),
+  };
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const session = {
+    access_token: "adigunsps-e2e-access-token",
+    token_type: "bearer",
+    expires_in: 3600,
+    expires_at: Math.floor(now / 1000) + 3600,
+    refresh_token: "adigunsps-e2e-refresh-token",
+    user,
+  };
+  await page.route(/https:\/\/[^/]+\.supabase\.co\//, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/auth/v1/signup") return route.fulfill({ json: session });
+    if (path === "/auth/v1/user") return route.fulfill({ json: user });
+    if (path === "/rest/v1/rpc/adigun_ensure_guest_session") {
+      return route.fulfill({
+        json: [
+          {
+            started_at: nowIso,
+            expires_at: new Date(now + 4 * 60_000).toISOString(),
+            server_now: nowIso,
+          },
+        ],
+      });
+    }
+    return route.fulfill({
+      status: 501,
+      json: {
+        error: "Unexpected Supabase request in browser acceptance test",
+        path,
+      },
+    });
+  });
   await page.goto("/");
   const welcomeContinue = page.locator("#welcomeContinue");
   await expect(welcomeContinue).toBeVisible();
