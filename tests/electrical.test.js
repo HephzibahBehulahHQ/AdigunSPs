@@ -126,6 +126,13 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const root={dataset:{selectedComponent:contact.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
 }
+{
+  const terminal=createElectricalComponent("phoenixPT25FeedThrough",1),peers=[createElectricalComponent("terminal",1,360,120),createElectricalComponent("terminal",2,360,260)],diagram={components:[terminal,...peers],wires:[]};
+  assert.equal(terminal.manufacturer,"Phoenix Contact");assert.equal(terminal.partNumber,"3209510");assert.equal(terminal.ratedVoltageV,800);assert.equal(terminal.ratedCurrentA,24);assert.deepEqual(terminal.terminals,["1","2"]);
+  for(let index=0;index<terminal.terminals.length;index++){const pin=terminal.terminals[index],result=connectElectricalTerminals(diagram,{componentId:terminal.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`feed-through connection ${pin} is wireable`);diagram.wires.push(result.wire);}
+  const root={dataset:{selectedComponent:terminal.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of terminal.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("Phoenix Contact PT 2,5 product data"));assert.match(electricalSymbolSvg(terminal),/PT 2,5/);
+}
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
