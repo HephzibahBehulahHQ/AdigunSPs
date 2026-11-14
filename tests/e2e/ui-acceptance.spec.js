@@ -904,7 +904,7 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
   const widgets = page.locator("#hmiBoard [data-hmi-widget]");
   for (const type of ["switch", "lamp", "value", "trend"]) {
     const count = await widgets.count();
-    await page.locator(`#hmiPane [data-hmi-add="${type}"]`).click();
+    await page.locator(`#editorToolboxDock [data-hmi-add="${type}"]`).click();
     await expect(widgets).toHaveCount(count + 1);
   }
   await page.locator("#processesButton").click();
