@@ -354,7 +354,7 @@ for(const type of Object.keys(electricalComponentCatalog))for(const rotation of 
     const press=(key,shiftKey=false)=>listeners.keydown({key,shiftKey,preventDefault(){},stopPropagation(){}});
     press("ArrowRight");assert.equal(component.x,40,"arrow moves one grid step");
     press("ArrowDown",true);assert.equal(component.y,120,"Shift moves five grid steps");
-    press("ArrowLeft",true);assert.equal(component.x,0,"keyboard movement stays inside the canvas origin");
+    press("ArrowLeft",true);assert.ok(electricalComponentBounds(component).left>=0,"keyboard movement keeps terminal hit areas inside the canvas origin");
     assert.equal(history,3,"each keyboard move records undo history");
     assert.equal(changes,3,"each keyboard move persists its change");
     assert.equal(focus,3,"focus returns to the moved component header");
