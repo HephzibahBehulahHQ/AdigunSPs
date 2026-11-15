@@ -107,7 +107,7 @@ Commands include **New project** (start empty), **Project manager** (open saved 
 
 ## Building a project
 
-AdigunSPs does not have a general-purpose “Build” button. In this app, **Run** starts the PLC simulation; **Compile** checks and runs the supported Structured Text workflow.
+There is no general-purpose Build button. **Run** starts PLC simulation; **Compile** runs supported Structured Text.
 
 **What you'll see:** Starting **Run** opens the simulation HUD with scan, active rung, active timer, and status readouts; it also adds a live System log. Voltage, current, and motor RPM are shown as **Not modeled**.
 
@@ -116,7 +116,7 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
 ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling: **Project → Cyclic ST tasks**. See User Guide.
 
-The Siemens 3RU2126-4BC0 relay exposes three phase pairs and 95/96 NC + 97/98 NO; **Overload tripped** switches both auxiliary contacts.
+The Siemens 3RU2126-4BC0 relay exposes three phase pairs and 95/96 NC + 97/98 NO; **Overload tripped** switches both auxiliary contacts. Schneider XB5AA31 is a spring-return NO button, terminals 13–14.
 
 4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. Fix reported compile errors.
 
