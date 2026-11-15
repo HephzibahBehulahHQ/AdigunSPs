@@ -13,10 +13,16 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const example of examples){
     const project=makeProjectFromExample(example),components=project.electrical.components;
     assert.equal(components.some((component)=>component.type==="pushbuttonNO"||component.type==="pilotLamp"||component.type==="contactor3P"),false,`${example.id} uses named, source-backed contact, indicator, and motor-contactor models`);
+    const examplePlc=components.find((component)=>component.type==="siemensS71212CG2");
+    assert.ok(examplePlc,`${example.id} includes the Siemens CPU 1212C G2`);
+    assert.equal(examplePlc.manufacturer,"Siemens",`${example.id} preserves the PLC manufacturer`);
+    assert.equal(examplePlc.partNumber,"6ES7212-1AG50-0XB0",`${example.id} preserves the documented PLC order number`);
+    assert.equal(components.some((component)=>component.type==="genericPlc24v4di4do"),false,`${example.id} does not use the generic PLC placeholder`);
     const legacy=createExampleElectricalDiagram(project.tags,project.io,project.initialState,example.outputLoadTypes||{}),legacyState=simulateElectricalDiagram(legacy,project.initialState,project.initialState),sourcedState=simulateElectricalDiagram(project.electrical,project.initialState,project.initialState);
     assert.ok(components.some((component)=>component.type==="sitopPSU100C"),`${example.id} includes the source-backed Siemens 24 V supply`);
     assert.ok(components.some((component)=>component.type==="singlePhaseSupply"),`${example.id} models the SITOP AC input supply`);
     assert.ok(legacy.components.some((component)=>component.type==="supply24vdc")&&!legacy.components.some((component)=>component.type==="sitopPSU100C"),"direct example-generator callers retain their generic 24 V default");
+    assert.ok(legacy.components.some((component)=>component.type==="genericPlc24v4di4do")&&!legacy.components.some((component)=>component.type==="siemensS71212CG2"),"direct example-generator callers retain their generic PLC default");
     assert.deepEqual(sourcedState.inputs,legacyState.inputs,`${example.id} keeps all PLC input states with source-backed contacts`);
     const byReference=(diagram,states)=>Object.fromEntries(diagram.components.filter((component)=>Object.hasOwn(states.energized,component.id)).map((component)=>[component.reference,states.energized[component.id]]));
     assert.deepEqual(byReference(project.electrical,sourcedState),byReference(legacy,legacyState),`${example.id} keeps all simulated load states with source-backed indicators`);
