@@ -106,13 +106,27 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 {
   const contactor=createElectricalComponent("siemensSirius3RT20171WB41",1),expected=["1/L1","3/L2","5/L3","13","A1+","2/T1","4/T2","6/T3","14","A2−"];
   assert.equal(contactor.manufacturer,"Siemens");assert.equal(contactor.partNumber,"3RT2017-1WB41");assert.deepEqual(contactor.terminals,expected);
+  assert.equal(electricalComponentCatalog[contactor.type].kind,"contactor");assert.deepEqual(electricalComponentCatalog[contactor.type].mainPairs,[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]]);assert.deepEqual(electricalComponentCatalog[contactor.type].coil,["A1+","A2−"]);assert.deepEqual(electricalComponentCatalog[contactor.type].auxNOPair,["13","14"]);
   const diagram={components:[contactor,createElectricalComponent("pilotLamp",1,360,120)],wires:[]};
   for(const pin of expected){const peer=createElectricalComponent("terminal",diagram.components.length,600,120+diagram.wires.length*120);diagram.components.push(peer);const result=connectElectricalTerminals(diagram,{componentId:contactor.id,terminal:pin},{componentId:peer.id,terminal:"1"});assert.equal(result.ok,true,`${pin} is a connectable manufacturer terminal`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:contactor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is displayed as its own terminal`);
   assert.ok(root.innerHTML.includes("Siemens SIRIUS 3RT2017-1WB41 data sheet"));
-  assert.ok(root.innerHTML.includes("does not model validated coil voltage, power switching, contact ratings, or device performance"));
+  assert.ok(root.innerHTML.includes("20.4–44.4 V"));
   assert.match(electricalSymbolSvg(contactor),/3RT20 · 3 NO/);
+  const makeCircuit=(coilSupplyType="supply24vdc",coilVoltage=null,coilConnected=true)=>{
+    const source=createElectricalComponent("supply3phase",1),dc=createElectricalComponent(coilSupplyType,2),starter=createElectricalComponent(contactor.type,2),motor=createElectricalComponent("threePhaseMotor",1),circuit={components:[source,dc,starter,motor],wires:[]};
+    if(coilVoltage!==null)dc.nominalVoltageV=coilVoltage;
+    const wire=(from,fromPin,to,toPin)=>{const result=connectElectricalTerminals(circuit,{componentId:from.id,terminal:fromPin},{componentId:to.id,terminal:toPin});assert.equal(result.ok,true,`${from.reference}.${fromPin} connects to ${to.reference}.${toPin}`);circuit.wires.push(result.wire);};
+    for(const [phase,input,output,motorPin] of [["L1","1/L1","2/T1","U1"],["L2","3/L2","4/T2","V1"],["L3","5/L3","6/T3","W1"]]){wire(source,phase,starter,input);wire(starter,output,motor,motorPin);}
+    if(coilConnected){wire(dc,coilSupplyType==="singlePhaseSupply"?"L":"+",starter,"A1+");wire(dc,coilSupplyType==="singlePhaseSupply"?"N":"−",starter,"A2−");}
+    return {circuit,starter,motor};
+  };
+  const valid=makeCircuit("supply24vdc",null,false);assert.equal(simulateElectricalDiagram(valid.circuit).energized[valid.motor.id],false,"open contactor poles isolate the three-phase motor before the coil is powered");
+  const closedCircuit=makeCircuit(),closed=simulateElectricalDiagram(closedCircuit.circuit);assert.equal(closed.componentStates[closedCircuit.starter.id].coilEnergized,true,"the 24 V DC coil energizes from the connected rated DC source");assert.equal(closed.componentStates[closedCircuit.starter.id].mainContactsClosed,true);assert.equal(closed.energized[closedCircuit.motor.id],true,"the three main poles connect all three phases to the motor");
+  assert.notEqual(electricalSymbolSvg({...closedCircuit.starter,...closed.componentStates[closedCircuit.starter.id]}),electricalSymbolSvg({...closedCircuit.starter,mainContactsClosed:false}),"the contactor symbol shows its simulated pole position");
+  for(const voltage of [12,48]){const outOfRange=makeCircuit("supply24vdc",voltage),result=simulateElectricalDiagram(outOfRange.circuit);assert.equal(result.componentStates[outOfRange.starter.id].coilEnergized,false,`${voltage} V DC lies outside the documented coil range`);assert.equal(result.energized[outOfRange.motor.id],false);}
+  const acCoil=makeCircuit("singlePhaseSupply"),acResult=simulateElectricalDiagram(acCoil.circuit);assert.equal(acResult.componentStates[acCoil.starter.id].coilEnergized,false,"230 V AC cannot energize the documented 24 V DC coil model");assert.equal(acResult.energized[acCoil.motor.id],false);
 }
 {
   const component=createElectricalComponent("pilotLamp",1,120,120);
