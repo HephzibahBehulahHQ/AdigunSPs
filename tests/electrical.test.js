@@ -290,6 +290,26 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 }
 
 {
+  const source=createElectricalComponent("supply24vdc",1),button=createElectricalComponent("schneiderXB5AA42RedPushbuttonNC",1),lamp=createElectricalComponent("pilotLamp",1),diagram={components:[source,button,lamp],wires:[]};
+  assert.equal(button.manufacturer,"Schneider Electric");assert.equal(button.partNumber,"XB5AA42");assert.deepEqual(button.terminals,["21","22"]);
+  assert.equal(electricalComponentCatalog[button.type].kind,"contact");assert.equal(electricalComponentCatalog[button.type].normallyClosed,true);
+  for(const [from,to] of [
+    [{componentId:source.id,terminal:"+"},{componentId:button.id,terminal:"21"}],
+    [{componentId:button.id,terminal:"22"},{componentId:lamp.id,terminal:"X1"}],
+    [{componentId:lamp.id,terminal:"X2"},{componentId:source.id,terminal:"−"}],
+  ]){const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true,"the documented NC terminals are independently connectable");diagram.wires.push(result.wire);}
+  const released=simulateElectricalDiagram(diagram,{S1:false}),pressed=simulateElectricalDiagram(diagram,{S1:true});
+  assert.equal(released.energized[lamp.id],true,"released spring-return button conducts through its NC contact");
+  assert.equal(pressed.energized[lamp.id],false,"pressed manual input opens the NC contact");
+  assert.equal(released.componentStates[button.id].contactClosed,true);assert.equal(pressed.componentStates[button.id].contactClosed,false);
+  assert.ok(!validateElectricalDiagram(diagram).some(issue=>issue.level==="error"));
+  const root={dataset:{selectedComponent:button.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of button.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`documented terminal ${pin} is a connectable editor endpoint`);
+  assert.ok(root.innerHTML.includes("XB5AA42"));assert.match(electricalSymbolSvg(button),/21–22 NC/);
+  assert.notEqual(electricalSymbolSvg({...button,...released.componentStates[button.id]}),electricalSymbolSvg({...button,...pressed.componentStates[button.id]}),"the symbol follows the manual NC contact state");
+}
+
+{
   const contact=createElectricalComponent("siemens3SU1400NOContact",1),peers=contact.terminals.map((_,index)=>createElectricalComponent("terminal",index+1,360,120+index*100)),diagram={components:[contact,...peers],wires:[]};
   assert.equal(contact.manufacturer,"Siemens");assert.equal(contact.partNumber,"3SU1400-1AA10-1BA0");assert.equal(electricalComponentCatalog[contact.type].kind,"contact");assert.equal(contact.normallyClosed,false);assert.deepEqual(contact.terminals,["3","4"]);
   for(let index=0;index<contact.terminals.length;index++){const pin=contact.terminals[index],result=connectElectricalTerminals(diagram,{componentId:contact.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`terminal ${pin} is individually connectable`);diagram.wires.push(result.wire);}
