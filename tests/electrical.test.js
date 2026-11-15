@@ -396,6 +396,22 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   assert.ok(root.innerHTML.includes("3RU2126-4BC0"),"the verified Siemens part identity appears in the editor");
   assert.match(electricalSymbolSvg({...relay,...atRest.componentStates[relay.id]}),/95–96 NC/u);
   assert.match(electricalSymbolSvg({...relay,...tripped.componentStates[relay.id]}),/97–98 NO/u);
+  {
+    const source=createElectricalComponent("supply3phase",1),dc=createElectricalComponent("supply24vdc",2),tripRelay=createElectricalComponent("siemens3RU21264BC0OverloadRelay",1),contactor=createElectricalComponent("contactor3P",1),motor=createElectricalComponent("threePhaseMotor",1),circuit={components:[source,dc,tripRelay,contactor,motor],wires:[]};
+    const wire=(from,fromPin,to,toPin)=>{const result=connectElectricalTerminals(circuit,{componentId:from.id,terminal:fromPin},{componentId:to.id,terminal:toPin});assert.equal(result.ok,true,`wire ${from.reference}.${fromPin} to ${to.reference}.${toPin}`);circuit.wires.push(result.wire);};
+    for(const [phase,line,load,contactorLine,contactorLoad,pin] of [["L1","1/L1","2/T1","1L1","2T1","U1"],["L2","3/L2","4/T2","3L2","4T2","V1"],["L3","5/L3","6/T3","5L3","6T3","W1"]]){wire(source,phase,tripRelay,line);wire(tripRelay,load,contactor,contactorLine);wire(contactor,contactorLoad,motor,pin);}
+    wire(source,"PE",motor,"PE");wire(dc,"+",tripRelay,"95");wire(tripRelay,"96",contactor,"A1");wire(contactor,"A2",dc,"−");
+    const atRest=simulateElectricalDiagram(circuit);
+    assert.equal(atRest.componentStates[contactor.id].coilEnergized,true,"healthy overload NC contact completes the contactor coil circuit");
+    assert.equal(atRest.energized[motor.id],true,"the energized contactor passes all phases through the motor");
+    const trippedCircuit=structuredClone(circuit);trippedCircuit.components.find((item)=>item.id===tripRelay.id).tripped=true;
+    const result=simulateElectricalDiagram(trippedCircuit);
+    assert.equal(result.componentStates[tripRelay.id].contactPairStates[0],false,"the trip opens 95/96");
+    assert.equal(result.componentStates[contactor.id].coilEnergized,false,"opening 95/96 drops the contactor coil");
+    assert.equal(result.componentStates[contactor.id].mainContactsClosed,false,"the contactor opens its main poles");
+    assert.equal(result.energized[motor.id],false,"the tripped overload control circuit disconnects the motor");
+  }
+
 }
 
 {
