@@ -182,7 +182,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.equal(contact.manufacturer,"Siemens");assert.equal(contact.partNumber,"3SU1400-1AA10-1BA0");assert.equal(electricalComponentCatalog[contact.type].kind,"contact");assert.equal(contact.normallyClosed,false);assert.deepEqual(contact.terminals,["3","4"]);
   for(let index=0;index<contact.terminals.length;index++){const pin=contact.terminals[index],result=connectElectricalTerminals(diagram,{componentId:contact.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`terminal ${pin} is individually connectable`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:contact.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
-  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes('data-electrical-input="S1"'),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
+  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("data-electrical-input=\"S1\""),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
 }
 {
   const supply=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU1400NOContact",1,320,80),lamp=createElectricalComponent("pilotLamp",1,560,80),diagram={components:[supply,contact,lamp],wires:[]};
@@ -214,7 +214,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 }
 {
   const cpu=createElectricalComponent("siemensS71212CG2",1),generic=createElectricalComponent("genericPlc24v4di4do",1);
-  assert.equal(cpu.manufacturer,"Siemens");assert.equal(cpu.partNumber,"6ES7212-1AG50-0XB0");assert.equal(electricalComponentCatalog[cpu.type].kind,"device-reference");assert.equal(electricalComponentCatalog[generic.type].kind,"plc","the functional generic PLC remains unchanged");
+  assert.equal(cpu.manufacturer,"Siemens");assert.equal(cpu.partNumber,"6ES7212-1AG50-0XB0");assert.equal(electricalComponentCatalog[cpu.type].kind,"plc");assert.equal(electricalComponentCatalog[generic.type].kind,"plc","the functional generic PLC remains unchanged");assert.deepEqual(electricalComponentCatalog[cpu.type].channels.inputPins,{I1:"X10-1",I2:"X10-3",I3:"X10-5",I4:"X10-7",I5:"X10-9",I6:"X10-2",I7:"X10-4",I8:"X10-6"});assert.deepEqual(electricalComponentCatalog[cpu.type].channels.outputPins,{Q1:"X11-3",Q2:"X11-5",Q3:"X11-7",Q4:"X11-4",Q5:"X11-6",Q6:"X11-8"});
   assert.equal(cpu.terminals.length,23,"CPU has 5 assigned X80 terminals, 10 X10 terminals, and 8 X11 terminals");assert.equal(electricalComponentCatalog[cpu.type].terminalLayout.length,24,"physical layout still shows all X80(6), X10(10), and X11(8) positions");assert.equal(cpu.terminals.includes("X80-3"),false,"unassigned X80 pin 3 is not connectable");
   assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X10-1"],"X10 physical pin 1 · digital input DI a.0");assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X10-2"],"X10 physical pin 2 · digital input DI a.5");assert.equal(electricalComponentCatalog[cpu.type].terminalNotes["X11-8"],"X11 physical pin 8 · digital output DQ a.5");
   const peers=cpu.terminals.map((_,index)=>createElectricalComponent("supply24vdc",index+1,0,index*100)),diagram={components:[cpu,...peers],wires:[]};
@@ -223,6 +223,26 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const pin of cpu.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered individually`);
   assert.ok(root.innerHTML.includes("X10 physical pin 1 · digital input DI a.0"),"pin tooltip exposes manufacturer connector and signal mapping");assert.match(electricalSymbolSvg(cpu),/CPU 1212C/u);assert.match(electricalSymbolSvg(cpu),/X80/u);assert.ok(root.innerHTML.includes("Siemens S7-1200 G2 System Manual · CPU 1212C terminal assignments"));
   assert.ok(validateElectricalDiagram(diagram).every((issue)=>issue.level!=="error"),"the source-backed terminals connect without invalid endpoint errors");
+}
+{
+  const cpu=createElectricalComponent("siemensS71212CG2",1),supply=createElectricalComponent("supply24vdc",2),positive=createElectricalComponent("junction",3),negative=createElectricalComponent("junction",4);
+  cpu.ioMap.I1={tag:"Start",address:"I0.0"};
+  const diagram={components:[cpu,supply,positive,negative],wires:[]};
+  const wire=(a,at,b,bt)=>{const result=connectElectricalTerminals(diagram,{componentId:a.id,terminal:at},{componentId:b.id,terminal:bt});assert.equal(result.ok,true,`${a.reference}.${at} connects to ${b.reference}.${bt}`);diagram.wires.push(result.wire);};
+  wire(supply,"+",positive,"1");wire(positive,"2",cpu,"X80-1");wire(positive,"3",cpu,"X10-1");wire(supply,"−",negative,"1");wire(negative,"2",cpu,"X80-5");wire(negative,"3",cpu,"X10-8");
+  assert.equal(simulateElectricalDiagram(diagram).inputs.Start,true,"Siemens DI a.0 reads on only from its documented powered input terminal and common");
+  const unpowered=structuredClone(diagram);unpowered.wires=unpowered.wires.filter((item)=>!(item.from.componentId===positive.id&&item.from.terminal==="2")&&!(item.to.componentId===positive.id&&item.to.terminal==="2"));
+  assert.equal(simulateElectricalDiagram(unpowered).inputs.Start,false,"the Siemens inputs remain off when the CPU's documented DC supply is disconnected");
+}
+{
+  const cpu=createElectricalComponent("siemensS71212CG2",1),supply=createElectricalComponent("supply24vdc",2),positive=createElectricalComponent("junction",3),negative=createElectricalComponent("junction",4),lamp={...createElectricalComponent("pilotLamp",5),tag:"Lamp"};
+  cpu.ioMap.Q1={tag:"Lamp",address:"Q0.0"};
+  const diagram={components:[cpu,supply,positive,negative,lamp],wires:[]};
+  const wire=(a,at,b,bt)=>{const result=connectElectricalTerminals(diagram,{componentId:a.id,terminal:at},{componentId:b.id,terminal:bt});assert.equal(result.ok,true,`${a.reference}.${at} connects to ${b.reference}.${bt}`);diagram.wires.push(result.wire);};
+  wire(supply,"+",positive,"1");wire(positive,"2",cpu,"X80-1");wire(positive,"3",cpu,"X11-2");wire(supply,"−",negative,"1");wire(negative,"2",cpu,"X80-5");wire(negative,"3",cpu,"X11-1");wire(cpu,"X11-3",lamp,"X1");wire(lamp,"X2",negative,"4");
+  assert.equal(simulateElectricalDiagram(diagram,{}, {Lamp:true}).energized[lamp.id],true,"Siemens DQ a.0 drives a load with documented CPU power and output common wiring");
+  const missingCommon=structuredClone(diagram);missingCommon.wires=missingCommon.wires.filter((item)=>!(item.from.componentId===negative.id&&item.from.terminal==="3")&&!(item.to.componentId===negative.id&&item.to.terminal==="3"));
+  assert.equal(simulateElectricalDiagram(missingCommon,{}, {Lamp:true}).energized[lamp.id],false,"a Siemens output is off when its documented 2M return is disconnected");
 }
 {
   const source=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1,360,240),diagram={components:[source,lamp],wires:[]};
@@ -344,7 +364,7 @@ for(const [type,spec] of Object.entries(electricalComponentCatalog)) {
   const component=createElectricalComponent(type,1);
   assert.deepEqual(component.terminals,spec.terminals,`${type} instance persists the catalog terminal layout`);
   assert.match(component.reference,new RegExp(`^${spec.prefix}\\d+$`),`${type} receives a reference designation`);
-  for(const channels of Object.values(spec.channels||{}))for(const channel of channels)assert.ok(spec.terminals.some((pin)=>pin===channel||pin.startsWith(`${channel}+`)||pin.startsWith(`${channel}−`)),`${type} channel ${channel} maps to a declared terminal`);
+  for(const [kind,channels] of Object.entries(spec.channels||{}))if(Array.isArray(channels))for(const channel of channels){const physicalPin=spec.channels.inputPins?.[channel]||spec.channels.outputPins?.[channel]||channel;assert.ok(spec.terminals.some((pin)=>pin===physicalPin||pin.startsWith(`${channel}+`)||pin.startsWith(`${channel}−`)),`${type} channel ${channel} maps to a declared terminal`);}
   for(const pair of [...(spec.mainPairs||[]),...(spec.coil?[spec.coil]:[]),...(spec.auxNOPair?[spec.auxNOPair]:[]),...(spec.auxNCPair?[spec.auxNCPair]:[]),...Object.values(spec.positionPairs||{})])assert.ok(pair.every((pin)=>spec.terminals.includes(pin)),`${type} internal pair ${pair.join("/")} uses declared terminals`);
   assert.match(electricalSymbolSvg(component),/^<svg class="electrical-standard-symbol"[\s\S]*<\/svg>$/u,`${type} renders a named electrical schematic symbol`);
 }
