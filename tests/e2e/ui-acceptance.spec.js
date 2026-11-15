@@ -1098,6 +1098,56 @@ test("imported overlapping schematic components can be dragged clear without los
   await expect(wire).toHaveAttribute("d", /L240 400/);
 });
 
+test("saved projects repair overlapping schematic components when reopened", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  const name="Saved overlap recovery fixture", project={
+    id:"saved-overlap-"+randomUUID(),name,language:"en",updatedAt:Date.now(),tags:[],io:{inputs:[],outputs:[]},initialState:{},rungs:[],
+    electrical:{
+      components:[
+        {id:"saved-s1",type:"pushbuttonNO",reference:"S1",label:"Start",x:300,y:300,rotation:0,terminals:["13","14"]},
+        {id:"saved-h1",type:"pilotLamp",reference:"H1",label:"Run lamp",x:320,y:320,rotation:0,terminals:["X1","X2"]}
+      ],
+      wires:[{id:"saved-wire",from:{componentId:"saved-s1",terminal:"14"},to:{componentId:"saved-h1",terminal:"X1"},waypoints:[{x:560,y:500}]}],
+      inputStates:{}
+    }
+  };
+  await page.evaluate((saved)=>new Promise((resolve,reject)=>{
+    const request=indexedDB.open("adigunsps-local",1);
+    request.onerror=()=>reject(request.error);
+    request.onsuccess=()=>{
+      const database=request.result,transaction=database.transaction("projects","readwrite");
+      transaction.objectStore("projects").put(saved);
+      transaction.oncomplete=()=>{database.close();resolve(true);};
+      transaction.onerror=()=>{database.close();reject(transaction.error);};
+    };
+  }),project);
+  await page.keyboard.press("Control+k");
+  await page.locator("#paletteSearch").fill("Saved overlap recovery fixture");
+  await page.locator("#paletteResults .palette-command").filter({hasText:name}).click();
+  await expect(page.locator("#modal")).toBeHidden();
+  await page.locator("#electricalTab").click();
+
+  const first=page.locator('#electricalBoard [data-component-id="saved-s1"]');
+  const second=page.locator('#electricalBoard [data-component-id="saved-h1"]');
+  const wire=page.locator('#electricalBoard [data-wire-id="saved-wire"]');
+  await expect(first).toBeVisible();
+  await expect(second).toBeVisible();
+  await expect(wire).toHaveAttribute("d",/L560 500/);
+  const a=await first.boundingBox(),b=await second.boundingBox();
+  expect(a.x+a.width+12<=b.x||b.x+b.width+12<=a.x||a.y+a.height+12<=b.y||b.y+b.height+12<=a.y,"saved project components open without overlapping").toBe(true);
+  const persisted=await page.evaluate((id)=>new Promise((resolve,reject)=>{
+    const request=indexedDB.open("adigunsps-local",1);
+    request.onerror=()=>reject(request.error);
+    request.onsuccess=()=>{
+      const database=request.result,transaction=database.transaction("projects","readonly"),query=transaction.objectStore("projects").get(id);
+      query.onsuccess=()=>{database.close();resolve(query.result);};
+      query.onerror=()=>{database.close();reject(query.error);};
+    };
+  }),project.id);
+  expect(persisted.electrical.components.find((item)=>item.id==="saved-h1").x).not.toBe(320);
+  expect(persisted.electrical.wires[0]).toEqual(project.electrical.wires[0]);
+});
+
 test("real multi-pin schematic models recover from example-style overlap without changing wires", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   const cpuTerminals=["X80-1","X80-2","X80-4","X80-5","X80-6",...Array.from({length:10},(_,i)=>`X10-${i+1}`),...Array.from({length:8},(_,i)=>`X11-${i+1}`)];
