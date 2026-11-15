@@ -14,6 +14,7 @@ For a routed cable, choose **Connect wire**, pick a source terminal, add bends b
 | Single-phase supply | L, N, and PE terminals; connectivity only | Draw a single-phase load path |
 | Three-phase supply | L1/L2/L3/PE connectivity | Draw a three-phase motor starter |
 | Generic PLC, 4 DI / 4 DO | Simulated Boolean input/output tag mapping | Map Start to I0.0 and Motor to Q0.0 |
+| Siemens SIMATIC S7-1200 G2 CPU 1212C DC/DC/DC (6ES7212-1AG50-0XB0) | Source-backed PLC model with 8 logical inputs and 6 outputs mapped to the Siemens X10/X11 terminal numbers; simulation requires wired X80 power and X10/X11 commons | Map I1 to X10-1 (DI a.0), Q1 to X11-3 (DQ a.0), and wire 24 V DC power/common according to the Siemens terminal table |
 | 4-channel digital input module | Four configurable Boolean inputs | Connect four simulated sensors |
 | 4-channel digital output module | Four configurable Boolean outputs | Map four output tags |
 | 2-channel analog input module | Two scalar signal channels | Read a simulated level signal |
@@ -44,7 +45,7 @@ For a routed cable, choose **Connect wire**, pick a source terminal, add bends b
 | Junction | Explicit wire split point | Branch a control signal |
 | Protective earth / ground common | Diagram connection node; no earth-fault analysis | Show the PE/common reference |
 
-References and component labels are unique within a project. Ratings shown for generic models are editable teaching values, not verified hardware specifications. The two source-backed schematic references include manufacturer source links in the component properties and their pin markers. The fuse model requires replacement after its test trip, but does not calculate current or thermal response.
+References and component labels are unique within a project. Ratings shown for generic models are editable teaching values, not verified hardware specifications. Source-backed schematic models include manufacturer source links in the component properties and their pin markers. Siemens CPU I/O mapping applies only to the documented CPU 1212C digital terminals and local project tag state; CPU program execution, timing, diagnostics, analog functions, hardware communication, and physical performance are not simulated. The fuse model requires replacement after its test trip, but does not calculate current or thermal response.
 
 ## PLC instructions
 
