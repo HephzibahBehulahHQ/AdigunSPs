@@ -269,7 +269,13 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   const root={dataset:{selectedComponent:terminal.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of terminal.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`PE connection ${pin} appears as a connectable pin`);
   assert.ok(root.innerHTML.includes("Phoenix Contact PT 2,5-PE product data"));assert.match(electricalSymbolSvg(terminal),/>PE</);
-  assert.ok(root.innerHTML.includes("Physical grounding, DIN-rail bonding and current carrying capacity are not simulated"));
+  assert.ok(root.innerHTML.includes("two manufacturer-specified conductor connections are modeled as ideal pass-through continuity"));
+}
+{
+  const source=createElectricalComponent("supply24vdc",1),terminal=createElectricalComponent("phoenixPT25PE",1),lamp=createElectricalComponent("pilotLamp",1),diagram={components:[source,terminal,lamp],wires:[]};
+  const wire=(a,ap,b,bp)=>{const result=connectElectricalTerminals(diagram,{componentId:a.id,terminal:ap},{componentId:b.id,terminal:bp});assert.equal(result.ok,true);diagram.wires.push(result.wire);};
+  wire(source,"+",terminal,"1");wire(terminal,"2",lamp,"X1");wire(lamp,"X2",source,"−");
+  assert.equal(simulateElectricalDiagram(diagram).energized[lamp.id],true,"the PE block's two conductor connections have ideal continuity");
 }
 {
   const source=createElectricalComponent("supply24vdc",1),button=createElectricalComponent("schneiderXB5AA31GreenPushbutton",1),lamp=createElectricalComponent("pilotLamp",1),diagram={components:[source,button,lamp],wires:[]};
