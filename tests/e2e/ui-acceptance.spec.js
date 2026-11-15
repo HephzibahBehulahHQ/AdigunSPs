@@ -1257,6 +1257,20 @@ test("source-backed Siemens NO contact manually switches its wired simulation lo
   await expect(contact).toHaveAttribute("data-contact-state","closed");
   await expect(lamp).toHaveClass(/energized/);
 });
+test("Siemens 3RV2 breaker inspector opens all three schematic poles", async ({ page }) => {
+  await page.setViewportSize({width:1894,height:850});
+  await page.locator("#electricalTab").click();
+  await page.locator("#electricalToolboxDock #electricalPalette").selectOption("siemensSirius3RV20111JA10");
+  await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
+  const breaker=page.locator('#electricalBoard [data-component-type="siemensSirius3RV20111JA10"]').last();
+  await expect(breaker.locator('.electrical-port')).toHaveCount(6);
+  const control=page.locator('#electricalProperties input[name="breakerOpen"]');
+  await expect(control).toBeVisible();await control.check();
+  await page.locator('#electricalProperties button[type="submit"]').click();
+  await expect(breaker).toHaveAttribute("data-contact-state","open");
+  await expect(breaker).toHaveAttribute("aria-label",/Open/);
+});
+
 test("component bodies remain draggable while wire mode is armed", async ({ page }) => {
   await page.setViewportSize({width:1894,height:850});
   await page.locator("#electricalTab").click();
