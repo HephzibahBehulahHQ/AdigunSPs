@@ -457,7 +457,7 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
 }
 {
   const motor=createElectricalComponent("wegW22XBCMotor",1),expected=["U1","V1","W1","U2","V2","W2"],peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,400,120+index*90)),diagram={components:[motor,...peers],wires:[]};
-  assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"W22XB-C · frame 315–500 family reference");assert.deepEqual(motor.terminals,expected);
+  assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"W22XB-C · frame 315–500 family reference");assert.equal(electricalComponentCatalog[motor.type].kind,"motor");assert.deepEqual(electricalComponentCatalog[motor.type].windingPairs,[["U1","U2"],["V1","V2"],["W1","W2"]]);assert.deepEqual(motor.terminals,expected);
   for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:motor.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is an individually wireable winding terminal`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:motor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("WEG W22XB-C motor instruction manual · connection diagrams"));assert.match(electricalSymbolSvg(motor),/WEG W22XB-C · 6 LEAD/);
