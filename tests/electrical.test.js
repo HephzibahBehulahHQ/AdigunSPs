@@ -717,11 +717,20 @@ assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {Scale
 {
   const breaker=createElectricalComponent("siemensSirius3RV20111JA10",1),expected=["1/L1","3/L2","5/L3","2/T1","4/T2","6/T3"];
   assert.equal(breaker.manufacturer,"Siemens");assert.equal(breaker.partNumber,"3RV2011-1JA10");assert.deepEqual(breaker.terminals,expected);
+  assert.deepEqual(electricalComponentCatalog.siemensSirius3RV20111JA10.mainPairs,[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]]);
+  assert.equal(electricalComponentCatalog.siemensSirius3RV20111JA10.kind,"multi-pole-breaker");assert.equal(breaker.breakerOpen,false);
   const peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,360,120+index*100)),diagram={components:[breaker,...peers],wires:[]};
-  for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:breaker.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is a connectable breaker terminal`);diagram.wires.push(result.wire);}
-  const root={dataset:{selectedComponent:breaker.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
-  for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as its own connectable pin`);
+  for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:breaker.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,"each breaker pin can connect");diagram.wires.push(result.wire);}
+  const source=createElectricalComponent("supply3phase",1),motor=createElectricalComponent("threePhaseMotor",1),circuit={components:[source,breaker,motor],wires:[]};
+  const wire=(a,ap,b,bp)=>{const result=connectElectricalTerminals(circuit,{componentId:a.id,terminal:ap},{componentId:b.id,terminal:bp});assert.equal(result.ok,true);circuit.wires.push(result.wire);};
+  for(const [phase,input,output,motorPin] of [["L1","1/L1","2/T1","U1"],["L2","3/L2","4/T2","V1"],["L3","5/L3","6/T3","W1"]]){wire(source,phase,breaker,input);wire(breaker,output,motor,motorPin);}
+  assert.equal(simulateElectricalDiagram(circuit).energized[motor.id],true,"closed poles pass all phases");
+  breaker.breakerOpen=true;const openResult=simulateElectricalDiagram(circuit);
+  assert.equal(openResult.energized[motor.id],false,"opening all poles isolates motor");assert.equal(openResult.componentStates[breaker.id].contactClosed,false);assert.equal(openResult.componentStates[breaker.id].breakerOpen,true);
+  diagram.simulation=simulateElectricalDiagram(diagram);const root={dataset:{selectedComponent:breaker.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of expected)assert.ok(root.innerHTML.includes('data-terminal="'+pin+'"'),"each marked pin is rendered");
   assert.ok(root.innerHTML.includes("Siemens SIRIUS 3RV2011-1JA10 data sheet"));assert.match(electricalSymbolSvg(breaker),/3RV2 · 3 POLE/);assert.match(electricalSymbolSvg(breaker),/I&gt;/);
+  assert.notEqual(electricalSymbolSvg(breaker),electricalSymbolSvg({...breaker,breakerOpen:false}));assert.match(root.innerHTML,/name="breakerOpen"/);assert.match(root.innerHTML,/data-contact-state="open"/);
 }
 
 {
