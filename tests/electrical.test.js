@@ -420,7 +420,16 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
 {
   const terminal=createElectricalComponent("phoenixPT25FeedThrough",1),peers=[createElectricalComponent("terminal",1,360,120),createElectricalComponent("terminal",2,360,260)],diagram={components:[terminal,...peers],wires:[]};
   assert.equal(terminal.manufacturer,"Phoenix Contact");assert.equal(terminal.partNumber,"3209510");assert.equal(terminal.ratedVoltageV,800);assert.equal(terminal.ratedCurrentA,24);assert.deepEqual(terminal.terminals,["1","2"]);
+  assert.equal(electricalComponentCatalog[terminal.type].kind,"pass-through","the sourced feed-through terminal conducts between its two connection points");
   for(let index=0;index<terminal.terminals.length;index++){const pin=terminal.terminals[index],result=connectElectricalTerminals(diagram,{componentId:terminal.id,terminal:pin},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`feed-through connection ${pin} is wireable`);diagram.wires.push(result.wire);}
+  const supply=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1),circuit={components:[supply,terminal,lamp],wires:[]};
+  for(const [from,to] of [
+    [{componentId:supply.id,terminal:"+"},{componentId:terminal.id,terminal:"1"}],
+    [{componentId:terminal.id,terminal:"2"},{componentId:lamp.id,terminal:"X1"}],
+    [{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}],
+  ]){const result=connectElectricalTerminals(circuit,from,to);assert.equal(result.ok,true,"the feed-through's individually marked pins connect to the circuit");circuit.wires.push(result.wire);}
+  assert.equal(simulateElectricalDiagram(circuit).energized[lamp.id],true,"the 1–2 feed-through carries the simulated circuit path");
+  assert.ok(!validateElectricalDiagram(circuit).some(issue=>issue.level==="error"));
   const root={dataset:{selectedComponent:terminal.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of terminal.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("Phoenix Contact PT 2,5 product data"));assert.match(electricalSymbolSvg(terminal),/PT 2,5/);
 }
