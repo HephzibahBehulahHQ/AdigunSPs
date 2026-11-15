@@ -448,7 +448,7 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
 }
 {
   const motor=createElectricalComponent("wegW22IE2Motor",1),expected=["U1","V1","W1","U2","V2","W2","PE"],peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,400,120+index*90)),diagram={components:[motor,...peers],wires:[]};
-  assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"11673230");assert.equal(electricalComponentCatalog[motor.type].kind,"device-reference");assert.deepEqual(motor.terminals,expected);
+  assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"11673230");assert.equal(electricalComponentCatalog[motor.type].kind,"motor");assert.deepEqual(electricalComponentCatalog[motor.type].windingPairs,[["U1","U2"],["V1","V2"],["W1","W2"]]);assert.deepEqual(motor.terminals,expected);
   for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:motor.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is an individually wireable motor terminal`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:motor.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered as a connectable motor terminal`);
@@ -465,6 +465,19 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   for(const pin of cpu.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered individually`);
   assert.ok(root.innerHTML.includes("X10 physical pin 1 · digital input DI a.0"),"pin tooltip exposes manufacturer connector and signal mapping");assert.match(electricalSymbolSvg(cpu),/CPU 1212C/u);assert.match(electricalSymbolSvg(cpu),/X80/u);assert.ok(root.innerHTML.includes("Siemens S7-1200 G2 System Manual · CPU 1212C terminal assignments"));
   assert.ok(validateElectricalDiagram(diagram).every((issue)=>issue.level!=="error"),"the source-backed terminals connect without invalid endpoint errors");
+}
+{
+  const makeCircuit=(arrangement)=>{
+    const supply=createElectricalComponent("supply3phase",1),load=createElectricalComponent("wegW22IE2Motor",2),diagram={components:[supply,load],wires:[]};
+    const wire=(from,fromPin,to,toPin)=>{const result=connectElectricalTerminals(diagram,{componentId:from.id,terminal:fromPin},{componentId:to.id,terminal:toPin});assert.equal(result.ok,true);diagram.wires.push(result.wire);};
+    for(const [phase,start] of [["L1","U1"],["L2","V1"],["L3","W1"]])wire(supply,phase,load,start);
+    wire(supply,"PE",load,"PE");
+    if(arrangement==="star"){wire(load,"U2",load,"V2");wire(load,"V2",load,"W2");}
+    if(arrangement==="delta"){wire(load,"U1",load,"W2");wire(load,"V1",load,"U2");wire(load,"W1",load,"V2");}
+    return {diagram,load};
+  };
+  for(const arrangement of ["star","delta"]){const {diagram,load}=makeCircuit(arrangement);assert.equal(simulateElectricalDiagram(diagram).energized[load.id],true,"valid "+arrangement+" winding bridges energize the motor model");}
+  const {diagram,load}=makeCircuit("open");assert.equal(simulateElectricalDiagram(diagram).energized[load.id],false,"unbridged winding leads do not report a running motor");
 }
 {
   const cpu=createElectricalComponent("siemensS71212CG2",1),supply=createElectricalComponent("supply24vdc",2),positive=createElectricalComponent("junction",3),negative=createElectricalComponent("junction",4);
