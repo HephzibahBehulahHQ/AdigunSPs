@@ -176,7 +176,7 @@ export function makeProjectFromExample(example) {
     ...(example.processes ? { processes:structuredClone(example.processes) } : {}),
     exampleId: example.id,
   };
-  project.electrical = createExampleElectricalDiagram(project.tags, project.io, project.initialState, example.outputLoadTypes || {}, {inputContactType:"siemens3SU1400NOContact",outputIndicatorType:"siemens3SU1152AmberIndicator",motorContactorType:"siemensSirius3RT20171WB41"});
+  project.electrical = createExampleElectricalDiagram(project.tags, project.io, project.initialState, example.outputLoadTypes || {}, {dcSupplyType:"sitopPSU100C",acSupplyType:"singlePhaseSupply",inputContactType:"siemens3SU1400NOContact",outputIndicatorType:"siemens3SU1152AmberIndicator",motorContactorType:"siemensSirius3RT20171WB41"});
   return project;
 }
 
