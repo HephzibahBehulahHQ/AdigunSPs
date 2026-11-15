@@ -193,6 +193,21 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
 {
+  const component=createElectricalComponent("pilotLamp",1,200,200),source=createElectricalComponent("supply24vdc",1,600,200),headEvents={},cardEvents={},boardEvents={},wireEvents={};
+  const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>headEvents[name]=handler},card={dataset:{componentId:component.id},style:{},addEventListener:(name,handler)=>cardEvents[name]=handler};
+  const wireButton={dataset:{electricalAction:"wire"},addEventListener:(name,handler)=>wireEvents[name]=handler};
+  const board={getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},addEventListener:(name,handler)=>boardEvents[name]=handler,querySelector:()=>card};
+  const root={dataset:{},innerHTML:"",querySelector:s=>s==="#electricalBoard"?board:null,querySelectorAll:s=>s==="[data-electrical-action]"?[wireButton]:s==="[data-drag-component]"?[head]:s===".electrical-component"?[card]:[]},previousCss=globalThis.CSS;globalThis.CSS={escape:value=>value};
+  const diagram={components:[component,source],wires:[]};
+  try{
+    renderElectricalWorkspace(root,{tags:[],electrical:diagram});wireEvents.click();
+    assert.ok(root.innerHTML.includes("Select two terminal markers to connect them."),"wire mode is active before testing the move handle");
+    headEvents.pointerdown({button:0,clientX:210,clientY:210,pointerId:5,target:{closest:()=>null},preventDefault(){},stopPropagation(){}});
+    boardEvents.pointermove({clientX:330,clientY:410});boardEvents.pointerup();
+    assert.deepEqual([component.x,component.y],[320,400],"the dedicated component move handle remains draggable while wire-connect mode is active");
+  }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
+}
+{
   const component=createElectricalComponent("pilotLamp",1,200,200),obstacleAhead=createElectricalComponent("pilotLamp",2,280,260),obstacleBehind=createElectricalComponent("pilotLamp",3,140,200),events={},card={dataset:{componentId:""},style:{},addEventListener:(name,handler)=>events[`card:${name}`]=handler};card.dataset.componentId=component.id;
   const head={dataset:{dragComponent:component.id},addEventListener:(name,handler)=>events[`head:${name}`]=handler,setPointerCapture(){}};
   const board={getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},addEventListener:(name,handler)=>events[`board:${name}`]=handler,querySelector:()=>card};
