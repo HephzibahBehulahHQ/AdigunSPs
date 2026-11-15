@@ -39,7 +39,7 @@ jobs:
           ADIGUNSP_BASE_URL: https://adigunsps.hephzibahbehulah.com
           ADIGUNSP_SCREENSHOT_PATH: artifacts/adigunsps-electrical-1894x850.png
           ADIGUNSP_HMI_SCREENSHOT_PATH: artifacts/adigunsps-hmi-1894x850.png
-        run: npx playwright test --grep "canvas toolbars stay compact|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires"
+        run: npx playwright test --grep "canvas toolbars stay compact|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
 
       - name: Upload production screenshots
         if: always()

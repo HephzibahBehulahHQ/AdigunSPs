@@ -1177,3 +1177,19 @@ test("source-backed Siemens NO contact manually switches its wired simulation lo
   await expect(contact).toHaveAttribute("data-contact-state","closed");
   await expect(lamp).toHaveClass(/energized/);
 });
+test("component bodies remain draggable while wire mode is armed", async ({ page }) => {
+  await page.setViewportSize({width:1894,height:850});
+  await page.locator("#electricalTab").click();
+  const palette=page.locator("#electricalToolboxDock #electricalPalette"),add=page.locator('#electricalToolboxDock [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
+  await palette.selectOption("supply24vdc");
+  const countBefore=await components.count();
+  await add.click();await add.click();await expect(components).toHaveCount(countBefore+2);
+  const ids=await components.evaluateAll(nodes=>nodes.slice(-2).map(node=>node.dataset.componentId)),source=page.locator(`#electricalBoard [data-component-id="${ids[0]}"]`),moved=page.locator(`#electricalBoard [data-component-id="${ids[1]}"]`),before=await moved.boundingBox(),symbol=await moved.locator(".electrical-symbol").boundingBox();
+  const wireTool=page.locator('#electricalCanvasContext [data-electrical-action="wire"]');
+  await wireTool.click();
+  await page.mouse.move(symbol.x+symbol.width/2,symbol.y+symbol.height/2);await page.mouse.down();await page.mouse.move(symbol.x+symbol.width/2+160,symbol.y+symbol.height/2+160,{steps:8});await page.mouse.up();
+  const after=await moved.boundingBox();expect(after.x).toBeGreaterThan(before.x+80);expect(after.y).toBeGreaterThan(before.y+80);
+  await page.locator(`[data-terminal-component="${ids[0]}"][data-terminal="+"]`).click();
+  await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="−"]`).click();
+  await expect(page.locator("#electricalBoard .electrical-wire")).toHaveCount(1);
+});
