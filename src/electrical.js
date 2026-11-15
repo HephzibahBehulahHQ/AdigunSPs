@@ -152,7 +152,9 @@ export function updateElectricalComponentProperties(component, updates = {}) {
   return next;
 }
 
-export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}) {
+export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}, deviceDefaults = {}) {
+  const inputContactType=electricalComponentCatalog[deviceDefaults.inputContactType]?.kind==="contact"?deviceDefaults.inputContactType:"pushbuttonNO";
+  const outputIndicatorType=electricalComponentCatalog[deviceDefaults.outputIndicatorType]?.kind==="load"?deviceDefaults.outputIndicatorType:"pilotLamp";
   const components = [], wires = [];
   const add = (type, x, y, tag = "") => {
     const sequence = Number(nextElectricalReference(type,components).replace(electricalComponentCatalog[type].prefix,""));
@@ -164,13 +166,13 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   const plcEarth=add("protectiveEarth",520,280); wire(plc,"PE",plcEarth,"PE");
   const boolInputs = (tags || []).filter((tag) => tag.role === "input" && tag.type === "BOOL");
   boolInputs.slice(0, 4).forEach((tag, index) => {
-    const button = add("pushbuttonNO", 80, 300 + index * 120, tag.name); plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
-    wire(positiveRail, String(index+3), button, "13"); wire(button, "14", plc, `I${index + 1}`);
+    const button = add(inputContactType, 80, 300 + index * 120, tag.name),[lineTerminal,signalTerminal]=electricalComponentCatalog[inputContactType].terminals; plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
+    wire(positiveRail, String(index+3), button, lineTerminal); wire(button, signalTerminal, plc, `I${index + 1}`);
     if (initialState[tag.name]) button.closed = true;
   });
   const boolOutputs = (tags || []).filter((tag) => tag.role === "output" && tag.type === "BOOL");
   boolOutputs.slice(0, 4).forEach((tag, index) => {
-    const type=electricalComponentCatalog[outputLoadTypes[tag.name]]?.kind ? outputLoadTypes[tag.name] : "pilotLamp", load = add(type, 960, 300 + index * 160, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
+    const requestedType=outputLoadTypes[tag.name],type=requestedType==="pilotLamp"&&deviceDefaults.outputIndicatorType?outputIndicatorType:electricalComponentCatalog[requestedType]?.kind?requestedType:outputIndicatorType,load = add(type, 960, 300 + index * 160, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
     if (type === "threePhaseMotor") {
       const contactor=add("contactor3P",1180,300+index*200), phaseSource=add("supply3phase",80+index*220,1140);
       wire(plc,`Q${index+1}`,contactor,"A1"); wire(contactor,"A2",returnRail,String(index+3));

@@ -12,6 +12,11 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   const collisions=[];
   for(const example of examples){
     const project=makeProjectFromExample(example),components=project.electrical.components;
+    assert.equal(components.some((component)=>component.type==="pushbuttonNO"||component.type==="pilotLamp"),false,`${example.id} uses named, source-backed example controls instead of generic button/lamp symbols`);
+    const legacy=createExampleElectricalDiagram(project.tags,project.io,project.initialState,example.outputLoadTypes||{}),legacyState=simulateElectricalDiagram(legacy,project.initialState,project.initialState),sourcedState=simulateElectricalDiagram(project.electrical,project.initialState,project.initialState);
+    assert.deepEqual(sourcedState.inputs,legacyState.inputs,`${example.id} keeps all PLC input states with source-backed contacts`);
+    const byReference=(diagram,states)=>Object.fromEntries(diagram.components.filter((component)=>Object.hasOwn(states.energized,component.id)).map((component)=>[component.reference,states.energized[component.id]]));
+    assert.deepEqual(byReference(project.electrical,sourcedState),byReference(legacy,legacyState),`${example.id} keeps all simulated load states with source-backed indicators`);
     const bounds=components.map(electricalComponentBounds);
     for(let first=0;first<components.length;first++)for(let second=first+1;second<components.length;second++){
       const a=bounds[first],b=bounds[second];
