@@ -463,6 +463,23 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   for(const pin of expected)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("WEG W22XB-C motor instruction manual · connection diagrams"));assert.match(electricalSymbolSvg(motor),/WEG W22XB-C · 6 LEAD/);
 }
 {
+  const makeCircuit=(arrangement)=>{
+    const supply=createElectricalComponent("supply3phase",1),motor=createElectricalComponent("wegW22XBCMotor",2),junctions=arrangement==="delta"?[1,2,3].map((n)=>createElectricalComponent("junction",n)):[createElectricalComponent("junction",1)],diagram={components:[supply,motor,...junctions],wires:[]};
+    const wire=(from,fromPin,to,toPin)=>{const result=connectElectricalTerminals(diagram,{componentId:from.id,terminal:fromPin},{componentId:to.id,terminal:toPin});assert.equal(result.ok,true);diagram.wires.push(result.wire);};
+    if(arrangement==="star"){
+      for(const [phase,start] of [["L1","U1"],["L2","V1"],["L3","W1"]])wire(supply,phase,motor,start);
+      for(const [pin,port] of [["U2","1"],["V2","2"],["W2","3"]])wire(motor,pin,junctions[0],port);
+    }else if(arrangement==="delta"){
+      for(const [index,phase,start,end] of [[0,"L1","U1","W2"],[1,"L2","V1","U2"],[2,"L3","W1","V2"]]){
+        const node=junctions[index];wire(supply,phase,node,"1");wire(motor,start,node,"2");wire(motor,end,node,"3");
+      }
+    }else for(const [phase,start] of [["L1","U1"],["L2","V1"],["L3","W1"]])wire(supply,phase,motor,start);
+    return {diagram,motor};
+  };
+  for(const arrangement of ["star","delta"]){const {diagram,motor}=makeCircuit(arrangement);assert.equal(simulateElectricalDiagram(diagram).energized[motor.id],true,`WEG W22XB-C ${arrangement} winding wiring reports an energized on/off state`);}
+  const {diagram,motor}=makeCircuit("open");assert.equal(simulateElectricalDiagram(diagram).energized[motor.id],false,"six unbridged WEG W22XB-C leads do not report a running motor");
+}
+{
   const motor=createElectricalComponent("wegW22IE2Motor",1),expected=["U1","V1","W1","U2","V2","W2","PE"],peers=expected.map((_,index)=>createElectricalComponent("terminal",index+1,400,120+index*90)),diagram={components:[motor,...peers],wires:[]};
   assert.equal(motor.manufacturer,"WEG");assert.equal(motor.partNumber,"11673230");assert.equal(electricalComponentCatalog[motor.type].kind,"motor");assert.deepEqual(electricalComponentCatalog[motor.type].windingPairs,[["U1","U2"],["V1","V2"],["W1","W2"]]);assert.deepEqual(motor.terminals,expected);
   for(let index=0;index<expected.length;index++){const result=connectElectricalTerminals(diagram,{componentId:motor.id,terminal:expected[index]},{componentId:peers[index].id,terminal:"1"});assert.equal(result.ok,true,`${expected[index]} is an individually wireable motor terminal`);diagram.wires.push(result.wire);}
