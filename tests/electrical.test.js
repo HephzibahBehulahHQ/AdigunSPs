@@ -727,7 +727,7 @@ assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {Scale
   assert.equal(simulateElectricalDiagram(circuit).energized[motor.id],true,"closed poles pass all phases");
   breaker.breakerOpen=true;const openResult=simulateElectricalDiagram(circuit);
   assert.equal(openResult.energized[motor.id],false,"opening all poles isolates motor");assert.equal(openResult.componentStates[breaker.id].contactClosed,false);assert.equal(openResult.componentStates[breaker.id].breakerOpen,true);
-  const root={dataset:{selectedComponent:breaker.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  diagram.simulation=simulateElectricalDiagram(diagram);const root={dataset:{selectedComponent:breaker.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of expected)assert.ok(root.innerHTML.includes('data-terminal="'+pin+'"'),"each marked pin is rendered");
   assert.ok(root.innerHTML.includes("Siemens SIRIUS 3RV2011-1JA10 data sheet"));assert.match(electricalSymbolSvg(breaker),/3RV2 · 3 POLE/);assert.match(electricalSymbolSvg(breaker),/I&gt;/);
   assert.notEqual(electricalSymbolSvg(breaker),electricalSymbolSvg({...breaker,breakerOpen:false}));assert.match(root.innerHTML,/name="breakerOpen"/);assert.match(root.innerHTML,/data-contact-state="open"/);
