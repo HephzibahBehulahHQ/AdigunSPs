@@ -1,5 +1,28 @@
 # User guide
 
+## Contents
+
+- [Start your first project](#first-project-across-three-workspaces)
+- [Program Main and logic](#edit-logic)
+- [Components / Schematic](#electrical-components)
+- [HMI screen](#hmi-screen)
+- [Run and test](#simulate)
+- [Open projects](#open-a-project)
+- [Save and recover work](#account-access-and-guest-work)
+- [Use the workspace layout](#electrical-engineering-workspace-docked-tools-and-properties)
+
+## First project across three workspaces
+
+1. Open **File → Example browser** and load a small example that lists **How to test** steps. This gives you known tags, logic, inputs, and expected outputs.
+2. In **Program Main**, review the tags and logic. Follow **How to test** using the **Simulated inputs** panel; use **Run** or **Step**, then read the output and diagnostics.
+3. In **Components / Schematic**, select each part to inspect its source and terminal names. Move parts by their headers; connect two terminal markers with **Connect wire**, add route bends, then **Validate**.
+4. In **HMI**, add a Switch bound to a BOOL input and a Lamp bound to a BOOL output. Run again and confirm the widgets follow the same tags.
+5. Sign in and use **Save** for a cloud copy, or download **Save locally (JSON)** for a portable project. Guest work is temporary in the current tab.
+
+If a result differs from the example, check the exact input values, selected program, and **Issues/Diagnostics** before changing the schematic. The editor is an educational simulator; it does not connect to or validate physical hardware.
+
+
+
 ## Refresh an older application version
 
 Open `update/` under the application URL, select **Update application**, and wait for **Update ready**. Select **Return to AdigunSPs**. This reinstalls application files without clearing saved projects or your account session; a failed download can be retried.
