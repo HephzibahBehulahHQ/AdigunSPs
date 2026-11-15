@@ -327,7 +327,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
   const height=Math.max(80,32+Math.ceil(component.terminals.length/2)*22),r=rotation*Math.PI/180;
-  for(const [x,y]of [[0,0],[120,0],[120,height],[0,height]]){
+  for(const [x,y]of [[-16,0],[136,0],[136,height],[-16,height]]){
     const px=component.x+60+(x-60)*Math.cos(r)-(y-40)*Math.sin(r),py=component.y+40+(x-60)*Math.sin(r)+(y-40)*Math.cos(r);
     assert.ok(px>=-1e-6&&px<=2200+1e-6&&py>=-1e-6&&py<=1400+1e-6,`${type} at ${rotation}° stays inside canvas`);
   }
@@ -354,7 +354,7 @@ for(const type of Object.keys(electricalComponentCatalog))for(const rotation of 
     const press=(key,shiftKey=false)=>listeners.keydown({key,shiftKey,preventDefault(){},stopPropagation(){}});
     press("ArrowRight");assert.equal(component.x,40,"arrow moves one grid step");
     press("ArrowDown",true);assert.equal(component.y,120,"Shift moves five grid steps");
-    press("ArrowLeft",true);assert.equal(component.x,0,"keyboard movement stays inside the canvas origin");
+    press("ArrowLeft",true);assert.ok(electricalComponentBounds(component).left>=0,"keyboard movement keeps terminal hit areas inside the canvas origin");
     assert.equal(history,3,"each keyboard move records undo history");
     assert.equal(changes,3,"each keyboard move persists its change");
     assert.equal(focus,3,"focus returns to the moved component header");
@@ -550,7 +550,9 @@ assert.equal(Object.hasOwn(simulateElectricalDiagram(openAnalogOutput,{}, {Scale
   assert.equal(issue?.level,"warning","saved component overlaps are surfaced as non-destructive diagnostics");
   assert.match(issue.message,/H1 and H2/u,"the warning identifies the overlapping references");
   const touchingOnly=validateElectricalDiagram({components:[first,touching],wires:[]});
-  assert.equal(touchingOnly.some((item)=>item.code==="electrical-component-overlap"),false,"cards that only touch are not reported as overlapping");
+  assert.ok(touchingOnly.some((item)=>item.code==="electrical-component-overlap"),"terminal hit areas extending beyond touching card bodies are reported as overlapping");
+  const portCrowded=createElectricalComponent("pilotLamp",4,252,120),portOverlap=validateElectricalDiagram({components:[first,portCrowded],wires:[]}).find((item)=>item.code==="electrical-component-overlap");
+  assert.ok(portOverlap,"terminal buttons extending 16 px outside each card are included in overlap checks even when card bodies have a 12 px gap");
   const root={dataset:{},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};
   renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   assert.ok(root.innerHTML.includes("Overlapping component cards: H1 and H2"),"the existing schematic diagnostics list displays overlap references");
