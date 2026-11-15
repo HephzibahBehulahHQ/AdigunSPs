@@ -64,10 +64,25 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.match(root.innerHTML,/data-terminal="−B"[^>]*aria-label="PS1 terminal − \(−B\): 0 V DC output terminal \(second of two\)"/u,"second negative output shows its physical mark and distinct internal identity");
   assert.match(root.innerHTML,/data-terminal="−B"[^>]*>−<\/button>/u,"second negative output is visibly marked minus");
   assert.ok(root.innerHTML.includes("ifm PN2070 data sheet"));
-  assert.ok(root.innerHTML.includes("pressure measurement, analogue output and IO-Link behavior are not simulated"));
+  assert.ok(root.innerHTML.includes("OUT1/IO-Link, pressure physics, accuracy, response and faults are not simulated"));
   const imported=normalizeImportedProject({name:"Routed schematic",rungs:[],tags:[],electrical:diagram});
   assert.deepEqual(imported.electrical.wires[0].waypoints,connected.wire.waypoints,"waypoints survive project import normalization");
   assert.match(electricalUiSource,/Click the canvas to add route bends/u);
+}
+{
+  const supply=createElectricalComponent("supply24vdc",1),sensor=createElectricalComponent("ifmPN2070",1),module=createElectricalComponent("analogInputModule2",1),common=createElectricalComponent("junction",1),diagram={components:[supply,sensor,module,common],wires:[]};
+  sensor.tag="Pressure";module.ioMap.AI1={tag:"Pressure",address:"IW0"};
+  const wire=(a,at,b,bt)=>{const result=connectElectricalTerminals(diagram,{componentId:a.id,terminal:at},{componentId:b.id,terminal:bt});assert.equal(result.ok,true,`${a.reference}.${at} connects to ${b.reference}.${bt}`);diagram.wires.push(result.wire);};
+  wire(supply,"+",sensor,"1");wire(sensor,"2",module,"AI1+");wire(sensor,"3",common,"1");wire(supply,"−",common,"2");wire(module,"AI1−",common,"3");
+  assert.equal(simulateElectricalDiagram(diagram,{Pressure:250}).inputs.Pressure,250,"a powered PN2070 OUT2 pin 2 carries the tagged scalar pressure to an analog input");
+  assert.ok(!validateElectricalDiagram(diagram,[{name:"Pressure",type:"REAL",role:"input"}]).some((issue)=>issue.level==="error"),"the sensor pressure tag maps to a valid analog input tag");
+  const noPower=structuredClone(diagram);noPower.wires=noPower.wires.filter((item)=>!(item.from.componentId===supply.id&&item.from.terminal==="+")&&!(item.to.componentId===supply.id&&item.to.terminal==="+"));
+  assert.equal(simulateElectricalDiagram(noPower,{Pressure:250}).inputs.Pressure,0,"the PN2070 cannot emit its analog signal without DC sensor power");
+  const lowVoltage=structuredClone(diagram);lowVoltage.components.find((item)=>item.id===supply.id).nominalVoltageV=12;
+  assert.equal(simulateElectricalDiagram(lowVoltage,{Pressure:250}).inputs.Pressure,0,"the PN2070 refuses a supply below its documented 18 V minimum");
+  const mains=createElectricalComponent("singlePhaseSupply",2),acDiagram={components:[mains,sensor,module,common],wires:[]};
+  for(const [a,at,b,bt] of [[mains,"L",sensor,"1"],[sensor,"2",module,"AI1+"],[sensor,"3",common,"1"],[mains,"N",common,"2"],[module,"AI1−",common,"3"]]){const result=connectElectricalTerminals(acDiagram,{componentId:a.id,terminal:at},{componentId:b.id,terminal:bt});assert.equal(result.ok,true);acDiagram.wires.push(result.wire);}
+  assert.equal(simulateElectricalDiagram(acDiagram,{Pressure:250}).inputs.Pressure,0,"an AC supply cannot satisfy the PN2070's documented DC power requirement");
 }
 {
   const mains=createElectricalComponent("singlePhaseSupply",1),psu=createElectricalComponent("sitopPSU100C",1),lamp={...createElectricalComponent("pilotLamp",1),tag:"Lamp"},diagram={components:[mains,psu,lamp],wires:[]};
