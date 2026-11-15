@@ -338,6 +338,35 @@ test("approved wide Electrical layout keeps the compact toolbox and project work
   await expect(page.locator("#exampleSearch")).toBeVisible();
 });
 
+test("opening an example keeps schematic component cards from overlapping", async ({ page }) => {
+  await page.setViewportSize({ width: 1894, height: 850 });
+  await page.locator('[data-app-menu="file"]').click();
+  await page.getByRole("menuitem", { name: "Example browser", exact: true }).click();
+  const examples = page.locator("#exampleList [data-example]");
+  await expect(examples.first()).toBeVisible();
+  await examples.first().click();
+
+  const components = page.locator("#electricalBoard .electrical-component");
+  await expect(components.first()).toBeVisible();
+  const overlaps = await components.evaluateAll((cards) => {
+    const boxes = cards.map((card) => {
+      const { left, top, right, bottom } = card.getBoundingClientRect();
+      return { left, top, right, bottom };
+    });
+    const collisions = [];
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], b = boxes[j];
+        if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) {
+          collisions.push([i, j]);
+        }
+      }
+    }
+    return collisions;
+  });
+  expect(overlaps).toEqual([]);
+});
+
 test("wide Electrical canvas actions align in the compact toolbar", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await page.locator("#electricalTab").click();
