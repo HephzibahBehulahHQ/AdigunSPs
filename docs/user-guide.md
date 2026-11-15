@@ -316,7 +316,7 @@ The Phoenix Contact PT 2,5-PE (3209536) is a manufacturer-backed protective-cond
 
 The Siemens SIRIUS ACT 3SU1400-1AA10-1BA0 is a source-backed normally-open contact module with individually connectable, manufacturer-marked terminals 3/4. Its data sheet is linked in the inspector; use its manual simulation input to open or close the contact path. The pushbutton actuator assembly and electrical ratings are not modeled.
 
-The Phoenix Contact PT 2,5 feed-through terminal (3209510) has two individually connectable conductor ports. Its official data sheet lists 800 V nominal voltage and 24 A nominal current; physical installation and current-carrying performance are not modeled.
+The Phoenix Contact PT 2,5 feed-through terminal (3209510) has two individually connectable conductor ports. Its official data sheet lists 800 V nominal voltage and 24 A nominal current; physical installation and current-carrying performance are not modeled. Its schematic model treats terminals 1–2 as an ideal pass-through; resistance, heating, and rating enforcement are not simulated.
 
 The Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 is a complete amber 24 V AC/DC indicator with individually connectable X1 and X2 terminals. Its official data sheet is linked in the inspector. The educational simulator shows an ideal on/off state from DC topology only; it does not model AC operation, LED polarity, current, brightness, photometry or protection.
 
