@@ -1,6 +1,6 @@
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
-  sitopPSU100C: { name:"Siemens SITOP PSU100C · 24 V / 2.5 A", category:"Power supplies", prefix:"PS", terminals:["L","N","PE","+","−A","−B"], terminalLabels:{"−A":"−","−B":"−"}, kind:"device-reference", manufacturer:"Siemens", partNumber:"6EP1332-5BA00", nominalVoltageV:24, ratedVoltageV:24, ratedCurrentA:2.5, source:{title:"SITOP PSU100C Operating Instructions",url:"https://support.industry.siemens.com/cs/attachments/65647808/PSU100C_Handbuch_englisch_en-US.pdf"}, terminalNotes:{L:"AC line",N:"AC neutral",PE:"Protective earth", "+":"24 V DC positive output","−A":"0 V DC output terminal (first of two)","−B":"0 V DC output terminal (second of two)"}, simulationLimitations:"Verified device identity and terminal map; input/output electrical behavior and current limiting are not modeled." },
+  sitopPSU100C: { name:"Siemens SITOP PSU100C · 24 V / 2.5 A", category:"Power supplies", prefix:"PS", terminals:["L","N","PE","+","−A","−B"], terminalLabels:{"−A":"−","−B":"−"}, kind:"power-converter", manufacturer:"Siemens", partNumber:"6EP1332-5BA00", nominalVoltageV:24, ratedVoltageV:24, ratedCurrentA:2.5, source:{title:"SITOP PSU100C Operating Instructions",url:"https://support.industry.siemens.com/cs/attachments/65647808/PSU100C_Handbuch_englisch_en-US.pdf"}, terminalNotes:{L:"AC line",N:"AC neutral",PE:"Protective earth", "+":"24 V DC positive output","−A":"0 V DC output terminal (first of two)","−B":"0 V DC output terminal (second of two)"}, simulationLimitations:"Educational ideal converter: the 24 V DC output is enabled by wired single-phase line/neutral paths. AC waveform, regulation, overload/current limiting, startup behavior, isolation, protection and device faults are not simulated." },
   ifmPN2070: { name:"ifm PN2070 pressure sensor · M12 4-pin", category:"Sensors", prefix:"B", terminals:["1","2","4","3"], kind:"device-reference", manufacturer:"ifm", partNumber:"PN-400-SER14-MFRKG/USI /V", source:{title:"ifm PN2070 data sheet",url:"https://media.ifm.com/dam/d61b3c6f-dc2b-4fe0-af49-278f0521b2d6/Original/PN2070-02_EN-GB.pdf"}, terminalNotes:{"1":"BN · L+","2":"WH · OUT2","4":"BK · OUT1 / IO-Link","3":"BU · L−"}, simulationLimitations:"Verified device identity and connector pin assignment; pressure measurement, analogue output and IO-Link behavior are not simulated." },
   phoenixPT25PE: { name:"Phoenix Contact PT 2,5-PE protective conductor terminal · 3209536", category:"Terminals and wiring", prefix:"XPE", terminals:["1","2"], kind:"device-reference", manufacturer:"Phoenix Contact", partNumber:"3209536", source:{title:"Phoenix Contact PT 2,5-PE product data",url:"https://www.phoenixcontact.com/en-us/products/ground-terminal-block-pt-25-pe-3209536"}, terminalNotes:{"1":"Protective conductor connection 1","2":"Protective conductor connection 2"}, simulationLimitations:"Manufacturer data identifies two conductor connections in one level and the protective grounding foot. Physical grounding, DIN-rail bonding and current carrying capacity are not simulated." },
   singlePhaseSupply: { name:"Single-phase AC supply · L/N/PE model", category:"Power supplies", prefix:"G", terminals:["L","N","PE"], kind:"single-phase-source", nominalVoltageV:230 },
@@ -299,7 +299,7 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
 export function simulateElectricalDiagram(diagram, inputStates = {}, outputStates = {}) {
   const all = diagram.components || [], byId = new Map(all.map((component) => [component.id, component]));
   const key = (id, pin) => `${id}:${pin}`;
-  const supplies = all.filter((component) => ["source", "three-phase-source", "single-phase-source"].includes(electricalComponentCatalog[component.type]?.kind));
+  const supplies = all.filter((component) => ["source", "three-phase-source", "single-phase-source", "power-converter"].includes(electricalComponentCatalog[component.type]?.kind));
   let coilEnergized = new Set();
   const makeGraph = () => {
     const nodes = new Map();
@@ -312,6 +312,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       const spec = electricalComponentCatalog[component.type]; if (!spec) continue;
       const signal = Boolean(inputStates[component.tag || component.reference]);
       if (spec.kind === "junction") for (let i = 0; i < spec.terminals.length; i++) for (let j = i + 1; j < spec.terminals.length; j++) addEdge(key(component.id, spec.terminals[i]), key(component.id, spec.terminals[j]));
+      else if (spec.kind === "power-converter") addEdge(key(component.id,"−A"),key(component.id,"−B"));
       else if (spec.kind === "pass-through") addEdge(key(component.id,spec.terminals[0]),key(component.id,spec.terminals[1]));
       else if (spec.kind === "selector-switch") for (const terminal of spec.positionPairs[component.selectorPosition]?.slice(1)||[]) addEdge(key(component.id,spec.positionPairs[component.selectorPosition][0]),key(component.id,terminal));
       else if (spec.kind === "contact" || spec.kind === "overload-contact") {
@@ -342,6 +343,14 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     const kind = electricalComponentCatalog[component.type].kind;
     if (kind === "three-phase-source") return { component, nets: Object.fromEntries(["L1", "L2", "L3", "PE"].map((pin) => [pin, reachable(nodes, key(component.id, pin))])) };
     if (kind === "single-phase-source") return { component, nets: Object.fromEntries(["L", "N", "PE"].map((pin) => [pin, reachable(nodes, key(component.id, pin))])) };
+    if (kind === "power-converter") {
+      const inputPowered = supplies.some((input) => {
+        if (electricalComponentCatalog[input.type]?.kind !== "single-phase-source") return false;
+        const line=reachable(nodes,key(input.id,"L")),neutral=reachable(nodes,key(input.id,"N"));
+        return !sourceHasShort({L:line,N:neutral})&&line.has(key(component.id,"L"))&&neutral.has(key(component.id,"N"));
+      });
+      return { component, nets: inputPowered ? { positive:reachable(nodes,key(component.id,"+")),negative:reachable(nodes,key(component.id,"−A")) } : { positive:new Set(),negative:new Set() } };
+    }
     return { component, nets: { positive: reachable(nodes, key(component.id, "+")), negative: reachable(nodes, key(component.id, "−")) } };
   });
   const sourceHasShort=(poles)=>{const names=Object.keys(poles);for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++)if([...poles[names[i]]].some((node)=>poles[names[j]].has(node)))return true;return false;};

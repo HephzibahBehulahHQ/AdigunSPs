@@ -44,7 +44,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
 {
   const psu=createElectricalComponent("sitopPSU100C",1),sensor=createElectricalComponent("ifmPN2070",1);
   assert.deepEqual(psu.terminals,["L","N","PE","+","−A","−B"]);
-  assert.equal(psu.manufacturer,"Siemens");assert.equal(psu.partNumber,"6EP1332-5BA00");assert.equal(psu.ratedCurrentA,2.5);
+  assert.equal(psu.manufacturer,"Siemens");assert.equal(psu.partNumber,"6EP1332-5BA00");assert.equal(psu.ratedCurrentA,2.5);assert.equal(electricalComponentCatalog[psu.type].kind,"power-converter");assert.equal(electricalComponentCatalog[psu.type].nominalVoltageV,24);
   assert.deepEqual(sensor.terminals,["1","2","4","3"]);
   assert.equal(sensor.manufacturer,"ifm");assert.equal(sensor.partNumber,"PN-400-SER14-MFRKG/USI /V");
   const diagram={components:[psu,sensor],wires:[]};
@@ -70,6 +70,15 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.match(electricalUiSource,/Click the canvas to add route bends/u);
 }
 {
+  const mains=createElectricalComponent("singlePhaseSupply",1),psu=createElectricalComponent("sitopPSU100C",1),lamp={...createElectricalComponent("pilotLamp",1),tag:"Lamp"},diagram={components:[mains,psu,lamp],wires:[]};
+  const wire=(a,at,b,bt)=>{const result=connectElectricalTerminals(diagram,{componentId:a.id,terminal:at},{componentId:b.id,terminal:bt});assert.equal(result.ok,true,`${a.reference}.${at} connects to ${b.reference}.${bt}`);diagram.wires.push(result.wire);};
+  wire(mains,"L",psu,"L");wire(mains,"N",psu,"N");wire(mains,"PE",psu,"PE");wire(psu,"+",lamp,"X1");wire(lamp,"X2",psu,"−B");
+  assert.equal(simulateElectricalDiagram(diagram).energized[lamp.id],true,"the sourced SITOP produces its documented 24 V DC output from wired line and neutral paths");
+  const noLine=structuredClone(diagram);noLine.wires=noLine.wires.filter((item)=>!(item.from.componentId===mains.id&&item.from.terminal==="L")&&!(item.to.componentId===mains.id&&item.to.terminal==="L"));
+  assert.equal(simulateElectricalDiagram(noLine).energized[lamp.id],false,"the SITOP output is disabled when mains line is disconnected");
+  const noNeutral=structuredClone(diagram);noNeutral.wires=noNeutral.wires.filter((item)=>!(item.from.componentId===mains.id&&item.from.terminal==="N")&&!(item.to.componentId===mains.id&&item.to.terminal==="N"));
+  assert.equal(simulateElectricalDiagram(noNeutral).energized[lamp.id],false,"the SITOP output is disabled when mains neutral is disconnected");
+}
 {
   const supplyA=createElectricalComponent("supply24vdc",1),supplyB=createElectricalComponent("supply24vdc",2,360,120),supplyC=createElectricalComponent("supply24vdc",3,600,120),lamp=createElectricalComponent("pilotLamp",1,840,120),diagram={components:[supplyA,supplyB,supplyC,lamp],wires:[]};
   const first=connectElectricalTerminals(diagram,{componentId:supplyA.id,terminal:"+"},{componentId:lamp.id,terminal:"X1"},[{x:420,y:340}]);assert.equal(first.ok,true);diagram.wires.push(first.wire);
@@ -79,6 +88,7 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.equal(rewireElectricalTerminal(diagram,first.wire.id,"from",{componentId:supplyB.id,terminal:"missing"}).ok,false,"rewiring rejects nonexistent device terminals");
   assert.equal(rewireElectricalTerminal(diagram,"missing-wire","from",{componentId:supplyB.id,terminal:"+"}).ok,false,"rewiring requires an existing completed cable");
 }
+{
   const contactor=createElectricalComponent("siemensSirius3RT20171WB41",1),expected=["1/L1","3/L2","5/L3","13","A1+","2/T1","4/T2","6/T3","14","A2−"];
   assert.equal(contactor.manufacturer,"Siemens");assert.equal(contactor.partNumber,"3RT2017-1WB41");assert.deepEqual(contactor.terminals,expected);
   const diagram={components:[contactor,createElectricalComponent("pilotLamp",1,360,120)],wires:[]};
