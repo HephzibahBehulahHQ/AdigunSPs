@@ -17,8 +17,9 @@ for (const section of ["getting-started", "taking-the-onboarding-tour", "navigat
 for (const [, anchor] of guide.matchAll(/\]\(#([^)]+)\)/g)) assert.ok(rendered.includes(`id="${anchor}"`), `Help contents target ${anchor} exists`);
 assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the requested word limit");
 assert.match(guide,/RUN SIMULATION/);
-assert.match(guide,/Schneider XB5AA31[\s\S]*terminals 13–14/i,"Help identifies the sourced spring-return pushbutton");
-assert.match(userGuide,/XB5AA31[\s\S]*13–14[\s\S]*not simulated/i,"User Guide documents the pushbutton terminals and model boundary");
+assert.match(guide,/Schneider XB5AA31[\s\S]*13–14[\s\S]*XB5AA42[\s\S]*21–22/i,"Help identifies both sourced spring-return pushbuttons");
+assert.match(userGuide,/XB5AA31[\s\S]*13–14[\s\S]*not simulated/i,"User Guide documents the NO pushbutton terminals and model boundary");
+assert.match(userGuide,/XB5AA42[\s\S]*21–22[\s\S]*not simulated/i,"User Guide documents the NC pushbutton terminals and model boundary");
 assert.match(guide,/3RU2126-4BC0[\s\S]*95\/96 NC \+ 97\/98 NO[\s\S]*Overload tripped/i,"Help documents the overload relay's verified terminals and trip control");
 assert.match(userGuide,/3RU2126-4BC0[\s\S]*95\/96 NC[\s\S]*97\/98 NO[\s\S]*not modeled/i,"User Guide documents the verified overload relay terminals and simulation boundary");
 assert.match(userGuide,/### Status strip[\s\S]*Grid: 20 px[\s\S]*no hardware connected/);
