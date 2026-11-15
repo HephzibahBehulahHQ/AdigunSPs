@@ -468,12 +468,18 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
 }
 {
   const makeCircuit=(arrangement)=>{
-    const supply=createElectricalComponent("supply3phase",1),load=createElectricalComponent("wegW22IE2Motor",2),diagram={components:[supply,load],wires:[]};
+    const supply=createElectricalComponent("supply3phase",1),load=createElectricalComponent("wegW22IE2Motor",2),phaseJunctions=arrangement==="delta"?[1,2,3].map((n)=>createElectricalComponent("junction",n)):[createElectricalComponent("junction",1)],diagram={components:[supply,load,...phaseJunctions],wires:[]};
     const wire=(from,fromPin,to,toPin)=>{const result=connectElectricalTerminals(diagram,{componentId:from.id,terminal:fromPin},{componentId:to.id,terminal:toPin});assert.equal(result.ok,true);diagram.wires.push(result.wire);};
-    for(const [phase,start] of [["L1","U1"],["L2","V1"],["L3","W1"]])wire(supply,phase,load,start);
     wire(supply,"PE",load,"PE");
-    if(arrangement==="star"){wire(load,"U2",load,"V2");wire(load,"V2",load,"W2");}
-    if(arrangement==="delta"){wire(load,"U1",load,"W2");wire(load,"V1",load,"U2");wire(load,"W1",load,"V2");}
+    if(arrangement==="star"){
+      for(const [phase,start] of [["L1","U1"],["L2","V1"],["L3","W1"]])wire(supply,phase,load,start);
+      for(const [pin,port] of [["U2","1"],["V2","2"],["W2","3"]])wire(load,pin,phaseJunctions[0],port);
+    }
+    if(arrangement==="delta"){
+      for(const [index,phase,start,end] of [[0,"L1","U1","W2"],[1,"L2","V1","U2"],[2,"L3","W1","V2"]]){
+        const node=phaseJunctions[index];wire(supply,phase,node,"1");wire(load,start,node,"2");wire(load,end,node,"3");
+      }
+    }
     return {diagram,load};
   };
   for(const arrangement of ["star","delta"]){const {diagram,load}=makeCircuit(arrangement);assert.equal(simulateElectricalDiagram(diagram).energized[load.id],true,"valid "+arrangement+" winding bridges energize the motor model");}
