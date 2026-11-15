@@ -312,7 +312,7 @@ The placeable Siemens SITOP PSU100C (6EP1332-5BA00) and ifm PN2070 are source-li
 The Siemens SIRIUS 3RT2017-1WB41 contactor reference provides separate terminals for its three main poles, 13/14 auxiliary NO contact, and A1+/A2− coil. Its official data sheet is linked in the inspector. Device-specific coil, power switching and ratings are not simulated or implied by the editable symbol.
 
 The source-backed Siemens SIRIUS 3RV2011-1JA10 breaker has three individually wired poles (1/L1–2/T1, 3/L2–4/T2, 5/L3–6/T3). Select it and check **Open all three poles** to disconnect all phases. Protection trips and performance are not simulated; see the linked Siemens data sheet.
-The Phoenix Contact PT 2,5-PE (3209536) is a manufacturer-backed protective-conductor terminal with two individually connectable conductor points. Its product data is linked in the inspector; physical grounding, DIN-rail bonding and current capacity are outside the simulation.
+The Phoenix Contact PT 2,5-PE (3209536) has two manufacturer-specified conductor connections, modeled as ideal continuity. Its source is linked in the inspector. Physical grounding through the DIN rail, ground potential, conductor ratings, and fault protection are not simulated.
 
 The Siemens SIRIUS ACT 3SU1400-1AA10-1BA0 is a source-backed normally-open contact module with individually connectable, manufacturer-marked terminals 3/4. Its data sheet is linked in the inspector; use its manual simulation input to open or close the contact path. The pushbutton actuator assembly and electrical ratings are not modeled.
 
