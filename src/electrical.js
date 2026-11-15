@@ -218,7 +218,6 @@ export function electricalComponentBounds(component,x=component?.x,y=component?.
 export function separateElectricalComponentOverlaps(diagram) {
   const components=Array.isArray(diagram?.components)?diagram.components:[],placed=[],moved=[],grid=20,clearance=12;
   const overlaps=(a,b)=>a.left<b.right+clearance&&a.right>b.left-clearance&&a.top<b.bottom+clearance&&a.bottom>b.top-clearance;
-  const fits=(bounds)=>bounds.left>=0&&bounds.top>=0&&bounds.right<=2200&&bounds.bottom<=1400;
   for(const component of components){
     if(!electricalComponentCatalog[component?.type]||!Number.isFinite(Number(component.x))||!Number.isFinite(Number(component.y)))continue;
     let bounds=electricalComponentBounds(component);
