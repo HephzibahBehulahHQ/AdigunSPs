@@ -27,7 +27,7 @@ AdigunSPs simulates PLC logic and HMIs. Physical control unavailable.
 **What you'll see:** An untitled project, menus, canvas, side panels, and status.
 
 1. Open the AdigunSPs website in your browser.
-2. Continue as guest. After four minutes editing pauses; work stays in this tab.
+2. Continue as guest. Guest access ends after four minutes; editing pauses, work remains in this tab.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
 
