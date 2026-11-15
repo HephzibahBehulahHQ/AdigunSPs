@@ -273,6 +273,25 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("data-electrical-input=\"S1\""),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
 }
 {
+  const source=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU1400NCContact",1,320,80),lamp=createElectricalComponent("pilotLamp",1,560,80),diagram={components:[source,contact,lamp],wires:[]};
+  assert.equal(contact.manufacturer,"Siemens");
+  assert.equal(contact.partNumber,"3SU1400-1AA10-1CA0");
+  assert.equal(electricalComponentCatalog[contact.type].kind,"contact");
+  assert.equal(contact.normallyClosed,true);
+  assert.deepEqual(contact.terminals,["1","2"]);
+  for(const [from,to] of [[{componentId:source.id,terminal:"+"},{componentId:contact.id,terminal:"1"}],[{componentId:contact.id,terminal:"2"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:source.id,terminal:"−"}]]){
+    const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true,"the Siemens NC contact's documented terminals connect into the control path");diagram.wires.push(result.wire);
+  }
+  assert.equal(simulateElectricalDiagram(diagram,{S1:false},{}).energized[lamp.id],true,"the unactuated Siemens NC contact conducts");
+  assert.equal(simulateElectricalDiagram(diagram,{S1:true},{}).energized[lamp.id],false,"actuating the Siemens NC contact opens the wired path");
+  const root={dataset:{selectedComponent:contact.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`documented pin ${pin} renders as an individually connectable terminal`);
+  assert.ok(root.innerHTML.includes('data-electrical-input="S1"'),"the NC component exposes its manual simulation input");
+  assert.ok(root.innerHTML.includes("3SU1400-1AA10-1CA0"),"the toolbox and selected-component details expose the verified product");
+  assert.notEqual(electricalSymbolSvg(contact),electricalSymbolSvg({...contact,contactClosed:false}),"the NC schematic symbol changes when the contact opens");
+}
+
+{
   const supply=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU1400NOContact",1,320,80),lamp=createElectricalComponent("pilotLamp",1,560,80),diagram={components:[supply,contact,lamp],wires:[]};
   for(const [from,to] of [[{componentId:supply.id,terminal:"+"},{componentId:contact.id,terminal:"3"}],[{componentId:contact.id,terminal:"4"},{componentId:lamp.id,terminal:"X1"}],[{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}]]){const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true,"manufacturer-marked NO contact terminals wire into a circuit");diagram.wires.push(result.wire);}
   assert.equal(simulateElectricalDiagram(diagram,{[contact.reference]:false}).energized[lamp.id],false,"the unactuated normally-open contact leaves its load off");
