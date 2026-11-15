@@ -276,29 +276,30 @@ function showContextMenu(event, entries, menuLabel = (contextCopy[language] || c
 }
 function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.onkeydown = null; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
 let helpMarkdownPromise;
+const helpDocuments = { topics:{file:"HELP.md",label:"Help topics"}, quickstart:{file:"QUICKSTART.md",label:"2-minute start"}, manual:{file:"user-guide.md",label:"Full manual"} };
+const helpDocumentCache = new Map();
+let helpDocumentGeneration = 0;
+function loadHelpDocument(id) {
+  if (!helpDocuments[id]) return Promise.reject(new Error("Unknown help document."));
+  if (!helpDocumentCache.has(id)) helpDocumentCache.set(id,fetch(new URL(`../docs/${helpDocuments[id].file}`,import.meta.url)).then((response)=>{if(!response.ok)throw new Error(`Help document request failed (${response.status})`);return response.text();}).catch((error)=>{helpDocumentCache.delete(id);throw error;}));
+  return helpDocumentCache.get(id);
+}
+function renderHelpDocument(menu,id,markdown) {
+  const nav=Object.entries(helpDocuments).map(([key,document])=>`<button type="button" data-help-document="${key}"${key===id?' aria-current="page"':''}>${document.label}</button>`).join("");
+  menu.innerHTML=`<section class="help-guide-content" role="region" aria-label="${helpDocuments[id].label}"><nav class="help-guide-doc-nav" aria-label="Help documents">${nav}</nav>${renderHelpMarkdown(markdown)}${id==="topics"?`<div class="help-guide-actions"><button type="button" data-help-action="safety">Safety and help</button><button type="button" data-help-action="resources">External resources</button></div>`:""}</section>`;
+  menu.querySelectorAll("[data-help-document]").forEach((button)=>button.addEventListener("click",()=>{const next=button.dataset.helpDocument,generation=++helpDocumentGeneration;menu.innerHTML=`<div class="help-guide-loading" role="status">Loading ${helpDocuments[next].label}…</div>`;void loadHelpDocument(next).then((content)=>{if(menu.hidden||generation!==helpDocumentGeneration)return;renderHelpDocument(menu,next,content);menu.scrollTop=0;menu.querySelector(`[data-help-document="${next}"]`)?.focus();}).catch(()=>{if(!menu.hidden&&generation===helpDocumentGeneration)menu.innerHTML=`<div class="help-guide-loading" role="alert">${helpDocuments[next].label} could not be loaded. Check that the docs folder is available, then reload the page.</div>`;});}));
+  menu.querySelectorAll('a[href^="#"]').forEach((link)=>link.addEventListener("click",(click)=>{click.preventDefault();menu.querySelector(link.getAttribute("href"))?.scrollIntoView({behavior:"smooth",block:"start"});}));
+  menu.querySelectorAll("[data-help-action]").forEach((button)=>button.addEventListener("click",()=>{const next=button.dataset.helpAction;hideContextMenu();if(next==="safety")showHelp();else showResources();}));
+}
 function showHelpGuideMenu(event) {
   event.preventDefault(); hideContextMenu();
-  const menu = $("#contextMenu"), trigger = event.currentTarget;
-  menu.classList.add("help-guide-menu"); menu.setAttribute("aria-label", "AdigunSPs Help Guide"); menu.innerHTML = `<div class="help-guide-loading" role="status">Loading Help Guide…</div>`; menu.hidden = false;
-  const rect = trigger.getBoundingClientRect(), width = Math.min(760, innerWidth - 16), top = Math.min(rect.bottom + 4, innerHeight - 120);
-  menu.style.width = `${width}px`; menu.style.maxHeight = `${Math.max(120, innerHeight - top - 8)}px`; menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, top)}px`;
-  contextMenuDismiss = bindMenuDismissal(trigger, menu, hideContextMenu);
-  menu.onkeydown = (keyEvent) => {
-    if (keyEvent.key !== "Escape") return;
-    keyEvent.preventDefault();
-    keyEvent.stopPropagation();
-    hideContextMenu();
-    trigger.focus();
-  };
-  const keyboardOpened = event.detail === 0;
-  helpMarkdownPromise ||= fetch(new URL("../docs/HELP.md", import.meta.url)).then((response) => { if (!response.ok) throw new Error(`Help guide request failed (${response.status})`); return response.text(); });
-  helpMarkdownPromise.then((markdown) => {
-    if (menu.hidden || !menu.classList.contains("help-guide-menu")) return;
-    menu.innerHTML = `<section class="help-guide-content" role="region" aria-label="AdigunSPs Help Guide">${renderHelpMarkdown(markdown)}<div class="help-guide-actions"><button type="button" data-help-action="safety">Safety and help</button><button type="button" data-help-action="resources">External resources</button></div></section>`;
-    if (keyboardOpened && document.activeElement === trigger) menu.querySelector("a[href], button")?.focus();
-    menu.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener("click", (click) => { click.preventDefault(); menu.querySelector(link.getAttribute("href"))?.scrollIntoView({ behavior:"smooth", block:"start" }); }));
-    menu.querySelectorAll("[data-help-action]").forEach((button) => button.addEventListener("click", () => { const next = button.dataset.helpAction; hideContextMenu(); if (next === "safety") showHelp(); else showResources(); }));
-  }).catch(() => { helpMarkdownPromise = undefined; if (!menu.hidden) menu.innerHTML = `<div class="help-guide-loading" role="alert">Help Guide could not be loaded. Check that the docs/HELP.md file is available, then reload the page.</div>`; });
+  const menu=$("#contextMenu"),trigger=event.currentTarget,keyboardOpened=event.detail===0,generation=++helpDocumentGeneration;
+  menu.classList.add("help-guide-menu");menu.setAttribute("aria-label","AdigunSPs Help and guides");menu.innerHTML=`<div class="help-guide-loading" role="status">Loading Help topics…</div>`;menu.hidden=false;
+  const rect=trigger.getBoundingClientRect(),width=Math.min(760,innerWidth-16),top=Math.min(rect.bottom+4,innerHeight-120);
+  menu.style.width=`${width}px`;menu.style.maxHeight=`${Math.max(120,innerHeight-top-8)}px`;menu.style.left=`${Math.max(8,Math.min(rect.left,innerWidth-width-8))}px`;menu.style.top=`${Math.max(8,top)}px`;
+  contextMenuDismiss=bindMenuDismissal(trigger,menu,hideContextMenu);
+  menu.onkeydown=(keyEvent)=>{if(keyEvent.key!=="Escape")return;keyEvent.preventDefault();keyEvent.stopPropagation();hideContextMenu();trigger.focus();};
+  void loadHelpDocument("topics").then((markdown)=>{if(menu.hidden||generation!==helpDocumentGeneration)return;renderHelpDocument(menu,"topics",markdown);if(keyboardOpened&&document.activeElement===trigger)menu.querySelector("[data-help-document]")?.focus();}).catch(()=>{if(!menu.hidden&&generation===helpDocumentGeneration)menu.innerHTML=`<div class="help-guide-loading" role="alert">Help Guide could not be loaded. Check that the docs folder is available, then reload the page.</div>`;});
 }
 function rungLayoutInfo(rung, index) {
   const branches = rungPaths(rung), signature = JSON.stringify([rung.comment || "", branches.map((branch) => branch.length), Boolean(rung.timer), Boolean(rung.counter), Boolean(rung.scale)]), key = rung.id || `rung-${index}`;
