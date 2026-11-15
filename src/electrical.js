@@ -156,15 +156,18 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   const inputContactType=electricalComponentCatalog[deviceDefaults.inputContactType]?.kind==="contact"?deviceDefaults.inputContactType:"pushbuttonNO";
   const outputIndicatorType=electricalComponentCatalog[deviceDefaults.outputIndicatorType]?.kind==="load"?deviceDefaults.outputIndicatorType:"pilotLamp";
   const motorContactorType=electricalComponentCatalog[deviceDefaults.motorContactorType]?.kind==="contactor"?deviceDefaults.motorContactorType:"contactor3P";
+  const requestedSupplyType=deviceDefaults.dcSupplyType,powerSupplyType=electricalComponentCatalog[requestedSupplyType]?.kind==="power-converter"?requestedSupplyType:"supply24vdc",mainsType=powerSupplyType==="supply24vdc"?null:(electricalComponentCatalog[deviceDefaults.acSupplyType]?.kind==="single-phase-source"?deviceDefaults.acSupplyType:"singlePhaseSupply");
+  const usesMainsSupply=Boolean(mainsType),plcX=usesMainsSupply?740:520,positiveRailX=usesMainsSupply?520:300,returnRailX=usesMainsSupply?960:740;
   const components = [], wires = [];
   const add = (type, x, y, tag = "") => {
     const sequence = Number(nextElectricalReference(type,components).replace(electricalComponentCatalog[type].prefix,""));
     const component = createElectricalComponent(type, sequence, x, y); component.tag = tag; components.push(component); return component;
   };
   const wire = (a, at, b, bt) => { const result = connectElectricalTerminals({ components, wires }, { componentId: a.id, terminal: at }, { componentId: b.id, terminal: bt }); if (!result.ok) throw new Error(result.error); wires.push(result.wire); };
-  const supply = add("supply24vdc", 80, 80), plc = add("genericPlc24v4di4do", 520, 80), positiveRail=add("dcPowerRail",300,80),returnRail=add("dcPowerRail",740,80);
-  wire(supply, "+", positiveRail, "1"); wire(supply, "−", returnRail, "1"); wire(positiveRail,"2",plc,"L+"); wire(returnRail,"2",plc,"M");
-  const plcEarth=add("protectiveEarth",520,280); wire(plc,"PE",plcEarth,"PE");
+  const mains=usesMainsSupply?add(mainsType,80,80):null,supply = add(powerSupplyType, usesMainsSupply?300:80, 80), plc = add("genericPlc24v4di4do", plcX, 80), positiveRail=add("dcPowerRail",positiveRailX,80),returnRail=add("dcPowerRail",returnRailX,80);
+  if(mains){wire(mains,"L",supply,"L");wire(mains,"N",supply,"N");wire(mains,"PE",supply,"PE");}
+  wire(supply, "+", positiveRail, "1"); wire(supply, usesMainsSupply?"−A":"−", returnRail, "1"); wire(positiveRail,"2",plc,"L+"); wire(returnRail,"2",plc,"M");
+  const plcEarth=add("protectiveEarth",plcX,280); wire(plc,"PE",plcEarth,"PE");
   const boolInputs = (tags || []).filter((tag) => tag.role === "input" && tag.type === "BOOL");
   boolInputs.slice(0, 4).forEach((tag, index) => {
     const button = add(inputContactType, 80, 300 + index * 120, tag.name),[lineTerminal,signalTerminal]=electricalComponentCatalog[inputContactType].terminals; plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
