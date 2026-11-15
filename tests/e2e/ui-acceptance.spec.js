@@ -1133,16 +1133,16 @@ test("real multi-pin schematic models recover from example-style overlap without
   const diagnostics=page.locator(".electrical-inspector details[data-inspector-section=\"diagnostics\"]");
   await expect(diagnostics.locator("summary")).toContainText(/warning/i);
   await diagnostics.locator("summary").click();
-  await expect(diagnostics).toContainText("Overlapping component cards: PLC1 and PE1");
+  await expect(diagnostics).not.toContainText("Overlapping component cards: PLC1 and PE1");
   const plcBox=await plc.boundingBox(),peBox=await pe.boundingBox();
-  expect(plcBox.x<peBox.x+peBox.width&&plcBox.x+plcBox.width>peBox.x&&plcBox.y<peBox.y+peBox.height&&plcBox.y+plcBox.height>peBox.y, `expected initial PLC/PE overlap; plc=${JSON.stringify(plcBox)} pe=${JSON.stringify(peBox)} styles=${await plc.getAttribute("style")} | ${await pe.getAttribute("style")}`).toBe(true);
+  expect(plcBox.x+plcBox.width+12<=peBox.x||peBox.x+peBox.width+12<=plcBox.x||plcBox.y+plcBox.height+12<=peBox.y||peBox.y+peBox.height+12<=plcBox.y, "legacy imported PLC and PE cards are automatically separated on open").toBe(true);
   const symbol=pe.locator(".electrical-symbol"),start=await symbol.boundingBox();
   await page.mouse.move(start.x+start.width/2,start.y+start.height/2);
   await page.mouse.down();
   await page.mouse.move(start.x+start.width/2+220,start.y+start.height/2+330,{steps:12});
   await page.mouse.up();
   const boxes=await page.locator("#electricalBoard [data-component-id]").evaluateAll(nodes=>nodes.map(node=>{const {left,top,right,bottom}=node.getBoundingClientRect();return {left,top,right,bottom};}));
-  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];expect(a.right+8<=b.left||b.right+8<=a.left||a.bottom+8<=b.top||b.bottom+8<=a.top).toBe(true);}
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];expect(a.right+12<=b.left||b.right+12<=a.left||a.bottom+12<=b.top||b.bottom+12<=a.top).toBe(true);}
   await expect(pe).toHaveAttribute("data-component-id","pe1");
   await expect(wire).toHaveAttribute("data-wire-id","earth-lead");
   await expect(wire).toHaveAttribute("d",/L700 460/);

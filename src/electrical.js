@@ -215,6 +215,32 @@ export function electricalComponentBounds(component,x=component?.x,y=component?.
   return {left:originX+Math.min(...corners.map(point=>point[0])),top:originY+Math.min(...corners.map(point=>point[1])),right:originX+Math.max(...corners.map(point=>point[0])),bottom:originY+Math.max(...corners.map(point=>point[1]))};
 }
 
+export function separateElectricalComponentOverlaps(diagram) {
+  const components=Array.isArray(diagram?.components)?diagram.components:[],placed=[],moved=[],grid=20,clearance=12;
+  const overlaps=(a,b)=>a.left<b.right+clearance&&a.right>b.left-clearance&&a.top<b.bottom+clearance&&a.bottom>b.top-clearance;
+  for(const component of components){
+    if(!electricalComponentCatalog[component?.type]||!Number.isFinite(Number(component.x))||!Number.isFinite(Number(component.y)))continue;
+    let bounds=electricalComponentBounds(component);
+    if(!placed.some((item)=>overlaps(bounds,item.bounds))){placed.push({component,bounds});continue;}
+    const originX=Math.round(Number(component.x)/grid)*grid,originY=Math.round(Number(component.y)/grid)*grid;
+    let location=null;
+    search: for(let radius=1;radius<=160;radius++){
+      const offsets=[];
+      for(let dx=-radius;dx<=radius;dx++)offsets.push([dx,-radius],[dx,radius]);
+      for(let dy=-radius+1;dy<radius;dy++)offsets.push([-radius,dy],[radius,dy]);
+      for(const [dx,dy] of offsets){
+        const x=originX+dx*grid,y=originY+dy*grid,candidate=electricalComponentBounds(component,x,y);
+        if(candidate.left<0||candidate.top<0||candidate.right>2200||candidate.bottom>1400)continue;
+        if(placed.some((item)=>overlaps(candidate,item.bounds)))continue;
+        location={x,y,bounds:candidate};break search;
+      }
+    }
+    if(location){component.x=location.x;component.y=location.y;bounds=location.bounds;moved.push(component.id);}
+    placed.push({component,bounds});
+  }
+  return moved;
+}
+
 export function validateElectricalDiagram(diagram, projectTags = []) {
   const issues = [], components = Array.isArray(diagram?.components) ? diagram.components : [], wires = Array.isArray(diagram?.wires) ? diagram.wires : [];
   const ids = new Set(), references = new Set(), endpoints = new Set(), mappedAddresses = new Set();
