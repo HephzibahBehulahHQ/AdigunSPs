@@ -345,6 +345,7 @@ test("opening an example keeps schematic component cards from overlapping", asyn
   const examples = page.locator("#exampleList [data-example]");
   await expect(examples.first()).toBeVisible();
   await examples.first().click();
+  await page.locator("#electricalTab").click();
 
   const components = page.locator("#electricalBoard .electrical-component");
   await expect(components.first()).toBeVisible();
