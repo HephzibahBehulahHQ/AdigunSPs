@@ -896,6 +896,24 @@ test("all application menus stay reachable within desktop viewports", async ({ p
   }
 });
 
+test("Help menu switches between workspace topics, quickstart, and the navigable manual", async ({ page }) => {
+  const menu = page.locator("#contextMenu");
+  await page.locator('[data-app-menu="help"]').click();
+  await expect(menu.locator(".help-guide-content")).toContainText("Components / Schematic");
+  await expect(menu.locator(".help-guide-content")).toContainText("Program Main");
+  await expect(menu.locator(".help-guide-content")).toContainText("HMI");
+
+  await menu.getByRole("button", { name:"2-minute start" }).click();
+  await expect(menu.locator(".help-guide-content h1")).toHaveText("AdigunSPs in 2 minutes");
+  await expect(menu.locator(".help-guide-content")).toContainText("Components / Schematic");
+
+  await menu.getByRole("button", { name:"Full manual" }).click();
+  await expect(menu.locator(".help-guide-content h1")).toHaveText("User guide");
+  await menu.locator('.help-guide-content a[href="#hmi-screen"]').click();
+  await expect(menu.locator("#hmi-screen")).toBeVisible();
+  await expect(menu.locator("#hmi-screen")).toHaveText("HMI screen");
+});
+
 test("canvas toolbars stay compact, accessible, single-line, and operational", async ({ page }) => {
   await page.setViewportSize({ width:1894, height:850 });
   const menuBefore = await page.locator(".app-menus").evaluate((element) => {
@@ -1287,3 +1305,4 @@ test("component bodies remain draggable while wire mode is armed", async ({ page
   await page.locator(`[data-terminal-component="${ids[1]}"][data-terminal="−"]`).click();
   await expect(page.locator("#electricalBoard .electrical-wire")).toHaveCount(1);
 });
+
