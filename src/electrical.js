@@ -231,7 +231,6 @@ export function separateElectricalComponentOverlaps(diagram) {
       for(let dy=-radius+1;dy<radius;dy++)offsets.push([-radius,dy],[radius,dy]);
       for(const [dx,dy] of offsets){
         const x=originX+dx*grid,y=originY+dy*grid,candidate=electricalComponentBounds(component,x,y);
-        if(!fits(candidate)&&!(candidate.right<0||candidate.left>2200||candidate.bottom<0||candidate.top>1400))continue;
         if(candidate.left<0||candidate.top<0||candidate.right>2200||candidate.bottom>1400)continue;
         if(placed.some((item)=>overlaps(candidate,item.bounds)))continue;
         location={x,y,bounds:candidate};break search;
