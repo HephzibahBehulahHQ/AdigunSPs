@@ -156,6 +156,7 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   const inputContactType=electricalComponentCatalog[deviceDefaults.inputContactType]?.kind==="contact"?deviceDefaults.inputContactType:"pushbuttonNO";
   const outputIndicatorType=electricalComponentCatalog[deviceDefaults.outputIndicatorType]?.kind==="load"?deviceDefaults.outputIndicatorType:"pilotLamp";
   const motorContactorType=electricalComponentCatalog[deviceDefaults.motorContactorType]?.kind==="contactor"?deviceDefaults.motorContactorType:"contactor3P";
+  const requestedPlcType=deviceDefaults.plcType,plcType=electricalComponentCatalog[requestedPlcType]?.kind==="plc"?requestedPlcType:"genericPlc24v4di4do",plcSpec=electricalComponentCatalog[plcType];
   const requestedSupplyType=deviceDefaults.dcSupplyType,powerSupplyType=electricalComponentCatalog[requestedSupplyType]?.kind==="power-converter"?requestedSupplyType:"supply24vdc",mainsType=powerSupplyType==="supply24vdc"?null:(electricalComponentCatalog[deviceDefaults.acSupplyType]?.kind==="single-phase-source"?deviceDefaults.acSupplyType:"singlePhaseSupply");
   const usesMainsSupply=Boolean(mainsType),plcX=usesMainsSupply?740:520,positiveRailX=usesMainsSupply?520:300,returnRailX=usesMainsSupply?960:740;
   const components = [], wires = [];
@@ -164,25 +165,26 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
     const component = createElectricalComponent(type, sequence, x, y); component.tag = tag; components.push(component); return component;
   };
   const wire = (a, at, b, bt) => { const result = connectElectricalTerminals({ components, wires }, { componentId: a.id, terminal: at }, { componentId: b.id, terminal: bt }); if (!result.ok) throw new Error(result.error); wires.push(result.wire); };
-  const mains=usesMainsSupply?add(mainsType,80,80):null,supply = add(powerSupplyType, usesMainsSupply?300:80, 80), plc = add("genericPlc24v4di4do", plcX, 80), positiveRail=add("dcPowerRail",positiveRailX,80),returnRail=add("dcPowerRail",returnRailX,80);
+  const mains=usesMainsSupply?add(mainsType,80,80):null,supply = add(powerSupplyType, usesMainsSupply?300:80, 80), plc = add(plcType, plcX, 80), positiveRail=add("dcPowerRail",positiveRailX,80),returnRail=add("dcPowerRail",returnRailX,80);
   if(mains){wire(mains,"L",supply,"L");wire(mains,"N",supply,"N");wire(mains,"PE",supply,"PE");}
-  wire(supply, "+", positiveRail, "1"); wire(supply, usesMainsSupply?"−A":"−", returnRail, "1"); wire(positiveRail,"2",plc,"L+"); wire(returnRail,"2",plc,"M");
-  const plcEarth=add("protectiveEarth",plcX,280); wire(plc,"PE",plcEarth,"PE");
+  wire(supply, "+", positiveRail, "1"); wire(supply, usesMainsSupply?"−A":"−", returnRail, "1"); wire(positiveRail,"2",plc,plcSpec.channels.powerPositivePin||"L+");
+  if(plcSpec.channels.inputCommonPins?.length&&plcSpec.channels.outputReturnPin){const inputCommon=add("groundCommon",1520,80),outputCommon=add("groundCommon",1720,80);wire(returnRail,"2",inputCommon,"COM1");wire(inputCommon,"COM2",plc,plcSpec.channels.powerNegativePin||"M");wire(inputCommon,"COM3",plc,plcSpec.channels.inputCommonPins[0]);wire(inputCommon,"COM4",outputCommon,"COM1");wire(outputCommon,"COM2",plc,plcSpec.channels.inputCommonPins[1]||plcSpec.channels.inputCommonPins[0]);wire(outputCommon,"COM3",plc,plcSpec.channels.outputReturnPin);if(plcSpec.channels.outputSupplyPin)wire(positiveRail,"7",plc,plcSpec.channels.outputSupplyPin);}else wire(returnRail,"2",plc,plcSpec.channels.powerNegativePin||"M");
+  if(plc.terminals.includes("PE")){const plcEarth=add("protectiveEarth",plcX,280);wire(plc,"PE",plcEarth,"PE");}
   const boolInputs = (tags || []).filter((tag) => tag.role === "input" && tag.type === "BOOL");
   boolInputs.slice(0, 4).forEach((tag, index) => {
-    const button = add(inputContactType, 80, 300 + index * 120, tag.name),[lineTerminal,signalTerminal]=electricalComponentCatalog[inputContactType].terminals; plc.ioMap[`I${index + 1}`] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
-    wire(positiveRail, String(index+3), button, lineTerminal); wire(button, signalTerminal, plc, `I${index + 1}`);
+    const button = add(inputContactType, 80, 300 + index * 120, tag.name),[lineTerminal,signalTerminal]=electricalComponentCatalog[inputContactType].terminals,channel=`I${index+1}`; plc.ioMap[channel] = { tag: tag.name, address: /^I\d+\.\d+$/.test(tag.address||"")?tag.address:`I0.${index}` };
+    wire(positiveRail, String(index+3), button, lineTerminal); wire(button, signalTerminal, plc, plcSpec.channels.inputPins?.[channel]||channel);
     if (initialState[tag.name]) button.closed = true;
   });
   const boolOutputs = (tags || []).filter((tag) => tag.role === "output" && tag.type === "BOOL");
   boolOutputs.slice(0, 4).forEach((tag, index) => {
-    const requestedType=outputLoadTypes[tag.name],type=requestedType==="pilotLamp"&&deviceDefaults.outputIndicatorType?outputIndicatorType:electricalComponentCatalog[requestedType]?.kind?requestedType:outputIndicatorType,load = add(type, 960, 300 + index * 160, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
+    const requestedType=outputLoadTypes[tag.name],type=requestedType==="pilotLamp"&&deviceDefaults.outputIndicatorType?outputIndicatorType:electricalComponentCatalog[requestedType]?.kind?requestedType:outputIndicatorType,load = add(type, 960, 300 + index * 160, tag.name),channel=`Q${index+1}`,plcOutput=plcSpec.channels.outputPins?.[channel]||channel; plc.ioMap[channel] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
     if (type === "threePhaseMotor") {
       const contactor=add(motorContactorType,1180,300+index*200),phaseSource=add("supply3phase",80+index*220,1140),contactorSpec=electricalComponentCatalog[motorContactorType],[coilPositive,coilNegative]=contactorSpec.coil;
-      wire(plc,`Q${index+1}`,contactor,coilPositive); wire(contactor,coilNegative,returnRail,String(index+3));
+      wire(plc,plcOutput,contactor,coilPositive); wire(contactor,coilNegative,returnRail,String(index+3));
       for(const [phaseIndex,phase,motorPin] of [[0,"L1","U1"],[1,"L2","V1"],[2,"L3","W1"]]) { const [mainIn,mainOut]=contactorSpec.mainPairs[phaseIndex]; wire(phaseSource,phase,contactor,mainIn); wire(contactor,mainOut,load,motorPin); }
       wire(phaseSource,"PE",load,"PE");
-    } else { wire(plc,`Q${index+1}`,load,electricalComponentCatalog[type].terminals[0]); wire(load,electricalComponentCatalog[type].terminals[1],returnRail,String(index+3)); }
+    } else { wire(plc,plcOutput,load,electricalComponentCatalog[type].terminals[0]); wire(load,electricalComponentCatalog[type].terminals[1],returnRail,String(index+3)); }
   });
   const analogInputs = (tags || []).filter((tag) => tag.role === "input" && ["INT", "REAL"].includes(tag.type));
   if (analogInputs.length) {
