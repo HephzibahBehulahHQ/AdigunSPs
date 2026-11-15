@@ -116,7 +116,7 @@ There is no general-purpose Build button. **Run** starts PLC simulation; **Compi
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
 ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling: **Project → Cyclic ST tasks**. See User Guide.
 
-The Siemens 3RU2126-4BC0 relay exposes three phase pairs and 95/96 NC + 97/98 NO; **Overload tripped** switches both auxiliary contacts. Schneider XB5AA31 is a spring-return NO button, terminals 13–14.
+Siemens 3RU2126-4BC0: three phase pairs and 95/96 NC + 97/98 NO; **Overload tripped** switches both auxiliary contacts. Schneider XB5AA31 is green spring-return NO (13–14); XB5AA42 is red spring-return NC (21–22).
 
 4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. Fix reported compile errors.
 
