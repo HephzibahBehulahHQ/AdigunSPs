@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentBounds, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, createExampleElectricalDiagram, duplicateElectricalComponent, electricalComponentBounds, electricalComponentCatalog, moveElectricalComponent, nextElectricalReference, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, separateElectricalComponentOverlaps, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { validateProject } from "../src/validation.js";
 import { electricalSimulationStatus, electricalSymbolSvg, electricalWirePath, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { makeProjectFromExample, scan } from "../src/engine.js";
@@ -8,6 +8,20 @@ import { examples } from "../src/examples.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+
+{
+  const plc=createElectricalComponent("siemensS71212CG2",1,460,80),earth=createElectricalComponent("phoenixPT25PE",1,480,210);
+  const wire={id:"earth-link",from:{componentId:plc.id,terminal:"X10-1"},to:{componentId:earth.id,terminal:"1"},waypoints:[{x:700,y:460}]};
+  const diagram={components:[plc,earth],wires:[wire]},originalWires=structuredClone(diagram.wires),originalEarth={x:earth.x,y:earth.y};
+  const moved=separateElectricalComponentOverlaps(diagram);
+  assert.deepEqual(moved,[earth.id],"legacy overlapping component is repositioned");
+  assert.notDeepEqual({x:earth.x,y:earth.y},originalEarth,"only the colliding component receives a new position");
+  assert.deepEqual(diagram.wires,originalWires,"wire endpoints, identity and manual route waypoints remain unchanged");
+  const boxes=diagram.components.map((component)=>electricalComponentBounds(component));
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++)assert.ok(boxes[i].right+12<=boxes[j].left||boxes[j].right+12<=boxes[i].left||boxes[i].bottom+12<=boxes[j].top||boxes[j].bottom+12<=boxes[i].top,"repaired component bounds have room for terminal hit targets");
+  assert.deepEqual(separateElectricalComponentOverlaps(diagram),[],"reopening a repaired layout is idempotent");
+}
+
 {
   const collisions=[];
   for(const example of examples){
