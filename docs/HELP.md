@@ -1,12 +1,16 @@
 # AdigunSPs Help and User Guide
 
-AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
+AdigunSPs simulates PLC logic and HMIs. Physical control unavailable.
 
 ## Table of contents
 
 - [Getting started](#getting-started)
 - [Taking the onboarding tour](#taking-the-onboarding-tour)
 - [Navigating the interface](#navigating-the-interface)
+- [Program Main](#program-main)
+- [Components / Schematic](#components-schematic)
+- [HMI](#hmi)
+- [First project: use all three workspaces](#first-project-use-all-three-workspaces)
 - [Creating a project](#creating-a-project)
 - [Saving your work](#saving-your-work)
 - [Using commands](#using-commands)
@@ -23,7 +27,7 @@ AdigunSPs simulates PLC logic and HMIs; physical control is unavailable.
 **What you'll see:** An untitled project, menus, canvas, side panels, and status.
 
 1. Open the AdigunSPs website in your browser.
-2. Continue as guest. Guest access ends after four minutes; editing then pauses, and temporary work stays in this tab.
+2. Continue as guest. After four minutes editing pauses; work stays in this tab.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
 
 
@@ -38,41 +42,37 @@ Header: RUN SIMULATION.
 
 ## Navigating the interface
 
-On wide screens, Undo/Redo/Save/Run move to the header. Account is under Project; language and preferences under Settings; Help stays in Help. Component search filters models; clear it to restore all. Manufacturer references are informational; Physical control unavailable.
+Start with the workspace that matches your task. Use the Help menu's **Help topics**, **2-minute start**, and **Full manual** buttons to switch documents. The workspace tabs stay the same; only the active canvas and its tools change.
 
-1. Click a top menu or toolbar control to open its menu or panel.
-Components / Schematic and HMI actions use compact icons; hover or focus to read names.
-2. Click outside or press Escape to close a menu; tap outside on touch.
-3. Select **Help** for this guide, safety notes, the tour, and external resources.
-
-| Menu / icon | What it does | Where it is |
+| Workspace | Use it for | First move |
 | --- | --- | --- |
-| File | New, examples, save/import/export, print, project manager | Top menu bar |
-| Edit | Undo/redo, copy/cut/paste rung, find and replace | Top menu bar |
-| View | Zoom, grid, panel layout, full screen | Top menu bar |
-| Project | Project manager, tags and I/O, hardware/device settings, Account | Top menu bar |
-| PLC/SPS | I/O and simulation controls | Top menu bar |
-| I/O & Tags | Open I/O and tag tools | Top menu bar |
-| Programs | Choose LD, FBD, ST, or SFC | Top menu bar |
-| Online / Debug | Simulation tools, watch, trace, events, checks | Top menu bar |
-| Tools | Examples, ST compile, scenarios, estimates, Modbus simulator, Adigun BOT | Top menu bar |
-| Window / Settings | Panel layout; open phone drawers here, close with **×** | Top menu bar or drawer |
-| Help | Safety/help and external resources | Top menu bar |
-| Account | Sign in, create account, guest work | Project menu |
-| Change language, preferences | Language and application settings | Settings menu |
-| Search all commands | Searchable command palette | Right side of menu row |
-| Save, Undo, Redo, Run | Project/simulation | Header ≥1200 px; else toolbar |
-| Program / Main, Components / Schematic, HMI | Switch editor workspace | Tabs or project tree |
-| LD/FBD/ST/SFC/HMI tools | Actions for the active editor | Left toolbox |
-| HMI widgets | Add; edit, move, delete | Left toolbox; right inspector |
-| Properties, Watch, Diagnostics | Edit the selected instruction, monitor values, and review checks | Right sidebar |
-| Simulated inputs, Outputs, Project Explorer | Set test inputs and navigate the open project | Left sidebar |
-| Help & docs | Open help and documentation | Footer |
+| Program Main | PLC logic and scan-by-scan simulation | Open a network and inspect its tags |
+| Components / Schematic | Named electrical parts, terminals, and routed wires | Select a component to inspect its pins |
+| HMI | Operator screens connected to project tags | Add a widget and bind its tag |
 
-**What you'll see:** A dialog has a **Close** or × control; the editor tabs include **Program / Main**.
+Press Escape or click outside to close menus. Hover or focus canvas icons for labels; use Help's table of contents for steps. **Window / Settings** open phone drawers here, close with **×**.
 
-1. Close an open dialog with its **Close** or × control, or press Escape to close an open menu.
-2. Select **Program / Main** to return to the ladder workspace from another editor tab.
+## Program Main
+
+In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `Start` and `Stop` inputs and a BOOL `Motor` output under **Tags and I/O**. Add a rung with Start NO and Stop NC before the Motor coil; add a Motor NO holding branch if needed. Set inputs in **Simulated inputs**, then use **Run** or **Step** and check diagnostics. Logic simulation does not imply motor physics.
+
+## Components / Schematic
+
+Open **Components / Schematic**, search for a named model, and choose **Place component**. Select it to inspect manufacturer, part number, pins, and model limits. Drag its header to move it. Choose **Connect wire**, select a terminal, click to add bends, and select the destination terminal. Use **Select / Move** to leave wire mode and **Validate** to check the drawing. Electrical simulation is a teaching model, not a hardware or safety test.
+
+## HMI
+
+Open **HMI** in the same project, choose a screen, and place a **Switch**, **Lamp**, **Value**, or **Trend**. Select the widget and bind an existing project tag in **Properties**. Use BOOL tags for switches and lamps; numeric tags for values and trends. Run, change a simulated input, and check the screen. HMI controls operate simulation only.
+
+## First project: use all three workspaces
+
+1. Open **File → Example browser** and choose an example with **How to test** instructions.
+2. In **Program Main**, inspect its tags and logic, toggle the named inputs, then run or step and check outputs and diagnostics.
+3. In **Components / Schematic**, inspect pins, move a part or cable, then validate.
+4. In **HMI**, bind a Switch to a BOOL input and a Lamp to a BOOL output. Run again and check both.
+5. Save signed-in work to the cloud or choose **Save locally (JSON)**. Guest changes are temporary.
+
+If a step does not match the example, follow that project's **How to test** and inspect **Issues/Diagnostics** before changing the model.
 
 ## Creating a project
 
@@ -203,3 +203,4 @@ Recipes: **Submit for review** sends snapshots. **Cloud recipe reviews** and [co
 
 Bends: click to add; drag, delete, pause, resume.
 Device sources and simulation limits appear in Properties.
+
