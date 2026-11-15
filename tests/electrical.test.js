@@ -210,6 +210,8 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
     headEvents.pointerdown({button:0,clientX:210,clientY:210,pointerId:5,target:{closest:()=>null},preventDefault(){},stopPropagation(){}});
     boardEvents.pointermove({clientX:330,clientY:410});boardEvents.pointerup();
     assert.deepEqual([component.x,component.y],[320,400],"the dedicated component move handle remains draggable while wire-connect mode is active");
+    cardEvents.pointerdown({button:0,clientX:330,clientY:410,pointerId:6,target:{closest:()=>null},preventDefault(){}});boardEvents.pointermove({clientX:450,clientY:530});boardEvents.pointerup();
+    assert.deepEqual([component.x,component.y],[440,520],"the component body remains movable while wire-connect mode is active");
   }finally{if(previousCss===undefined)delete globalThis.CSS;else globalThis.CSS=previousCss;}
 }
 {
