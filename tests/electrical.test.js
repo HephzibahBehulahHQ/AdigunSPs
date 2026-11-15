@@ -8,6 +8,12 @@ import { examples } from "../src/examples.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.meta.url),"utf8");
+const appSource=readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const openExampleStart=appSource.indexOf("async function openExample(example) {");
+const openExampleEnd=appSource.indexOf("async function exportExampleTestReport",openExampleStart);
+const openExampleSource=appSource.slice(openExampleStart,openExampleEnd<0?undefined:openExampleEnd);
+const exampleRepairIndex=openExampleSource.indexOf("separateElectricalComponentOverlaps(project.electrical)");
+assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(example)")&&exampleRepairIndex<openExampleSource.indexOf("render()"),"example schematics repair overlapping components before their first render");
 
 {
   const plc=createElectricalComponent("siemensS71212CG2",1,460,80),earth=createElectricalComponent("phoenixPT25PE",1,480,210);
