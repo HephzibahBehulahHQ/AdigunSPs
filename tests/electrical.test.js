@@ -273,19 +273,19 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   for(const pin of contact.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`));assert.ok(root.innerHTML.includes("data-electrical-input=\"S1\""),"the real NO contact is controllable from the manual simulation inputs");assert.ok(root.innerHTML.includes("Siemens SIRIUS ACT 3SU1 data sheet"));assert.match(electricalSymbolSvg(contact),/SIRIUS ACT|3SU1400|normally-open contact/i);
 }
 {
-  const source=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU14001NO1NCContact",1,320,80),ncLamp=createElectricalComponent("pilotLamp",1,560,20),noLamp=createElectricalComponent("pilotLamp",2,560,180),diagram={components:[source,contact,ncLamp,noLamp],wires:[]};
+  const sourceNc=createElectricalComponent("supply24vdc",1,80,80),sourceNo=createElectricalComponent("supply24vdc",2,80,220),contact=createElectricalComponent("siemens3SU14001NO1NCContact",1,320,80),ncLamp=createElectricalComponent("pilotLamp",1,560,20),noLamp=createElectricalComponent("pilotLamp",2,560,180),diagram={components:[sourceNc,sourceNo,contact,ncLamp,noLamp],wires:[]};
   assert.equal(contact.manufacturer,"Siemens");
   assert.equal(contact.partNumber,"3SU1400-1AA10-1FA0");
   assert.deepEqual(contact.terminals,["1","2","3","4"]);
   assert.deepEqual(electricalComponentCatalog[contact.type].terminalLayout,["1","3","2","4"]);
   assert.deepEqual(electricalComponentCatalog[contact.type].contactPairs,[{terminals:["1","2"],normallyClosed:true},{terminals:["3","4"],normallyClosed:false}]);
   for(const [from,to] of [
-    [{componentId:source.id,terminal:"+"},{componentId:contact.id,terminal:"1"}],
+    [{componentId:sourceNc.id,terminal:"+"},{componentId:contact.id,terminal:"1"}],
     [{componentId:contact.id,terminal:"2"},{componentId:ncLamp.id,terminal:"X1"}],
-    [{componentId:ncLamp.id,terminal:"X2"},{componentId:source.id,terminal:"−"}],
-    [{componentId:source.id,terminal:"+"},{componentId:contact.id,terminal:"3"}],
+    [{componentId:ncLamp.id,terminal:"X2"},{componentId:sourceNc.id,terminal:"−"}],
+    [{componentId:sourceNo.id,terminal:"+"},{componentId:contact.id,terminal:"3"}],
     [{componentId:contact.id,terminal:"4"},{componentId:noLamp.id,terminal:"X1"}],
-    [{componentId:noLamp.id,terminal:"X2"},{componentId:source.id,terminal:"−"}],
+    [{componentId:noLamp.id,terminal:"X2"},{componentId:sourceNo.id,terminal:"−"}],
   ]){const result=connectElectricalTerminals(diagram,from,to);assert.equal(result.ok,true,"all four manufacturer-marked terminals wire independently");diagram.wires.push(result.wire);}
   const atRest=simulateElectricalDiagram(diagram,{S1:false},{}),actuated=simulateElectricalDiagram(diagram,{S1:true},{});
   assert.equal(atRest.energized[ncLamp.id],true,"the 1/2 normally-closed path conducts at rest");
