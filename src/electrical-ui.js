@@ -129,6 +129,7 @@ export function electricalSymbolSvg(component) {
     case "phoenixPT25PE":body=`${line(5,22,31,22)}<rect x="31" y="10" width="34" height="24" ${common}/>${text(48,25,"PE",10)}${line(65,22,91,22)}${line(48,34,48,38)}${line(39,38,57,38)}${line(42,41,54,41)}${line(45,44,51,44)}`;break;
     case "selectorSwitch":{const closedThrow=component.selectorPosition==="II"?54:32;body=`${line(4,32,31,32)}<circle cx="31" cy="32" r="2" fill="currentColor" stroke="none"/>${line(31,32,closedThrow===32?65:58,closedThrow)}${line(65,32,92,32)}${line(65,54,92,54)}${text(48,11,component.selectorPosition||"I",7)}`;break;}
     case "siemens3SU1400NCContact":body=contact(true,component.contactClosed??true);break;
+    case "siemens3RU21264BC0OverloadRelay":{const states=component.contactPairStates||[true,false],nc=Boolean(states[0]),no=Boolean(states[1]),main=[8,20,32].map((y,index)=>`${line(4,y,30,y)}<rect x="30" y="${y-4}" width="36" height="8" ${common}/>${line(35,y+3,61,y-3)}${line(66,y,92,y)}${text(48,y+3,`L${index+1}/T${index+1}`,4)}`).join(""),aux=(y,closed,normallyClosed,label)=>`${line(4,y,31,y)}${line(31,y-5,31,y+5)}${line(65,y-5,65,y+5)}${line(65,y,92,y)}${line(31,y,closed?65:58,closed?y:y-6)}${normallyClosed?line(42,y-6,53,y+6):""}${text(48,y+9,label,5)}`;body=`${main}${aux(48,nc,true,"95–96 NC")}${aux(68,no,false,"97–98 NO")}`;break;}
     case "siemens3SU14001NO1NCContact":{const states=component.contactPairStates||[true,false],ncClosed=Boolean(states[0]),noClosed=Boolean(states[1]);body=`${line(4,12,31,12)}${line(31,4,31,20)}${line(65,4,65,20)}${line(65,12,92,12)}${line(31,12,ncClosed?65:58,ncClosed?12:5)}${line(42,3,53,21)}${text(48,3,"NC",5)}${line(4,36,31,36)}${line(31,28,31,44)}${line(65,28,65,44)}${line(65,36,92,36)}${line(31,36,noClosed?65:58,noClosed?36:29)}${text(48,46,"NO",5)}`;break;}
     case "siemens3SU1400NOContact":body=contact(false);break;
     case "pushbuttonNO":case "toggleSwitchNO":case "limitSwitchNO":case "proximityNO":case "photoelectricNO":case "pressureSwitchNO":case "temperatureSwitchNO":case "floatSwitchNO":case "pushbuttonNC":case "emergencyStopNC":case "toggleSwitchNC":case "temperatureSwitchNC":case "limitSwitchNC":case "proximityNC":case "photoelectricNC":case "auxiliaryNO":case "auxiliaryNC":case "overloadNC":{const normallyClosed=Boolean(component.normallyClosed)||["auxiliaryNC","overloadNC"].includes(component.type);body=contact(normallyClosed,component.contactClosed??normallyClosed);break;}
@@ -151,7 +152,7 @@ export function electricalSymbolSvg(component) {
     case "groundCommon":body=`${[0,1,2,3].map((i)=>line(7,8+i*9,39,8+i*9)).join("")}<circle cx="52" cy="22" r="12" ${common}/>${text(52,25,"COM",7)}${line(64,22,91,22)}`;break;
     default:body=`<rect x="22" y="7" width="52" height="30" rx="2" ${common}/>${text(48,25,spec.prefix,9)}${line(5,22,22,22)}${line(74,22,91,22)}`;
   }
-  const viewBox=component.type==="selectorSwitch"?"0 0 96 64":"0 0 96 44";
+  const viewBox=component.type==="selectorSwitch"?"0 0 96 64":component.type==="siemens3RU21264BC0OverloadRelay"?"0 0 96 80":"0 0 96 44";
   return `<svg class="electrical-standard-symbol" viewBox="${viewBox}" role="img" aria-label="${escape(spec.name)}"><title>${escape(spec.name)}</title>${body}</svg>`;
 }
 
