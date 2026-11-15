@@ -1,6 +1,6 @@
 # AdigunSPs component and instruction library
 
-The **Components** tab is an editable schematic workspace with terminal-level wires and Boolean/scalar simulation. Its educational devices are not vendor-certified and must not be used as a wiring or safety design. The selectable Siemens SITOP PSU100C and ifm PN2070 entries below are source-backed schematic references with connectable pins; their electrical behavior is not simulated. Manufacturer catalog entries remain informational unless explicitly listed as placeable schematic references.
+The **Components** tab is an editable schematic workspace with terminal-level wires and Boolean/scalar simulation. Its educational devices are not vendor-certified and must not be used as a wiring or safety design. The source-backed Siemens SITOP PSU100C is simulated as an ideal 24 V DC converter when its L/N terminals are wired to a modeled single-phase supply; real waveform, regulation, overload, protection, isolation, startup, and device fault behavior are not modeled. The ifm PN2070 is a source-backed pin-level reference without sensor signal behavior. Manufacturer catalog entries remain informational unless explicitly listed as placeable schematic references.
 
 For a routed cable, choose **Connect wire**, pick a source terminal, add bends by clicking the canvas, and select a destination terminal. Select a wire in Properties to drag its saved bends or press Delete on a focused bend to remove it. Pause a cable with the same **Pause wire** control and resume from its free-end marker. Paused drafts persist but are ignored by circuit simulation until completed.
 
@@ -9,7 +9,7 @@ For a routed cable, choose **Connect wire**, pick a source terminal, add bends b
 | Component | Function in this simulator | Example |
 | --- | --- | --- |
 | 24 V DC supply | Simulated positive and negative rails | Power a pushbutton and lamp circuit |
-| Siemens SITOP PSU100C (6EP1332-5BA00) | Source-backed schematic reference; L, N, PE, +, and two separately connectable 0 V terminals | Draw the documented 24 V / 2.5 A supply connections; behavior/current limiting are not simulated |
+| Siemens SITOP PSU100C (6EP1332-5BA00) | Source-backed ideal AC/DC converter with L, N, PE, +, and two internally common 0 V terminals; requires wired single-phase AC input | Connect L/N to a modeled AC source and use the +/− output terminals for a 24 V DC teaching circuit; regulation and current limiting are not simulated |
 | ifm PN2070 pressure sensor | Source-backed M12 four-pin schematic reference: 1 BN/L+, 2 WH/OUT2, 4 BK/OUT1, 3 BU/L− | Wire the documented supply and signal pins; pressure, analogue, and IO-Link behavior are not simulated |
 | Single-phase supply | L, N, and PE terminals; connectivity only | Draw a single-phase load path |
 | Three-phase supply | L1/L2/L3/PE connectivity | Draw a three-phase motor starter |
