@@ -17,6 +17,8 @@ for (const section of ["getting-started", "taking-the-onboarding-tour", "navigat
 for (const [, anchor] of guide.matchAll(/\]\(#([^)]+)\)/g)) assert.ok(rendered.includes(`id="${anchor}"`), `Help contents target ${anchor} exists`);
 assert.ok(guide.trim().split(/\s+/).length < 2500, "Help guide stays under the requested word limit");
 assert.match(guide,/RUN SIMULATION/);
+assert.match(guide,/3RU2126-4BC0[\s\S]*thermal response[\s\S]*not calculated/i,"Help documents the overload relay simulation boundary");
+assert.match(userGuide,/3RU2126-4BC0[\s\S]*95\/96 NC[\s\S]*97\/98 NO[\s\S]*not modeled/i,"User Guide documents the verified overload relay terminals and simulation boundary");
 assert.match(userGuide,/### Status strip[\s\S]*Grid: 20 px[\s\S]*no hardware connected/);
 assert.ok(quickstart.trim().split(/\s+/).length < 500, "Quickstart stays within one page");
 assert.match(guide, /\*\*Project → Account\*\*/, "Help identifies the wide-screen Account menu path");

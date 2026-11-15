@@ -116,6 +116,8 @@ AdigunSPs does not have a general-purpose “Build” button. In this app, **Run
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
 ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling: **Project → Cyclic ST tasks**. See User Guide.
 
+The source-backed Siemens SIRIUS 3RU2126-4BC0 overload-relay model has three wired phase paths plus 95/96 NC and 97/98 NO trip contacts. Select the component and toggle **Overload tripped** to test its auxiliary contacts. Its thermal response and motor-protection behavior are not calculated.
+
 4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. On wide screens, ribbon actions remain in menus and search. Fix reported compile errors.
 
 The HUD is educational: voltage, current, and motor RPM are not calculated. USB controls are under Hardware inventory / BOM.

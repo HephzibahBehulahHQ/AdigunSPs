@@ -302,6 +302,47 @@ const electricalUiSource=readFileSync(new URL("../src/electrical-ui.js",import.m
   assert.match(electricalSymbolSvg(contact),/NC/u);assert.match(electricalSymbolSvg(contact),/NO/u);
 }
 {
+  const relay=createElectricalComponent("siemens3RU21264BC0OverloadRelay",1,320,120),supplies=Array.from({length:5},(_,index)=>createElectricalComponent("supply24vdc",index+1)),lamps=Array.from({length:5},(_,index)=>createElectricalComponent("pilotLamp",index+1)),diagram={components:[...supplies,relay,...lamps],wires:[]};
+  assert.equal(relay.manufacturer,"Siemens");
+  assert.equal(relay.partNumber,"3RU2126-4BC0");
+  assert.deepEqual(relay.terminals,["1/L1","3/L2","5/L3","2/T1","4/T2","6/T3","95","96","97","98"]);
+  assert.deepEqual(electricalComponentCatalog[relay.type].mainPairs,[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]]);
+  assert.deepEqual(electricalComponentCatalog[relay.type].contactPairs,[{terminals:["95","96"],normallyClosed:true},{terminals:["97","98"],normallyClosed:false}]);
+  for(let index=0;index<3;index++){
+    const [from,to]=electricalComponentCatalog[relay.type].mainPairs[index];
+    for(const [a,b] of [
+      [{componentId:supplies[index].id,terminal:"+"},{componentId:relay.id,terminal:from}],
+      [{componentId:relay.id,terminal:to},{componentId:lamps[index].id,terminal:"X1"}],
+      [{componentId:lamps[index].id,terminal:"X2"},{componentId:supplies[index].id,terminal:"−"}],
+    ]){const result=connectElectricalTerminals(diagram,a,b);assert.equal(result.ok,true,`main pole ${from}–${to} terminals connect`);diagram.wires.push(result.wire);}
+  }
+  for(const [index,pair] of electricalComponentCatalog[relay.type].contactPairs.entries()){
+    const supply=supplies[index+3],lamp=lamps[index+3];
+    for(const [a,b] of [
+      [{componentId:supply.id,terminal:"+"},{componentId:relay.id,terminal:pair.terminals[0]}],
+      [{componentId:relay.id,terminal:pair.terminals[1]},{componentId:lamp.id,terminal:"X1"}],
+      [{componentId:lamp.id,terminal:"X2"},{componentId:supply.id,terminal:"−"}],
+    ]){const result=connectElectricalTerminals(diagram,a,b);assert.equal(result.ok,true,`auxiliary pole ${pair.terminals.join("–")} terminals connect`);diagram.wires.push(result.wire);}
+  }
+  const atRest=simulateElectricalDiagram(diagram),trippedDiagram=structuredClone(diagram);trippedDiagram.components.find(item=>item.id===relay.id).tripped=true;
+  const tripped=simulateElectricalDiagram(trippedDiagram);
+  assert.deepEqual([0,1,2].map(index=>atRest.energized[lamps[index].id]),[true,true,true],"all three thermal main paths are electrically represented as pass-throughs");
+  assert.equal(atRest.energized[lamps[3].id],true,"the 95/96 NC trip contact conducts at rest");
+  assert.equal(atRest.energized[lamps[4].id],false,"the 97/98 NO trip indication is open at rest");
+  assert.deepEqual(atRest.componentStates[relay.id].contactPairStates,[true,false]);
+  assert.deepEqual([0,1,2].map(index=>tripped.energized[lamps[index].id]),[true,true,true],"manual trip does not falsely model the overload relay as a contactor power switch");
+  assert.equal(tripped.energized[lamps[3].id],false,"the 95/96 NC contact opens when tripped");
+  assert.equal(tripped.energized[lamps[4].id],true,"the 97/98 NO trip indication closes when tripped");
+  assert.deepEqual(tripped.componentStates[relay.id].contactPairStates,[false,true]);
+  assert.ok(!validateElectricalDiagram(diagram).some(issue=>issue.level==="error"),"three-phase overload schematic paths validate");
+  const root={dataset:{selectedComponent:relay.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
+  for(const pin of relay.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`manufacturer terminal ${pin} is an individual wiring endpoint`);
+  assert.ok(root.innerHTML.includes("3RU2126-4BC0"),"the verified Siemens part identity appears in the editor");
+  assert.match(electricalSymbolSvg({...relay,...atRest.componentStates[relay.id]}),/95–96 NC/u);
+  assert.match(electricalSymbolSvg({...relay,...tripped.componentStates[relay.id]}),/97–98 NO/u);
+}
+
+{
   const source=createElectricalComponent("supply24vdc",1,80,80),contact=createElectricalComponent("siemens3SU1400NCContact",1,320,80),lamp=createElectricalComponent("pilotLamp",1,560,80),diagram={components:[source,contact,lamp],wires:[]};
   assert.equal(contact.manufacturer,"Siemens");
   assert.equal(contact.partNumber,"3SU1400-1AA10-1CA0");
