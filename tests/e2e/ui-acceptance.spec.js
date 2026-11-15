@@ -1180,7 +1180,7 @@ test("source-backed Siemens NO contact manually switches its wired simulation lo
 test("component bodies remain draggable while wire mode is armed", async ({ page }) => {
   await page.setViewportSize({width:1894,height:850});
   await page.locator("#electricalTab").click();
-  const palette=page.locator("#electricalCanvasContext #electricalPalette"),add=page.locator('#electricalCanvasContext [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
+  const palette=page.locator("#electricalToolboxDock #electricalPalette"),add=page.locator('#electricalToolboxDock [data-electrical-action="add"]'),components=page.locator("#electricalBoard [data-component-id]");
   await palette.selectOption("supply24vdc");
   const countBefore=await components.count();
   await add.click();await add.click();await expect(components).toHaveCount(countBefore+2);
