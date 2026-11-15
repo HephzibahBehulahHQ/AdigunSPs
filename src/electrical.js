@@ -155,6 +155,7 @@ export function updateElectricalComponentProperties(component, updates = {}) {
 export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}, deviceDefaults = {}) {
   const inputContactType=electricalComponentCatalog[deviceDefaults.inputContactType]?.kind==="contact"?deviceDefaults.inputContactType:"pushbuttonNO";
   const outputIndicatorType=electricalComponentCatalog[deviceDefaults.outputIndicatorType]?.kind==="load"?deviceDefaults.outputIndicatorType:"pilotLamp";
+  const motorContactorType=electricalComponentCatalog[deviceDefaults.motorContactorType]?.kind==="contactor"?deviceDefaults.motorContactorType:"contactor3P";
   const components = [], wires = [];
   const add = (type, x, y, tag = "") => {
     const sequence = Number(nextElectricalReference(type,components).replace(electricalComponentCatalog[type].prefix,""));
@@ -174,9 +175,9 @@ export function createExampleElectricalDiagram(tags, io, initialState = {}, outp
   boolOutputs.slice(0, 4).forEach((tag, index) => {
     const requestedType=outputLoadTypes[tag.name],type=requestedType==="pilotLamp"&&deviceDefaults.outputIndicatorType?outputIndicatorType:electricalComponentCatalog[requestedType]?.kind?requestedType:outputIndicatorType,load = add(type, 960, 300 + index * 160, tag.name); plc.ioMap[`Q${index + 1}`] = { tag: tag.name, address: /^Q\d+\.\d+$/.test(tag.address||"")?tag.address:`Q0.${index}` };
     if (type === "threePhaseMotor") {
-      const contactor=add("contactor3P",1180,300+index*200), phaseSource=add("supply3phase",80+index*220,1140);
-      wire(plc,`Q${index+1}`,contactor,"A1"); wire(contactor,"A2",returnRail,String(index+3));
-      for(const [phase,mainIn,mainOut,motorPin] of [["L1","1L1","2T1","U1"],["L2","3L2","4T2","V1"],["L3","5L3","6T3","W1"]]) { wire(phaseSource,phase,contactor,mainIn); wire(contactor,mainOut,load,motorPin); }
+      const contactor=add(motorContactorType,1180,300+index*200),phaseSource=add("supply3phase",80+index*220,1140),contactorSpec=electricalComponentCatalog[motorContactorType],[coilPositive,coilNegative]=contactorSpec.coil;
+      wire(plc,`Q${index+1}`,contactor,coilPositive); wire(contactor,coilNegative,returnRail,String(index+3));
+      for(const [phaseIndex,phase,motorPin] of [[0,"L1","U1"],[1,"L2","V1"],[2,"L3","W1"]]) { const [mainIn,mainOut]=contactorSpec.mainPairs[phaseIndex]; wire(phaseSource,phase,contactor,mainIn); wire(contactor,mainOut,load,motorPin); }
       wire(phaseSource,"PE",load,"PE");
     } else { wire(plc,`Q${index+1}`,load,electricalComponentCatalog[type].terminals[0]); wire(load,electricalComponentCatalog[type].terminals[1],returnRail,String(index+3)); }
   });
