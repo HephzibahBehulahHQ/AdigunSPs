@@ -1755,6 +1755,18 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
   await expect(await readPersistedState()).toEqual(before);
 });
 
+test("workspace starts with an unsupported saved interface language", async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem("adigun-language", "fr"));
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#languageButton")).toHaveText("EN");
+  await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", /^(guest|member|account-required)$/);
+  await page.evaluate(() => localStorage.setItem("adigun-language", "de"));
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(page.locator("#languageButton")).toHaveText("DE");
+});
+
 test("workspace dialog controls follow the interface language", async ({ page }) => {
   for (const [locale, closeLabel] of [["EN", "Close dialog"], ["DE", "Dialog schließen"], ["YO", "Pa àpótí ìjíròrò"], ["PCM", "Close this window"]]) {
     await expect(page.locator("#languageButton")).toHaveText(locale);
