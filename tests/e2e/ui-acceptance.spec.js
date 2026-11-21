@@ -1346,6 +1346,25 @@ test("mobile drawer keyboard focus enters each drawer and returns on Escape", as
     await page.keyboard.press("Escape");
     await expect(close).toBeHidden();
     await expect(opener).toBeFocused();
+    for (const backwards of [true, false]) {
+      await opener.press("Enter");
+      await page.locator(choice).press("Enter");
+      await page.locator(`.${side}-sidebar`).evaluate((drawer, backwards) => {
+        const stops = [...drawer.querySelectorAll("a[href],button,input,select,textarea,[tabindex]")]
+          .filter((element) => element.tabIndex >= 0 && !element.matches(":disabled") &&
+            element.getClientRects().length && getComputedStyle(element).visibility === "visible");
+        (backwards ? stops[0] : stops.at(-1)).focus();
+      }, backwards);
+      await page.keyboard.press(backwards ? "Shift+Tab" : "Tab");
+      await expect(close).toBeHidden();
+      await expect(opener).toBeFocused();
+    }
+    await opener.press("Enter");
+    await page.locator(choice).press("Enter");
+    await page.setViewportSize({ width:1024, height:768 });
+    await expect(page.locator(".workspace")).not.toHaveClass(/mobile-(left|right)-open/);
+    await page.setViewportSize({ width:390, height:844 });
+    await expect(close).toBeHidden();
   }
 });
 

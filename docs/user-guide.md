@@ -274,7 +274,7 @@ On narrow phones the header uses two rows: company/product identity above, proje
 
 On phones, scroll the editor tabs and its control row sideways to reach extra controls; the page itself stays within the screen.
 
-Choose **Panel layout** to open the Project and I/O panel or the Inspector and diagnostics panel. Focus moves into the drawer. Tap **×** or press **Escape** to close it and return focus to **Panel layout**.
+Choose **Panel layout** to open the Project and I/O panel or the Inspector and diagnostics panel. Focus moves into the drawer. Tap **×** or press **Escape** to close it and return focus to **Panel layout**. Moving past the first or last control with Shift+Tab or Tab also closes the drawer.
 
 At viewport widths of 1051 px and above, **Window → Panel layout** also lets you enter a width in pixels for either side panel. Clear the field to return that panel to automatic sizing. The browser remembers your widths separately from the project.
 
