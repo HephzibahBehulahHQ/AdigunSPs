@@ -114,7 +114,7 @@ There is no general-purpose Build button. **Run** starts PLC simulation; **Compi
 **What you'll see:** Starting **Run** opens the simulation HUD with scan, active rung, active timer, and status readouts; it also adds a live System log. Voltage, current, and motor RPM are shown as **Not modeled**.
 
 1. Add logic in **Program / Main** or choose **Programs** to open FBD, ST, or SFC.
-2. For ladder logic, set simulated inputs in the **Simulated inputs** panel and select **Run** to scan continuously, or **Step** for one scan. Select **Pause** to pause; **Reset** stops and clears simulation state. **Operations estimates** exports the same Boolean outputs shown in the dashboard, including idle outputs.
+2. Set **Simulated inputs**. **Run** scans continuously, **Step** scans once, **Pause** stops scanning, and **Reset** clears state. **Operations estimates** exports all Boolean outputs shown, including idle outputs.
 3. For ST, select **Compile** and check **Diagnostics**. Statements can share or span lines; names ignore case (`motor` = `Motor`). Case-only duplicate tags are rejected.
 ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling: **Project → Cyclic ST tasks**. See User Guide.
 
