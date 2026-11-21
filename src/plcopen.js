@@ -14,6 +14,36 @@ const children = (node, name) => [...(node?.children || [])].filter((child) => c
 const child = (node, name) => children(node, name)[0] || null;
 const text = (node) => node?.textContent?.trim() || "";
 
+const TIME_UNITS_MS = new Map([["d", 86400000], ["h", 3600000], ["m", 60000], ["s", 1000], ["ms", 1]]);
+
+function readTimeLiteral(value) {
+  const literal = /^(?:T|TIME)#(.+)$/i.exec(value?.trim())?.[1];
+  if (!literal) return NaN;
+  const component = /(\d+)(?:\.(\d+))?(ms|d|h|m|s)/iy;
+  let offset = 0, previousUnit = Infinity, total = 0;
+  while (offset < literal.length) {
+    component.lastIndex = offset;
+    const match = component.exec(literal);
+    if (!match) return NaN;
+    const [, whole, fraction, unit] = match;
+    const multiplier = TIME_UNITS_MS.get(unit.toLowerCase());
+    if (multiplier >= previousUnit || (fraction && component.lastIndex !== literal.length)) return NaN;
+    total += Number(whole) * multiplier;
+    if (fraction) {
+      const decimal = fraction.replace(/0+$/, "");
+      if (decimal) {
+        const divisor = 10 ** decimal.length;
+        const scaled = Number(decimal) * multiplier;
+        total += Number.isFinite(scaled) && Number.isFinite(divisor) ? scaled / divisor : Number("0." + decimal) * multiplier;
+      }
+    }
+    previousUnit = multiplier;
+    offset = component.lastIndex;
+    if (literal[offset] === "_" && offset + 1 < literal.length) offset++;
+  }
+  return total <= Number.MAX_SAFE_INTEGER ? total : NaN;
+}
+
 function supportedRungs(project) {
   if (!Array.isArray(project.rungs) || !project.rungs.length) throw new Error("Add at least one ladder network before exporting PLCopen XML.");
   const declared = new Set((project.tags || []).map((tag) => tag.name));
@@ -311,8 +341,7 @@ function readLdTimerBlock(block) {
   const ptPoints = children(ptPin, "connectionPointIn");
   const ptPoint = ptPoints[0];
   const expressions = children(ptPoint, "expression");
-  const presetMatch = /^(?:T|TIME)#(\d+)ms$/i.exec(text(expressions[0]));
-  const preset = Number(presetMatch?.[1]);
+  const preset = readTimeLiteral(text(expressions[0]));
   if (ptPoints.length !== 1 || expressions.length !== 1 || children(ptPoint, "connection").length ||
       !Number.isSafeInteger(preset) || preset <= 0) {
     throw new Error("PLCopen timer preset must be a positive integer-millisecond literal.");
@@ -351,8 +380,7 @@ function readTaskConfiguration(root, pou) {
     throw new Error("PLCopen import supports one cyclic task assigned to the imported program.");
   }
   const name = task.getAttribute("name")?.trim();
-  const interval = /^(?:T|TIME)#(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?$/i.exec(task.getAttribute("interval") || "");
-  const cycleMs = interval ? Number(interval[1] || 0) * 60000 + Number(interval[2] || 0) * 1000 + Number(interval[3] || 0) : NaN;
+  const cycleMs = readTimeLiteral(task.getAttribute("interval"));
   if (!name || task.hasAttribute("single") || !Number.isInteger(cycleMs) || cycleMs < 1 || cycleMs > 60000) {
     throw new Error("PLCopen import requires a named cyclic task with a period of 1–60000 whole milliseconds.");
   }
@@ -407,7 +435,14 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     if (alias) tag.alias = alias; if (label || otherDocs.length) tag.label = [label, ...otherDocs].filter(Boolean).join("\n");
     tags.push(tag); declarations.set(name, tag);
     const value = child(child(variable, "initialValue"), "simpleValue")?.getAttribute("value");
-    if (value !== null && value !== undefined) initialState[name] = type === "BOOL" ? value.toUpperCase() === "TRUE" : type === "TIME" ? Number.parseFloat(value.replace(/^T#/, "")) || 0 : Number(value);
+    if (value !== null && value !== undefined) {
+      if (type === "TIME") {
+        const legacy = /^(?:(\d+(?:\.\d+)?)|(?:T|TIME)#(\d+(?:\.\d+)?e[+-]?\d+)ms)$/i.exec(value.trim());
+        const duration = legacy ? Number(legacy[1] ?? legacy[2]) : readTimeLiteral(value);
+        if (!Number.isFinite(duration) || duration > Number.MAX_SAFE_INTEGER) throw new Error(`PLCopen TIME tag ${name} uses an invalid duration.`);
+        initialState[name] = duration;
+      } else initialState[name] = type === "BOOL" ? value.toUpperCase() === "TRUE" : Number(value);
+    }
   }
   const occupiedNames = new Set(tags.map(({ name }) => name.toUpperCase()));
   for (const [instance, tag] of timerDeclarations) {

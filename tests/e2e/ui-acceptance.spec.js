@@ -141,9 +141,11 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
     const generatedInstance = new DOMParser().parseFromString(dottedXml, "application/xml").querySelector("block").getAttribute("instanceName");
     return {
       modes:[check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"')), check(enabledXml), check(dottedXml)],
+      alternatePreset:check(xml.replace("T#1500ms", "TIME#1.5s")),
       ambiguityRejected, generatedInstance, invalidTaskErrors,
       task:parsePlcopenXml(xml).task,
       combinedPeriod:parsePlcopenXml(xml.replace("T#750ms", "T#1s250ms")).task.cycleMs,
+      decimalPeriod:parsePlcopenXml(xml.replace("T#750ms", "T#1.001s")).task.cycleMs,
       legacyPeriod:parsePlcopenXml(xml.replace(/<configurations>.*?<\/configurations>/, "<configurations/>")).task.cycleMs
     };
   });
@@ -154,10 +156,11 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
       ["DelayTimer", "EN", true, true, true, false, false],
       ["T0.0", "EN", true, true, true, false, false]
     ],
+    alternatePreset:["DelayTimer", "DN", false, true, true, false, false],
     ambiguityRejected:true,
     generatedInstance:"AdigunTimer_2",
     invalidTaskErrors:[expect.stringContaining("named cyclic task"), expect.stringContaining("named cyclic task"), expect.stringContaining("assigned to the imported program")],
-    task:{ name:"TimingCycle", mode:"cyclic", cycleMs:750 }, combinedPeriod:1250, legacyPeriod:100
+    task:{ name:"TimingCycle", mode:"cyclic", cycleMs:750 }, combinedPeriod:1250, decimalPeriod:1001, legacyPeriod:100
   });
 });
 

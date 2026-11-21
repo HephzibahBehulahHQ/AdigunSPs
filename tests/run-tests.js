@@ -156,6 +156,20 @@ for (const [inputs, expected] of [
 assert.equal(importedPlcopen.name, "Imported exercise", "PLCopen importer reads project name");
 assert.deepEqual(importedPlcopen.io, { inputs:["Start", "Stop", "Sensor"], outputs:["Motor"] }, "PLCopen importer recovers I/O roles and addresses");
 assert.equal(importedPlcopen.initialState.Delay, 1500, "PLCopen importer restores TIME initial values in milliseconds");
+
+const delayInitial = descendantsForTest(plcRoot, "simpleValue").at(-1);
+for (const [value, expected] of [
+  ["T#1s", 1000], ["TIME#1s_250ms", 1250], ["T#1.001s", 1001], ["T#1m2.5s", 62500],
+  ["T#0.125ms", 0.125], ["T#1e-7ms", 0.0000001], ["1500", 1500]
+]) {
+  delayInitial.setAttribute("value", value);
+  assert.equal(parsePlcopenXml("<project/>", PlcopenDomParserStub).initialState.Delay, expected, value);
+}
+for (const value of ["T#1ms2s", "T#1.5s2ms", "T#1s_", "T#1sUnknown", "T#1d1d", "T#-1s"]) {
+  delayInitial.setAttribute("value", value);
+  assert.throws(() => parsePlcopenXml("<project/>", PlcopenDomParserStub), /invalid duration/, value);
+}
+delayInitial.setAttribute("value", "T#1500ms");
 assert.deepEqual(importedPlcopen.rungs[0].branches, [[{ tag:"Start", mode:"NO" }, { tag:"Stop", mode:"NC" }], [{ tag:"Sensor", mode:"NO" }]], "PLCopen importer reconstructs parallel OR paths with their series contacts");
 assert.equal(importedPlcopen.rungs[0].comment, "Motor enable", "PLCopen importer restores network comments");
 assert.equal(importedPlcopen.tags.find((tag) => tag.name === "Motor").alias, "Drive A", "PLCopen importer restores aliases recorded in variable documentation");
