@@ -765,6 +765,75 @@ test("SFC starts and resets to the configured step in an imported chart", async 
   await expect(ready).toHaveClass(/active/);
 });
 
+test("PLCopen SFC sequence round-trips step actions, conditions, and the initial step", async ({ page }) => {
+  const xml = await page.evaluate(async () => {
+    const { createPlcopenXml } = await import("/src/plcopen.js");
+    return createPlcopenXml({
+      name:"SFC XML sequence", editorType:"SFC", rungs:[],
+      tags:[{ name:"Advance", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+      initialState:{ Advance:false },
+      sfc:{ initialStep:"ready", outputs:["Lamp"],
+        steps:[{ id:"idle", name:"Idle", actions:[] }, { id:"ready", name:"Ready to run", actions:["Lamp"] }],
+        transitions:[
+          { id:"advance", from:"ready", to:"idle", condition:"Advance", mode:"NO" },
+          { id:"return", from:"idle", to:"ready", condition:"Advance", mode:"NC" }
+        ] }
+    });
+  });
+  expect(xml).toContain('<jumpStep');
+  expect(xml).toContain('<reference name="Lamp"/>');
+  const importXml = async (name, value) => page.locator("#fileInput").setInputFiles({
+    name, mimeType:"application/xml", buffer:Buffer.from(value)
+  });
+  await importXml("sequential.xml", xml);
+  await expect(page.locator("#projectTitle")).toHaveText("SFC XML sequence");
+  await expect(page.locator("#editorMode")).toHaveValue("SFC");
+  const ready = page.locator('[data-sfc-step="plcopen-step-2"]');
+  await expect(ready).toHaveClass(/active/);
+  await expect(ready.locator('[data-step-field="name"]')).toHaveValue("Ready to run");
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  await page.locator('[data-app-menu="debug"]').click();
+  await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
+  await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("true");
+  await page.locator("#modal .modal-close").click();
+  const advance = page.locator('#inputList [data-input="Advance"]');
+  await advance.check();
+  await expect(page.locator('[data-sfc-step="plcopen-step-1"]')).toHaveClass(/active/);
+  await page.locator('[data-app-menu="debug"]').click();
+  await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
+  await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("false");
+  await page.locator("#modal .modal-close").click();
+  await advance.uncheck();
+  await expect(ready).toHaveClass(/active/);
+  await page.locator('[data-app-menu="file"]').click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name:"Export PLCopen XML", exact:true }).click()
+  ]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const exported = Buffer.concat(chunks).toString("utf8");
+  expect(exported).toContain('<SFC>');
+  expect(exported).toContain('AdigunSPs step label: Ready to run');
+  const roundTrip = await page.evaluate(async (value) => {
+    const { parsePlcopenXml } = await import("/src/plcopen.js");
+    const chart = parsePlcopenXml(value).sfc;
+    return {
+      initialName:chart.steps.find((step) => step.id === chart.initialStep).name,
+      conditions:chart.transitions.map(({ condition, mode }) => ({ condition, mode }))
+    };
+  }, exported);
+  expect(roundTrip).toEqual({
+    initialName:"Ready to run", conditions:[{ condition:"Advance", mode:"NC" }, { condition:"Advance", mode:"NO" }]
+  });
+  await importXml("two-initial-steps.xml", exported.replace('initialStep="false"', 'initialStep="true"'));
+  await expect(page.locator("#toast")).toContainText("exactly one initial step");
+  await importXml("latched-action.xml", exported.replace('qualifier="N"', 'qualifier="S"'));
+  await expect(page.locator("#toast")).toContainText("only nonstored N actions");
+  await expect(ready).toHaveClass(/active/);
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");
