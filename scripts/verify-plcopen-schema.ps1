@@ -50,7 +50,17 @@ const functionBlocks = {
     { type:"AND", inputs:["Start", "Permit", "Above"], outputTag:"Lamp" }
   ]
 };
-process.stdout.write(JSON.stringify({ ladder:createPlcopenXml(project), tof:createPlcopenXml(offDelay), tp:createPlcopenXml(pulse), st:createPlcopenXml(structuredText), fbd:createPlcopenXml(functionBlocks) }));
+const sequentialChart = {
+  name:"PLCopen SFC schema fixture", editorType:"SFC", rungs:[],
+  tags:[{ name:"Start", type:"BOOL", role:"input" }, output("Lamp")],
+  sfc:{ initialStep:"idle", outputs:["Lamp"],
+    steps:[{ id:"idle", name:"Idle", actions:[] }, { id:"run", name:"Run lamp", actions:["Lamp"] }],
+    transitions:[
+      { from:"idle", to:"run", condition:"Start", mode:"NO" },
+      { from:"run", to:"idle", condition:"Start", mode:"NC" }
+    ] }
+};
+process.stdout.write(JSON.stringify({ sfc:createPlcopenXml(sequentialChart), ladder:createPlcopenXml(project), tof:createPlcopenXml(offDelay), tp:createPlcopenXml(pulse), st:createPlcopenXml(structuredText), fbd:createPlcopenXml(functionBlocks) }));
 '@ | node --input-type=module
     if ($LASTEXITCODE -ne 0) { throw 'Could not generate the PLCopen XML test fixture.' }
 } finally {
@@ -90,6 +100,9 @@ Assert-PlcopenXmlValid $fixtures.st
 Write-Output 'PASS: TC6 2.01 validates a Structured Text body with declared scalar tags.'
 Assert-PlcopenXmlValid $fixtures.fbd
 Write-Output 'PASS: TC6 2.01 validates connected Boolean FBD gates and a numeric comparison.'
+
+Assert-PlcopenXmlValid $fixtures.sfc
+Write-Output 'PASS: TC6 2.01 validates SFC steps, BOOL actions, transition conditions, and a return jump.'
 
 $invalidXml = [regex]::Replace($fixtures.ladder, '<contentHeader name="[^"]+"', '<contentHeader')
 if ($invalidXml -eq $fixtures.ladder) { throw 'Could not construct the invalid fixture.' }

@@ -136,6 +136,69 @@ function createFbdBody(project) {
   return `<FBD>${inputNodes.join("")}${blockNodes.join("")}</FBD>`;
 }
 
+function checkSfcSequence(chart, tags, outputNames) {
+  const steps = chart?.steps || [], transitions = chart?.transitions || [];
+  const byId = new Map(steps.map((step) => [step.id, step]));
+  const initialStep = chart?.initialStep ?? steps[0]?.id;
+  const boolTags = new Set(tags.filter((tag) => tag.type === "BOOL").map((tag) => tag.name));
+  const outputs = new Set(outputNames), outgoing = new Map(), incoming = new Map();
+  if (!byId.has(initialStep) || byId.size !== steps.length ||
+      steps.some((step) => !step.id || !step.name?.trim())) {
+    throw new Error("PLCopen SFC needs uniquely identified, named steps and a valid initial step.");
+  }
+  for (const step of steps) {
+    if ((step.actions || []).some((name) => !boolTags.has(name) || !outputs.has(name))) {
+      throw new Error("PLCopen SFC actions must reference declared BOOL outputs.");
+    }
+  }
+  for (const transition of transitions) {
+    const { from, to, condition, mode = "NO" } = transition;
+    if (!byId.has(from) || !byId.has(to) || outgoing.has(from) || incoming.has(to) ||
+        !boolTags.has(condition) || !["NO", "NC"].includes(mode)) {
+      throw new Error("PLCopen SFC requires a single sequence with declared BOOL transition conditions.");
+    }
+    outgoing.set(from, transition);
+    incoming.set(to, transition);
+  }
+  const order = new Map();
+  let next = initialStep;
+  while (next !== undefined && !order.has(next)) {
+    order.set(next, order.size);
+    next = outgoing.get(next)?.to;
+  }
+  if (order.size !== steps.length || (next !== undefined && next !== initialStep)) {
+    throw new Error("PLCopen SFC steps must form one reachable sequence or a loop back to its initial step.");
+  }
+  return { initialStep, outgoing, incoming, order };
+}
+
+function createSfcBody(project, outputNames) {
+  const chart = project.sfc;
+  const { initialStep, outgoing, incoming, order } = checkSfcSequence(chart, project.tags || [], outputNames);
+  let nextId = 1;
+  const ids = new Map(chart.steps.map((step) => [step.id, nextId++]));
+  const edgeIds = new Map((chart.transitions || []).map(({ from }) => [from, nextId++]));
+  const reservedNames = new Set((project.tags || []).map(({ name }) => name.toUpperCase()));
+  const names = new Map(chart.steps.map(({ id, name }) => {
+    let candidate = name, suffix = ids.get(id);
+    while (!IEC_IDENTIFIER.test(candidate) || reservedNames.has(candidate.toUpperCase())) candidate = `Step_${suffix++}`;
+    reservedNames.add(candidate.toUpperCase());
+    return [id, candidate];
+  }));
+  const link = (id, pin) => `<connectionPointIn><connection refLocalId="${id}"${pin ? ` formalParameter="${pin}"` : ""}/></connectionPointIn>`;
+  const graph = chart.steps.map(({ id, name, actions = [] }) => {
+    const localId = ids.get(id), initial = id === initialStep, transition = outgoing.get(id), previous = incoming.get(id);
+    const y = 120 * order.get(id);
+    const label = name === names.get(id) ? "" : `<documentation><xhtml:p>AdigunSPs step label: ${esc(name)}</xhtml:p></documentation>`;
+    const step = `<step localId="${localId}" name="${esc(names.get(id))}" initialStep="${initial}"><position x="40" y="${y}"/>${previous && !initial ? link(edgeIds.get(previous.from)) : ""}${transition ? '<connectionPointOut formalParameter="OUT"/>' : ""}${actions.length ? '<connectionPointOutAction formalParameter="ACTION"/>' : ""}${label}</step>`;
+    const actionBlock = actions.length ? `<actionBlock localId="${nextId++}"><position x="170" y="${y}"/>${link(localId, "ACTION")}${[...new Set(actions)].map((action, index) => `<action localId="${nextId++}" qualifier="N"><relPosition x="0" y="${index * 28}"/><reference name="${esc(action)}"/></action>`).join("")}</actionBlock>` : "";
+    const edge = transition ? `<transition localId="${edgeIds.get(id)}"><position x="40" y="${y + 60}"/>${link(localId, "OUT")}<connectionPointOut/><condition negated="${transition.mode === "NC"}"><reference name="${esc(transition.condition)}"/></condition></transition>` : "";
+    const jump = transition?.to === initialStep ? `<jumpStep localId="${nextId++}" targetName="${esc(names.get(initialStep))}"><position x="40" y="${y + 95}"/>${link(edgeIds.get(id))}</jumpStep>` : "";
+    return step + actionBlock + edge + jump;
+  });
+  return `<SFC>${graph.join("")}</SFC>`;
+}
+
 function createTaskConfiguration(task) {
   if (!task) return "<configurations/>";
   const { name = "Main", mode = "cyclic", cycleMs = 100 } = task;
@@ -151,7 +214,7 @@ export function createPlcopenXml(project) {
     throw new Error("PLCopen XML export supports a single program body. Use project JSON to preserve program units and task assignments.");
   }
   const mode = project.editorType || "LD", tags = project.tags || [];
-  if (!["LD", "ST", "FBD"].includes(mode)) throw new Error("PLCopen export supports Ladder Diagram, Structured Text, and FBD programs in the supported subset.");
+  if (!["LD", "ST", "FBD", "SFC"].includes(mode)) throw new Error("PLCopen export supports LD, ST, FBD, and sequential SFC programs in the supported subset.");
   const rungs = mode === "LD" ? supportedRungs(project) : [];
   const stBody = mode === "ST" ? checkedStSource(project.stSource, tags) : null;
   const variables = tags.map((tag) => {
@@ -164,7 +227,8 @@ export function createPlcopenXml(project) {
     return `<variable name="${esc(tag.name)}"${tag.address ? ` address="${esc(toPlcAddress(tag.address))}"` : ""}><type><${type}/></type>${init}${documentation}</variable>`;
   });
   const isInput = (tag) => tag.role === "input" || /^I\b/i.test(tag.address || "") || (project.io?.inputs || []).includes(tag.name);
-  const isOutput = (tag) => tag.role === "output" || /^Q\b/i.test(tag.address || "") || (project.io?.outputs || []).includes(tag.name);
+  const outputNames = new Set([...(project.io?.outputs || []), ...(mode === "SFC" ? project.sfc?.outputs || [] : [])]);
+  const isOutput = (tag) => tag.role === "output" || /^Q\b/i.test(tag.address || "") || outputNames.has(tag.name);
   const groups = { inputVars:[], outputVars:[], localVars:[] };
   tags.forEach((tag, index) => groups[isInput(tag) ? "inputVars" : isOutput(tag) ? "outputVars" : "localVars"].push(variables[index]));
   const ladderTimers = rungs.flatMap(({ timer }) => timer ? [timer] : []);
@@ -218,7 +282,8 @@ export function createPlcopenXml(project) {
     return nodes.join("");
   }).join("");
   const body = mode === "ST" ? `<ST><xhtml:pre>${esc(stBody)}</xhtml:pre></ST>` :
-    mode === "FBD" ? createFbdBody(project) : `<LD>${ladderBody}</LD>`;
+    mode === "FBD" ? createFbdBody(project) :
+    mode === "SFC" ? createSfcBody(project, tags.filter((tag) => !isInput(tag) && isOutput(tag)).map((tag) => tag.name)) : `<LD>${ladderBody}</LD>`;
   const vars = Object.entries(groups).map(([name, items]) => items.length ? `<${name}>${items.join("")}</${name}>` : "").join("");
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="${XHTML}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body>${body}</body></pou></pous></types><instances>${createTaskConfiguration(project.task)}</instances></project>`;
@@ -329,6 +394,84 @@ function readFbdBody(body, imported) {
   }
   return checkedFbdBlocks({ ...imported, fbdBlocks:blocks });
 }
+function readSfcLink(node, nodes, sourceType, connector, optional = false) {
+  const points = children(node, "connectionPointIn"), links = connectionNodes(node);
+  if (optional && !points.length) return null;
+  const link = links[0], source = nodes.get(link?.getAttribute("refLocalId"));
+  const port = child(source, connector), pin = link?.getAttribute("formalParameter");
+  if (points.length !== 1 || links.length !== 1 || child(points[0], "expression") ||
+      source?.localName !== sourceType || !port || (pin !== null && pin !== port.getAttribute("formalParameter"))) {
+    throw new Error("PLCopen SFC requires one direct connection from the expected step or transition.");
+  }
+  return source;
+}
+
+function readSfcBody(body, project) {
+  const nodes = new Map();
+  for (const node of body.children) {
+    const id = node.getAttribute("localId");
+    if (!["step", "transition", "actionBlock", "jumpStep"].includes(node.localName) || !id || nodes.has(id)) {
+      throw new Error("PLCopen SFC supports uniquely identified steps, transitions, jumps, and action blocks.");
+    }
+    nodes.set(id, node);
+  }
+  const stepNodes = [...nodes.values()].filter((node) => node.localName === "step");
+  const initial = stepNodes.filter((node) => xmlBoolean(node.getAttribute("initialStep"), "initialStep"));
+  if (initial.length !== 1) throw new Error("PLCopen SFC needs exactly one initial step.");
+  const steps = new Map(), byName = new Map(), targets = new Map();
+  for (const node of stepNodes) {
+    const name = node.getAttribute("name")?.trim();
+    const key = name?.toUpperCase();
+    if (!name || byName.has(key) || xmlBoolean(node.getAttribute("negated"), "SFC step negated")) {
+      throw new Error("PLCopen SFC step names must be unique and steps cannot be negated.");
+    }
+    const label = descendants(child(node, "documentation"), "p").map(text).find((part) => part.startsWith("AdigunSPs step label: "));
+    const step = { id:`plcopen-step-${node.getAttribute("localId")}`, name:label?.slice("AdigunSPs step label: ".length) || name, actions:[] };
+    steps.set(node, step);
+    byName.set(key, step);
+  }
+  const setTarget = (source, target) => {
+    if (!target || targets.has(source)) throw new Error("PLCopen SFC transitions must have one valid destination.");
+    targets.set(source, target);
+  };
+  for (const node of nodes.values()) {
+    if (node.localName === "step") {
+      const source = readSfcLink(node, nodes, "transition", "connectionPointOut", true);
+      if (source) setTarget(source, steps.get(node));
+    } else if (node.localName === "jumpStep") {
+      setTarget(readSfcLink(node, nodes, "transition", "connectionPointOut"), byName.get(node.getAttribute("targetName")?.toUpperCase()));
+    } else if (node.localName === "actionBlock") {
+      const source = readSfcLink(node, nodes, "step", "connectionPointOutAction");
+      if (xmlBoolean(node.getAttribute("negated"), "SFC action block negated")) throw new Error("PLCopen SFC action blocks cannot be negated.");
+      const step = steps.get(source);
+      for (const action of children(node, "action")) {
+        const ref = children(action, "reference");
+        const tag = ref[0]?.getAttribute("name");
+        if (ref.length !== 1 || !tag || child(action, "inline") || (action.getAttribute("qualifier") || "N") !== "N" ||
+            action.hasAttribute("duration") || action.hasAttribute("indicator")) {
+          throw new Error("PLCopen SFC supports only nonstored N actions referencing BOOL outputs.");
+        }
+        if (!step.actions.includes(tag)) step.actions.push(tag);
+      }
+    }
+  }
+  const transitions = [];
+  for (const [id, node] of nodes) {
+    if (node.localName !== "transition") continue;
+    const source = readSfcLink(node, nodes, "step", "connectionPointOut");
+    const condition = children(node, "condition"), parts = condition[0]?.children;
+    const ref = parts?.[0], tag = ref?.getAttribute("name"), target = targets.get(node);
+    if (condition.length !== 1 || parts?.length !== 1 || ref?.localName !== "reference" || !tag || !target) {
+      throw new Error("PLCopen SFC transitions need a direct BOOL reference and a destination.");
+    }
+    transitions.push({ id:`plcopen-transition-${id}`, from:steps.get(source).id, to:target.id,
+      condition:tag, mode:xmlBoolean(condition[0].getAttribute("negated"), "SFC condition negated") ? "NC" : "NO" });
+  }
+  const chart = { initialStep:steps.get(initial[0]).id, steps:[...steps.values()], transitions, outputs:project.io.outputs };
+  checkSfcSequence(chart, project.tags, project.io.outputs);
+  return chart;
+}
+
 function readLdTimerBlock(block) {
   const inputs = children(child(block, "inputVariables"), "variable");
   const outputs = children(child(block, "outputVariables"), "variable");
@@ -396,9 +539,12 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (pous.length > 1) throw new Error("PLCopen import supports one program POU. This file contains multiple POUs.");
   const pou = pous.find((node) => node.getAttribute("pouType") === "program");
   const bodies = children(pou, "body");
-  const ld = child(bodies[0], "LD"), st = child(bodies[0], "ST"), fbd = child(bodies[0], "FBD");
+  const ld = child(bodies[0], "LD"), st = child(bodies[0], "ST"), fbd = child(bodies[0], "FBD"), sfc = child(bodies[0], "SFC");
   const languages = [...(bodies[0]?.children || [])].filter((node) => ["LD", "ST", "FBD", "SFC", "IL"].includes(node.localName));
-  if (bodies.length !== 1 || languages.length !== 1 || !(ld || st || fbd)) throw new Error("PLCopen import needs one program POU with a Ladder Diagram, Structured Text, or supported FBD body.");
+  if (bodies.length !== 1 || languages.length !== 1 || !(ld || st || fbd || sfc)) throw new Error("PLCopen import needs one program POU with a supported LD, ST, FBD, or sequential SFC body.");
+  if (sfc && (children(child(pou, "actions"), "action").length || children(child(pou, "transitions"), "transition").length)) {
+    throw new Error("PLCopen SFC requires direct BOOL references in place of named action or transition bodies.");
+  }
   const names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "block", "comment"]);
   const nodes = [...(ld?.children || [])].filter((node) => node.localName !== "position");
   if (nodes.some((node) => !names.has(node.localName))) throw new Error("PLCopen import found LD instructions outside the supported contact and coil subset.");
@@ -457,6 +603,7 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const imported = { id:"", name, language:"en", task:readTaskConfiguration(root, pou), tags, io:{ inputs, outputs }, initialState };
   if (st) return { ...imported, editorType:"ST", stSource:readStSource(st, tags), rungs:[] };
   if (fbd) return { ...imported, editorType:"FBD", fbdBlocks:readFbdBody(fbd, imported), rungs:[] };
+  if (sfc) return { ...imported, editorType:"SFC", sfc:readSfcBody(sfc, imported), rungs:[] };
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
   const coils = nodes.filter((node) => node.localName === "coil");
   const timers = new Map(blocks.map((block) => [block.getAttribute("localId"), readLdTimerBlock(block)]));
