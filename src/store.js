@@ -15,14 +15,35 @@ function db() {
   });
 }
 
-async function requestStore(name, mode, action) {
+async function runTransaction(names, mode, action) {
   const database = await db();
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction(name, mode);
-    const request = action(transaction.objectStore(name));
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    const transaction = database.transaction(names, mode);
+    let result, failure;
+    transaction.oncomplete = () => { database.close(); resolve(result); };
+    transaction.onabort = () => {
+      database.close();
+      reject(failure || transaction.error || new Error("Project storage transaction aborted."));
+    };
+    const abort = (error) => { failure = error; transaction.abort(); };
+    try {
+      action(transaction, (value) => { result = value; }, abort);
+    } catch (error) {
+      abort(error);
+    }
   });
+}
+
+function requestStore(name, mode, action) {
+  return runTransaction(name, mode, (transaction, setResult) => {
+    const request = action(transaction.objectStore(name));
+    request.onsuccess = () => setResult(request.result);
+  });
+}
+
+function projectVersions(snapshots, id) {
+  return snapshots.filter((item) => item.projectId === id || item.id === id)
+    .sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0) || b.savedAt - a.savedAt);
 }
 
 export const store = {
@@ -36,15 +57,34 @@ export const store = {
   get: (id) => requestStore("projects", "readonly", (s) => s.get(id)),
   touch: (project) => requestStore("projects", "readwrite", (s) => s.put(project)),
   save: async (project) => {
-    project.updatedAt = Date.now();
-    await requestStore("projects", "readwrite", (s) => s.put(project));
-    const snapshot = { id: `${project.id}:${Date.now()}:${crypto.randomUUID()}`, projectId: project.id, savedAt: Date.now(), project: structuredClone(project) };
-    await requestStore("snapshots", "readwrite", (s) => s.put(snapshot));
-    const versions = (await requestStore("snapshots", "readonly", (s) => s.getAll())).filter((item) => item.projectId === project.id || item.id === project.id).sort((a, b) => b.savedAt - a.savedAt);
-    await Promise.all(versions.slice(25).map((item) => requestStore("snapshots", "readwrite", (s) => s.delete(item.id))));
+    const updatedAt = Date.now();
+    const savedProject = structuredClone({ ...project, updatedAt });
+    const snapshot = { id: `${project.id}:${updatedAt}:${crypto.randomUUID()}`, projectId: project.id, savedAt: updatedAt, project: savedProject };
+    await runTransaction(["projects", "snapshots"], "readwrite", (transaction, _, abort) => {
+      transaction.objectStore("projects").put(savedProject);
+      const snapshots = transaction.objectStore("snapshots");
+      const previous = snapshots.getAll();
+      previous.onsuccess = () => {
+        try {
+          const versions = projectVersions(previous.result, savedProject.id);
+          snapshots.put({ ...snapshot, revision:(versions[0]?.revision ?? 0) + 1 });
+          for (const item of versions.slice(24)) snapshots.delete(item.id);
+        } catch (error) {
+          abort(error);
+        }
+      };
+    });
+    project.updatedAt = updatedAt;
     return project;
   },
-  remove: async (id) => { await requestStore("projects", "readwrite", (s) => s.delete(id)); const versions = (await requestStore("snapshots", "readonly", (s) => s.getAll())).filter((item) => item.projectId === id || item.id === id); await Promise.all(versions.map((item) => requestStore("snapshots", "readwrite", (s) => s.delete(item.id)))); },
-  history: async (id) => (await requestStore("snapshots", "readonly", (s) => s.getAll())).filter((item) => item.projectId === id || item.id === id).sort((a, b) => b.savedAt - a.savedAt),
+  remove: (id) => runTransaction(["projects", "snapshots"], "readwrite", (transaction) => {
+    transaction.objectStore("projects").delete(id);
+    const snapshots = transaction.objectStore("snapshots");
+    const previous = snapshots.getAll();
+    previous.onsuccess = () => {
+      for (const item of projectVersions(previous.result, id)) snapshots.delete(item.id);
+    };
+  }),
+  history: async (id) => projectVersions(await requestStore("snapshots", "readonly", (s) => s.getAll()), id),
   recover: async (id) => (await store.history(id))[0] || null,
 };

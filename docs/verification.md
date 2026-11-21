@@ -1,5 +1,9 @@
 # Verification record
 
+## Local project recovery transactions — 2026-11-21
+
+The browser regression injects a snapshot write failure and verifies that the previous project and history survive. Concurrent saves with the same timestamp retain 25 snapshots and return the current saved version first. Deleting the project clears its history. These checks run against actual IndexedDB.
+
 ## Offline workspace navigation — 2026-11-21
 
 Chrome, Playwright Firefox, and Playwright WebKit loaded the locally served workspace while offline after a service worker took control. The test verifies that the app module and all three Help documents are served from cache. CI and the production smoke workflow now repeat this check. This covers browser navigation after an online visit. Native PWA installation and device-level relaunch remain open.
