@@ -46,9 +46,9 @@ function projectVersions(snapshots, id) {
     .sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0) || b.savedAt - a.savedAt);
 }
 
-function putProjectRevision(transaction, project, abort) {
+function putProjectRevision(transaction, project, abort, change = { kind:"save" }) {
   const { id, updatedAt } = project;
-  const snapshot = { id:`${id}:${updatedAt}:${crypto.randomUUID()}`, projectId:id, savedAt:updatedAt, project };
+  const snapshot = { id:`${id}:${updatedAt}:${crypto.randomUUID()}`, projectId:id, savedAt:updatedAt, project, change };
   transaction.objectStore("projects").put(project);
   const snapshots = transaction.objectStore("snapshots");
   const previous = snapshots.getAll();
@@ -103,7 +103,7 @@ export const store = {
       try {
         apply(project);
         project.updatedAt = Date.now();
-        putProjectRevision(transaction, project, abort);
+        putProjectRevision(transaction, project, abort, { kind:"properties" });
         setResult(project);
       } catch (error) {
         abort(error);
@@ -125,7 +125,10 @@ export const store = {
             restored.id = crypto.randomUUID();
             restored.name = `${restored.name} (${copySuffix})`;
           }
-          putProjectRevision(transaction, restored, abort);
+          putProjectRevision(transaction, restored, abort, {
+            kind:copySuffix ? "copy" : "restore",
+            source:{ revision:version.revision, savedAt:version.savedAt, projectName:version.project.name }
+          });
           setResult(restored);
         } catch (error) {
           abort(error);

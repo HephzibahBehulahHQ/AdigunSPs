@@ -146,6 +146,31 @@ test("snapshot comparison displays separated ST edits with independent line numb
   await expect(dialog.locator("pre").filter({ hasText:"Keep :=" })).toHaveCount(0);
 });
 
+test("local snapshot history records which revision was restored or copied", async ({ page, context }) => {
+  await useOfflineMember(page, context);
+  await page.goto("/?offline-project=history", { waitUntil:"domcontentloaded" });
+  await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
+  const { id, copy } = await page.evaluate(async () => {
+    const { store } = await import("/src/store.js");
+    const id = crypto.randomUUID();
+    await store.save({ id, name:"Source project", rungs:[] });
+    const [original] = await store.history(id);
+    await store.update(id, (project) => { project.name = "Edited project"; });
+    const copied = await store.restore(id, original.id, { copySuffix:"copy" });
+    await store.restore(id, original.id);
+    return { id, copy:copied.id };
+  });
+  await page.locator("#projectMenu").click();
+  await page.locator(`[data-recover="${id}"]`).click();
+  await expect(page.locator("#snapshotLatest")).toContainText("Restored from Source project · #1");
+  await expect(page.getByText("Project properties edited")).toBeVisible();
+  await page.getByRole("button", { name:"Close dialog" }).click();
+  await page.locator("#projectMenu").click();
+  await page.locator(`[data-recover="${copy}"]`).click();
+  await expect(page.locator("#snapshotLatest")).toContainText("Copied from Source project · #1");
+  await expect(page.getByText("No older snapshots yet")).toBeVisible();
+});
+
 test("local project metadata edits preserve saves from another tab", async ({ page, context }) => {
   await page.addInitScript(() => {
     localStorage.setItem("adigun-preferences", JSON.stringify({ autosave:false }));
