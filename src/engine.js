@@ -132,18 +132,23 @@ export function scanSFC(model, inputs, state = {}) {
   return { outputs, values: { ...inputs, ...outputs }, activeStep: nextStep?.id || null, energized: {}, timers: state.timers || {} };
 }
 
+export function fbdWrittenTags(block) {
+  const countTag = block.type === "CTU" || block.type === "CTD" ? block.countTag : undefined;
+  return [block.outputTag, countTag].filter(Boolean);
+}
+
 export function orderFbdBlocks(blocks = []) {
   const producers = new Map(), errors = [];
   for (const [index, block] of blocks.entries()) {
-    if (!block.outputTag) continue;
-    if (producers.has(block.outputTag)) errors.push(`FBD output ${block.outputTag} is produced by more than one block.`);
-    else producers.set(block.outputTag, index);
+    for (const tag of fbdWrittenTags(block)) {
+      if (producers.has(tag)) errors.push(`FBD output ${tag} has multiple assignments.`);
+      else producers.set(tag, index);
+    }
   }
   if (errors.length) return { blocks:[], errors };
   const outgoing = blocks.map(() => []), indegree = blocks.map(() => 0);
   for (const [index, block] of blocks.entries()) {
-    const dependencies = new Set((block.inputs || []).map((tag) => producers.get(tag)).filter((producer) => producer !== undefined && producer !== index));
-    if ((block.inputs || []).includes(block.outputTag) && block.outputTag) dependencies.add(index);
+    const dependencies = new Set((block.inputs || []).map((tag) => producers.get(tag)).filter((producer) => producer !== undefined));
     for (const dependency of dependencies) { outgoing[dependency].push(index); indegree[index] += 1; }
   }
   const ready = indegree.map((degree, index) => degree === 0 ? index : -1).filter((index) => index >= 0), ordered = [];

@@ -487,6 +487,26 @@ assert.equal(countProjectMatches(searchableProject,"FBD","Ready"),4,"Find counts
 assert.equal(countProjectMatches({...searchableProject,stSource:"Ready := TRUE;"},"ST","ready"),1,"Find remains case-insensitive in Structured Text");
 const dependentBlocks = [{ id:"sum", type:"ADD", inputs:["Scaled", "Offset"], outputTag:"Sum" }, { id:"scale", type:"SCALE", inputs:["Raw"], outputTag:"Scaled", rawMin:0, rawMax:100, scaledMin:0, scaledMax:10 }];
 assert.deepEqual(orderFbdBlocks(dependentBlocks).blocks.map((block) => block.id), ["scale", "sum"], "FBD dependencies execute in topological order regardless of editor order");
+const counterDependencies = [
+  { id:"compare", type:"EQ", inputs:["Count", "Target"], outputTag:"Matches" },
+  { id:"counter", type:"CTU", inputs:["Pulse"], outputTag:"Reached", countTag:"Count", preset:2 },
+];
+const counterDependencyProject = {
+  fbdBlocks:counterDependencies,
+  tags:[
+    { name:"Count", type:"INT" }, { name:"Target", type:"INT" }, { name:"Pulse", type:"BOOL" },
+    { name:"Reached", type:"BOOL" }, { name:"Matches", type:"BOOL" }
+  ]
+};
+assert.deepEqual(validateFbdBlocks(counterDependencyProject), [], "FBD accepts a numeric dependency on a counter value");
+assert.deepEqual(orderFbdBlocks(counterDependencies).blocks.map(({ id }) => id), ["counter", "compare"]);
+assert.equal(scanFBD(counterDependencies, { Pulse:true, Target:1 }, {}, ["Matches"]).outputs.Matches, true,
+  "the comparison sees the counter value written in the same scan");
+const duplicateCount = [...counterDependencies, { id:"duplicate", type:"ADD", inputs:["Target", "Target"], outputTag:"Count" }];
+assert.match(orderFbdBlocks(duplicateCount).errors[0], /multiple assignments/);
+assert.ok(validateFbdBlocks({ ...counterDependencyProject, fbdBlocks:duplicateCount }).some(({ code }) => code === "fbd-dependency"));
+const cyclicCount = [counterDependencies[0], { ...counterDependencies[1], inputs:["Matches"] }];
+assert.match(orderFbdBlocks(cyclicCount).errors[0], /cycle/);
 assert.equal(scanFBD(dependentBlocks, {}, {}, ["Sum"], 100, { Raw:50, Offset:2 }).outputs.Sum, 7, "FBD consumers receive values from earlier dependencies even when shown first");
 const cyclicBlocks = [{ id:"left", type:"AND", inputs:["Right"], outputTag:"Left" }, { id:"right", type:"AND", inputs:["Left"], outputTag:"Right" }];
 assert.ok(orderFbdBlocks(cyclicBlocks).errors[0]?.includes("cycle"), "FBD dependency cycles are rejected");
