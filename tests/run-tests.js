@@ -170,6 +170,32 @@ for (const value of ["T#1ms2s", "T#1.5s2ms", "T#1s_", "T#1sUnknown", "T#1d1d", "
   assert.throws(() => parsePlcopenXml("<project/>", PlcopenDomParserStub), /invalid duration/, value);
 }
 delayInitial.setAttribute("value", "T#1500ms");
+
+const initialDeclarations = descendantsForTest(plcRoot, "localVars")[0];
+const scalarFixtures = [
+  { type:"BOOL", name:"Prepared", literal:"BOOL#1", expected:true, malformed:"on" },
+  { type:"BOOL", name:"Disabled", literal:"0", expected:false, malformed:"2" },
+  { type:"INT", name:"Limit", literal:"INT#16#FF_FF", expected:65535, malformed:"2#12" },
+  { type:"INT", name:"Samples", literal:"-1_250", expected:-1250, malformed:"1.25" },
+  { type:"REAL", name:"Gain", literal:"REAL#-1.25e-2", expected:-0.0125, malformed:"Infinity" }
+];
+for (const {type,name,literal,expected,malformed} of scalarFixtures) {
+  const declaration = plcVar(name, type, null, "localVars", literal);
+  declaration.parentElement = initialDeclarations;
+  initialDeclarations.children.push(declaration);
+  const value = descendantsForTest(declaration, "simpleValue")[0];
+  try {
+    assert.equal(parsePlcopenXml("<project/>", PlcopenDomParserStub).initialState[name], expected, literal);
+    value.setAttribute("value", malformed);
+    assert.throws(() => parsePlcopenXml("<project/>", PlcopenDomParserStub), /invalid initial value/, malformed);
+  } finally {
+    initialDeclarations.children.pop();
+  }
+}
+assert.throws(() => createPlcopenXml({ ...plcopenProject,
+  initialState:{ ...plcopenProject.initialState, Start:"on" }
+}), /invalid initial value/, "export rejects an invalid stored initializer");
+
 assert.deepEqual(importedPlcopen.rungs[0].branches, [[{ tag:"Start", mode:"NO" }, { tag:"Stop", mode:"NC" }], [{ tag:"Sensor", mode:"NO" }]], "PLCopen importer reconstructs parallel OR paths with their series contacts");
 assert.equal(importedPlcopen.rungs[0].comment, "Motor enable", "PLCopen importer restores network comments");
 assert.equal(importedPlcopen.tags.find((tag) => tag.name === "Motor").alias, "Drive A", "PLCopen importer restores aliases recorded in variable documentation");

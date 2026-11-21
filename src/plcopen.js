@@ -44,6 +44,36 @@ function readTimeLiteral(value) {
   return total <= Number.MAX_SAFE_INTEGER ? total : NaN;
 }
 
+function readScalarInitial(value, type, name) {
+  const literal = value.trim();
+  if (type === "TIME") {
+    const legacy = /^(?:(\d+(?:\.\d+)?)|(?:T|TIME)#(\d+(?:\.\d+)?e[+-]?\d+)ms)$/i.exec(literal);
+    const duration = legacy ? Number(legacy[1] ?? legacy[2]) : readTimeLiteral(literal);
+    if (Number.isFinite(duration) && duration <= Number.MAX_SAFE_INTEGER) return duration;
+    throw new Error(`PLCopen TIME tag ${name} uses an invalid duration.`);
+  }
+  const prefix = `${type}#`;
+  const scalar = literal.toUpperCase().startsWith(prefix) ? literal.slice(prefix.length) : literal;
+  if (type === "BOOL") {
+    if (/^(?:TRUE|1)$/i.test(scalar)) return true;
+    if (/^(?:FALSE|0)$/i.test(scalar)) return false;
+  } else {
+    const decimal = scalar.replace(/(\d)_(?=\d)/g, "$1");
+    let number = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(decimal) ? Number(decimal) : NaN;
+    if (type === "INT") {
+      const based = /^([+-]?)(2|8|16)#([0-9a-f]+(?:_[0-9a-f]+)*)$/i.exec(scalar);
+      if (based) {
+        const [, sign, radix, digits] = based;
+        const allowed = { 2:/^[01]+$/, 8:/^[0-7]+$/, 16:/^[\da-f]+$/i };
+        const compact = digits.replaceAll("_", "");
+        if (allowed[radix].test(compact)) number = (sign === "-" ? -1 : 1) * Number.parseInt(compact, Number(radix));
+      }
+    }
+    if (type === "INT" ? Number.isSafeInteger(number) : Number.isFinite(number)) return number;
+  }
+  throw new Error(`PLCopen ${type} tag ${name} uses an invalid initial value.`);
+}
+
 function supportedRungs(project) {
   if (!Array.isArray(project.rungs) || !project.rungs.length) throw new Error("Add at least one ladder network before exporting PLCopen XML.");
   const declared = new Set((project.tags || []).map((tag) => tag.name));
@@ -220,7 +250,9 @@ export function createPlcopenXml(project) {
   const variables = tags.map((tag) => {
     const type = String(tag.type || "BOOL").toUpperCase();
     if (!TYPES.has(type)) throw new Error(`Tag ${tag.name} has unsupported PLCopen data type ${type}.`);
-    const initial = project.initialState?.[tag.name], initialValue = type === "BOOL" ? String(initial).toUpperCase() : type === "TIME" ? `T#${initial}ms` : initial;
+    const stored = Object.hasOwn(project.initialState || {}, tag.name) ? project.initialState[tag.name] : undefined;
+    const initial = stored === undefined ? undefined : readScalarInitial(String(stored), type, tag.name);
+    const initialValue = type === "BOOL" ? String(initial).toUpperCase() : type === "TIME" ? `T#${initial}ms` : initial;
     const init = initial === undefined ? "" : `<initialValue><simpleValue value="${esc(initialValue)}"/></initialValue>`;
     const documentationItems = [...(tag.alias ? [`AdigunSPs alias: ${tag.alias}`] : []), ...(tag.label ? [`AdigunSPs label: ${tag.label}`] : [])];
     const documentation = documentationItems.length ? `<documentation>${documentationItems.map((item) => `<xhtml:p>${esc(item)}</xhtml:p>`).join("")}</documentation>` : "";
@@ -580,15 +612,16 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     const alias = docs.find((item) => item.startsWith("AdigunSPs alias: "))?.slice(17), label = docs.find((item) => item.startsWith("AdigunSPs label: "))?.slice(17), otherDocs = docs.filter((item) => !item.startsWith("AdigunSPs alias: ") && !item.startsWith("AdigunSPs label: "));
     if (alias) tag.alias = alias; if (label || otherDocs.length) tag.label = [label, ...otherDocs].filter(Boolean).join("\n");
     tags.push(tag); declarations.set(name, tag);
-    const value = child(child(variable, "initialValue"), "simpleValue")?.getAttribute("value");
-    if (value !== null && value !== undefined) {
-      if (type === "TIME") {
-        const legacy = /^(?:(\d+(?:\.\d+)?)|(?:T|TIME)#(\d+(?:\.\d+)?e[+-]?\d+)ms)$/i.exec(value.trim());
-        const duration = legacy ? Number(legacy[1] ?? legacy[2]) : readTimeLiteral(value);
-        if (!Number.isFinite(duration) || duration > Number.MAX_SAFE_INTEGER) throw new Error(`PLCopen TIME tag ${name} uses an invalid duration.`);
-        initialState[name] = duration;
-      } else initialState[name] = type === "BOOL" ? value.toUpperCase() === "TRUE" : Number(value);
+    const initializers = children(variable, "initialValue");
+    if (!initializers.length) continue;
+    const [scalar] = initializers[0].children;
+    if (initializers.length !== 1 || initializers[0].children.length !== 1 || scalar.localName !== "simpleValue") {
+      throw new Error(`PLCopen ${type} tag ${name} requires a scalar initial value.`);
     }
+    const value = scalar.getAttribute("value");
+    if (value !== null) Object.defineProperty(initialState, name, {
+      value:readScalarInitial(value, type, name), enumerable:true, writable:true, configurable:true
+    });
   }
   const occupiedNames = new Set(tags.map(({ name }) => name.toUpperCase()));
   for (const [instance, tag] of timerDeclarations) {

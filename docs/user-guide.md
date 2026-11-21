@@ -308,6 +308,8 @@ PLCopen XML preserves the name and period of one cyclic task assigned to its sin
 
 A scenario frame with a compiler or runtime error reports FAIL even if the previously held outputs match the expected values.
 
+PLCopen scalar initializers are validated during import and export. BOOL accepts TRUE/FALSE or 1/0, INT accepts decimal and IEC radix literals, and REAL accepts finite decimal or scientific notation.
+
 ## USB connection
 
 Open **I/O & Tags → Hardware inventory / BOM**, then select **Connect USB** in a browser with Web Serial support. Choose the port for a device running compatible firmware. **USB port open** confirms the browser opened the port.
