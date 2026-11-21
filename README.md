@@ -146,11 +146,19 @@ Run the complete local automated suite:
 npm test
 ```
 
-The suite covers 1,000 learning examples and deterministic PLC/electrical behavior checks, plus focused branding, hardware/report, Adigun BOT, resource, Modbus TCP, account, and Supabase-client checks. Bot library search returns ranked example matches with a Load action. Each model is JSON round-tripped through import normalization before structural and simulation validation; this is not a browser-storage workflow test. The machine-readable report lists 4,717 logic cases, 8,913 schematic checks, and 4,517 integrated cases; all supported scenarios passed. Electrical models remain educational and do not validate physical hardware or safety. A focused manual browser smoke is recorded in [`docs/browser-smoke-check.md`](docs/browser-smoke-check.md); full browser E2E, accessibility, security, performance, cross-browser, and PWA installation audits remain outstanding.
+The suite covers 1,000 learning examples and deterministic PLC/electrical behavior checks, plus focused branding, hardware/report, Adigun BOT, resource, Modbus TCP, account, and Supabase-client checks. Bot library search returns ranked example matches with a Load action. Each model is JSON round-tripped through import normalization before structural and simulation validation; this is not a browser-storage workflow test. The machine-readable report lists 4,717 logic cases, 8,913 schematic checks, and 4,517 integrated cases; all supported scenarios passed. Electrical models remain educational and do not validate physical hardware or safety. A focused manual browser smoke is recorded in [`docs/browser-smoke-check.md`](docs/browser-smoke-check.md); full workflow coverage, assistive-technology and security audits, maximum-size performance, and native PWA installation remain open.
 
-GitHub Actions runs `npm test` and `npm run build` on pushes and pull requests targeting `main`; it verifies source quality and creates no deployment.
+GitHub Actions runs `npm test`, the full Chromium acceptance suite, focused Firefox and WebKit checks, and the static build on pushes and pull requests targeting `main`. See the [verification record](docs/verification.md) for the scope of the browser checks.
 
 Run `npm run validate:examples` to regenerate the report from the simulator checks.
+
+On Windows, download and extract the **PLCopen XML version 2.01 xsd file** from [PLCopen Downloads](https://www.plcopen.org/downloads/), then verify generated TON XML with the official schema.
+
+```powershell
+./scripts/verify-plcopen-schema.ps1 -SchemaPath ./test-results/plcopen-schema/tc6_xml_v201.xsd
+```
+
+The script checks delayed and immediate coil exports with default timer addresses and confirms that the schema rejects a missing required attribute.
 
 Focused suites are available as `npm run test:electrical`, `npm run test:industrial-components`, `npm run test:fbd-gates`, `npm run test:adigun-bot-builder`, `npm run test:industrial-catalog`, `npm run test:brand`, `npm run test:hardware`, `npm run test:ai`, `npm run test:resources`, `npm run test:protocol`, `npm run test:supabase`, `npm run test:help-guide`, and `npm run test:guest-expiry`.
 
