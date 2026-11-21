@@ -1,16 +1,20 @@
 # Verification record
 
-## PLCopen Boolean FBD interchange — 2026-11-21
+## PLCopen FBD gates, comparisons, and internal wires — 2026-11-21
 
-The browser workflow imports connected Boolean gates, verifies that changing an input reaches the downstream output, keeps the gate position, exports the imported program, and rejects an unsupported pin reference. FBD and SFC outlines are anchored inside their editor panes so they cannot cover the File menu. The official TC6 2.01 schema accepted the generated FBD fixture. The interchange covers NOT, two-input XOR, and AND/OR with two to eight inputs.
+The browser workflow imports connected Boolean gates, verifies that changing an input reaches the downstream output, keeps the gate position, exports the imported program, and rejects an unsupported pin reference. FBD and SFC outlines are anchored inside their editor panes so they cannot cover the File menu. The official TC6 2.01 schema accepted the generated FBD fixture. The interchange covers NOT, two-input XOR, AND/OR with two to eight inputs, and GT/LT/EQ with matching INT or REAL inputs. The deployed browser fixture verifies REAL comparisons, rejects mixed operand types, and imports an unnamed wire as a local BOOL tag without replacing a declaration that differs only in letter case.
 
 ## PLCopen Structured Text program interchange — 2026-11-21
 
 A single supported Structured Text program body can round-trip in TC6 XML with declared scalar tags. The browser acceptance workflow imports a numeric conditional containing XML-sensitive text, steps the program, checks its result in Watch, exports it, and verifies that invalid source does not replace the open program. The generated example passed the official [PLCopen TC6 2.01 schema](https://www.plcopen.org/downloads/).
 
+## PLCopen cyclic task and ladder off-delay interchange — 2026-11-21
+
+Chrome, Firefox, and WebKit verified task round-trips through the local workspace. A 750 ms cyclic task drives timer scan steps and a 625 ms task appears in the imported ST workspace. Legacy files without a task retain the 100 ms default. Event-triggered tasks, out-of-range periods, and incorrect POU assignments are rejected. A direct production Chrome check confirmed the cyclic-task and TOF round-trips. The TOF fixture checks immediate and Q-driven coils and rejects a mismatched timer declaration.
+
 ## PLCopen TC6 2.01 schema verification — 2026-11-21
 
-`scripts/verify-plcopen-schema.ps1` validates the current TON export with delayed and immediate coils, dotted timer address documentation, and collision-safe IEC instance names against the [official PLCopen TC6 2.01 XSD](https://www.plcopen.org/downloads/). It also checks that removing the required project name fails schema validation. These checks passed with the official download. Vendor-tool import and IEC 61131-10 coverage remain open.
+`scripts/verify-plcopen-schema.ps1` validates TON and TOF exports with delayed and immediate coils, dotted timer address documentation, collision-safe IEC instance names, and a cyclic program instance against the [official PLCopen TC6 2.01 XSD](https://www.plcopen.org/downloads/). It also checks that removing the required project name fails schema validation. These checks passed with the official download. Vendor-tool import and IEC 61131-10 coverage remain open.
 
 ## Analog fault offsets and process state — 2026-11-21
 
