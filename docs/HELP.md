@@ -83,7 +83,7 @@ If a step does not match the example, follow that project's **How to test** and 
 1. Select **New** on the toolbar or **File → New project**. Confirm replacing the current project if prompted.
 2. The new project opens as **Untitled project** with an empty ladder and default Main task. Project creation does not ask for a name or description.
 3. Project creation has no name or description fields and no **Create** button. To name the project later, open **Project manager** from **File** or **Project**, choose the rename pencil beside it, and enter a name. The manager lists recent projects in last-opened order. To add a description, author, version, or project language, choose the gear and save **Project properties**.
-4. **Settings** (⚙) contains the Main task name and scan cycle, autosave, simulation speed, theme, trend history, contrast, and readable-font preferences.
+4. **Settings** (⚙) contains the Main task name and scan cycle, autosave, simulation speed, theme, trend history, accessibility preferences, and the localization audit.
 5. To remove a project, use the × button beside it in **Project manager** and confirm. To make a separate copy, choose the duplicate icon.
 
 ## Saving your work

@@ -219,7 +219,7 @@ Open **Operations** to see session-only simulated runtime for Boolean outputs. E
 
 ## Languages and offline use
 
-The language button cycles English, German, Yoruba, and Nigerian Pidgin. Project names and tags remain project data when the interface language changes. In Project properties, set a separate project language; generated I/O, wiring, BOM, scenario, trend, and operations reports use that language while the controls remain in the selected interface language. Open **Settings** to enable or disable local autosave, set simulation speed and trend retention (60, 300, or 1,000 samples), increase contrast, or switch to a simple sans-serif font. With autosave disabled, use Save to write changes to local storage. Serve the app over localhost or HTTPS to install it and enable offline shell caching. Browser storage is local to that browser profile.
+The language button cycles English, German, Yoruba, and Nigerian Pidgin. Project names and tags remain project data when the interface language changes. In Project properties, set a separate project language; generated I/O, wiring, BOM, scenario, trend, and operations reports use that language while the controls remain in the selected interface language. Open **Settings** to enable or disable local autosave, set simulation speed and trend retention (60, 300, or 1,000 samples), increase contrast, or switch to a simple sans-serif font. Open **Localization audit** in Settings to review or download the translation coverage counts. With autosave disabled, use Save to write changes to local storage. Serve the app over localhost or HTTPS to install it and enable offline shell caching. Browser storage is local to that browser profile.
 
 ## Adigun BOT
 
