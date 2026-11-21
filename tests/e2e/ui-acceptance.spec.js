@@ -90,21 +90,30 @@ test.beforeEach(async ({ page }) => {
 test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
-    const { scan } = await import("/src/engine.js");
+    const { getTaskCycleMs, scan } = await import("/src/engine.js");
     const source = {
-      name:"TON exercise", editorType:"LD",
+      name:"TON exercise", editorType:"LD", task:{ name:"TimingCycle", mode:"cyclic", cycleMs:750 },
       tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
       io:{ inputs:["Start"], outputs:["Lamp"] },
       rungs:[{ branches:[[{ tag:"Start", mode:"NO" }]], coil:"Lamp",
         timer:{ tag:"DelayTimer", type:"TON", preset:1500, output:"DN" } }]
     };
     const xml = createPlcopenXml(source);
+    const invalidTaskErrors = [
+      xml.replace('interval="T#750ms"', 'interval="T#750ms" single="Start"'),
+      xml.replace('interval="T#750ms"', 'interval="T#61s"'),
+      xml.replace('name="MainInstance" typeName="Main"', 'name="MainInstance" typeName="DifferentProgram"')
+    ].map((invalidXml) => {
+      try { parsePlcopenXml(invalidXml); } catch (error) { return error.message; }
+      return null;
+    });
     const check = (importedXml) => {
       const project = parsePlcopenXml(importedXml);
       const { tag, output } = project.rungs[0].timer;
-      const first = scan(project, { Start:true }, {}, 750);
-      const second = scan(project, { Start:true }, first, 750);
-      const reset = scan(project, { Start:false }, second, 750);
+      const period = getTaskCycleMs(project);
+      const first = scan(project, { Start:true }, {}, period);
+      const second = scan(project, { Start:true }, first, period);
+      const reset = scan(project, { Start:false }, second, period);
       return [tag, output, first.outputs.Lamp, second.outputs.Lamp, second.timers[tag].done, reset.outputs.Lamp, reset.timers[tag].done];
     };
     source.rungs[0].timer.output = "EN";
@@ -132,7 +141,10 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
     const generatedInstance = new DOMParser().parseFromString(dottedXml, "application/xml").querySelector("block").getAttribute("instanceName");
     return {
       modes:[check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"')), check(enabledXml), check(dottedXml)],
-      ambiguityRejected, generatedInstance
+      ambiguityRejected, generatedInstance, invalidTaskErrors,
+      task:parsePlcopenXml(xml).task,
+      combinedPeriod:parsePlcopenXml(xml.replace("T#750ms", "T#1s250ms")).task.cycleMs,
+      legacyPeriod:parsePlcopenXml(xml.replace(/<configurations>.*?<\/configurations>/, "<configurations/>")).task.cycleMs
     };
   });
   expect(result).toEqual({
@@ -143,7 +155,9 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
       ["T0.0", "EN", true, true, true, false, false]
     ],
     ambiguityRejected:true,
-    generatedInstance:"AdigunTimer_2"
+    generatedInstance:"AdigunTimer_2",
+    invalidTaskErrors:[expect.stringContaining("named cyclic task"), expect.stringContaining("named cyclic task"), expect.stringContaining("assigned to the imported program")],
+    task:{ name:"TimingCycle", mode:"cyclic", cycleMs:750 }, combinedPeriod:1250, legacyPeriod:100
   });
 });
 
@@ -153,6 +167,7 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
     const { createPlcopenXml } = await import("/src/plcopen.js");
     return createPlcopenXml({
       name:"Structured Text XML exercise", editorType:"ST", stSource,
+      task:{ name:"TemperatureCycle", mode:"cyclic", cycleMs:625 },
       tags:[{ name:"Temperature", type:"REAL", role:"input" }, { name:"Control", type:"REAL", role:"output" }],
       initialState:{ Temperature:10 }
     });
@@ -163,6 +178,7 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
     name:"structured-text.xml", mimeType:"application/xml", buffer:Buffer.from(xml)
   });
   await expect(page.locator("#projectTitle")).toHaveText("Structured Text XML exercise");
+  await expect(page.locator("#taskCycleInfo")).toHaveText("TemperatureCycle · 625 ms");
   await expect(page.locator("#editorMode")).toHaveValue("ST");
   await expect(page.locator("#stSource")).toHaveValue(source);
   await page.locator('[data-app-menu="plc"]').click();

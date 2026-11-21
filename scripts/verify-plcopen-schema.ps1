@@ -16,6 +16,7 @@ import { createPlcopenXml } from "./src/plcopen.js";
 const contacts = [[{ tag:"Start", mode:"NO" }]];
 const output = (name) => ({ name, type:"BOOL", role:"output" });
 const project = {
+  task:{ name:"MainCycle", mode:"cyclic", cycleMs:750 },
   name:"PLCopen TON schema fixture",
   editorType:"LD",
   tags:[{ name:"Start", type:"BOOL", role:"input" }, output("Delayed"), output("Immediate"),
