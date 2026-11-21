@@ -857,7 +857,15 @@ assert.deepEqual(compareSnapshotLogic({ name:"Earlier", initialState:{ B:true, A
   { name:"Later", initialState:{ A:false, B:true } }), [], "renaming and property order leave logic unchanged");
 assert.deepEqual(compareSnapshotLogic({ stSource:"A := FALSE;\r\nB := TRUE;" },
   { stSource:"A := FALSE;\nB := FALSE;" }),
-  [{ key:"text", firstLine:2, before:["B := TRUE;"], after:["B := FALSE;"] }]);
+  [{ key:"text", hunks:[{ beforeLine:2, afterLine:2, before:["B := TRUE;"], after:["B := FALSE;"] }] }]);
+assert.deepEqual(compareSnapshotLogic({ stSource:"A := FALSE;\nKeep := TRUE;\nB := FALSE;" },
+  { stSource:"A := TRUE;\nExtra := TRUE;\nKeep := TRUE;\nB := TRUE;" }),
+  [{ key:"text", hunks:[
+    { beforeLine:1, afterLine:1, before:["A := FALSE;"], after:["A := TRUE;", "Extra := TRUE;"] },
+    { beforeLine:3, afterLine:4, before:["B := FALSE;"], after:["B := TRUE;"] }
+  ] }], "unchanged anchors separate edits and preserve independent line numbers");
+assert.deepEqual(compareSnapshotLogic({ stSource:"Stable;\nRemoved;\nStable;" }, { stSource:"Stable;\nStable;" }),
+  [{ key:"text", hunks:[{ beforeLine:2, afterLine:2, before:["Removed;"], after:[] }] }]);
 assert.deepEqual(compareSnapshotLogic({ rungs:[{ coil:"Before" }], tasks:[{ periodMs:100 }] },
   { rungs:[{ coil:"After" }], tasks:[{ periodMs:200 }] }).map(({ key }) => key), ["ladder", "tasks"]);
 

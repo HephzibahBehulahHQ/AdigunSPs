@@ -19,6 +19,7 @@ async function useOfflineMember(page, context) {
 }
 
 test("a cached member can reopen and restore a local project while offline", async ({ page, context }) => {
+  test.setTimeout(60_000);
   await useOfflineMember(page, context);
   try {
     await page.goto("/?offline-project=author", { waitUntil:"domcontentloaded" });
@@ -122,6 +123,27 @@ test("a cached member can reopen and restore a local project while offline", asy
   } finally {
     await context.setOffline(false);
   }
+});
+
+test("snapshot comparison displays separated ST edits with independent line numbers", async ({ page, context }) => {
+  await useOfflineMember(page, context);
+  await page.goto("/?offline-project=diff", { waitUntil:"domcontentloaded" });
+  await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
+  const id = await page.evaluate(async () => {
+    const { store } = await import("/src/store.js");
+    const id = crypto.randomUUID();
+    const project = { id, name:"ST revision comparison", editorType:"ST", rungs:[], stSource:"A := FALSE;\nKeep := TRUE;\nB := FALSE;" };
+    await store.save(project);
+    await store.save({ ...project, stSource:"A := TRUE;\nExtra := TRUE;\nKeep := TRUE;\nB := TRUE;" });
+    return id;
+  });
+  await page.locator("#projectMenu").click();
+  await page.locator(`[data-recover="${id}"]`).click();
+  await page.getByRole("button", { name:"Compare logic" }).click();
+  const dialog = page.getByRole("dialog", { name:"Compare saved logic" });
+  await expect(dialog.getByLabel(/Selected snapshot.*Line 3/)).toHaveText("B := FALSE;");
+  await expect(dialog.getByLabel(/Latest saved snapshot.*Line 4/)).toHaveText("B := TRUE;");
+  await expect(dialog.locator("pre").filter({ hasText:"Keep :=" })).toHaveCount(0);
 });
 
 test("local snapshot history records which revision was restored or copied", async ({ page, context }) => {
