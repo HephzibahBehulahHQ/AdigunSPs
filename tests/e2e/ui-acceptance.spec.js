@@ -300,6 +300,46 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   expect(await blocks.count()).toBeLessThan(mountedLimit);
 });
 
+for (const editorType of ["LD", "FBD"]) {
+  test(`continuous scans preserve every output in a large ${editorType} project`, async ({ page }) => {
+    const outputs = Array.from({ length:999 }, (_, index) => `Output_${index}`);
+    const ladder = editorType === "LD";
+    const project = {
+      name:`Continuous ${editorType} workload`, editorType,
+      tags:[{ name:"Start", type:"BOOL", role:"input" }, ...outputs.map((name) => ({ name, type:"BOOL", role:"output" }))],
+      io:{ inputs:["Start"], outputs }, initialState:{ Start:ladder },
+      rungs:ladder ? Array.from({ length:2_000 }, (_, index) => ({
+        id:`rung-${index}`, branches:[[{ tag:"Start", mode:"NO" }]], coil:outputs[index % outputs.length]
+      })) : [],
+      ...(!ladder && { fbdBlocks:outputs.map((outputTag, index) => ({
+        id:`block-${index}`, type:"NOT", inputs:["Start"], outputTag, x:40, y:index * 300
+      })) })
+    };
+    await page.locator("#fileInput").setInputFiles({
+      name:"continuous-workload.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+    });
+    await expect(page.locator("#projectTitle")).toHaveText(project.name);
+    const chooseMenu = async (menu, name) => {
+      await page.locator(`[data-app-menu="${menu}"]`).click();
+      await page.getByRole("menuitem", { name, exact:true }).click();
+    };
+    await chooseMenu("online", "Record trace");
+    await chooseMenu("plc", "Run");
+    await expect.poll(async () => Number(await page.locator("#cycleCount").textContent()), { timeout:20_000 })
+      .toBeGreaterThanOrEqual(20);
+    await chooseMenu("plc", "Pause");
+    await chooseMenu("online", "Record trace");
+    await chooseMenu("debug", "Trace history");
+    const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    const { frames } = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    expect(frames.length).toBeGreaterThanOrEqual(20);
+    expect(frames.flatMap((frame, index) => outputs.filter((name) => frame.outputs[name] !== true)
+      .map((name) => ({ frame:index + 1, output:name }))).slice(0, 5)).toEqual([]);
+  });
+}
+
 test("HMI alarm hysteresis, acknowledgement, and exported history agree", async ({ page }) => {
   const project = {
     name:"Alarm hysteresis exercise", editorType:"LD", rungs:[],
