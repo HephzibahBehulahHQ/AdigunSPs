@@ -10,6 +10,7 @@ import { hmiScreenCopy } from "../src/hmi-copy.js";
 import { defaultProject, getTaskCycleMs, makeProjectFromExample, orderFbdBlocks, runExampleChecks, scan, scanFBD, scanSFC } from "../src/engine.js";
 import { validateProject } from "../src/validation.js";
 import { countProjectMatches } from "../src/project-search.js";
+import { compareSnapshotLogic } from "../src/snapshot-comparison.js";
 import { searchExamples } from "../src/example-search.js";
 import { validateFbdBlocks, requiredFbdInputs, connectFbdPorts } from "../src/fbd-validation.js";
 import { convertLadderToFbd } from "../src/logic-conversion.js";
@@ -852,6 +853,14 @@ assert.ok(app.includes("keyboardContactTarget(location, event.key)") && app.incl
 assert.ok(html.includes('id="contextMenu"') && app.includes('showContextMenu(event') && app.includes('menu.onkeydown') && ["Aktionen im KOP-Editor", "Àwọn àṣẹ olóòtú ladder", "Ladder editor actions"].every((label) => app.includes(label)), "LD context actions are rendered with keyboard support and localized labels");
 assert.ok(html.includes('id="panelLayoutButton"') && app.includes("function showPanelLayout()") && app.includes('id="panelLeftToggle"') && app.includes('id="panelRightToggle"'), "view provides persisted project and inspector panel controls");
 assert.match(app, /setPointerCapture\(event\.pointerId\)/, "HMI widgets support pointer and touch repositioning");
+assert.deepEqual(compareSnapshotLogic({ name:"Earlier", initialState:{ B:true, A:false } },
+  { name:"Later", initialState:{ A:false, B:true } }), [], "renaming and property order leave logic unchanged");
+assert.deepEqual(compareSnapshotLogic({ stSource:"A := FALSE;\r\nB := TRUE;" },
+  { stSource:"A := FALSE;\nB := FALSE;" }),
+  [{ key:"text", firstLine:2, before:["B := TRUE;"], after:["B := FALSE;"] }]);
+assert.deepEqual(compareSnapshotLogic({ rungs:[{ coil:"Before" }], tasks:[{ periodMs:100 }] },
+  { rungs:[{ coil:"After" }], tasks:[{ periodMs:200 }] }).map(({ key }) => key), ["ladder", "tasks"]);
+
 console.log(`PASS: ${examples.length} examples, ${examples.reduce((n, e) => n + e.testCases.length, 0)} cases, process models, LD TON/TOF/TP, replay, breakpoints, ST, FBD, SFC, HMI, validation and UI bindings`)
 
 
