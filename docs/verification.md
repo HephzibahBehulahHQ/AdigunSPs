@@ -1,5 +1,9 @@
 # Verification record
 
+## HMI alarm lifecycle — 2026-11-21
+
+Browser acceptance imports a REAL tag declared as an input by role. It raises a high alarm at 75, verifies that it remains active at 72 with hysteresis of 5, acknowledges it, and verifies clearing at 70. The downloaded event history matches all three transitions. The check also covers numeric input values surviving an LD scan.
+
 ## Trace recording and replay — 2026-11-21
 
 The browser acceptance test records two timer scans, exports their output states and a historical breakpoint, restores the earlier state, then resumes replay after the breakpoint and checks for zero divergences. The development preview ignores generated test and export artifacts so they cannot reload the workspace during this workflow.
