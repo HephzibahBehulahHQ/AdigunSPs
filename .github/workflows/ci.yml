@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           for browser in firefox webkit; do
-            ADIGUNSP_TEST_BROWSER="$browser" npm run test:e2e -- --grep 'offline PWA navigation|recovery snapshots commit together|touch workspace|without overlap|core LD|side-panel layout changes|wire endpoints track'
+            ADIGUNSP_TEST_BROWSER="$browser" npm run test:e2e -- --grep 'offline PWA navigation|recovery snapshots commit together|touch workspace|mobile drawer keyboard|without overlap|core LD|side-panel layout changes|wire endpoints track'
           done
       - name: Build static application
         run: npm run build

@@ -925,12 +925,21 @@ function applyPanelLayout() {
     else workspace.style.setProperty(property, `${width}px`);
   }
 }
+function setMobileDrawer(side) {
+  const workspace = $(".workspace");
+  const wasOpen = workspace.matches(".mobile-left-open, .mobile-right-open");
+  workspace.classList.toggle("mobile-left-open", side === "left");
+  workspace.classList.toggle("mobile-right-open", side === "right");
+  if (side) $(`[data-mobile-drawer-close="${side}"]`).focus();
+  else if (wasOpen) $("#panelLayoutButton").focus();
+  return wasOpen;
+}
 function showPanelLayout() {
   const copy = ({ en:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"}, de:{title:"Panelanordnung",left:"Projekt- und E/A-Bereich",right:"Inspektor und Diagnose",showProject:"Projekt- und E/A-Bereich öffnen",showInspector:"Inspektor und Diagnose öffnen",close:"Seitenbereiche schließen"}, yo:{title:"Ìṣètò pánẹ́lì",left:"Pánẹ́lì iṣẹ́ àti I/O",right:"Olùṣàyẹ̀wò àti àyẹ̀wò ètò",showProject:"Ṣí pánẹ́lì iṣẹ́ àti I/O",showInspector:"Ṣí olùṣàyẹ̀wò àti àyẹ̀wò ètò",close:"Pa àwọn pánẹ́lì ẹ̀gbẹ́"}, pcm:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"} })[language];
   const mobile = matchMedia("(max-width: 760px)").matches;
   if (mobile) {
     modal(copy.title, `<div class="modal-body"><button class="secondary panel-layout-button" id="mobileProjectPanel">${copy.showProject}</button><button class="secondary panel-layout-button" id="mobileInspectorPanel">${copy.showInspector}</button><button class="secondary panel-layout-button" id="mobileClosePanels">${copy.close}</button></div>`);
-    const workspace = $(".workspace"), open = (side) => { workspace.classList.remove("mobile-left-open", "mobile-right-open"); if (side) workspace.classList.add(side === "left" ? "mobile-left-open" : "mobile-right-open"); $("#modal").close(); };
+    const open = (side) => { $("#modal").close(); setMobileDrawer(side); };
     $("#mobileProjectPanel").onclick = () => open("left"); $("#mobileInspectorPanel").onclick = () => open("right"); $("#mobileClosePanels").onclick = () => open(null);
     return;
   }
@@ -2134,6 +2143,10 @@ document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase(), modifier = event.ctrlKey || event.metaKey, active = document.activeElement;
   if (event.key === "Escape" && $("#modal").open) { $("#modal").close(); return; }
   if (event.key === "Escape" && !$("#contextMenu").hidden) { hideContextMenu(); return; }
+  if (event.key === "Escape" && !event.defaultPrevented && matchMedia("(max-width: 760px)").matches && setMobileDrawer(null)) {
+    event.preventDefault();
+    return;
+  }
   if (["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName) || active.isContentEditable) return;
   if (modifier && key === "k") { event.preventDefault(); showPalette(); }
   else if (modifier && key === "f") { event.preventDefault(); showFindReplace(); }
@@ -2231,7 +2244,7 @@ function selectInspectorTab(tab) {
 }
 $("#propertiesTab").addEventListener("click", () => selectInspectorTab("properties"));
 $("#issuesTab").addEventListener("click", () => selectInspectorTab("issues"));
-for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => $(".workspace").classList.remove("mobile-left-open", "mobile-right-open"));
+for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => setMobileDrawer(null));
 startAdigunCopilotObservers();
 init().then(setupAdigunBotWindow);
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js").catch(() => {});
