@@ -53,15 +53,17 @@ export function validateFbdBlocks(project) {
   return issues;
 }
 
-export function connectFbdPorts(blocks, sourceIndex, targetIndex, inputIndex) {
+export function connectFbdPorts(blocks, sourceIndex, targetIndex, inputIndex, countOutput = false) {
   const source = blocks[sourceIndex], target = blocks[targetIndex];
   const inputLimit = ["CTU", "CTD", "RTO"].includes(target?.type) ? 2 : expandableInputs.has(target?.type) ? 8 : requiredFbdInputs(target?.type);
-  if (!source?.outputTag || !target || !Number.isInteger(inputIndex) || inputIndex < 0 || inputIndex >= inputLimit) return { ok:false, code:"port" };
-  const sourceNumeric = numericOutputs.has(source.type), targetNumeric = numericInputs.has(target.type);
+  const sourceTag = countOutput && ["CTU", "CTD"].includes(source?.type) ? source.countTag :
+    countOutput ? undefined : source?.outputTag;
+  if (!sourceTag || !target || !Number.isInteger(inputIndex) || inputIndex < 0 || inputIndex >= inputLimit) return { ok:false, code:"port" };
+  const sourceNumeric = countOutput || numericOutputs.has(source.type), targetNumeric = numericInputs.has(target.type);
   if (!types.has(source.type) || (sourceNumeric !== targetNumeric)) return { ok:false, code:"type", expected:targetNumeric ? "numeric" : "BOOL" };
   const candidate = blocks.map((block, index) => {
     if (index !== targetIndex) return block;
-    const inputs = [...(block.inputs || [])]; while (inputs.length <= inputIndex) inputs.push(""); inputs[inputIndex] = source.outputTag;
+    const inputs = [...(block.inputs || [])]; while (inputs.length <= inputIndex) inputs.push(""); inputs[inputIndex] = sourceTag;
     return { ...block, inputs };
   });
   if (orderFbdBlocks(candidate).errors.some((message) => message.includes("cycle"))) return { ok:false, code:"cycle" };

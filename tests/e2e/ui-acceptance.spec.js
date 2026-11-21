@@ -237,6 +237,36 @@ test("PLCopen FBD reads connected preset literals and older inline presets", asy
   expect(result.rejection).toContain("CTU PV");
 });
 
+test("FBD counter value port shows imported wires and supports keyboard and pointer wiring", async ({ page }) => {
+  const xml = await page.evaluate(async () => {
+    const { createPlcopenXml } = await import("/src/plcopen.js");
+    return createPlcopenXml({ name:"Counter wire", editorType:"FBD",
+      tags:[{ name:"Pulse",type:"BOOL",role:"input" }, { name:"Target",type:"INT",role:"input" },
+        { name:"Count",type:"INT" }, { name:"Reached",type:"BOOL",role:"output" }, { name:"Matches",type:"BOOL",role:"output" }],
+      fbdBlocks:[{ type:"CTU",inputs:["Pulse"],outputTag:"Reached",countTag:"Count",preset:2,layout:{ x:160,y:60 } },
+        { type:"EQ",inputs:["Count","Target"],outputTag:"Matches",layout:{ x:740,y:60 } }] });
+  });
+  await page.locator("#fileInput").setInputFiles({ name:"count.xml", mimeType:"application/xml", buffer:Buffer.from(xml) });
+  await expect(page.locator("#editorMode")).toHaveValue("FBD");
+  const counter = page.locator('[data-fbd-node="0"]');
+  const cv = counter.getByRole("button", { name:/CV Count/ });
+  await expect(cv).toBeVisible();
+  await expect(page.locator(".fbd-wires path")).toHaveCount(1);
+  const secondInput = page.locator('[data-fbd-input-handle="1"][data-fbd-input-index="1"]');
+  await cv.press("Enter");
+  await secondInput.press("Enter");
+  await expect(page.locator('[data-fbd-index="1"][data-fbd-field="inputs"]')).toHaveValue("Count, Count");
+  await expect(page.locator(".fbd-wires path")).toHaveCount(2);
+  await expect(secondInput).toBeFocused();
+  const fields = page.locator('[data-fbd-index="1"][data-fbd-field="inputs"]');
+  await fields.fill("Count, Target");
+  await fields.press("Tab");
+  await expect(page.locator(".fbd-wires path")).toHaveCount(1);
+  await cv.dragTo(secondInput);
+  await expect(fields).toHaveValue("Count, Count");
+  await expect(page.locator(".fbd-wires path")).toHaveCount(2);
+});
+
 test("PLCopen CTU CV preserves named outputs and unnamed direct wires", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
