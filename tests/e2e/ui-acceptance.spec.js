@@ -212,6 +212,57 @@ test("a simulated scan exposes configured PID limits in HMI", async ({ page }) =
   await expect(page.locator(".process-card").filter({ hasText:"Five percent ceiling" }).locator("strong")).toHaveText(/^5(?:\.0)? %$/);
 });
 
+test("trace history exports, restores, and replays a recorded ladder timer", async ({ page }, testInfo) => {
+  const project = {
+    name:"Trace timer exercise", editorType:"LD",
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+    initialState:{ Start:true },
+    rungs:[{
+      id:"trace-timer", branches:[[{ tag:"Start", mode:"NO" }]], coil:"Lamp",
+      timer:{ tag:"TraceTimer", type:"TON", preset:200, output:"DN" }
+    }]
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"trace-timer.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  const chooseMenu = async (menu, name) => {
+    await page.locator(`[data-app-menu="${menu}"]`).click();
+    await page.getByRole("menuitem", { name, exact:true }).click();
+  };
+  await chooseMenu("online", "Record trace");
+  await chooseMenu("plc", "Step");
+  await chooseMenu("plc", "Step");
+  await chooseMenu("online", "Record trace");
+  const coil = page.locator("#ladderCanvas .coil");
+  await expect(coil).toHaveClass(/energized/);
+
+  await chooseMenu("debug", "Trace history");
+  const scrubber = page.locator("#traceScrubber");
+  await expect(scrubber).toHaveValue("2");
+  await scrubber.press("ArrowLeft");
+  await expect(scrubber).toHaveValue("1");
+  await page.locator("#traceBreakpointToggle").click();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);
+  await download.saveAs(testInfo.outputPath("recorded.trace.json"));
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const exported = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  expect(exported.schema).toBe("adigunsps-trace-v1");
+  expect(exported.frames.map((frame) => frame.outputs.Lamp)).toEqual([false, true]);
+  expect(exported.historicalBreakpoints).toEqual([1]);
+
+  await page.locator("#traceRestore").click();
+  await expect(coil).not.toHaveClass(/energized/);
+  await chooseMenu("online", "Replay trace");
+  await expect(page.locator("#toast")).toContainText("Historical breakpoint · scan 1");
+  await expect(page.getByRole("heading", { name:"Simulation trace & scan history" })).toBeVisible();
+  await page.locator("#modal .modal-close").click();
+  await chooseMenu("plc", "Run");
+  await expect(page.locator("#toast")).toContainText("Replay complete · 0 divergence(s)");
+  await expect(coil).toHaveClass(/energized/);
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");
