@@ -545,6 +545,20 @@ assert.ok(!twinSvg.includes("marker-end"), "unconfigured process models are not 
 assert.equal(renderProcessTwin([], {}), "", "2D process mimic is absent when no process models exist");
 const pid = defaultProcessModel("pid", "pid1", "PID", "", "Control", "Temperature"); pid.setpoint = 40; pid.kp = 2; pid.ki = 0; pid.kd = 0;
 assert.equal(stepProcesses([pid], { Temperature:10 }, {}, 1000).values.Control, 60, "PID tuning model calculates bounded proportional output");
+const boundedPid = { ...pid, setpoint:10, kp:0, ki:1, min:0, max:5 };
+let pidScan = stepProcesses([boundedPid], { Temperature:0 }, {}, 1000);
+assert.equal(pidScan.values.Control, 5, "PID integral reaches the output bound within a scan");
+for (let index = 0; index < 10; index++) pidScan = stepProcesses([boundedPid], { Temperature:0 }, pidScan.states, 1000);
+assert.equal(pidScan.states.pid1.integral, 5, "PID integral does not wind up at the upper bound");
+assert.equal(stepProcesses([boundedPid], { Temperature:11 }, pidScan.states, 1000).values.Control, 4, "PID output recovers immediately as the error reverses");
+const gatedPid = { ...boundedPid, controlTag:"Enable", kd:1 };
+const disabledPid = stepProcesses([gatedPid], { Enable:false, Temperature:100 }, pidScan.states, 1000);
+assert.equal(disabledPid.values.Control, 0, "disabled PID produces zero output");
+assert.equal(disabledPid.states.pid1.integral, 5, "disabled PID holds its integral");
+assert.equal(stepProcesses([gatedPid], { Enable:true, Temperature:11 }, disabledPid.states, 1000).values.Control, 4, "re-enabling suppresses the derivative kick");
+assert.equal(stepProcesses([{ ...pid, min:-100, max:0 }], { Temperature:10 }, {}, 1000).values.Control, 0, "a zero PID maximum is preserved");
+assert.ok(validateProject({ ...defaultProject(), processes:[{ ...pid, min:10, max:0 }] })
+  .some((issue) => issue.code === "process-pid-limits"), "inverted PID output limits are flagged");
 const st = compileStructuredText("Motor := Start AND NOT Stop;\nLamp := (Start OR Sensor) AND NOT Stop;", ["Motor", "Lamp", "Start", "Stop", "Sensor"]);
 assert.equal(st.ok, true, "boolean ST program compiles");
 const stResult = executeStructuredText(st, { Start: true, Stop: false, Sensor: false }, {}, ["Motor", "Lamp"]);

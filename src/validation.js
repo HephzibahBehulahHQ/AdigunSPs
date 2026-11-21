@@ -143,6 +143,7 @@ export function validateProject(project) {
     else if (tags.get(model.outputTag).type === "BOOL") issues.push({ level: "error", code: "process-output-type", message: `Process output ${model.outputTag} must be numeric.` });
     if (model.type !== "pid" && (!model.controlTag || !processInputs.has(model.controlTag))) issues.push({ level: "error", code: "process-control-tag", message: `Process ${model.name || model.id} needs a declared digital run input.` });
     if (model.type === "pid" && (!model.inputTag || !tags.has(model.inputTag) || tags.get(model.inputTag).type === "BOOL")) issues.push({ level: "error", code: "process-pv-tag", message: `PID model ${model.name || model.id} needs a numeric process-variable tag.` });
+    if (model.type === "pid" && Number(model.min ?? 0) > Number(model.max ?? 100)) issues.push({ level:"error", code:"process-pid-limits", message:`PID model ${model.name || model.id} needs a minimum output no greater than its maximum.` });
     for (const field of Object.keys(model).filter((key) => ["capacity", "fillRate", "drainRate", "speed", "length", "ratedSpeed", "responseSeconds", "ambient", "heatRate", "coolingRate", "passiveCoolingRate", "maxFlow", "head", "maxHead", "setpoint", "kp", "ki", "kd", "min", "max"].includes(key))) if (!Number.isFinite(Number(model[field]))) issues.push({ level: "error", code: "process-parameter", message: `Process ${model.name || model.id} parameter ${field} must be numeric.` });
   }
   return issues;

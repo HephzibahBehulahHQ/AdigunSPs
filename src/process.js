@@ -1,6 +1,40 @@
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const active = (signals, tag) => Boolean(tag && signals[tag]);
 
+function finiteNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function stepPid(model, signals, state, dt) {
+  const enabled = !model.controlTag || active(signals, model.controlTag);
+  if (!enabled) {
+    state.enabled = false;
+    return state.output = 0;
+  }
+
+  const elapsed = finiteNumber(dt);
+  const min = finiteNumber(model.min);
+  const max = finiteNumber(model.max, 100);
+  const error = finiteNumber(model.setpoint) - finiteNumber(signals[model.inputTag]);
+  const derivative = elapsed > 0 && state.enabled !== false && Number.isFinite(state.previousError) ?
+    (error - state.previousError) / elapsed : 0;
+  const ki = finiteNumber(model.ki);
+  const baseOutput = finiteNumber(model.kp) * error + finiteNumber(model.kd) * derivative;
+  let integral = finiteNumber(state.integral);
+  const output = baseOutput + ki * integral;
+  const delta = ki * error * elapsed;
+  // Limit the integrator contribution at saturation while allowing it to move back into range.
+  if (ki !== 0 && Number.isFinite(delta)) {
+    const boundedDelta = clamp(delta, Math.min(0, min - output), Math.max(0, max - output));
+    integral = finiteNumber(integral + boundedDelta / ki, integral);
+  }
+  state.integral = integral;
+  state.previousError = error;
+  state.enabled = true;
+  return state.output = clamp(baseOutput + ki * integral, min, max);
+}
+
 export function stepProcesses(models, inputs, previous = {}, dtMs = 100) {
   const states = structuredClone(previous), signals = { ...inputs }, values = {}, dt = Math.max(0, Number(dtMs) || 0) / 1000;
   for (const model of models || []) {
@@ -26,12 +60,7 @@ export function stepProcesses(models, inputs, previous = {}, dtMs = 100) {
       const maxHead = Math.max(0.001, Number(model.maxHead) || 100), ratio = clamp((Number(model.head) || 0) / maxHead, 0, 1);
       value = active(signals, model.controlTag) ? (Number(model.maxFlow) || 100) * (1 - ratio * ratio) : 0;
     } else if (model.type === "pid") {
-      const setpoint = Number(model.setpoint) || 0, pv = Number(signals[model.inputTag]) || 0, error = setpoint - pv;
-      state.integral = (state.integral || 0) + error * dt;
-      const derivative = dt ? (error - (state.previousError || 0)) / dt : 0;
-      state.previousError = error;
-      const output = (Number(model.kp) || 0) * error + (Number(model.ki) || 0) * state.integral + (Number(model.kd) || 0) * derivative;
-      value = state.output = active(signals, model.controlTag) || !model.controlTag ? clamp(output, Number(model.min) || 0, Number(model.max) || 100) : 0;
+      value = stepPid(model, signals, state, dt);
     }
     if (model.outputTag) { values[model.outputTag] = value; signals[model.outputTag] = value; }
   }

@@ -64,7 +64,7 @@ Open **Components / Schematic**, search for a named model, and choose **Place co
 
 ## HMI
 
-Open **HMI** in the same project, choose a screen, and place a **Switch**, **Lamp**, **Value**, or **Trend**. Select the widget and bind an existing project tag in **Properties**. Use BOOL tags for switches and lamps; numeric tags for values and trends. Run, change a simulated input, and check the screen. HMI controls operate simulation only.
+In **HMI**, add a **Switch**, **Lamp**, **Value**, or **Trend** and bind a tag in **Properties**. Use BOOL for switches and lamps, numeric tags for values and trends. Run and change an input to check the screen. Set simulated PID output limits under **Processes**.
 
 ## First project: use all three workspaces
 
