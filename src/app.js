@@ -1356,11 +1356,37 @@ const snapshotComparisonCopy = {
   pcm:{ compare:"Compare logic", title:"Compare saved logic", earlier:"Snapshot wey you choose", latest:"Latest saved snapshot", back:"Go back to snapshots", empty:"Logic for these sections no change.", line:"Line", editor:"Editor", ladder:"Ladder logic", blocks:"Function blocks", text:"Structured Text", chart:"Sequence chart", units:"Program units", tasks:"Tasks", tags:"Tags", io:"I/O", initial:"Starting values", processes:"Process models" }
 };
 
-function showSnapshotComparison(projectId, earlier, latest) {
+const snapshotPairCopy = {
+  en:{ with:"Compare with", other:"Comparison snapshot" },
+  de:{ with:"Vergleichen mit", other:"Vergleichs-Snapshot" },
+  yo:{ with:"Fi wé", other:"Ẹ̀dà fún àfiwé" },
+  pcm:{ with:"Compare with", other:"Snapshot for comparison" }
+};
+
+function showSnapshotComparison(projectId, earlier, versions) {
   const copy = snapshotComparisonCopy[language];
-  const changes = compareSnapshotLogic(earlier.project, latest.project);
-  modal(copy.title, `<div class="modal-body"><div class="snapshot-diff-versions"><p><b>${copy.earlier}</b><br>${formatLocaleDateTime(earlier.savedAt, language)}</p><p><b>${copy.latest}</b><br>${formatLocaleDateTime(latest.savedAt, language)}</p></div><div id="snapshotDiffSections"></div><div class="modal-actions"><button type="button" class="secondary" id="snapshotDiffBack">${copy.back}</button></div></div>`);
+  const labels = snapshotPairCopy[language];
+  const targets = versions.filter((version) => version.id !== earlier.id);
+  const versionLabel = (version) => {
+    const when = formatLocaleDateTime(version.savedAt, language);
+    return version.revision ? `#${formatLocaleNumber(version.revision, language, 0)} · ${when}` : when;
+  };
+  modal(copy.title, `<div class="modal-body"><div class="snapshot-diff-versions"><p><b>${copy.earlier}</b><br>${escapeHtml(versionLabel(earlier))}</p><label class="field">${labels.with}<select id="snapshotDiffTarget">${targets.map((version, index) => `<option value="${index}">${version === versions[0] ? `${copy.latest} · ` : ""}${escapeHtml(versionLabel(version))}</option>`).join("")}</select></label></div><div id="snapshotDiffSections"></div><div class="modal-actions"><button type="button" class="secondary" id="snapshotDiffBack">${copy.back}</button></div></div>`);
+  const targetSelect = $("#snapshotDiffTarget");
+  const update = () => {
+    const target = targets[Number(targetSelect.value)];
+    const targetLabel = target === versions[0] ? copy.latest : labels.other;
+    renderSnapshotChanges(compareSnapshotLogic(earlier.project, target.project), copy, targetLabel);
+  };
+  targetSelect.addEventListener("change", update);
+  update();
+  $("#snapshotDiffBack").onclick = () => showRecovery(projectId, earlier.id);
+  targetSelect.focus();
+}
+
+function renderSnapshotChanges(changes, copy, targetLabel) {
   const sections = $("#snapshotDiffSections");
+  sections.replaceChildren();
   if (!changes.length) sections.textContent = copy.empty;
   for (const change of changes) {
     const details = document.createElement("details");
@@ -1371,7 +1397,7 @@ function showSnapshotComparison(projectId, earlier, latest) {
       if (!details.open || details.childElementCount > 1) return;
       const columns = document.createElement("div");
       columns.className = "snapshot-diff-columns";
-      for (const [label, lines] of [[copy.earlier, change.before], [copy.latest, change.after]]) {
+      for (const [label, lines] of [[copy.earlier, change.before], [targetLabel, change.after]]) {
         const column = document.createElement("div");
         const heading = document.createElement("b");
         heading.textContent = `${label} · ${copy.line} ${formatLocaleNumber(change.firstLine, language, 0)}`;
@@ -1387,9 +1413,6 @@ function showSnapshotComparison(projectId, earlier, latest) {
     sections.append(details);
     if (sections.childElementCount === 1) details.open = true;
   }
-  const back = $("#snapshotDiffBack");
-  back.onclick = () => showRecovery(projectId, earlier.id);
-  (sections.querySelector("summary") || back).focus();
 }
 
 async function showRecovery(projectId, focusSnapshot) {
@@ -1405,7 +1428,7 @@ async function showRecovery(projectId, focusSnapshot) {
   modal(copy.title, `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version, index) => `<div class="project-row snapshot-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · ${copy.restore}</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs?.length ?? 0,language,0)} ${copy.rungs}</span><button class="secondary" data-compare-snapshot="${index + 1}">${compare}</button><button class="secondary" data-restore-copy="${escapeAttr(version.id)}">${copy.copy}</button></div>`).join("")}</div></div>`);
   document.querySelectorAll("[data-compare-snapshot]").forEach((button) => {
     const version = versions[Number(button.dataset.compareSnapshot)];
-    button.onclick = () => showSnapshotComparison(projectId, version, versions[0]);
+    button.onclick = () => showSnapshotComparison(projectId, version, versions);
     if (version.id === focusSnapshot) button.focus();
   });
   document.querySelectorAll("[data-restore], [data-restore-copy]").forEach((button) => button.onclick = async () => {
