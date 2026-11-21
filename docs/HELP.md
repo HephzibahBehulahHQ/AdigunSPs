@@ -97,7 +97,7 @@ If a step does not match the example, follow that project's **How to test** and 
 
 ## Using commands
 
-A command is an app action like adding a rung, opening a project, or running a simulation—not text sent to a PLC or shell.
+Commands control the workspace and simulator. They never reach a PLC or shell.
 
 Commands include **New project** (start empty), **Project manager** (open saved work), **Example browser** (load a learning project), **Add rung**, **Add contact**, **Run**, **Step**, **Reset**, **Tags and I/O**, and **Safety and help**.
 
@@ -105,7 +105,7 @@ Commands include **New project** (start empty), **Project manager** (open saved 
 
 1. Type a few letters in the search field.
 2. Select a result to run it. Search can also find projects, tags, and examples when you enter a search term.
-3. **Worked example:** Press Ctrl+K, type “Run,” then select **Run**. The simulator begins repeated PLC scans; use **Pause** to pause or **Reset** to clear simulated outputs and timers.
+3. **Worked example:** Press Ctrl+K, search “Run,” and select **Run**. **Pause** halts scans. **Reset** clears simulated outputs and timers.
 
 ## Building a project
 
@@ -120,7 +120,7 @@ ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling:
 
 Siemens 3RU2126-4BC0: three phase pairs and 95/96 NC + 97/98 NO; **Overload tripped** switches both auxiliary contacts. Schneider XB5AA31 is green spring-return NO (13–14); XB5AA42 is red spring-return NC (21–22).
 
-4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. Fix reported compile errors. A TP pulse timer runs for its preset duration and ignores new input edges while its pulse is active.
+4. Toggle tones via **Online → Toggle simulation sound**. TP ignores new input edges during an active pulse.
 
 USB controls are under Hardware inventory / BOM.
 
