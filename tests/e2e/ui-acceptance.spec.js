@@ -191,6 +191,27 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   expect(await blocks.count()).toBeLessThan(count / 4);
 });
 
+test("a simulated scan exposes configured PID limits in HMI", async ({ page }) => {
+  const project = {
+    name:"PID limit exercise", editorType:"LD", rungs:[],
+    tags:["Temperature", "ZeroControl", "BoundedControl"].map((name) => ({ name, type:"REAL" })),
+    initialState:{ Temperature:0 },
+    processes:[
+      { id:"zero-pid", type:"pid", name:"Zero ceiling", inputTag:"Temperature", outputTag:"ZeroControl", setpoint:10, kp:1, min:-10, max:0 },
+      { id:"bounded-pid", type:"pid", name:"Five percent ceiling", inputTag:"Temperature", outputTag:"BoundedControl", setpoint:10, kp:1, min:0, max:5 }
+    ]
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"pid-limits.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  await page.locator("#hmiTab").click();
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  await expect(page.locator(".process-card").filter({ hasText:"Zero ceiling" }).locator("strong")).toHaveText(/^0(?:\.0)? %$/);
+  await expect(page.locator(".process-card").filter({ hasText:"Five percent ceiling" }).locator("strong")).toHaveText(/^5(?:\.0)? %$/);
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");

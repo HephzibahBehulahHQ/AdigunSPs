@@ -1,5 +1,9 @@
 # Verification record
 
+## Simulated PID output limits — 2026-11-21
+
+The process-model regression checks a zero output ceiling, saturation without integral windup, release from saturation when the error reverses, and integral hold while disabled. It verifies that re-enabling suppresses a derivative kick and that validation reports inverted limits. An HMI browser scan exercises the configured ceilings through the file import workflow.
+
 ## Logic outline keyboard navigation — 2026-11-21
 
 Browser checks verify a single Tab entry point for LD, FBD, and SFC outlines. They cover selecting and focusing the final coil or block in a large import, activating a ladder coil with Enter, and moving from an SFC outline entry to its editor control. Screen-reader announcements still need manual verification.
