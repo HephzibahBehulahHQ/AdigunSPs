@@ -209,6 +209,7 @@ assert.deepEqual(applyInputFaults({ Sensor:false, Start:true }, [{ tag:"Sensor",
 assert.deepEqual(applyInputFaults({ Motor:false }, [{ tag:"Motor", target:"output", kind:"stuck-high" }]), { Motor:false }, "output faults do not alter input values");
 assert.deepEqual(applyOutputFaults({ Motor:false, Speed:10 }, [{ tag:"Motor", target:"output", kind:"stuck-high" }, { tag:"Speed", target:"output", kind:"offset", offset:2.5 }]), { Motor:true, Speed:12.5 }, "output faults force digital outputs and offset numeric outputs");
 assert.deepEqual(applyAnalogFaults({ Level:40, Output:12 }, [{ tag:"Level", kind:"offset", offset:5 }, { tag:"Level", kind:"offset", offset:-2 }, { tag:"Output", kind:"offset", offset:100 }], ["Level"]), { Level:43, Output:12 }, "analog offsets combine and only affect configured analog input tags");
+assert.deepEqual(applyAnalogFaults({ Level:40 }, [{ tag:"Level", target:"output", kind:"offset", offset:5 }], ["Level"]), { Level:40 }, "output faults never alter the raw analog input");
 const trendHistory = {};
 for (let sample = 1; sample <= 4; sample++) appendTrendSample(trendHistory, "Level", { time:sample * 1000, value:sample * 10 }, 3);
 assert.deepEqual(trendHistory.Level.map((sample) => sample.time), [2000, 3000, 4000], "trend retention keeps only the configured newest samples");

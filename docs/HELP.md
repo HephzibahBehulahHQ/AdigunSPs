@@ -64,7 +64,7 @@ Open **Components / Schematic**, search for a named model, and choose **Place co
 
 ## HMI
 
-In **HMI**, add a **Switch**, **Lamp**, **Value**, or **Trend** and bind a tag in **Properties**. Use BOOL for switches and lamps, numeric tags for values and trends. Run and change an input to check the screen. Set simulated PID output limits under **Processes**.
+In **HMI**, add a **Switch**, **Lamp**, **Value**, or **Trend** and bind it in **Properties**. Use BOOL for switches and lamps, numeric tags for values and trends. **Processes** sets PID limits. **Watch** shows fault-adjusted values.
 
 ## First project: use all three workspaces
 

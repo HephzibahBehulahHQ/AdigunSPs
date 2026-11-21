@@ -1,5 +1,9 @@
 # Verification record
 
+## Analog fault offsets and process state — 2026-11-21
+
+A browser trace holds a raw analog input at 40, applies a +5 offset once per scan, and removes the offset to recover the original reading. The PID sees a steady effective value, the tank advances on each LD scan, and replay reports zero divergences. Regression checks also ensure output faults cannot modify raw analog inputs.
+
 ## HMI alarm lifecycle — 2026-11-21
 
 Browser acceptance imports a REAL tag declared as an input by role. It raises a high alarm at 75, verifies that it remains active at 72 with hysteresis of 5, acknowledges it, and verifies clearing at 70. The downloaded event history matches all three transitions. The check also covers numeric input values surviving an LD scan.

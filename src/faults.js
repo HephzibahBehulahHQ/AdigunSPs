@@ -27,7 +27,7 @@ export function applyOutputFaults(outputs, faults = []) {
 export function applyAnalogFaults(values, faults = [], analogInputs = []) {
   const result = { ...values }, allowed = new Set(analogInputs), offsets = new Map();
   for (const fault of faults) {
-    if (fault.kind !== "offset" || !allowed.has(fault.tag) || !Number.isFinite(Number(fault.offset))) continue;
+    if (fault.target === "output" || fault.kind !== "offset" || !allowed.has(fault.tag) || !Number.isFinite(Number(fault.offset))) continue;
     offsets.set(fault.tag, (offsets.get(fault.tag) || 0) + Number(fault.offset));
   }
   for (const [tag, offset] of offsets) {
