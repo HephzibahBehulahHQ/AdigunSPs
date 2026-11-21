@@ -46,8 +46,10 @@ jobs:
         run: npm run build
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Add Pages no-Jekyll marker
-        run: touch dist/.nojekyll
+      - name: Add Pages deployment metadata
+        run: |
+          touch dist/.nojekyll
+          printf '%s\n' "$GITHUB_SHA" > dist/release-sha.txt
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
         timeout-minutes: 5
