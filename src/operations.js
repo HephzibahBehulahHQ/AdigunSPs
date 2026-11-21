@@ -27,9 +27,9 @@ export function calculateOperations(session = {}, config = {}, outputNames = [])
     cost:rows.length && rows.every((row) => row.cost !== null) ? rows.reduce((sum,row) => sum + row.cost,0) : null };
 }
 
-export function createOperationsReportCsv(project, session, identity, language = "en") {
-  const copy = csvCopy[language] || csvCopy.en, names = (project.io?.outputs || []).filter((name) => session.outputRuntimeMs?.[name] !== undefined || Object.hasOwn(project.operations?.loadKw || {}, name));
-  const report = calculateOperations(session, project.operations || {}, names), cell = (value) => `"${String(value ?? "").replaceAll('"','""')}"`, rows = [
+export function createOperationsReportCsv(project, session, identity, language = "en", outputNames = project.io?.outputs || []) {
+  const copy = csvCopy[language] || csvCopy.en;
+  const report = calculateOperations(session, project.operations || {}, outputNames), cell = (value) => `"${String(value ?? "").replaceAll('"','""')}"`, rows = [
     [copy.company,identity.companyName], [copy.product,identity.productName], [copy.attribution,identity.attribution], [copy.project,project.name], [copy.elapsed,report.elapsedHours], [copy.tariff,report.tariff ?? ""], [],
     [copy.output,copy.runtime,copy.duty,copy.load,copy.average,copy.energy,copy.cost,copy.advisory],
     ...report.rows.map((row) => [row.name,row.runtimeHours.toFixed(4),row.dutyPct.toFixed(2),row.loadKw ?? "",row.averageKw?.toFixed(5) ?? "",row.energyKwh?.toFixed(5) ?? "",row.cost?.toFixed(5) ?? "",row.advisory ? copy.advisory : ""]),

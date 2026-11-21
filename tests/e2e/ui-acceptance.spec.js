@@ -642,6 +642,33 @@ test("trace history exports, restores, and replays a recorded ladder timer", asy
   await expect(coil).toHaveClass(/energized/);
 });
 
+test("Operations CSV includes active and idle Boolean outputs shown in the dashboard", async ({ page }) => {
+  const project = {
+    name:"Operations output coverage", editorType:"LD", task:{ cycleMs:36_000 },
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"ActiveLamp", type:"BOOL", role:"output" },
+      { name:"IdleLamp", type:"BOOL", role:"output" }, { name:"AnalogOutput", type:"REAL", role:"output" }],
+    io:{ inputs:["Start"], outputs:["ActiveLamp"] }, initialState:{ Start:true },
+    rungs:[{ id:"active-lamp", branches:[[{ tag:"Start", mode:"NO" }]], coil:"ActiveLamp" }]
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"operations-coverage.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  await page.locator('[data-app-menu="online"]').click();
+  await page.getByRole("menuitem", { name:"Operations estimates", exact:true }).click();
+  const table = page.locator(".ops-table");
+  await expect(table.getByRole("rowheader")).toHaveText(["ActiveLamp","IdleLamp"]);
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#operationsExport").click()]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const csv = Buffer.concat(chunks).toString("utf8");
+  expect(csv).toContain('"ActiveLamp","0.0100","100.00"');
+  expect(csv).toContain('"IdleLamp","0.0000","0.00"');
+  expect(csv).not.toContain("AnalogOutput");
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");
