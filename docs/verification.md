@@ -1,5 +1,9 @@
 # Verification record
 
+## PLCopen Structured Text program interchange — 2026-11-21
+
+A single supported Structured Text program body can round-trip in TC6 XML with declared scalar tags. The browser acceptance workflow imports a numeric conditional containing XML-sensitive text, steps the program, checks its result in Watch, exports it, and verifies that invalid source does not replace the open program. The generated example passed the official [PLCopen TC6 2.01 schema](https://www.plcopen.org/downloads/).
+
 ## PLCopen TC6 2.01 schema verification — 2026-11-21
 
 `scripts/verify-plcopen-schema.ps1` validates the current TON export with delayed and immediate coils, dotted timer address documentation, and collision-safe IEC instance names against the [official PLCopen TC6 2.01 XSD](https://www.plcopen.org/downloads/). It also checks that removing the required project name fails schema validation. These checks passed with the official download. Vendor-tool import and IEC 61131-10 coverage remain open.

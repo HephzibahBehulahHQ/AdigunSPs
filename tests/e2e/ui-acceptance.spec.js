@@ -146,6 +146,46 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
   });
 });
 
+test("a PLCopen Structured Text body imports and executes with its declared tags", async ({ page }) => {
+  const source = "(* Heat & control *)\nIF Temperature < 20.0 THEN\n  Control := Temperature * 2.0;\nELSE\n  Control := 0.0;\nEND_IF;";
+  const xml = await page.evaluate(async (stSource) => {
+    const { createPlcopenXml } = await import("/src/plcopen.js");
+    return createPlcopenXml({
+      name:"Structured Text XML exercise", editorType:"ST", stSource,
+      tags:[{ name:"Temperature", type:"REAL", role:"input" }, { name:"Control", type:"REAL", role:"output" }],
+      initialState:{ Temperature:10 }
+    });
+  }, source);
+  expect(xml).toContain("Heat &amp; control");
+  expect(xml).toContain("Temperature &lt; 20.0");
+  await page.locator("#fileInput").setInputFiles({
+    name:"structured-text.xml", mimeType:"application/xml", buffer:Buffer.from(xml)
+  });
+  await expect(page.locator("#projectTitle")).toHaveText("Structured Text XML exercise");
+  await expect(page.locator("#editorMode")).toHaveValue("ST");
+  await expect(page.locator("#stSource")).toHaveValue(source);
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  await page.locator('[data-app-menu="debug"]').click();
+  await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
+  await expect(page.locator('[data-watch-value="Control"]')).toHaveText("20");
+  await page.locator("#modal .modal-close").click();
+  await page.locator('[data-app-menu="file"]').click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name:"Export PLCopen XML", exact:true }).click()
+  ]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks).toString("utf8")).toContain("<ST><xhtml:pre>");
+  await page.locator("#fileInput").setInputFiles({
+    name:"invalid-structured-text.xml", mimeType:"application/xml",
+    buffer:Buffer.from(xml.replace("END_IF;", "INVALID STATEMENT"))
+  });
+  await expect(page.locator("#toast")).toContainText("PLCopen ST uses unsupported or invalid statements");
+  await expect(page.locator("#stSource")).toHaveValue(source);
+});
+
 test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {
   const count = 240;
   const outputs = Array.from({ length:count }, (_, index) => `Output_${index}`);

@@ -1,4 +1,7 @@
+import { compileStructuredText } from "./structured-text.js";
+
 const NS = "http://www.plcopen.org/xml/tc6_0201";
+const XHTML = "http://www.w3.org/1999/xhtml";
 const TYPES = new Set(["BOOL", "INT", "REAL", "TIME"]);
 const IEC_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const LADDER_TIMER_ADDRESS = /^T\d+\.\d+$/i;
@@ -9,7 +12,6 @@ const child = (node, name) => children(node, name)[0] || null;
 const text = (node) => node?.textContent?.trim() || "";
 
 function supportedRungs(project) {
-  if ((project.editorType || "LD") !== "LD") throw new Error("PLCopen export currently supports Ladder Diagram projects only.");
   if (!Array.isArray(project.rungs) || !project.rungs.length) throw new Error("Add at least one ladder network before exporting PLCopen XML.");
   const declared = new Set((project.tags || []).map((tag) => tag.name));
   return project.rungs.map((rung, index) => {
@@ -24,11 +26,35 @@ function supportedRungs(project) {
   });
 }
 
+function checkedStSource(source, tags) {
+  if (typeof source !== "string" || !source.trim()) throw new Error("PLCopen ST needs a nonempty program body.");
+  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/u.test(source)) throw new Error("PLCopen ST contains characters outside XML 1.0.");
+  const compiled = compileStructuredText(source, tags.map(({ name }) => name));
+  if (!compiled.ok) throw new Error(`PLCopen ST uses unsupported or invalid statements: ${compiled.errors[0]}`);
+  if (compiled.functions.length || compiled.functionBlocks.length || compiled.programs.length) {
+    throw new Error("PLCopen ST supports a single program body without embedded program or function declarations.");
+  }
+  return source;
+}
+
+function readStSource(body, tags) {
+  const elements = [...body.children];
+  const container = elements[0];
+  if (elements.length !== 1 || container.namespaceURI !== XHTML ||
+      !["p", "pre", "code"].includes(container.localName) || container.children.length) {
+    throw new Error("PLCopen ST needs a plain-text XHTML program body.");
+  }
+  return checkedStSource(container.textContent, tags);
+}
+
 export function createPlcopenXml(project) {
   if (project.programUnits?.length || project.tasks?.length) {
-    throw new Error("PLCopen XML export supports a single ladder body. Use project JSON to preserve program units and task assignments.");
+    throw new Error("PLCopen XML export supports a single program body. Use project JSON to preserve program units and task assignments.");
   }
-  const rungs = supportedRungs(project), tags = project.tags || [];
+  const mode = project.editorType || "LD", tags = project.tags || [];
+  if (mode !== "LD" && mode !== "ST") throw new Error("PLCopen export supports Ladder Diagram and Structured Text programs only.");
+  const rungs = mode === "LD" ? supportedRungs(project) : [];
+  const stBody = mode === "ST" ? checkedStSource(project.stSource, tags) : null;
   const variables = tags.map((tag) => {
     const type = String(tag.type || "BOOL").toUpperCase();
     if (!TYPES.has(type)) throw new Error(`Tag ${tag.name} has unsupported PLCopen data type ${type}.`);
@@ -61,7 +87,7 @@ export function createPlcopenXml(project) {
     timerInstances.set(tag, instance);
   }
   let id = 1, y = 0;
-  const body = rungs.map((rung) => {
+  const ladderBody = rungs.map((rung) => {
     const rail = id++, nodes = [], tails = [], paths = rung.branches;
     const rungHeight = Math.max(96, 56 + Math.max(0, paths.length - 1) * 32);
     let maxContacts = 0;
@@ -92,9 +118,10 @@ export function createPlcopenXml(project) {
     y += rungHeight;
     return nodes.join("");
   }).join("");
+  const body = mode === "ST" ? `<ST><xhtml:pre>${esc(stBody)}</xhtml:pre></ST>` : `<LD>${ladderBody}</LD>`;
   const vars = Object.entries(groups).map(([name, items]) => items.length ? `<${name}>${items.join("")}</${name}>` : "").join("");
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body><LD>${body}</LD></body></pou></pous></types><instances><configurations/></instances></project>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="${XHTML}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body>${body}</body></pou></pous></types><instances><configurations/></instances></project>`;
 }
 
 function toPlcAddress(address) {
@@ -147,10 +174,13 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (root?.localName !== "project" || !/^http:\/\/www\.plcopen\.org\/xml\/tc6_020[01]$/.test(root.namespaceURI || "") || descendants(document, "parsererror").length) throw new Error("This is not a supported PLCopen TC6 project XML document.");
   const pous = descendants(root, "pou");
   if (pous.length > 1) throw new Error("PLCopen import supports one program POU. This file contains multiple POUs.");
-  const pou = pous.find((node) => node.getAttribute("pouType") === "program" && child(child(node, "body"), "LD"));
-  if (!pou) throw new Error("PLCopen import needs a program POU with a Ladder Diagram body.");
-  const ld = child(child(pou, "body"), "LD"), names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "block", "comment"]);
-  const nodes = [...ld.children].filter((node) => !["position"].includes(node.localName));
+  const pou = pous.find((node) => node.getAttribute("pouType") === "program");
+  const bodies = children(pou, "body");
+  const ld = child(bodies[0], "LD"), st = child(bodies[0], "ST");
+  const languages = [...(bodies[0]?.children || [])].filter((node) => ["LD", "ST", "FBD", "SFC", "IL"].includes(node.localName));
+  if (bodies.length !== 1 || languages.length !== 1 || !(ld || st)) throw new Error("PLCopen import needs one program POU with a Ladder Diagram or Structured Text body.");
+  const names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "block", "comment"]);
+  const nodes = [...(ld?.children || [])].filter((node) => node.localName !== "position");
   if (nodes.some((node) => !names.has(node.localName))) throw new Error("PLCopen import found LD instructions outside the supported contact and coil subset.");
   const identified = nodes.filter((node) => node.hasAttribute("localId"));
   const byId = new Map(identified.map((node) => [node.getAttribute("localId"), node]));
@@ -191,6 +221,11 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     occupiedNames.add(tag.toUpperCase());
   }
   if (timerInstances.size !== timerDeclarations.size || [...timerInstances.keys()].some((name) => !timerDeclarations.has(name))) throw new Error("PLCopen TON blocks need matching local instance declarations.");
+  const inputs = tags.filter((tag) => tag.role === "input" || /^I\d/i.test(tag.address || "")).map((tag) => tag.name);
+  const outputs = tags.filter((tag) => tag.role === "output" || /^Q\d/i.test(tag.address || "")).map((tag) => tag.name);
+  const name = child(root, "contentHeader")?.getAttribute("name") || "Imported PLCopen project";
+  const imported = { id:"", name, language:"en", task:{ name:"Main", mode:"cyclic", cycleMs:100 }, tags, io:{ inputs, outputs }, initialState };
+  if (st) return { ...imported, editorType:"ST", stSource:readStSource(st, tags), rungs:[] };
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
   const coils = nodes.filter((node) => node.localName === "coil");
   const timers = new Map(blocks.map((block) => [block.getAttribute("localId"), readTonBlock(block)]));
@@ -253,7 +288,5 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (!rungs.length) throw new Error("PLCopen LD contains no output coils to import.");
   if (nodes.filter((node) => node.localName === "contact").some((node) => !used.has(node.getAttribute("localId")))) throw new Error("PLCopen LD contains contacts outside imported coil networks.");
   if (blocks.some((block) => !usedBlocks.has(block.getAttribute("localId")))) throw new Error("PLCopen LD contains TON blocks outside imported coil networks.");
-  const inputs = tags.filter((tag) => tag.role === "input" || /^I\d/i.test(tag.address || "")).map((tag) => tag.name), outputs = tags.filter((tag) => tag.role === "output" || /^Q\d/i.test(tag.address || "")).map((tag) => tag.name);
-  const name = child(root, "contentHeader")?.getAttribute("name") || "Imported PLCopen project";
-  return { id:"", name, language:"en", editorType:"LD", task:{ name:"Main", mode:"cyclic", cycleMs:100 }, tags, io:{ inputs, outputs }, initialState, rungs };
+  return { ...imported, editorType:"LD", rungs };
 }
