@@ -1,5 +1,9 @@
 # Verification record
 
+## PLCopen TON coil modes — 2026-11-21
+
+The browser round-trip checks Q-driven coils, older exports with an implicit Q pin, and immediate coils that share the paths feeding TON IN. Both modes reset with the input, and ambiguous multiple TON blocks on one set of paths are rejected.
+
 ## Large imported logic projects — 2026-11-21
 
 Browser acceptance uses separate 240-network LD and 240-block FBD imports. Fewer than 60 canvas elements mount at once. The ladder outline reaches the last network without replacing the I/O controls, and the FBD outline reaches and retains focus on the last block. This covers bounded rendering and keyboard navigation for these fixtures. Maximum-size projects and sustained scan performance remain open.

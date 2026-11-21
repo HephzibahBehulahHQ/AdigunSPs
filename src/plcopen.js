@@ -92,6 +92,30 @@ function connectionRefs(node) {
   if (!connections.length) throw new Error("PLCopen LD element has no incoming connection.");
   return connections.map((connection) => connection.getAttribute("refLocalId"));
 }
+function readTonBlock(block) {
+  const inputs = children(child(block, "inputVariables"), "variable");
+  const outputs = children(child(block, "outputVariables"), "variable");
+  const inPin = inputs.find((pin) => pin.getAttribute("formalParameter") === "IN");
+  const ptPin = inputs.find((pin) => pin.getAttribute("formalParameter") === "PT");
+  if (inputs.length !== 2 || !inPin || !ptPin || children(child(block, "inOutVariables"), "variable").length ||
+      outputs.length !== 1 || outputs[0].getAttribute("formalParameter") !== "Q") {
+    throw new Error("PLCopen TON import supports only IN/PT inputs and the Q output.");
+  }
+  const ptPoints = children(ptPin, "connectionPointIn");
+  const ptPoint = ptPoints[0];
+  const expressions = children(ptPoint, "expression");
+  const presetMatch = /^(?:T|TIME)#(\d+)ms$/i.exec(text(expressions[0]));
+  const preset = Number(presetMatch?.[1]);
+  if (ptPoints.length !== 1 || expressions.length !== 1 || children(ptPoint, "connection").length ||
+      !Number.isSafeInteger(preset) || preset <= 0) {
+    throw new Error("PLCopen TON preset must be a positive integer-millisecond literal.");
+  }
+  return { tag:block.getAttribute("instanceName"), type:"TON", preset, refs:connectionRefs(inPin) };
+}
+
+function contactPathKey(refs) {
+  return JSON.stringify([...refs].sort());
+}
 function xmlBoolean(value, attribute) {
   if (value === null || value === undefined || value === "false" || value === "0") return false;
   if (value === "true" || value === "1") return true;
@@ -110,11 +134,13 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const ld = child(child(pou, "body"), "LD"), names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "block", "comment"]);
   const nodes = [...ld.children].filter((node) => !["position"].includes(node.localName));
   if (nodes.some((node) => !names.has(node.localName))) throw new Error("PLCopen import found LD instructions outside the supported contact and coil subset.");
-  const byId = new Map(nodes.filter((node) => node.hasAttribute("localId")).map((node) => [node.getAttribute("localId"), node]));
+  const identified = nodes.filter((node) => node.hasAttribute("localId"));
+  const byId = new Map(identified.map((node) => [node.getAttribute("localId"), node]));
+  if (byId.size !== identified.length) throw new Error("PLCopen LD localIds must be unique.");
   const blocks = nodes.filter((node) => node.localName === "block"), timerInstances = new Map();
   for (const block of blocks) {
     const name = block.getAttribute("instanceName");
-    if (block.getAttribute("typeName") !== "TON" || !name || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely named TON blocks only.");
+    if (!block.getAttribute("localId") || block.getAttribute("typeName") !== "TON" || !name || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely identified and named TON blocks only.");
     timerInstances.set(name, block);
   }
   const variableNodes = descendants(child(pou, "interface"), "variable"), tags = [], initialState = {};
@@ -134,24 +160,36 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   }
   if (timerInstances.size !== timerDeclarations.size || [...timerInstances.keys()].some((name) => !timerDeclarations.has(name)) || tags.some((tag) => timerInstances.has(tag.name))) throw new Error("PLCopen TON blocks need matching local instance declarations.");
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
-  const coils = nodes.filter((node) => node.localName === "coil"), used = new Set(), usedBlocks = new Set(), rungs = coils.map((coil, index) => {
+  const coils = nodes.filter((node) => node.localName === "coil");
+  const timers = new Map(blocks.map((block) => [block.getAttribute("localId"), readTonBlock(block)]));
+  const coilSources = new Set(coils.flatMap(connectionRefs));
+  const enabledTimersByPath = new Map();
+  for (const [id, timer] of timers) {
+    if (coilSources.has(id)) continue;
+    const key = contactPathKey(timer.refs);
+    if (enabledTimersByPath.has(key)) throw new Error("PLCopen LD has multiple TON blocks on the same enabled coil paths.");
+    enabledTimersByPath.set(key, id);
+  }
+  const used = new Set(), usedBlocks = new Set(), rungs = coils.map((coil, index) => {
     const coilStorage = coil.getAttribute("storage") || "none";
     if (xmlBoolean(coil.getAttribute("negated"), "coil negated") || (coil.getAttribute("edge") || "none") !== "none" || !["none", "set", "reset"].includes(coilStorage)) throw new Error("PLCopen import supports normal, set, and reset coils only.");
     const coilConnections = connectionNodes(coil);
-    let timer = null, branchRefs;
-    if (coilConnections.length === 1 && byId.get(coilConnections[0].getAttribute("refLocalId"))?.localName === "block") {
-      const block = byId.get(coilConnections[0].getAttribute("refLocalId")), instanceName = block.getAttribute("instanceName");
+    const singleSource = coilConnections.length === 1 ? coilConnections[0].getAttribute("refLocalId") : null;
+    let output = "EN", branchRefs = connectionRefs(coil), timerId = enabledTimersByPath.get(contactPathKey(branchRefs));
+    if (timers.has(singleSource)) {
       const outputPin = coilConnections[0].getAttribute("formalParameter");
-      if ((outputPin !== null && outputPin !== "Q") || !timerDeclarations.has(instanceName)) throw new Error("PLCopen TON coil input must connect to its declared Q output.");
-      const inputVars = children(child(block, "inputVariables"), "variable"), inPins = inputVars.filter((pin) => pin.getAttribute("formalParameter") === "IN"), ptPins = inputVars.filter((pin) => pin.getAttribute("formalParameter") === "PT"), outputVars = children(child(block, "outputVariables"), "variable");
-      if (inputVars.length !== 2 || inPins.length !== 1 || ptPins.length !== 1 || children(child(block, "inOutVariables"), "variable").length || outputVars.length !== 1 || outputVars[0].getAttribute("formalParameter") !== "Q") throw new Error("PLCopen TON import supports only IN/PT inputs and the Q output.");
-      const ptPoint = child(ptPins[0], "connectionPointIn"), ptExpression = text(child(ptPoint, "expression")), presetMatch = /^(?:T|TIME)#(\d+)ms$/i.exec(ptExpression);
-      const preset = Number(presetMatch?.[1]);
-      if (children(ptPoint, "connection").length || !Number.isSafeInteger(preset) || preset <= 0) throw new Error("PLCopen TON preset must be a positive integer-millisecond literal.");
-      branchRefs = connectionRefs(inPins[0]);
-      timer = { tag:instanceName, type:"TON", preset, output:"DN" };
-      usedBlocks.add(block.getAttribute("localId"));
-    } else branchRefs = connectionRefs(coil);
+      if (outputPin !== null && outputPin !== "Q") throw new Error("PLCopen TON coil input must connect to its declared Q output.");
+      timerId = singleSource;
+      branchRefs = timers.get(timerId).refs;
+      output = "DN";
+    }
+    let timer;
+    if (timerId !== undefined) {
+      if (usedBlocks.has(timerId)) throw new Error("PLCopen TON block belongs to more than one coil network.");
+      const { tag, type, preset } = timers.get(timerId);
+      timer = { tag, type, preset, output };
+      usedBlocks.add(timerId);
+    }
     const branches = branchRefs.map((startRef) => {
       const chain = [], visited = new Set(); let ref = startRef;
       while (true) {

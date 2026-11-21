@@ -71,7 +71,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#modal")).toBeHidden();
 });
 
-test("PLCopen TON XML round-trips through the browser parser and drives the coil after its preset", async ({ page }) => {
+test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
     const { scan } = await import("/src/engine.js");
@@ -87,11 +87,34 @@ test("PLCopen TON XML round-trips through the browser parser and drives the coil
       const project = parsePlcopenXml(importedXml);
       const first = scan(project, { Start:true }, {}, 750);
       const second = scan(project, { Start:true }, first, 750);
-      return [first.outputs.Lamp, second.outputs.Lamp];
+      const reset = scan(project, { Start:false }, second, 750);
+      return [project.rungs[0].timer.output, first.outputs.Lamp, second.outputs.Lamp, second.timers.DelayTimer.done, reset.outputs.Lamp, reset.timers.DelayTimer.done];
     };
-    return [check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"'))];
+    source.rungs[0].timer.output = "EN";
+    const enabledXml = createPlcopenXml(source);
+    const ambiguous = new DOMParser().parseFromString(enabledXml, "application/xml");
+    const block = ambiguous.querySelector("block");
+    const secondBlock = block.cloneNode(true);
+    secondBlock.setAttribute("localId", "99");
+    secondBlock.setAttribute("instanceName", "AnotherTimer");
+    block.after(secondBlock);
+    const declaration = ambiguous.querySelector('localVars variable[name="DelayTimer"]');
+    const secondDeclaration = declaration.cloneNode(true);
+    secondDeclaration.setAttribute("name", "AnotherTimer");
+    declaration.after(secondDeclaration);
+    let ambiguityRejected = false;
+    try {
+      parsePlcopenXml(new XMLSerializer().serializeToString(ambiguous));
+    } catch (error) {
+      if (!error.message.includes("multiple TON blocks")) throw error;
+      ambiguityRejected = true;
+    }
+    return { modes:[check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"')), check(enabledXml)], ambiguityRejected };
   });
-  expect(result).toEqual([[false, true], [false, true]]);
+  expect(result).toEqual({
+    modes:[["DN", false, true, true, false, false], ["DN", false, true, true, false, false], ["EN", true, true, true, false, false]],
+    ambiguityRejected:true
+  });
 });
 
 test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {
