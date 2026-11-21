@@ -1,5 +1,9 @@
 # Verification record
 
+## Large imported logic projects — 2026-11-21
+
+Browser acceptance uses separate 240-network LD and 240-block FBD imports. Fewer than 60 canvas elements mount at once. The ladder outline reaches the last network without replacing the I/O controls, and the FBD outline reaches and retains focus on the last block. This covers bounded rendering and keyboard navigation for these fixtures. Maximum-size projects and sustained scan performance remain open.
+
 ## Local project recovery transactions — 2026-11-21
 
 The browser regression injects a snapshot write failure and verifies that the previous project and history survive. Concurrent saves with the same timestamp retain 25 snapshots and return the current saved version first. Deleting the project clears its history. These checks run against actual IndexedDB.
