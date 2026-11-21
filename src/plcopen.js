@@ -188,7 +188,8 @@ function createFbdBody(project, localVariables, reserved) {
   const inputNodes = externalTags.map((tag, index) =>
     `<inVariable localId="${inputs.get(tag)}"><position x="0" y="${24 + index * 28}"/><connectionPointOut/><expression>${esc(tag)}</expression></inVariable>`);
   let nextInstanceId = 1;
-  let nextOutputId = blocks.length + inputs.size + 1;
+  let nextNodeId = blocks.length + inputs.size + 1;
+  const presetNodes = [];
   const blockNodes = blocks.map((block, index) => {
     const id = index + 1, { x, y } = fbdBlockPosition(block, index);
     const baseType = FBD_BASE_TYPES.get(block.type);
@@ -208,7 +209,9 @@ function createFbdBody(project, localVariables, reserved) {
       instanceAttribute = ` instanceName="${instance}"`;
       const presetPin = type === "CTU" ? "PV" : "PT";
       const preset = type === "CTU" ? Number(block.preset) : `T#${Number(block.preset)}ms`;
-      pins += `<variable formalParameter="${presetPin}"><connectionPointIn><expression>${preset}</expression></connectionPointIn></variable>`;
+      const presetId = nextNodeId++;
+      presetNodes.push(`<inVariable localId="${presetId}"><position x="${Math.max(0, x - 100)}" y="${y + 36}"/><connectionPointOut/><expression>${preset}</expression></inVariable>`);
+      pins += `<variable formalParameter="${presetPin}"><connectionPointIn><connection refLocalId="${presetId}"/></connectionPointIn></variable>`;
     }
     const outputPin = producers.get(block.outputTag).pin;
     const results = [[outputPin, block.outputTag]];
@@ -216,10 +219,10 @@ function createFbdBody(project, localVariables, reserved) {
     const outputPins = results.map(([pin], index) =>
       `<variable formalParameter="${pin}"${index === 0 ? negation : ""}><connectionPointOut/></variable>`).join("");
     const outputNodes = results.map(([pin, tag], index) =>
-      `<outVariable localId="${nextOutputId++}"><position x="${x + 115}" y="${y + index * 24}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="${pin}"/></connectionPointIn><expression>${esc(tag)}</expression></outVariable>`).join("");
+      `<outVariable localId="${nextNodeId++}"><position x="${x + 115}" y="${y + index * 24}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="${pin}"/></connectionPointIn><expression>${esc(tag)}</expression></outVariable>`).join("");
     return `<block localId="${id}" typeName="${type}"${instanceAttribute} width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables>${outputPins}</outputVariables></block>${outputNodes}`;
   });
-  return `<FBD>${inputNodes.join("")}${blockNodes.join("")}</FBD>`;
+  return `<FBD>${inputNodes.join("")}${presetNodes.join("")}${blockNodes.join("")}</FBD>`;
 }
 
 function checkSfcSequence(chart, tags, outputNames) {
@@ -415,6 +418,17 @@ function readFbdSource(node, nodes) {
   return { source, output };
 }
 
+function readFbdPresetLiteral(pin, nodes, usedInputs) {
+  if (!connectionNodes(pin).length) return readInlinePresetLiteral(pin);
+  const { source } = readFbdSource(pin, nodes);
+  const expressions = children(source, "expression");
+  if (source.localName !== "inVariable" || expressions.length !== 1) {
+    throw new Error("PLCopen FBD preset wiring requires a literal input variable.");
+  }
+  usedInputs.add(source);
+  return text(expressions[0]);
+}
+
 function readFbdBody(body, imported) {
   const nodes = new Map();
   for (const node of body.children) {
@@ -473,8 +487,9 @@ function readFbdBody(body, imported) {
       const presetPin = pinNames.get(presetName);
       if (!presetPin) throw new Error(`PLCopen FBD ${type} requires a ${presetName} input.`);
       checkFbdModifiers(presetPin);
-      settings = type === "CTU" ? { preset:readCounterPreset(presetPin), maxCount:PLCOPEN_INT_MAX } :
-        { preset:readTimerPreset(presetPin) };
+      const literal = readFbdPresetLiteral(presetPin, nodes, usedInputs);
+      settings = type === "CTU" ? { preset:readCounterPreset(literal), maxCount:PLCOPEN_INT_MAX } :
+        { preset:readTimerPreset(literal) };
     }
     const inputs = expectedPins.map((name) => {
       const pin = pinNames.get(name);
@@ -611,27 +626,26 @@ function readLdTimerBlock(block) {
       outputs.length !== 1 || outputs[0].getAttribute("formalParameter") !== "Q") {
     throw new Error("PLCopen timer import supports only IN/PT inputs and the Q output.");
   }
-  return { tag:block.getAttribute("instanceName"), type:block.getAttribute("typeName"), preset:readTimerPreset(ptPin), refs:connectionRefs(inPin) };
+  return { tag:block.getAttribute("instanceName"), type:block.getAttribute("typeName"), preset:readTimerPreset(readInlinePresetLiteral(ptPin)), refs:connectionRefs(inPin) };
 }
 
-function readTimerPreset(ptPin) {
-  const ptPoints = children(ptPin, "connectionPointIn");
-  const ptPoint = ptPoints[0];
-  const expressions = children(ptPoint, "expression");
-  const preset = readTimeLiteral(text(expressions[0]));
-  if (ptPoints.length !== 1 || expressions.length !== 1 || children(ptPoint, "connection").length ||
-      !Number.isSafeInteger(preset) || preset <= 0) {
+function readInlinePresetLiteral(pin) {
+  const points = children(pin, "connectionPointIn"), expressions = children(points[0], "expression");
+  if (points.length !== 1 || expressions.length !== 1 || children(points[0], "connection").length) {
+    throw new Error("PLCopen preset must be a literal expression.");
+  }
+  return text(expressions[0]);
+}
+
+function readTimerPreset(literal) {
+  const preset = readTimeLiteral(literal);
+  if (!Number.isSafeInteger(preset) || preset <= 0) {
     throw new Error("PLCopen timer preset must be a positive integer-millisecond literal.");
   }
   return preset;
 }
 
-function readCounterPreset(pin) {
-  const points = children(pin, "connectionPointIn"), expressions = children(points[0], "expression");
-  const literal = text(expressions[0]);
-  if (points.length !== 1 || expressions.length !== 1 || children(points[0], "connection").length) {
-    throw new Error("PLCopen FBD CTU PV must be a positive INT literal.");
-  }
+function readCounterPreset(literal) {
   const value = readScalarInitial(literal, "INT", "CTU PV");
   if (value < 1 || value > PLCOPEN_INT_MAX) throw new Error("PLCopen FBD CTU PV must be from 1 to 32767.");
   return value;
