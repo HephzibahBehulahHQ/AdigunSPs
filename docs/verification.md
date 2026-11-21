@@ -1,5 +1,9 @@
 # Verification record
 
+## Trace recording and replay — 2026-11-21
+
+The browser acceptance test records two timer scans, exports their output states and a historical breakpoint, restores the earlier state, then resumes replay after the breakpoint and checks for zero divergences. The development preview ignores generated test and export artifacts so they cannot reload the workspace during this workflow.
+
 ## Simulated PID output limits — 2026-11-21
 
 The process-model regression checks a zero output ceiling, saturation without integral windup, release from saturation when the error reverses, and integral hold while disabled. It verifies that re-enabling suppresses a derivative kick and that validation reports inverted limits. An HMI browser scan exercises the configured ceilings through the file import workflow.

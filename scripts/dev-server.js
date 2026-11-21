@@ -7,6 +7,7 @@ import { loadAdigunRuntimeConfig, serializeAdigunRuntimeConfig } from "./runtime
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const port = Number(process.env.ADIGUN_DEV_PORT || 8080);
 const clients = new Set();
+const generatedDirectories = new Set([".git", "node_modules", "dist", "test-results", "playwright-report", "artifacts"]);
 const types = { ".css":"text/css; charset=utf-8", ".html":"text/html; charset=utf-8", ".js":"text/javascript; charset=utf-8", ".json":"application/json; charset=utf-8", ".jpg":"image/jpeg", ".png":"image/png", ".svg":"image/svg+xml", ".webmanifest":"application/manifest+json" };
 
 createServer((request, response) => {
@@ -41,6 +42,6 @@ createServer((request, response) => {
 }).listen(port, "127.0.0.1", () => console.log(`AdigunSPs live preview: http://127.0.0.1:${port}/`));
 
 watch(root, { recursive:true }, (event, filename) => {
-  if (!filename || filename.includes("node_modules") || filename.includes(".git")) return;
+  if (!filename || filename.split(/[\\/]/).some((directory) => generatedDirectories.has(directory))) return;
   for (const client of clients) client.write(`data: ${Date.now()}\n\n`);
 });
