@@ -82,6 +82,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   const welcomeContinue = page.locator("#welcomeContinue");
   await expect(welcomeContinue).toBeVisible();
+  await expect(page.locator("#modal")).toHaveAccessibleName(/AdigunSPs/i);
   await welcomeContinue.click();
   await expect(page.locator("#modal")).toBeHidden();
 });
@@ -850,7 +851,8 @@ test("contextual toolboxes keep the existing editor actions reachable", async ({
   await page.locator("#electricalLibraryWorkflows .industrial-catalog > summary").click();
   await expect(page.locator("#electricalToolboxDock .industrial-catalog li").first()).toBeVisible();
   await page.locator('#electricalLibraryWorkflows [data-action="faults"]').click();
-  await expect(page.locator("#modal")).toBeVisible();
+  const faultDialog = page.locator("#modal");
+  await expect(faultDialog).toHaveAccessibleName(await faultDialog.getByRole("heading", { level:2 }).textContent());
   await page.keyboard.press("Escape");
   await expect(page.locator("#modal")).toBeHidden();
   await page.locator("#logicTab").click();

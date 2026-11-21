@@ -1172,13 +1172,14 @@ function updateMotorHum() { const running = Object.values(project.electrical?.si
 function runSimulation() { if (runTimer) return; logEvent(traceReplay ? "replay" : "run", traceReplay ? "Trace replay started" : "Simulation started"); addNarratorEntry("PLC scan started; outputs follow the current logic state."); window.adigunPaused = false; const delay = preferences.speed === "slow" ? 1000 : preferences.speed === "fast" ? 100 : 500; runTimer = setInterval(() => doScan(), delay); updateSimulationHud(); updateStatus(); }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch])); }
 function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#96;"); }
-function modal(title, content, options = {}) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) { if (options.reveal !== false) adigunBotWindow.open(); } else if (options.reveal !== false) botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2>${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
+function modal(title, content, options = {}) { const botPanel = $("#adigunBotWindow"); if (botPanel && title === adigunAiLabels(language).title) { $("#adigunBotWindowTitle").textContent = title; botPanel.querySelector("[data-window-content]").innerHTML = content; if (adigunBotWindow) { if (options.reveal !== false) adigunBotWindow.open(); } else if (options.reveal !== false) botPanel.hidden = false; return; } $("#modal").dataset.view = ""; $("#modalContent").innerHTML = `<div class="modal-head"><h2 id="workspaceDialogTitle">${title}</h2><button class="modal-close" aria-label="Close">×</button></div>${content}`; if (!$("#modal").open) $("#modal").showModal(); $(".modal-close").onclick = () => $("#modal").close(); }
 function confirmProjectChange() {
   if (!hasUnsavedChanges) return Promise.resolve(true);
   return new Promise((resolve) => {
     const dialog = document.createElement("dialog");
     dialog.className = "modal";
-    dialog.innerHTML = `<div class="modal-head"><h2>Unsaved changes</h2></div><div class="modal-body"><p class="safety-copy">You have changes since your last file or cloud save. Save a copy before switching projects?</p><div class="modal-actions"><button type="button" class="secondary" data-change-cancel>Cancel</button><button type="button" class="secondary" data-change-continue>Switch without an extra save</button><button type="button" class="primary" data-change-save>Save and continue</button></div></div>`;
+    dialog.setAttribute("aria-labelledby", "unsavedChangesTitle");
+    dialog.innerHTML = `<div class="modal-head"><h2 id="unsavedChangesTitle">Unsaved changes</h2></div><div class="modal-body"><p class="safety-copy">You have changes since your last file or cloud save. Save a copy before switching projects?</p><div class="modal-actions"><button type="button" class="secondary" data-change-cancel>Cancel</button><button type="button" class="secondary" data-change-continue>Switch without an extra save</button><button type="button" class="primary" data-change-save>Save and continue</button></div></div>`;
     document.body.append(dialog);
     let complete = false;
     const finish = (proceed) => { if (complete) return; complete = true; if (dialog.open) dialog.close(); dialog.remove(); resolve(proceed); };
@@ -1798,7 +1799,8 @@ function confirmBotPreviewCommit() {
   return new Promise((resolve) => {
     const dialog = document.createElement("dialog");
     dialog.id = "botPreviewCommitConfirm"; dialog.className = "modal";
-    dialog.innerHTML = '<div class="modal-head"><h2>Replace current project?</h2></div><div class="modal-body"><p class="safety-copy">The current project has unsaved changes. Commit will replace it with the verified Bot draft. Cancel and discard the preview first if you need to save or keep the current work.</p><div class="modal-actions"><button type="button" class="secondary" data-bot-commit-cancel>Cancel</button><button type="button" class="primary" data-bot-commit-confirm>Replace and commit</button></div></div>';
+    dialog.setAttribute("aria-labelledby", "botPreviewCommitTitle");
+    dialog.innerHTML = '<div class="modal-head"><h2 id="botPreviewCommitTitle">Replace current project?</h2></div><div class="modal-body"><p class="safety-copy">The current project has unsaved changes. Commit will replace it with the verified Bot draft. Cancel and discard the preview first if you need to save or keep the current work.</p><div class="modal-actions"><button type="button" class="secondary" data-bot-commit-cancel>Cancel</button><button type="button" class="primary" data-bot-commit-confirm>Replace and commit</button></div></div>';
     document.body.append(dialog);
     let complete = false;
     const finish = (answer) => { if (complete) return; complete = true; if (dialog.open) dialog.close(); dialog.remove(); resolve(answer); };
