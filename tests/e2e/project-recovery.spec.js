@@ -91,6 +91,7 @@ test("a cached member can reopen and restore a local project while offline", asy
 
     await reopened.locator("#projectMenu").click();
     await reopened.locator(`[data-recover="${originalId}"]`).click();
+    await expect(reopened.locator("[data-restore]").first()).toBeVisible();
     await page.evaluate(async (id) => {
       const { store } = await import("/src/store.js");
       await store.remove(id);
