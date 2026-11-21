@@ -1,4 +1,6 @@
 import { compileStructuredText } from "./structured-text.js";
+import { validateFbdBlocks } from "./fbd-validation.js";
+import { fbdBlockPosition } from "./fbd-layout.js";
 
 const NS = "http://www.plcopen.org/xml/tc6_0201";
 const XHTML = "http://www.w3.org/1999/xhtml";
@@ -47,12 +49,57 @@ function readStSource(body, tags) {
   return checkedStSource(container.textContent, tags);
 }
 
+function booleanGatePins(type, count) {
+  if (type === "NOT" && count === 1) return ["IN"];
+  if ((type === "XOR" && count === 2) || (["AND", "OR"].includes(type) && count >= 2 && count <= 8)) {
+    return Array.from({ length:count }, (_, index) => `IN${index + 1}`);
+  }
+  throw new Error("PLCopen FBD supports NOT, two-input XOR, and AND/OR with two to eight inputs.");
+}
+
+function checkedFbdBlocks(project) {
+  const blocks = project.fbdBlocks || [];
+  if (!blocks.length) throw new Error("PLCopen FBD needs at least one Boolean gate.");
+  const tags = new Map((project.tags || []).map((tag) => [tag.name, tag]));
+  for (const block of blocks) {
+    const inputs = block.inputs || [];
+    booleanGatePins(block.type, inputs.length);
+    if (![...inputs, block.outputTag].every((name) => tags.get(name)?.type === "BOOL") ||
+        tags.get(block.outputTag)?.role === "input" || project.io?.inputs?.includes(block.outputTag)) {
+      throw new Error("PLCopen FBD gates require declared BOOL tags and cannot write to input tags.");
+    }
+  }
+  const errors = validateFbdBlocks(project);
+  if (errors.length) throw new Error(errors[0].message);
+  return blocks;
+}
+
+function createFbdBody(project) {
+  const blocks = checkedFbdBlocks(project);
+  const producers = new Map(blocks.map((block, index) => [block.outputTag, index + 1]));
+  const externalTags = [...new Set(blocks.flatMap((block) => block.inputs).filter((tag) => !producers.has(tag)))];
+  const inputs = new Map(externalTags.map((tag, index) => [tag, blocks.length + index + 1]));
+  const inputNodes = externalTags.map((tag, index) =>
+    `<inVariable localId="${inputs.get(tag)}"><position x="0" y="${24 + index * 28}"/><connectionPointOut/><expression>${esc(tag)}</expression></inVariable>`);
+  const gateNodes = blocks.map((block, index) => {
+    const id = index + 1, { x, y } = fbdBlockPosition(block, index);
+    const pins = booleanGatePins(block.type, block.inputs.length).map((pin, inputIndex) => {
+      const tag = block.inputs[inputIndex], producer = producers.get(tag);
+      return `<variable formalParameter="${pin}"><connectionPointIn><connection refLocalId="${producer ?? inputs.get(tag)}"${producer ? ' formalParameter="OUT"' : ""}/></connectionPointIn></variable>`;
+    }).join("");
+    const outputId = blocks.length + inputs.size + id;
+    return `<block localId="${id}" typeName="${block.type}" width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables><variable formalParameter="OUT"><connectionPointOut/></variable></outputVariables></block>` +
+      `<outVariable localId="${outputId}"><position x="${x + 115}" y="${y}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="OUT"/></connectionPointIn><expression>${esc(block.outputTag)}</expression></outVariable>`;
+  });
+  return `<FBD>${inputNodes.join("")}${gateNodes.join("")}</FBD>`;
+}
+
 export function createPlcopenXml(project) {
   if (project.programUnits?.length || project.tasks?.length) {
     throw new Error("PLCopen XML export supports a single program body. Use project JSON to preserve program units and task assignments.");
   }
   const mode = project.editorType || "LD", tags = project.tags || [];
-  if (mode !== "LD" && mode !== "ST") throw new Error("PLCopen export supports Ladder Diagram and Structured Text programs only.");
+  if (!["LD", "ST", "FBD"].includes(mode)) throw new Error("PLCopen export supports Ladder Diagram, Structured Text, and basic Boolean FBD programs.");
   const rungs = mode === "LD" ? supportedRungs(project) : [];
   const stBody = mode === "ST" ? checkedStSource(project.stSource, tags) : null;
   const variables = tags.map((tag) => {
@@ -118,7 +165,8 @@ export function createPlcopenXml(project) {
     y += rungHeight;
     return nodes.join("");
   }).join("");
-  const body = mode === "ST" ? `<ST><xhtml:pre>${esc(stBody)}</xhtml:pre></ST>` : `<LD>${ladderBody}</LD>`;
+  const body = mode === "ST" ? `<ST><xhtml:pre>${esc(stBody)}</xhtml:pre></ST>` :
+    mode === "FBD" ? createFbdBody(project) : `<LD>${ladderBody}</LD>`;
   const vars = Object.entries(groups).map(([name, items]) => items.length ? `<${name}>${items.join("")}</${name}>` : "").join("");
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="${XHTML}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body>${body}</body></pou></pous></types><instances><configurations/></instances></project>`;
@@ -136,6 +184,80 @@ function connectionRefs(node) {
   const connections = connectionNodes(node);
   if (!connections.length) throw new Error("PLCopen LD element has no incoming connection.");
   return connections.map((connection) => connection.getAttribute("refLocalId"));
+}
+function checkFbdModifiers(node) {
+  if (xmlBoolean(node.getAttribute("negated"), "FBD negated") || xmlBoolean(node.getAttribute("hidden"), "FBD hidden") ||
+      (node.getAttribute("edge") || "none") !== "none" || (node.getAttribute("storage") || "none") !== "none") {
+    throw new Error("PLCopen FBD pin and variable modifiers are outside the supported subset.");
+  }
+}
+
+function readFbdSource(node, nodes) {
+  const points = children(node, "connectionPointIn"), connections = connectionNodes(node);
+  if (points.length !== 1 || connections.length !== 1 || child(points[0], "expression")) {
+    throw new Error("PLCopen FBD supports exactly one direct connection per input.");
+  }
+  const connection = connections[0], id = connection.getAttribute("refLocalId"), source = nodes.get(id);
+  const pin = connection.getAttribute("formalParameter");
+  if (!source || (source.localName === "block" ? pin !== null && pin !== "OUT" : pin !== null)) {
+    throw new Error("PLCopen FBD source must reference a variable or the OUT pin of a gate.");
+  }
+  return source;
+}
+
+function readFbdBody(body, imported) {
+  const nodes = new Map();
+  for (const node of body.children) {
+    const id = node.getAttribute("localId");
+    if (!["block", "inVariable", "outVariable"].includes(node.localName) || !id || nodes.has(id)) {
+      throw new Error("PLCopen FBD supports unique Boolean gates and input/output variables only.");
+    }
+    checkFbdModifiers(node);
+    nodes.set(id, node);
+  }
+  const outputs = new Map();
+  for (const node of nodes.values()) {
+    if (node.localName !== "outVariable") continue;
+    const source = readFbdSource(node, nodes), tag = text(child(node, "expression"));
+    if (source.localName !== "block" || outputs.has(source) || !tag) {
+      throw new Error("PLCopen FBD requires a single declared output tag connected to each gate.");
+    }
+    outputs.set(source, tag);
+  }
+  const writtenTags = new Set(outputs.values()), usedInputs = new Set(), blocks = [];
+  for (const [id, node] of nodes) {
+    if (node.localName !== "block") continue;
+    const type = node.getAttribute("typeName");
+    const pins = children(child(node, "inputVariables"), "variable");
+    const expectedPins = booleanGatePins(type, pins.length);
+    const pinNames = new Map(pins.map((pin) => [pin.getAttribute("formalParameter"), pin]));
+    const output = children(child(node, "outputVariables"), "variable");
+    if (node.getAttribute("instanceName") || children(child(node, "inOutVariables"), "variable").length ||
+        output.length !== 1 || output[0].getAttribute("formalParameter") !== "OUT" || !outputs.has(node) ||
+        expectedPins.some((pin) => !pinNames.has(pin))) {
+      throw new Error("PLCopen FBD gate pins or output assignment are outside the supported subset.");
+    }
+    checkFbdModifiers(output[0]);
+    const inputs = expectedPins.map((name) => {
+      const pin = pinNames.get(name);
+      checkFbdModifiers(pin);
+      const source = readFbdSource(pin, nodes);
+      if (source.localName === "block" && outputs.has(source)) return outputs.get(source);
+      if (source.localName === "inVariable") {
+        const tag = text(child(source, "expression"));
+        if (!writtenTags.has(tag)) { usedInputs.add(source); return tag; }
+      }
+      throw new Error("PLCopen FBD inputs must use direct gate connections or external BOOL tags.");
+    });
+    const position = child(node, "position");
+    const x = Number(position?.getAttribute("x")), y = Number(position?.getAttribute("y"));
+    const layout = Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
+    blocks.push({ id:`plcopen-block-${id}`, type, inputs, outputTag:outputs.get(node), ...(layout ? { layout } : {}) });
+  }
+  if ([...nodes.values()].some((node) => node.localName === "inVariable" && !usedInputs.has(node))) {
+    throw new Error("PLCopen FBD contains an input variable outside the imported gate networks.");
+  }
+  return checkedFbdBlocks({ ...imported, fbdBlocks:blocks });
 }
 function readTonBlock(block) {
   const inputs = children(child(block, "inputVariables"), "variable");
@@ -176,9 +298,9 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (pous.length > 1) throw new Error("PLCopen import supports one program POU. This file contains multiple POUs.");
   const pou = pous.find((node) => node.getAttribute("pouType") === "program");
   const bodies = children(pou, "body");
-  const ld = child(bodies[0], "LD"), st = child(bodies[0], "ST");
+  const ld = child(bodies[0], "LD"), st = child(bodies[0], "ST"), fbd = child(bodies[0], "FBD");
   const languages = [...(bodies[0]?.children || [])].filter((node) => ["LD", "ST", "FBD", "SFC", "IL"].includes(node.localName));
-  if (bodies.length !== 1 || languages.length !== 1 || !(ld || st)) throw new Error("PLCopen import needs one program POU with a Ladder Diagram or Structured Text body.");
+  if (bodies.length !== 1 || languages.length !== 1 || !(ld || st || fbd)) throw new Error("PLCopen import needs one program POU with a Ladder Diagram, Structured Text, or supported FBD body.");
   const names = new Set(["leftPowerRail", "rightPowerRail", "contact", "coil", "block", "comment"]);
   const nodes = [...(ld?.children || [])].filter((node) => node.localName !== "position");
   if (nodes.some((node) => !names.has(node.localName))) throw new Error("PLCopen import found LD instructions outside the supported contact and coil subset.");
@@ -226,6 +348,7 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const name = child(root, "contentHeader")?.getAttribute("name") || "Imported PLCopen project";
   const imported = { id:"", name, language:"en", task:{ name:"Main", mode:"cyclic", cycleMs:100 }, tags, io:{ inputs, outputs }, initialState };
   if (st) return { ...imported, editorType:"ST", stSource:readStSource(st, tags), rungs:[] };
+  if (fbd) return { ...imported, editorType:"FBD", fbdBlocks:readFbdBody(fbd, imported), rungs:[] };
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
   const coils = nodes.filter((node) => node.localName === "coil");
   const timers = new Map(blocks.map((block) => [block.getAttribute("localId"), readTonBlock(block)]));

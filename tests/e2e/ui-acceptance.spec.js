@@ -186,6 +186,58 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen Boolean FBD gates round-trip with direct dependencies", async ({ page }) => {
+  const xml = await page.evaluate(async () => {
+    const { createPlcopenXml } = await import("/src/plcopen.js");
+    return createPlcopenXml({
+      name:"Boolean FBD XML exercise", editorType:"FBD",
+      tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Stop", type:"BOOL", role:"input" },
+        { name:"Permit", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" }],
+      initialState:{ Start:true, Stop:false },
+      fbdBlocks:[
+        { id:"stop-invert", type:"NOT", inputs:["Stop"], outputTag:"Permit", layout:{ x:360, y:140 } },
+        { id:"enable", type:"AND", inputs:["Start", "Permit"], outputTag:"Lamp", layout:{ x:740, y:140 } }
+      ]
+    });
+  });
+  expect(xml).toContain('<block localId="1" typeName="NOT"');
+  expect(xml).toContain('<connection refLocalId="1" formalParameter="OUT"/>');
+  await page.locator("#fileInput").setInputFiles({
+    name:"boolean-gates.xml", mimeType:"application/xml", buffer:Buffer.from(xml)
+  });
+  await expect(page.locator("#projectTitle")).toHaveText("Boolean FBD XML exercise");
+  await expect(page.locator("#editorMode")).toHaveValue("FBD");
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  await page.locator('[data-app-menu="debug"]').click();
+  await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
+  await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("true");
+  await page.locator("#modal .modal-close").click();
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"I/O and tags", exact:true }).click();
+  await page.locator('[data-mobile-input="Stop"]').check();
+  await page.locator("#modal .modal-close").click();
+  await page.locator('[data-app-menu="debug"]').click();
+  await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
+  await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("false");
+  await page.locator("#modal .modal-close").click();
+  await expect(page.locator('#fbdBlocks [data-fbd-node="0"]')).toHaveCSS("left", "360px");
+  await page.locator('[data-app-menu="file"]').click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name:"Export PLCopen XML", exact:true }).click()
+  ]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks).toString("utf8")).toContain("<FBD>");
+  await page.locator("#fileInput").setInputFiles({
+    name:"invalid-fbd.xml", mimeType:"application/xml",
+    buffer:Buffer.from(xml.replace('refLocalId="1" formalParameter="OUT"', 'refLocalId="1" formalParameter="ET"'))
+  });
+  await expect(page.locator("#toast")).toContainText("PLCopen FBD source must reference a variable or the OUT pin");
+  await expect(page.locator("#projectTitle")).toHaveText("Boolean FBD XML exercise");
+});
+
 test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {
   const count = 240;
   const outputs = Array.from({ length:count }, (_, index) => `Output_${index}`);

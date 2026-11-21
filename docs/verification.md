@@ -1,5 +1,9 @@
 # Verification record
 
+## PLCopen Boolean FBD interchange — 2026-11-21
+
+The browser workflow imports connected Boolean gates, verifies that changing an input reaches the downstream output, keeps the gate position, exports the imported program, and rejects an unsupported pin reference. FBD and SFC outlines are anchored inside their editor panes so they cannot cover the File menu. The official TC6 2.01 schema accepted the generated FBD fixture. The interchange covers NOT, two-input XOR, and AND/OR with two to eight inputs.
+
 ## PLCopen Structured Text program interchange — 2026-11-21
 
 A single supported Structured Text program body can round-trip in TC6 XML with declared scalar tags. The browser acceptance workflow imports a numeric conditional containing XML-sensitive text, steps the program, checks its result in Watch, exports it, and verifies that invalid source does not replace the open program. The generated example passed the official [PLCopen TC6 2.01 schema](https://www.plcopen.org/downloads/).
