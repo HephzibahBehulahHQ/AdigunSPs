@@ -370,8 +370,10 @@ test("scheduled FBD units carry outputs through 5,000 blocks over 60 scans", asy
   };
   await chooseMenu("online", "Record trace");
   await chooseMenu("plc", "Run");
-  await expect.poll(async () => Number(await page.locator("#cycleCount").textContent()), { timeout:48_000 })
-    .toBeGreaterThanOrEqual(60);
+  const cycle = page.locator("#cycleCount");
+  await expect.poll(async () => Number(await cycle.textContent()), { timeout:24_000 }).toBeGreaterThanOrEqual(30);
+  await page.locator('#inputList [data-input="Start"]').check();
+  await expect.poll(async () => Number(await cycle.textContent()), { timeout:24_000 }).toBeGreaterThanOrEqual(60);
   await chooseMenu("plc", "Pause");
   await chooseMenu("online", "Record trace");
   await chooseMenu("debug", "Trace history");
@@ -386,7 +388,10 @@ test("scheduled FBD units carry outputs through 5,000 blocks over 60 scans", asy
     ...commonOutputs.map((name, index) => [name, index >= 29]),
     ...stageOutputs.map((name, index) => [name, index % 2 === 0])
   ]);
-  for (const frame of frames) expect(frame.outputs).toEqual(expected);
+  const reversed = Object.fromEntries(Object.entries(expected).map(([name, value]) => [name, !value]));
+  expect(frames[0].inputs.Start).toBe(false);
+  expect(frames.at(-1).inputs.Start).toBe(true);
+  for (const frame of frames) expect(frame.outputs).toEqual(frame.inputs.Start ? reversed : expected);
 });
 
 test("HMI alarm hysteresis, acknowledgement, and exported history agree", async ({ page }) => {
