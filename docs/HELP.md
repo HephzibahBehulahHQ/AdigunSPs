@@ -26,6 +26,8 @@ AdigunSPs simulates PLC logic and HMIs. Physical control unavailable.
 
 **What you'll see:** An untitled project, menus, canvas, side panels, and status.
 
+On wide screens, use **Window → Panel layout** to hide or resize the side panels. Clear a width to use automatic sizing again.
+
 1. Open the AdigunSPs website in your browser.
 2. Continue as guest. Guest access ends after four minutes; editing pauses, work remains in this tab.
 3. In **Project → Account**, enter email and password to sign in, or choose **Create account** and confirm by email. Use **Forgot password?** for recovery.
@@ -42,7 +44,7 @@ Header: RUN SIMULATION.
 
 ## Navigating the interface
 
-Start with the workspace that matches your task. Use the Help menu's **Help topics**, **2-minute start**, and **Full manual** buttons to switch documents. The workspace tabs stay the same; only the active canvas and its tools change.
+Switch guides with **Help topics**, **2-minute start**, and **Full manual** in the Help menu.
 
 | Workspace | Use it for | First move |
 | --- | --- | --- |

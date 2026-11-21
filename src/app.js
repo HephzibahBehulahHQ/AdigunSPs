@@ -910,7 +910,21 @@ function applyWorkspaceView() {
   for (const item of document.querySelectorAll("[data-project-view]")) { const active = item.dataset.projectView === workspaceView; item.classList.toggle("selected", active); if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current"); }
   if (wasCanvasHidden && !other && mode === "LD" && project.rungs.length > 80) requestAnimationFrame(renderLadder);
 }
-function applyPanelLayout() { const workspace = $(".workspace"); workspace.classList.toggle("panels-left-hidden", !panelLayout.left); workspace.classList.toggle("panels-right-hidden", !panelLayout.right); }
+const panelWidthLimits = { left:[218, 360], right:[245, 380] };
+function normalizePanelWidth(side, value) {
+  const [minimum, maximum] = panelWidthLimits[side];
+  return Number.isInteger(value) && value >= minimum && value <= maximum ? value : null;
+}
+function applyPanelLayout() {
+  const workspace = $(".workspace");
+  for (const side of ["left", "right"]) {
+    workspace.classList.toggle(`panels-${side}-hidden`, !panelLayout[side]);
+    const width = normalizePanelWidth(side, panelLayout[`${side}Width`]);
+    const property = `--workspace-${side}-width`;
+    if (width === null) workspace.style.removeProperty(property);
+    else workspace.style.setProperty(property, `${width}px`);
+  }
+}
 function showPanelLayout() {
   const copy = ({ en:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"}, de:{title:"Panelanordnung",left:"Projekt- und E/A-Bereich",right:"Inspektor und Diagnose",showProject:"Projekt- und E/A-Bereich öffnen",showInspector:"Inspektor und Diagnose öffnen",close:"Seitenbereiche schließen"}, yo:{title:"Ìṣètò pánẹ́lì",left:"Pánẹ́lì iṣẹ́ àti I/O",right:"Olùṣàyẹ̀wò àti àyẹ̀wò ètò",showProject:"Ṣí pánẹ́lì iṣẹ́ àti I/O",showInspector:"Ṣí olùṣàyẹ̀wò àti àyẹ̀wò ètò",close:"Pa àwọn pánẹ́lì ẹ̀gbẹ́"}, pcm:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"} })[language];
   const mobile = matchMedia("(max-width: 760px)").matches;
@@ -920,9 +934,36 @@ function showPanelLayout() {
     $("#mobileProjectPanel").onclick = () => open("left"); $("#mobileInspectorPanel").onclick = () => open("right"); $("#mobileClosePanels").onclick = () => open(null);
     return;
   }
-  modal(copy.title, `<div class="modal-body"><label class="field panel-layout-choice"><input id="panelLeftToggle" type="checkbox" ${panelLayout.left ? "checked" : ""}> ${copy.left}</label><label class="field panel-layout-choice"><input id="panelRightToggle" type="checkbox" ${panelLayout.right ? "checked" : ""}> ${copy.right}</label></div>`);
-  const save = () => { panelLayout = { left:$("#panelLeftToggle").checked, right:$("#panelRightToggle").checked }; localStorage.setItem("adigun-panel-layout", JSON.stringify(panelLayout)); applyPanelLayout(); };
-  $("#panelLeftToggle").onchange = save; $("#panelRightToggle").onchange = save;
+  const widthCopy = ({
+    en:["Width (px)", "Auto"],
+    de:["Breite (px)", "Automatisch"],
+    yo:["Ìbú (px)", "Aládàáṣiṣẹ́"],
+    pcm:["Width (px)", "Auto"]
+  })[language];
+  const widthField = (side, label) => {
+    const [minimum, maximum] = panelWidthLimits[side];
+    const value = normalizePanelWidth(side, panelLayout[`${side}Width`]);
+    return `<label class="field panel-layout-width">${label} · ${widthCopy[0]} <input data-panel-width="${side}" type="number" min="${minimum}" max="${maximum}" value="${value ?? ""}" placeholder="${widthCopy[1]}"></label>`;
+  };
+  modal(copy.title, `<div class="modal-body"><label class="field panel-layout-choice"><input id="panelLeftToggle" type="checkbox" ${panelLayout.left ? "checked" : ""}> ${copy.left}</label>${widthField("left", copy.left)}<label class="field panel-layout-choice"><input id="panelRightToggle" type="checkbox" ${panelLayout.right ? "checked" : ""}> ${copy.right}</label>${widthField("right", copy.right)}</div>`);
+  const save = () => {
+    localStorage.setItem("adigun-panel-layout", JSON.stringify(panelLayout));
+    applyPanelLayout();
+  };
+  for (const field of $("#modal").querySelectorAll("[data-panel-width]")) {
+    field.onchange = () => {
+      const side = field.dataset.panelWidth;
+      const key = `${side}Width`;
+      if (!field.validity.valid) {
+        field.value = normalizePanelWidth(side, panelLayout[key]) ?? "";
+        return;
+      }
+      panelLayout[key] = normalizePanelWidth(side, field.valueAsNumber);
+      save();
+    };
+  }
+  $("#panelLeftToggle").onchange = (event) => { panelLayout.left = event.target.checked; save(); };
+  $("#panelRightToggle").onchange = (event) => { panelLayout.right = event.target.checked; save(); };
 }
 function addFbdBlock() { pushHistory(); project.fbdBlocks ||= []; const inputs = inferTags().inputs, outputs = inferTags().outputs; project.fbdBlocks.push({ id: crypto.randomUUID(), type: "AND", inputs: inputs.slice(0, 2), outputTag: outputs[0] || "Q0.0" }); render(); persist(); }
 function addSfcStep() { pushHistory(); project.sfc ||= makeDefaultSfc(); const index = project.sfc.steps.length + 1, id = `step-${index}`; project.sfc.steps.push({ id, name: `Step ${index}`, actions: [] }); render(); persist(); }
