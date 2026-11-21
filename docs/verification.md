@@ -46,7 +46,7 @@ The browser round-trip checks Q-driven coils, older exports with an implicit Q p
 
 ## Large imported logic projects — 2026-11-21
 
-Browser acceptance uses separate 2,000-network LD and 5,000-block FBD imports, each with 1,000 declared tags. Chrome, Firefox, and Playwright WebKit passed against the deployed application. Fewer than 60 canvas elements mount at the start and end of each canvas. The ladder outline reaches the last network without replacing the I/O controls, and the FBD outline reaches and retains focus on the last block. Sustained scan performance remains open.
+Browser acceptance uses separate 2,000-network LD and 5,000-block FBD imports, each with 1,000 declared tags. Chrome, Firefox, and Playwright WebKit passed against the deployed application. Fewer than 60 canvas elements mount at the start and end of each canvas. The ladder outline reaches the last network without replacing the I/O controls, and the FBD outline reaches and retains focus on the last block. Continuous Run was checked against production in Chrome, Firefox, and Playwright WebKit with a 2,000-network ladder project and a valid 999-block FBD project, each with 999 outputs. At least 20 recorded scans per project returned the expected value for every output. Longer duration, maximum-block executable FBD, and scan latency measurements remain open.
 
 ## Local project recovery transactions — 2026-11-21
 
