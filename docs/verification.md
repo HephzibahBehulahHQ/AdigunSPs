@@ -1,5 +1,9 @@
 # Verification record
 
+## PLCopen TC6 2.01 schema verification — 2026-11-21
+
+`scripts/verify-plcopen-schema.ps1` validates the current TON export with delayed and immediate coils, dotted timer address documentation, and collision-safe IEC instance names against the [official PLCopen TC6 2.01 XSD](https://www.plcopen.org/downloads/). It also checks that removing the required project name fails schema validation. These checks passed with the official download. Vendor-tool import and IEC 61131-10 coverage remain open.
+
 ## Analog fault offsets and process state — 2026-11-21
 
 A browser trace holds a raw analog input at 40, applies a +5 offset once per scan, and removes it to recover the original reading. The PID sees a steady effective value, the tank advances on each LD scan, and replay reports zero divergences. Browser and core regressions also cover edited numeric inputs, versioned recipe review and application, raw numeric recipe capture, and isolation from output faults.
