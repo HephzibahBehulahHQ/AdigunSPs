@@ -1,5 +1,9 @@
 # Verification record
 
+## Offline project lifecycle — 2026-11-21
+
+Chrome, Playwright Firefox, and Playwright WebKit verified JSON import, autosave, reopening in a new tab, restoring an earlier snapshot, JSON download, and reimport while offline. The test uses a disposable cached member fixture and browser-local IndexedDB. Live authentication and cloud synchronization are separate acceptance items.
+
 ## Default timer addresses and Chrome installation eligibility — 2026-11-21
 
 The browser TON round-trip preserves a default dotted timer address such as `T0.0` using a collision-free IEC instance name with the original address recorded in its declaration. The production app's English, German, Yoruba, and Nigerian Pidgin manifests passed Chrome's installability diagnostics in a standard disposable profile. Installation and standalone relaunch remain separate checks.
