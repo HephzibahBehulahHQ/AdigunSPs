@@ -105,6 +105,16 @@ function createFbdBody(project) {
   return `<FBD>${inputNodes.join("")}${blockNodes.join("")}</FBD>`;
 }
 
+function createTaskConfiguration(task) {
+  if (!task) return "<configurations/>";
+  const { name = "Main", mode = "cyclic", cycleMs = 100 } = task;
+  if (mode !== "cyclic" || typeof name !== "string" ||
+      !Number.isInteger(cycleMs) || cycleMs < 1 || cycleMs > 60000) {
+    throw new Error("PLCopen export requires a named cyclic task with a period of 1–60000 milliseconds.");
+  }
+  return `<configurations><configuration name="Config"><resource name="Resource"><task name="${esc(name.trim() || "Main")}" interval="T#${cycleMs}ms" priority="0"><pouInstance name="MainInstance" typeName="Main"/></task></resource></configuration></configurations>`;
+}
+
 export function createPlcopenXml(project) {
   if (project.programUnits?.length || project.tasks?.length) {
     throw new Error("PLCopen XML export supports a single program body. Use project JSON to preserve program units and task assignments.");
@@ -180,7 +190,7 @@ export function createPlcopenXml(project) {
     mode === "FBD" ? createFbdBody(project) : `<LD>${ladderBody}</LD>`;
   const vars = Object.entries(groups).map(([name, items]) => items.length ? `<${name}>${items.join("")}</${name}>` : "").join("");
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="${XHTML}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body>${body}</body></pou></pous></types><instances><configurations/></instances></project>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="${NS}" xmlns:xhtml="${XHTML}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${NS} ${NS}"><fileHeader companyName="HEPHZIBAH BEHULAH" productName="AdigunSPs" productVersion="0.1" creationDateTime="${now}"/><contentHeader name="${esc(project.name || "AdigunSPs project")}"><coordinateInfo><fbd><scaling x="16" y="16"/></fbd><ld><scaling x="16" y="16"/></ld><sfc><scaling x="16" y="16"/></sfc></coordinateInfo></contentHeader><types><dataTypes/><pous><pou name="Main" pouType="program"><interface>${vars}</interface><body>${body}</body></pou></pous></types><instances>${createTaskConfiguration(project.task)}</instances></project>`;
 }
 
 function toPlcAddress(address) {
@@ -318,6 +328,36 @@ function xmlBoolean(value, attribute) {
   throw new Error(`PLCopen ${attribute} attribute must be a valid XML boolean.`);
 }
 
+function readTaskConfiguration(root, pou) {
+  const meaningfulChildren = (node) => [...(node?.children || [])].filter((item) => item.localName !== "documentation");
+  const instanceSections = children(root, "instances");
+  if (instanceSections.length > 1) throw new Error("PLCopen import supports one instances section.");
+  const instances = meaningfulChildren(instanceSections[0]);
+  const configurations = meaningfulChildren(instances[0]);
+  if (!instances.length || (instances.length === 1 && instances[0].localName === "configurations" && !configurations.length)) {
+    return { name:"Main", mode:"cyclic", cycleMs:100 };
+  }
+  const resources = meaningfulChildren(configurations[0]);
+  const tasks = meaningfulChildren(resources[0]);
+  const [task] = tasks;
+  const programs = meaningfulChildren(task), typeName = pou.getAttribute("name");
+  if (instances.length !== 1 || instances[0].localName !== "configurations" ||
+      configurations.length !== 1 || configurations[0].localName !== "configuration" ||
+      resources.length !== 1 || resources[0].localName !== "resource" ||
+      tasks.length !== 1 || task.localName !== "task" ||
+      programs.length !== 1 || programs[0].localName !== "pouInstance" ||
+      !typeName || programs[0].getAttribute("typeName")?.toUpperCase() !== typeName.toUpperCase() || meaningfulChildren(programs[0]).length) {
+    throw new Error("PLCopen import supports one cyclic task assigned to the imported program.");
+  }
+  const name = task.getAttribute("name")?.trim();
+  const interval = /^(?:T|TIME)#(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?$/i.exec(task.getAttribute("interval") || "");
+  const cycleMs = interval ? Number(interval[1] || 0) * 60000 + Number(interval[2] || 0) * 1000 + Number(interval[3] || 0) : NaN;
+  if (!name || task.hasAttribute("single") || !Number.isInteger(cycleMs) || cycleMs < 1 || cycleMs > 60000) {
+    throw new Error("PLCopen import requires a named cyclic task with a period of 1–60000 whole milliseconds.");
+  }
+  return { name, mode:"cyclic", cycleMs };
+}
+
 export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   if (typeof xml !== "string" || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("Invalid or unsafe PLCopen XML document.");
   if (!DOMParserImpl) throw new Error("XML import is unavailable in this browser.");
@@ -375,7 +415,7 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const inputs = tags.filter((tag) => tag.role === "input" || /^I\d/i.test(tag.address || "")).map((tag) => tag.name);
   const outputs = tags.filter((tag) => tag.role === "output" || /^Q\d/i.test(tag.address || "")).map((tag) => tag.name);
   const name = child(root, "contentHeader")?.getAttribute("name") || "Imported PLCopen project";
-  const imported = { id:"", name, language:"en", task:{ name:"Main", mode:"cyclic", cycleMs:100 }, tags, io:{ inputs, outputs }, initialState };
+  const imported = { id:"", name, language:"en", task:readTaskConfiguration(root, pou), tags, io:{ inputs, outputs }, initialState };
   if (st) return { ...imported, editorType:"ST", stSource:readStSource(st, tags), rungs:[] };
   if (fbd) return { ...imported, editorType:"FBD", fbdBlocks:readFbdBody(fbd, imported), rungs:[] };
   const commentByY = new Map(nodes.filter((node) => node.localName === "comment").map((node) => [child(node, "position")?.getAttribute("y"), text(child(node, "content"))]));
