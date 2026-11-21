@@ -31,12 +31,14 @@ const structuredText = {
   stSource:"(* Heat & control *)\nIF Temperature < 20.0 THEN Control := Temperature * 2.0; ELSE Control := 0.0; END_IF;"
 };
 const functionBlocks = {
-  name:"PLCopen Boolean FBD schema fixture", editorType:"FBD",
+  name:"PLCopen FBD schema fixture", editorType:"FBD",
   tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Stop", type:"BOOL", role:"input" },
-    { name:"Permit", type:"BOOL" }, output("Lamp")],
+    { name:"Permit", type:"BOOL" }, { name:"Above", type:"BOOL" }, output("Lamp"),
+    { name:"Temperature", type:"REAL", role:"input" }, { name:"Limit", type:"REAL", role:"input" }],
   fbdBlocks:[
     { type:"NOT", inputs:["Stop"], outputTag:"Permit" },
-    { type:"AND", inputs:["Start", "Permit"], outputTag:"Lamp" }
+    { type:"GT", inputs:["Temperature", "Limit"], outputTag:"Above" },
+    { type:"AND", inputs:["Start", "Permit", "Above"], outputTag:"Lamp" }
   ]
 };
 process.stdout.write(JSON.stringify({ ladder:createPlcopenXml(project), st:createPlcopenXml(structuredText), fbd:createPlcopenXml(functionBlocks) }));
@@ -74,7 +76,7 @@ Write-Output 'PASS: TC6 2.01 validates delayed and immediate TON coils with defa
 Assert-PlcopenXmlValid $fixtures.st
 Write-Output 'PASS: TC6 2.01 validates a Structured Text body with declared scalar tags.'
 Assert-PlcopenXmlValid $fixtures.fbd
-Write-Output 'PASS: TC6 2.01 validates connected Boolean FBD gates.'
+Write-Output 'PASS: TC6 2.01 validates connected Boolean FBD gates and a numeric comparison.'
 
 $invalidXml = [regex]::Replace($fixtures.ladder, '<contentHeader name="[^"]+"', '<contentHeader')
 if ($invalidXml -eq $fixtures.ladder) { throw 'Could not construct the invalid fixture.' }
