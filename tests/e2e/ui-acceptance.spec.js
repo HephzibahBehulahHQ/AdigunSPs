@@ -709,16 +709,25 @@ test("Operations CSV includes active and idle Boolean outputs shown in the dashb
   await expect(page.locator("#projectTitle")).toHaveText(project.name);
   await page.locator('[data-app-menu="plc"]').click();
   await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  const input = page.locator('#inputList [data-input="Start"]');
+  await input.uncheck();
+  await input.check();
   await page.locator('[data-app-menu="online"]').click();
   await page.getByRole("menuitem", { name:"Operations estimates", exact:true }).click();
   const table = page.locator(".ops-table");
   await expect(table.getByRole("rowheader")).toHaveText(["ActiveLamp","IdleLamp"]);
+  await expect(table.getByRole("columnheader", { name:"Simulated starts" })).toBeVisible();
+  await page.locator("#operationsStartsThreshold").fill("1");
+  await page.locator("#operationsSave").click();
+  await expect(table.getByText("Start threshold exceeded")).toHaveCount(1);
+  await expect(table.getByRole("rowheader").first()).toContainText("Start threshold exceeded");
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#operationsExport").click()]);
   const chunks = [];
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   const csv = Buffer.concat(chunks).toString("utf8");
-  expect(csv).toContain('"ActiveLamp","0.0100","100.00"');
-  expect(csv).toContain('"IdleLamp","0.0000","0.00"');
+  expect(csv).toContain('"ActiveLamp","0.0200","2","66.67"');
+  expect(csv).toContain('"IdleLamp","0.0000","0","0.00"');
+  expect(csv).toContain("Start threshold exceeded");
   expect(csv).not.toContain("AnalogOutput");
 });
 
