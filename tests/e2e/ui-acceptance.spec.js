@@ -1478,12 +1478,18 @@ test("all application menus stay reachable within desktop viewports", async ({ p
     expect(actualKeys).toEqual(expectedKeys);
 
     for (const key of expectedKeys) {
-      await page.locator(`[data-app-menu="${key}"]`).click();
+      const trigger = page.locator(`[data-app-menu="${key}"]`);
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      await trigger.click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
       const menu = page.locator("#contextMenu");
       await expect(menu, `${key} menu opens at ${viewport.width}px`).toBeVisible();
       if (key === "help") {
         await expect(menu.locator(".help-guide-content")).toBeVisible();
+        await expect(menu).toHaveRole("region");
       } else {
+        await expect(menu).toHaveRole("menu");
+        await expect(menu).toHaveAccessibleName(await trigger.textContent());
         await expect(menu.getByRole("menuitem").first()).toBeVisible();
         expect(await menu.getByRole("menuitem").count(), `${key} menu has actions`).toBeGreaterThan(0);
       }
@@ -1495,8 +1501,21 @@ test("all application menus stay reachable within desktop viewports", async ({ p
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height);
       await page.keyboard.press("Escape");
       await expect(menu).toBeHidden();
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
     }
   }
+
+  const file = page.locator('[data-app-menu="file"]');
+  await file.press("Enter");
+  const menu = page.getByRole("menu", { name:"File", exact:true });
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(file).toBeFocused();
+  await file.press("Enter");
+  await menu.getByRole("menuitem", { name:"Project manager" }).press("Enter");
+  await expect(page.locator("#modal")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(file).toBeFocused();
 });
 
 test("Help menu switches between workspace topics, quickstart, and the navigable manual", async ({ page }) => {
