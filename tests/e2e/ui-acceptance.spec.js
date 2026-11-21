@@ -278,7 +278,7 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
   await expect(page.locator("#projectTitle")).toHaveText("Boolean FBD XML exercise");
 });
 
-test("PLCopen LD TOF XML preserves off-delay coil behavior", async ({ page }) => {
+test("PLCopen LD TOF and TP XML preserve timer coil behavior", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
     const { scan } = await import("/src/engine.js");
@@ -289,9 +289,9 @@ test("PLCopen LD TOF XML preserves off-delay coil behavior", async ({ page }) =>
         timer:{ tag:"T0.0", type:"TOF", preset:200, output:"DN" } }]
     };
     const inputs = [false, true, false, false, true, false, true];
-    const execute = (project) => {
+    const execute = (project, inputSequence = inputs) => {
       let state = {};
-      return inputs.map((Start) => {
+      return inputSequence.map((Start) => {
         state = scan(project, { Start }, state, 100);
         return state.outputs.Lamp;
       });
@@ -305,10 +305,14 @@ test("PLCopen LD TOF XML preserves off-delay coil behavior", async ({ page }) =>
       declarationError = error.message;
     }
     const original = execute({ ...source, io:restored.io });
+    const pulse = { ...source, rungs:source.rungs.map((rung) => ({ ...rung, timer:{ ...rung.timer, type:"TP" } })) };
+    const restoredPulse = parsePlcopenXml(createPlcopenXml(pulse));
     source.rungs[0].timer.output = "EN";
     return {
       timer, original,
-      delayed:execute(restored), immediate:execute(parsePlcopenXml(createPlcopenXml(source))), declarationError
+      delayed:execute(restored), immediate:execute(parsePlcopenXml(createPlcopenXml(source))), declarationError,
+      pulseTimer:restoredPulse.rungs[0].timer,
+      pulse:execute(restoredPulse, [false, true, false, true, true, false, true])
     };
   });
   expect(result.timer).toEqual({ tag:"T0.0", type:"TOF", preset:200, output:"DN" });
@@ -316,6 +320,8 @@ test("PLCopen LD TOF XML preserves off-delay coil behavior", async ({ page }) =>
   expect(result.delayed).toEqual(result.original);
   expect(result.immediate).toEqual([false, true, false, false, true, false, true]);
   expect(result.declarationError).toContain("declaration must match its block type");
+  expect(result.pulseTimer).toEqual({ tag:"T0.0", type:"TP", preset:200, output:"DN" });
+  expect(result.pulse).toEqual([false, true, true, false, false, false, true]);
 });
 
 test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {
