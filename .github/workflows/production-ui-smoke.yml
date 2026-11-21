@@ -37,9 +37,34 @@ jobs:
       - name: Verify production workspace and capture canvas screenshots
         env:
           ADIGUNSP_BASE_URL: https://adigunsps.hephzibahbehulah.com
+          EXPECTED_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           ADIGUNSP_SCREENSHOT_PATH: artifacts/adigunsps-electrical-1894x850.png
           ADIGUNSP_HMI_SCREENSHOT_PATH: artifacts/adigunsps-hmi-1894x850.png
-        run: npx playwright test --grep "offline PWA navigation|cached member|mobile drawer keyboard|canvas toolbars stay compact|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
+        shell: bash
+        run: |
+          read_release() {
+            curl --fail --silent --show-error --max-time 10 \
+              "$ADIGUNSP_BASE_URL/release-sha.txt?check=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RANDOM"
+          }
+          for attempt in {1..6}; do
+            served_sha=$(read_release) || served_sha=""
+            if [[ "$served_sha" == "$EXPECTED_RELEASE_SHA" ]]; then
+              break
+            fi
+            if [[ "$attempt" == 6 ]]; then
+              echo "::error::Expected deployment $EXPECTED_RELEASE_SHA, served ${served_sha:-no release marker}."
+              exit 1
+            fi
+            sleep 5
+          done
+
+          npx playwright test --grep "offline PWA navigation|cached member|local project metadata edits preserve|opening a palette result uses the latest saved project|mobile drawer keyboard|canvas toolbars stay compact|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
+
+          served_sha=$(read_release) || served_sha=""
+          if [[ "$served_sha" != "$EXPECTED_RELEASE_SHA" ]]; then
+            echo "::error::Expected deployment $EXPECTED_RELEASE_SHA after smoke tests, served ${served_sha:-no release marker}."
+            exit 1
+          fi
 
       - name: Upload production screenshots
         if: always()
