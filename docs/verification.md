@@ -1,5 +1,9 @@
 # Verification record
 
+## Default timer addresses and Chrome installation eligibility — 2026-11-21
+
+The browser TON round-trip preserves a default dotted timer address such as `T0.0` using a collision-free IEC instance name with the original address recorded in its declaration. The production app's English, German, Yoruba, and Nigerian Pidgin manifests passed Chrome's installability diagnostics in a standard disposable profile. Installation and standalone relaunch remain separate checks.
+
 ## PLCopen TON coil modes — 2026-11-21
 
 The browser round-trip checks Q-driven coils, older exports with an implicit Q pin, and immediate coils that share the paths feeding TON IN. Both modes reset with the input, and ambiguous multiple TON blocks on one set of paths are rejected.

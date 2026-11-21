@@ -85,10 +85,11 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
     const xml = createPlcopenXml(source);
     const check = (importedXml) => {
       const project = parsePlcopenXml(importedXml);
+      const { tag, output } = project.rungs[0].timer;
       const first = scan(project, { Start:true }, {}, 750);
       const second = scan(project, { Start:true }, first, 750);
       const reset = scan(project, { Start:false }, second, 750);
-      return [project.rungs[0].timer.output, first.outputs.Lamp, second.outputs.Lamp, second.timers.DelayTimer.done, reset.outputs.Lamp, reset.timers.DelayTimer.done];
+      return [tag, output, first.outputs.Lamp, second.outputs.Lamp, second.timers[tag].done, reset.outputs.Lamp, reset.timers[tag].done];
     };
     source.rungs[0].timer.output = "EN";
     const enabledXml = createPlcopenXml(source);
@@ -109,11 +110,24 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
       if (!error.message.includes("multiple TON blocks")) throw error;
       ambiguityRejected = true;
     }
-    return { modes:[check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"')), check(enabledXml)], ambiguityRejected };
+    source.tags.push({ name:"adiguntimer_1", type:"BOOL" });
+    source.rungs[0].timer.tag = "T0.0";
+    const dottedXml = createPlcopenXml(source);
+    const generatedInstance = new DOMParser().parseFromString(dottedXml, "application/xml").querySelector("block").getAttribute("instanceName");
+    return {
+      modes:[check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"')), check(enabledXml), check(dottedXml)],
+      ambiguityRejected, generatedInstance
+    };
   });
   expect(result).toEqual({
-    modes:[["DN", false, true, true, false, false], ["DN", false, true, true, false, false], ["EN", true, true, true, false, false]],
-    ambiguityRejected:true
+    modes:[
+      ["DelayTimer", "DN", false, true, true, false, false],
+      ["DelayTimer", "DN", false, true, true, false, false],
+      ["DelayTimer", "EN", true, true, true, false, false],
+      ["T0.0", "EN", true, true, true, false, false]
+    ],
+    ambiguityRejected:true,
+    generatedInstance:"AdigunTimer_2"
   });
 });
 
