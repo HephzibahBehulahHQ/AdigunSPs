@@ -120,7 +120,7 @@ ST POUs: **Programs → ST programs / Functions / Function blocks**. Scheduling:
 
 Siemens 3RU2126-4BC0: three phase pairs and 95/96 NC + 97/98 NO; **Overload tripped** switches both auxiliary contacts. Schneider XB5AA31 is green spring-return NO (13–14); XB5AA42 is red spring-return NC (21–22).
 
-4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. Fix reported compile errors.
+4. Successful runs show outputs and HUD values. Toggle tones via **Online → Toggle simulation sound** or command search. Fix reported compile errors. A TP pulse timer runs for its preset duration and ignores new input edges while its pulse is active.
 
 USB controls are under Hardware inventory / BOM.
 

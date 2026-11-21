@@ -605,6 +605,20 @@ assert.equal(fbdTof.outputs.Done, false, "FBD TOF expires at its preset");
 let fbdTp = scanFBD([{ id:"tp", type:"TP", inputs:["Start"], outputTag:"Done", preset:200 }], { Start:true }, {}, ["Done"], 100);
 fbdTp = scanFBD([{ id:"tp", type:"TP", inputs:["Start"], outputTag:"Done", preset:200 }], { Start:true }, fbdTp, ["Done"], 200);
 assert.equal(fbdTp.outputs.Done, false, "FBD TP emits a bounded pulse");
+
+const pulseBlocks = [{ id:"tp", type:"TP", inputs:["Start"], outputTag:"Done", preset:200 }];
+for (const [editor, output, step] of [
+  ["LD", "Motor", (Start, state) => scan(pulse, { Start }, state, 100)],
+  ["FBD", "Done", (Start, state) => scanFBD(pulseBlocks, { Start }, state, ["Done"], 100)]
+]) {
+  let state = {};
+  const observed = [true, false, true, true, false, true].map((Start) => {
+    state = step(Start, state);
+    return state.outputs[output];
+  });
+  assert.deepEqual(observed, [true, true, false, false, false, true], `${editor} TP ignores a rising edge at the end of an active pulse and starts on the next fresh edge`);
+}
+
 const sumBlock = [{ id:"sum", type:"ADD", inputs:["A", "B"], outputTag:"Sum" }];
 assert.equal(scanFBD(sumBlock, {}, {}, ["Sum"], 100, { A:4, B:3 }).outputs.Sum, 7, "FBD arithmetic reads numeric tag values");
 const scaleBlock = [{ id:"scale", type:"SCALE", inputs:["RawAI"], outputTag:"ScaledAI", rawMin:0, rawMax:1000, scaledMin:0, scaledMax:100 }];
