@@ -1,5 +1,9 @@
 # Verification record
 
+## Cross-browser workspace verification — 2026-11-21
+
+Five workspace checks passed in each of Chrome, Playwright Firefox, and Playwright WebKit on Windows. They cover responsive electrical canvas geometry, both side drawers with emulated touch at 390 × 844, core editor toolbox actions, electrical wire alignment and focus, and panel-width changes without project-data mutations. CI runs the focused set in Firefox and WebKit alongside the full Chromium suite. Physical-device touch, native Safari, and PWA installation remain open.
+
 ## Live cache-recovery verification — 2026-11-02
 
 - A fresh browser tab at the production custom-domain root rendered 519 manufacturer references after recovery installation; the earlier stale count was 391.

@@ -39,5 +39,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser acceptance checks
         run: npm run test:e2e
+      - name: Install Firefox and WebKit for workspace checks
+        run: npx playwright install --with-deps firefox webkit
+      - name: Verify workspace behavior in Firefox and WebKit
+        shell: bash
+        run: |
+          for browser in firefox webkit; do
+            ADIGUNSP_TEST_BROWSER="$browser" npm run test:e2e -- --grep 'touch workspace|without overlap|core LD|side-panel layout changes|wire endpoints track'
+          done
       - name: Build static application
         run: npm run build

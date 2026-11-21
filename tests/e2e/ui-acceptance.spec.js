@@ -241,6 +241,30 @@ test("electrical workspace stays usable without overlap at required viewports", 
   }
 });
 
+test.describe("touch workspace", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("both mobile drawers open and close by touch", async ({ page }) => {
+    await page.locator("#electricalTab").tap();
+    const workspace = page.locator(".workspace");
+
+    await page.locator("#panelLayoutButton").tap();
+    await page.locator("#mobileProjectPanel").tap();
+    await expect(workspace).toHaveClass(/mobile-left-open/);
+    await expect(page.locator(".electrical-toolbox-dock")).toBeVisible();
+    await page.locator('[data-mobile-drawer-close="left"]').tap();
+    await expect(workspace).not.toHaveClass(/mobile-left-open/);
+
+    await page.locator("#panelLayoutButton").tap();
+    await page.locator("#mobileInspectorPanel").tap();
+    await expect(workspace).toHaveClass(/mobile-right-open/);
+    await expect(page.locator("#inspectorContent")).toBeVisible();
+    await page.locator('[data-mobile-drawer-close="right"]').tap();
+    await expect(workspace).not.toHaveClass(/mobile-right-open/);
+    await expect(page.locator(".electrical-board")).toBeVisible();
+  });
+});
+
 test("contextual toolboxes keep the existing editor actions reachable", async ({ page }) => {
   await expect(page.locator("#electricalTab")).toHaveAttribute("aria-label", "Components / Schematic");
   const logicTab = page.locator("#logicTab");
