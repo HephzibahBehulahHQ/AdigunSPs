@@ -110,6 +110,29 @@ export const store = {
       }
     };
   }),
+  restore: (id, snapshotId, { copySuffix = "" } = {}) => runTransaction(["projects", "snapshots"], "readwrite", (transaction, setResult, abort) => {
+    const current = transaction.objectStore("projects").get(id);
+    current.onsuccess = () => {
+      if (!current.result) return;
+      const selected = transaction.objectStore("snapshots").get(snapshotId);
+      selected.onsuccess = () => {
+        const version = selected.result;
+        if (!version || (version.projectId !== id && version.id !== id) || version.project?.id !== id) return;
+        try {
+          const now = Date.now();
+          const restored = { ...version.project, lastOpenedAt:now, updatedAt:now };
+          if (copySuffix) {
+            restored.id = crypto.randomUUID();
+            restored.name = `${restored.name} (${copySuffix})`;
+          }
+          putProjectRevision(transaction, restored, abort);
+          setResult(restored);
+        } catch (error) {
+          abort(error);
+        }
+      };
+    };
+  }),
   remove: (id) => runTransaction(["projects", "snapshots"], "readwrite", (transaction) => {
     transaction.objectStore("projects").delete(id);
     const snapshots = transaction.objectStore("snapshots");
