@@ -598,7 +598,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   if (traceReplay) { const frame = traceFrames[traceCursor]; if (!frame) { traceReplay = false; if (runTimer) { clearInterval(runTimer); runTimer = null; } toast(`Replay complete · ${traceMismatches.length} divergence(s)`); updateStatus(); return; } inputOverride = frame.inputs; simulationFaults = structuredClone(frame.faults || []); Object.assign(sim.values, frame.numericInputs || {}); dt = frame.dt; traceCursor++; }
   const tags = inferTags(), baseInputs = Object.fromEntries(tags.signals.map((name) => [name, Object.hasOwn(forcedInputs, name) ? forcedInputs[name] : Boolean(sim.values[name])]));
   const rawInputs = inputOverride ?? applyInputFaults(baseInputs, simulationFaults);
-  const analogInputValues = analogRuntimeValues(Object.fromEntries((project.tags || []).filter((tag) => tag.type !== "BOOL" && project.io?.inputs?.includes(tag.name)).map((tag) => [tag.name, Number(sim.values[tag.name] ?? project.initialState?.[tag.name] ?? 0)])));
+  const analogInputValues = analogRuntimeValues(Object.fromEntries(analogInputNames().map((name) => [name, Number(sim.values[name] ?? project.initialState?.[name] ?? 0)])));
   const inputElectrical = project.electrical ? simulateElectricalDiagram(project.electrical,{...project.electrical.inputStates,...rawInputs,...analogInputValues},sim.outputs) : null;
   const inputs = inputElectrical ? { ...rawInputs, ...analogInputValues, ...inputElectrical.inputs } : rawInputs;
   for (const [tag,value] of Object.entries(inputs)) if (Object.hasOwn(priorNarratorInputs, tag) && Boolean(priorNarratorInputs[tag]) !== Boolean(value)) addNarratorEntry(`Input ${tag} switched ${value ? "ON" : "OFF"}; PLC evaluates the change on this scan.`);

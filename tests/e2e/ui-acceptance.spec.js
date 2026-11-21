@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { ADIGUN_SUPABASE_PROJECT_REF } from "../../src/supabase-client.js";
 
 const viewportCases = [
   { width: 1894, height: 704, minBoardHeight: 300 },
@@ -41,12 +42,25 @@ test.beforeEach(async ({ page }) => {
     refresh_token: "adigunsps-e2e-refresh-token",
     user,
   };
+  await page.addInitScript(({ projectRef, cachedSession }) => {
+    const key = `sb-${projectRef}-auth-token`;
+    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(cachedSession));
+  }, { projectRef:ADIGUN_SUPABASE_PROJECT_REF, cachedSession:session });
   await page.route(/https:\/\/[^/]+\.supabase\.co\//, async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === "/auth/v1/signup") return route.fulfill({ json: session });
-    if (path === "/auth/v1/user") return route.fulfill({ json: user });
+    const request = route.request();
+    const requestHeaders = request.headers();
+    const headers = {
+      "access-control-allow-origin":requestHeaders.origin || "*",
+      "access-control-allow-methods":"GET, POST, OPTIONS",
+      "access-control-allow-headers":requestHeaders["access-control-request-headers"] || "*"
+    };
+    if (request.method() === "OPTIONS") return route.fulfill({ status:204, headers });
+    const path = new URL(request.url()).pathname;
+    if (path === "/auth/v1/signup") return route.fulfill({ json:session, headers });
+    if (path === "/auth/v1/user") return route.fulfill({ json:user, headers });
     if (path === "/rest/v1/rpc/adigun_ensure_guest_session") {
       return route.fulfill({
+        headers,
         json: [
           {
             started_at: nowIso,
@@ -58,6 +72,7 @@ test.beforeEach(async ({ page }) => {
     }
     return route.fulfill({
       status: 501,
+      headers,
       json: {
         error: "Unexpected Supabase request in browser acceptance test",
         path,
@@ -189,6 +204,55 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   await expect(lastBlock).toBeFocused();
   await expect(lastBlock).toBeInViewport();
   expect(await blocks.count()).toBeLessThan(count / 4);
+});
+
+test("HMI alarm hysteresis, acknowledgement, and exported history agree", async ({ page }) => {
+  const project = {
+    name:"Alarm hysteresis exercise", editorType:"LD", rungs:[],
+    tags:[{ name:"Temperature", type:"REAL", role:"input" }],
+    initialState:{ Temperature:65 },
+    hmi:{ alarms:[{
+      id:"temperature-alarm", tag:"Temperature", message:"Temperature high", priority:"high",
+      condition:{ kind:"threshold", operator:"gte", threshold:75, hysteresis:5 }
+    }] }
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"alarm-hysteresis.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  await page.locator("#hmiTab").click();
+  const alarm = page.locator("#hmiAlarmPanel .alarm-row").filter({ hasText:"Temperature high" });
+  await expect(alarm).toHaveCount(0);
+
+  const setTemperature = async (temperature) => {
+    await page.locator('[data-app-menu="plc"]').click();
+    await page.getByRole("menuitem", { name:"I/O and tags", exact:true }).click();
+    const field = page.locator('#ioModalBody [data-mobile-input="Temperature"]');
+    await field.fill(String(temperature));
+    await field.press("Tab");
+    await page.locator("#modal .modal-close").click();
+  };
+  await setTemperature(75);
+  await expect(alarm).toBeVisible();
+  await expect(alarm).toContainText(/unacknowledged/i);
+  await setTemperature(72);
+  await expect(alarm).toBeVisible();
+  const acknowledge = alarm.locator('[data-alarm-action="acknowledge"]');
+  await acknowledge.click();
+  await expect(acknowledge).toBeDisabled();
+  await setTemperature(70);
+  await expect(alarm).toHaveCount(0);
+
+  await page.locator("#alarmHistoryButton").click();
+  await expect(page.locator("#modal .event-row")).toHaveCount(3);
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#alarmHistoryExport").click()]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const exported = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  expect(exported.schema).toBe("adigunsps-alarm-history-v1");
+  expect(exported.events.map(({ type, value }) => [type, value])).toEqual([
+    ["cleared", 70], ["acknowledge", undefined], ["raised", 75]
+  ]);
 });
 
 test("a simulated scan exposes configured PID limits in HMI", async ({ page }) => {
