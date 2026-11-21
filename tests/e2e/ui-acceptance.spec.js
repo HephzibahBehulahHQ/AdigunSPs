@@ -794,9 +794,29 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
   const before = await readPersistedState();
   expect(before.guestDrafts.length + before.projects.length).toBeGreaterThan(0);
 
+  await page.setViewportSize({ width: 1280, height: 768 });
   await page.locator("#panelLayoutButton").click();
   await expect(page.locator("#panelLeftToggle")).toBeChecked();
   await expect(page.locator("#panelRightToggle")).toBeChecked();
+  await page.locator('[data-panel-width="left"]').fill("310");
+  await page.locator('[data-panel-width="right"]').fill("345");
+  await page.locator('[data-panel-width="right"]').press("Tab");
+  await expect(page.locator(".left-sidebar")).toHaveCSS("width", "310px");
+  await expect(page.locator(".right-sidebar")).toHaveCSS("width", "345px");
+  await page.locator("#modal .modal-close").click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("adigun-panel-layout"))))
+    .toEqual({ left:true, right:true, leftWidth:310, rightWidth:345 });
+  await page.setViewportSize({ width: 1894, height: 704 });
+  await page.locator("#electricalTab").click();
+  await expect(page.locator(".left-sidebar")).toHaveCSS("width", "310px");
+  await expect(page.locator(".right-sidebar")).toHaveCSS("width", "345px");
+  await page.locator("#logicTab").click();
+  await page.setViewportSize({ width: 1280, height: 768 });
+  await page.locator("#panelLayoutButton").click();
+  await expect(page.locator('[data-panel-width="left"]')).toHaveValue("310");
+  await page.locator('[data-panel-width="left"]').fill("");
+  await page.locator('[data-panel-width="left"]').press("Tab");
+  await expect(page.locator(".left-sidebar")).toHaveCSS("width", "218px");
   await page.locator("#panelLeftToggle").uncheck();
   await page.locator("#panelRightToggle").uncheck();
   await page.locator("#modal .modal-close").click();
@@ -971,10 +991,6 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
     const rect = element.getBoundingClientRect();
     return {x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)};
   })).toEqual(menuBefore);
-  if (process.env.ADIGUNSP_HMI_SCREENSHOT_PATH) {
-    await page.screenshot({ path: process.env.ADIGUNSP_HMI_SCREENSHOT_PATH });
-  }
-
   await page.once("dialog", (dialog) => dialog.accept("Secondary HMI"));
   await page.locator("#addHmiScreen").click();
   await expect(page.locator("#hmiScreenSelect option")).toHaveCount(2);
@@ -1001,6 +1017,10 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
   }
   await page.locator("#processesButton").click();
   await expect(page.locator("#modal")).toBeVisible();
+  if (process.env.ADIGUNSP_HMI_SCREENSHOT_PATH) {
+    await page.locator("#modal .modal-close").click();
+    await page.screenshot({ path: process.env.ADIGUNSP_HMI_SCREENSHOT_PATH });
+  }
 });
 
 test("1894px electrical workspace geometry matches the approved reference", async ({ page }) => {

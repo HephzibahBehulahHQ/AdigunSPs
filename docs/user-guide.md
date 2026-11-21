@@ -270,6 +270,8 @@ On phones, scroll the editor tabs and its control row sideways to reach extra co
 
 Choose **Panel layout** to open the Project and I/O panel or the Inspector and diagnostics panel. Tap the **×** at the top of the open side panel to close it.
 
+At viewport widths of 1051 px and above, **Window → Panel layout** also lets you enter a width in pixels for either side panel. Clear the field to return that panel to automatic sizing. The browser remembers your widths separately from the project.
+
 Hosted questions show **Waiting for a reply...** and temporarily disable other sends. Choose **Cancel request**, or close the Bot, to stop waiting; requests time out after 45 seconds, including session lookup and response reading. Cancellation or timeout does not undo a request already processed; the project remains unchanged, and a reply from a different project/account is discarded.
 
 ### Mixed-language project files

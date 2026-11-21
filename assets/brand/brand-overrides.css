@@ -200,7 +200,6 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 #electricalPane .electrical-body{display:grid;grid-template-columns:minmax(0,1fr);gap:0;flex:1;min-height:0;min-width:0;overflow:hidden}
 #electricalPane .electrical-board-wrap{height:100%;min-height:0;min-width:0;box-sizing:border-box;overflow:auto;overscroll-behavior:contain}
 
-@media (min-width:1051px){.workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden){grid-template-columns:minmax(225px,260px) minmax(0,1fr) minmax(280px,325px)}}
 @media(max-width:760px){.workspace.electrical-workspace-active .electrical-toolbox-dock{padding:8px}.workspace.electrical-workspace-active .inspector-content>.electrical-inspector{padding:5px}}
 @media(min-width:761px){
   .workspace.electrical-workspace-active .editor-footer{display:none}
@@ -309,7 +308,7 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
   .inspector-tabs button { font-size: 12px; }
   .left-sidebar .panel-heading { font-size: 11px; }
   .workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden) {
-    grid-template-columns: minmax(270px, 270px) minmax(0, 1fr) minmax(339px, 339px);
+    grid-template-columns: var(--workspace-left-width, 270px) minmax(0, 1fr) var(--workspace-right-width, 339px);
   }
   #electricalPane > .electrical-pane { gap: 12px; padding: 0 11px 9px 14px; }
 }
@@ -322,6 +321,26 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 /* Keep translated inspector tabs inside the fixed right dock at scaled text sizes. */
 .inspector-tabs { min-width: 0; max-width: 100%; overflow: hidden; }
 .inspector-tabs button { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.panel-layout-width { display: none; }
+@media (min-width: 1051px) {
+  .panel-layout-width { display: grid; grid-template-columns: minmax(0, 1fr) 7em; align-items: center; }
+  .workspace:not(.panels-left-hidden):not(.panels-right-hidden) {
+    grid-template-columns: var(--workspace-left-width, 218px) minmax(0, 1fr) var(--workspace-right-width, 245px);
+  }
+  .workspace.panels-left-hidden:not(.panels-right-hidden) {
+    grid-template-columns: minmax(0, 1fr) var(--workspace-right-width, 245px);
+  }
+  .workspace.panels-right-hidden:not(.panels-left-hidden) {
+    grid-template-columns: var(--workspace-left-width, 218px) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1051px) and (max-width: 1500px) {
+  .workspace.electrical-workspace-active:not(.panels-left-hidden):not(.panels-right-hidden) {
+    grid-template-columns: var(--workspace-left-width, minmax(225px, 260px)) minmax(0, 1fr) var(--workspace-right-width, minmax(280px, 325px));
+  }
+}
 
 /* Match the approved wide Electrical workspace while retaining every action in its menus/inspector. */
 @media (min-width: 1501px) {
