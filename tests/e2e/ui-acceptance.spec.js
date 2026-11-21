@@ -206,6 +206,37 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen FBD timers preserve Q wiring and scan timing", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scanFBD } = await import("/src/engine.js");
+    const timerTypes = ["TON","TOF","TP"];
+    const xml = createPlcopenXml({
+      name:"FBD timer exercise", editorType:"FBD",
+      tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"AdigunTimer_1", type:"BOOL" },
+        ...[...timerTypes,"Idle"].map((name) => ({ name, type:"BOOL", role:"output" }))],
+      fbdBlocks:[{ type:"NOT", inputs:["TON"], outputTag:"Idle" },
+        ...timerTypes.map((type) => ({ type, inputs:["Start"], outputTag:type, preset:200 }))]
+    });
+    const restored = parsePlcopenXml(xml);
+    const malformed = xml.replace('<derived name="TOF"/>', '<derived name="TON"/>');
+    let rejection;
+    try { parsePlcopenXml(malformed); } catch (error) { rejection = error.message; }
+    let state = {};
+    const scans = [true,true,true,false,false,false].map((Start) => {
+      state = scanFBD(restored.fbdBlocks, { Start }, state, restored.io.outputs, 100);
+      return [...timerTypes,"Idle"].map((name) => state.outputs[name]);
+    });
+    return { scans, rejection, qWired:xml.includes('refLocalId="2" formalParameter="Q"'),
+      instanceCollisionAvoided:!xml.includes('instanceName="AdigunTimer_1"') };
+  });
+  expect(result.qWired).toBe(true);
+  expect(result.instanceCollisionAvoided).toBe(true);
+  expect(result.rejection).toContain("timer declaration must match its block type");
+  expect(result.scans).toEqual([[false,true,true,true], [true,true,true,false], [true,true,false,false],
+    [false,true,false,true], [false,false,false,true], [false,false,false,true]]);
+});
+
 test("PLCopen FBD negated gate outputs preserve their truth tables", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
