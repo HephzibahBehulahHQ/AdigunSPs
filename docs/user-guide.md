@@ -304,7 +304,7 @@ Tag renames update saved unit references. Remove references from saved units bef
 
 Diagnostics identifies saved units with invalid logic by name. Applying a configuration or scanning a mixed project checks these errors before execution.
 
-Use project JSON to export saved program units and task assignments. PLCopen XML supports one ladder, Structured Text, or supported FBD program body with scalar tag declarations. A Structured Text body must use the supported statement subset and exclude embedded programs, functions, and function blocks. The FBD subset supports NOT, two-input XOR, and AND/OR with two to eight inputs. Gates use declared BOOL tags and direct connections. GT, LT, and EQ compare two declared inputs of the same INT or REAL type and return a BOOL.
+PLCopen XML preserves the name and period of one cyclic task assigned to its single program. Use project JSON to export multiple program units and task assignments. PLCopen XML supports one ladder, Structured Text, or supported FBD program body with scalar tag declarations. A Structured Text body must use the supported statement subset and exclude embedded programs, functions, and function blocks. The FBD subset supports NOT, two-input XOR, and AND/OR with two to eight inputs. Gates use declared BOOL tags and direct connections. GT, LT, and EQ compare two declared inputs of the same INT or REAL type and return a BOOL.
 
 A scenario frame with a compiler or runtime error reports FAIL even if the previously held outputs match the expected values.
 
