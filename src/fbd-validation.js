@@ -1,4 +1,4 @@
-import { orderFbdBlocks } from "./engine.js";
+import { fbdWrittenTags, orderFbdBlocks } from "./engine.js";
 
 const types = new Set(["AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR", "TON", "TOF", "TP", "RTO", "CTU", "CTD", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"]);
 const numericInputs = new Set(["ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE"]);
@@ -13,11 +13,16 @@ const add = (issues, blockIndex, code, message, data = {}) => issues.push({ leve
 export function validateFbdBlocks(project) {
   const blocks = project.fbdBlocks || [], tags = new Map((project.tags || []).map((tag) => [tag.name, tag])), producers = new Map(), issues = [];
   blocks.forEach((block, index) => {
-    if (!block.outputTag) return;
-    if (producers.has(block.outputTag)) {
-      add(issues, index, "fbd-dependency", `FBD output ${block.outputTag} is produced by more than one block.`, { tag:block.outputTag });
-      add(issues, producers.get(block.outputTag), "fbd-dependency", `FBD output ${block.outputTag} is produced by more than one block.`, { tag:block.outputTag });
-    } else producers.set(block.outputTag, index);
+    for (const tag of fbdWrittenTags(block)) {
+      const previous = producers.get(tag);
+      if (previous === undefined) {
+        producers.set(tag, index);
+        continue;
+      }
+      const message = `FBD output ${tag} has multiple assignments.`;
+      add(issues, index, "fbd-dependency", message, { tag });
+      if (previous !== index) add(issues, previous, "fbd-dependency", message, { tag });
+    }
   });
   blocks.forEach((block, index) => {
     const inputs = block.inputs || [], isNumericInput = numericInputs.has(block.type), isNumericOutput = numericOutputs.has(block.type);
@@ -30,7 +35,9 @@ export function validateFbdBlocks(project) {
     if (block.countTag && !tags.has(block.countTag)) add(issues, index, "fbd-count-tag", `FBD CTU block ${index + 1} count value tag ${block.countTag} is undeclared.`, { tag:block.countTag });
     else if (block.countTag && tags.get(block.countTag).type === "BOOL") add(issues, index, "fbd-count-type", `FBD CTU count value ${block.countTag} must use a numeric type.`, { tag:block.countTag, expected:"numeric" });
     for (const name of inputs) {
-      const sourceIndex = producers.get(name), source = sourceIndex === undefined ? null : blocks[sourceIndex], sourceType = source ? (numericOutputs.has(source.type) ? "REAL" : "BOOL") : tags.get(name)?.type || ((project.io?.inputs || []).includes(name) ? "BOOL" : null);
+      const source = blocks[producers.get(name)];
+      const sourceType = source ? (source.outputTag !== name || numericOutputs.has(source.type) ? "REAL" : "BOOL") :
+        tags.get(name)?.type || ((project.io?.inputs || []).includes(name) ? "BOOL" : null);
       if (!sourceType) add(issues, index, "fbd-input-tag", `FBD block ${index + 1} uses undeclared input ${name}.`, { tag:name });
       else if (isNumericInput ? sourceType === "BOOL" : sourceType !== "BOOL") add(issues, index, isNumericInput ? "fbd-numeric-type" : "fbd-input-type", `FBD ${block.type} input ${name} must be ${isNumericInput ? "numeric" : "BOOL"}.`, { tag:name, expected:isNumericInput ? "numeric" : "BOOL" });
     }
