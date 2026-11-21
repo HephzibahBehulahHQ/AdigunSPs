@@ -229,6 +229,8 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
     const wireOnly = [...document.getElementsByTagNameNS("*", "outVariable")]
       .find((node) => node.getElementsByTagNameNS("*", "expression")[0]?.textContent === "Permit");
     wireOnly.remove();
+    const start = [...document.getElementsByTagNameNS("*", "variable")].find((node) => node.getAttribute("name") === "Start");
+    start.getElementsByTagNameNS("*", "simpleValue")[0].setAttribute("value", "BOOL#1");
     return new XMLSerializer().serializeToString(document);
   });
   expect(xml).toContain('<block localId="1" typeName="NOT"');
@@ -265,6 +267,12 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   const exported = Buffer.concat(chunks).toString("utf8");
   expect(exported).toContain("<FBD>");
+  expect(exported).toContain('<simpleValue value="TRUE"/>');
+  await page.locator("#fileInput").setInputFiles({
+    name:"invalid-bool.xml", mimeType:"application/xml",
+    buffer:Buffer.from(xml.replace('value="BOOL#1"', 'value="on"'))
+  });
+  await expect(page.locator("#toast")).toContainText("BOOL tag Start uses an invalid initial value");
   expect(exported).toContain('<variable name="FbdWire_2"><type><BOOL/>');
   expect(exported).toContain("<expression>FbdWire_2</expression>");
   for (const type of ["GT", "LT", "EQ"]) expect(exported).toContain(`typeName="${type}"`);
