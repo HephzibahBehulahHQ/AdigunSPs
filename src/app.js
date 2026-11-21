@@ -733,9 +733,22 @@ function renderFbd() {
 function drawFbdConnections(root, blocks) {
   const svg = root.querySelector(".fbd-wires"); if (!svg) return;
   const box = root.getBoundingClientRect(), scale = (parseFloat(root.style.zoom) || 100) / 100, size = fbdCanvasSize(blocks); svg.setAttribute("viewBox", `0 0 ${size.width} ${size.height}`); svg.setAttribute("width", size.width); svg.setAttribute("height", size.height);
+  const anchors = new Map();
+  for (const port of root.querySelectorAll("[data-fbd-output-handle], [data-fbd-input-handle]")) {
+    const { fbdInputHandle, fbdInputIndex, fbdOutputHandle, fbdOutputKind } = port.dataset;
+    const key = fbdOutputHandle === undefined ? `${fbdInputHandle}:in:${fbdInputIndex}` : `${fbdOutputHandle}:out:${fbdOutputKind}`;
+    anchors.set(key, { port, point:null });
+  }
   const point = (blockIndex, inputIndex = null, outputKind = "main") => {
-    const block = blocks[blockIndex], selector = inputIndex == null ? `[data-fbd-output-handle="${blockIndex}"][data-fbd-output-kind="${outputKind}"]` : `[data-fbd-input-handle="${blockIndex}"][data-fbd-input-index="${inputIndex}"]`, port = root.querySelector(selector);
-    if (port) { const rect = port.getBoundingClientRect(); return { x:(rect.left - box.left + rect.width / 2) / scale, y:(rect.top - box.top + rect.height / 2) / scale }; }
+    const key = inputIndex == null ? `${blockIndex}:out:${outputKind}` : `${blockIndex}:in:${inputIndex}`;
+    const anchor = anchors.get(key);
+    if (anchor) {
+      if (anchor.point) return anchor.point;
+      const rect = anchor.port.getBoundingClientRect();
+      anchor.point = { x:(rect.left - box.left + rect.width / 2) / scale, y:(rect.top - box.top + rect.height / 2) / scale };
+      return anchor.point;
+    }
+    const block = blocks[blockIndex];
     const position = fbdBlockPosition(block, blockIndex), height = fbdBlockHeights.get(block.id) || (block.type === "SCALE" || ["CTU", "CTD"].includes(block.type) ? 300 : 240);
     if (inputIndex == null) { const offset = fbdWrittenTags(block).length > 1 ? (outputKind === "cv" ? 15 : -15) : 0; return { x:position.x + 370, y:position.y + height / 2 + offset }; }
     const inputs = block.inputs || [], count = Math.max(inputs.length, requiredFbdInputs(block.type)), tag = inputs[inputIndex] || "", portWidth = Math.min(145, Math.max(42, tag.length * 6 + 18));
