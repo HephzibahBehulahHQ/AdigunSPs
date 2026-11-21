@@ -1,5 +1,9 @@
 # Verification record
 
+## Offline workspace navigation — 2026-11-21
+
+Chrome, Playwright Firefox, and Playwright WebKit loaded the locally served workspace while offline after a service worker took control. The test verifies that the app module and all three Help documents are served from cache. CI and the production smoke workflow now repeat this check. This covers browser navigation after an online visit. Native PWA installation and device-level relaunch remain open.
+
 ## Cross-browser workspace verification — 2026-11-21
 
 Five workspace checks passed in each of Chrome, Playwright Firefox, and Playwright WebKit on Windows. They cover responsive electrical canvas geometry, both side drawers with emulated touch at 390 × 844, core editor toolbox actions, electrical wire alignment and focus, and panel-width changes without project-data mutations. CI runs the focused set in Firefox and WebKit alongside the full Chromium suite. Physical-device touch, native Safari, and PWA installation remain open.
