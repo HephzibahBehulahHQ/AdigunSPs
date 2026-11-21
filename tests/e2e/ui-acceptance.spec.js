@@ -206,6 +206,36 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen FBD arithmetic preserves typed unnamed wires", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scanFBD } = await import("/src/engine.js");
+    return ["INT", "REAL"].map((type) => {
+      const project = {
+        name:"Arithmetic wire exercise", editorType:"FBD",
+        tags:[{ name:"Left", type, role:"input" }, { name:"Right", type, role:"input" },
+          { name:"Sum", type }, { name:"Difference", type }, { name:"Product", type, role:"output" }],
+        fbdBlocks:[
+          { id:"multiply", type:"MUL", inputs:["Difference", "Right"], outputTag:"Product" },
+          { id:"subtract", type:"SUB", inputs:["Sum", "Right"], outputTag:"Difference" },
+          { id:"add", type:"ADD", inputs:["Left", "Right"], outputTag:"Sum" }
+        ]
+      };
+      const exported = createPlcopenXml(project);
+      const xml = new DOMParser().parseFromString(exported.replaceAll('formalParameter="OUT"', 'formalParameter="OUT1"'), "application/xml");
+      for (const node of [...xml.getElementsByTagNameNS("*", "outVariable")]) {
+        if (node.textContent !== "Product") node.remove();
+      }
+      const imported = parsePlcopenXml(new XMLSerializer().serializeToString(xml));
+      const reimported = parsePlcopenXml(createPlcopenXml(imported));
+      const values = type === "INT" ? { Left:5, Right:3 } : { Left:5.5, Right:2.5 };
+      const { outputs, errors } = scanFBD(reimported.fbdBlocks, values, {}, reimported.io.outputs);
+      return { wires:reimported.tags.filter(({ name }) => name.startsWith("FbdWire_")).map((tag) => tag.type), product:outputs.Product, errors };
+    });
+  });
+  expect(result).toEqual([{ wires:["INT","INT"], product:15, errors:[] }, { wires:["REAL","REAL"], product:13.75, errors:[] }]);
+});
+
 test("PLCopen Boolean FBD and numeric comparisons round-trip with direct dependencies", async ({ page }) => {
   const xml = await page.evaluate(async () => {
     const { createPlcopenXml } = await import("/src/plcopen.js");
@@ -285,7 +315,7 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
     name:"invalid-fbd.xml", mimeType:"application/xml",
     buffer:Buffer.from(xml.replace('refLocalId="1" formalParameter="OUT"', 'refLocalId="1" formalParameter="ET"'))
   });
-  await expect(page.locator("#toast")).toContainText("PLCopen FBD source must reference a variable or the OUT pin");
+  await expect(page.locator("#toast")).toContainText("PLCopen FBD source must reference a variable or the declared output pin");
   await expect(page.locator("#projectTitle")).toHaveText("Boolean FBD XML exercise");
 });
 
