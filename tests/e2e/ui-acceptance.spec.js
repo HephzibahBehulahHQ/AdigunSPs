@@ -265,6 +265,19 @@ test("FBD counter value port shows imported wires and supports keyboard and poin
   await cv.dragTo(secondInput);
   await expect(fields).toHaveValue("Count, Count");
   await expect(page.locator(".fbd-wires path")).toHaveCount(2);
+  const startError = () => page.locator(".fbd-wires path").evaluateAll((paths) => {
+    const cv = document.querySelector('[data-fbd-output-handle="0"][data-fbd-output-kind="cv"]');
+    const bounds = cv.getBoundingClientRect();
+    return Math.max(...paths.map((path) => {
+      const source = path.getPointAtLength(0).matrixTransform(path.getScreenCTM());
+      return Math.hypot(source.x - bounds.left - bounds.width / 2, source.y - bounds.top - bounds.height / 2);
+    }));
+  });
+  await expect.poll(startError).toBeLessThan(2);
+  const previousLeft = await counter.evaluate((node) => getComputedStyle(node).left);
+  await counter.locator("[data-fbd-drag-handle]").press("ArrowRight");
+  await expect(counter).not.toHaveCSS("left", previousLeft);
+  await expect.poll(startError).toBeLessThan(2);
 });
 
 test("PLCopen CTU CV preserves named outputs and unnamed direct wires", async ({ page }) => {
