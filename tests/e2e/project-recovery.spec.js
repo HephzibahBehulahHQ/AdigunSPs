@@ -49,8 +49,26 @@ test("a cached member can reopen and restore a local project while offline", asy
     await reopened.locator("[data-open]").filter({ hasText:name }).click();
     const reopenedComment = reopened.getByRole("textbox", { name:"Rung comment" });
     await expect(reopenedComment).toHaveValue("Edited offline");
+    const originalId = await reopened.evaluate(async (projectName) => {
+      const { store } = await import("/src/store.js");
+      return (await store.all()).find((item) => item.name === projectName).id;
+    }, name);
     await reopened.locator("#projectMenu").click();
-    await reopened.locator(".project-row").filter({ hasText:name }).locator("[data-recover]").click();
+    await reopened.locator(`[data-recover="${originalId}"]`).click();
+    await reopened.getByRole("button", { name:"Restore as copy" }).first().click();
+    await expect(reopened.locator("#projectTitle")).toHaveText(`${name} (recovered copy)`);
+    await expect(reopenedComment).toHaveValue("Original network");
+    const savedOriginal = await reopened.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      const saved = await store.get(id);
+      return { comment:saved.rungs[0].comment, revisions:(await store.history(id)).length };
+    }, originalId);
+    expect(savedOriginal).toEqual({ comment:"Edited offline", revisions:2 });
+    await reopened.locator("#projectMenu").click();
+    await reopened.locator(`[data-open="${originalId}"]`).click();
+    await expect(reopenedComment).toHaveValue("Edited offline");
+    await reopened.locator("#projectMenu").click();
+    await reopened.locator(`[data-recover="${originalId}"]`).click();
     await reopened.locator("[data-restore]").first().click();
     await expect(reopenedComment).toHaveValue("Original network");
     await reopened.locator('[data-app-menu="file"]').click();
@@ -70,6 +88,20 @@ test("a cached member can reopen and restore a local project while offline", asy
       const { store } = await import("/src/store.js");
       return (await store.all()).filter((item) => item.name === projectName).length;
     }, name)).toBe(2);
+
+    await reopened.locator("#projectMenu").click();
+    await reopened.locator(`[data-recover="${originalId}"]`).click();
+    await page.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      await store.remove(id);
+    }, originalId);
+    await reopened.locator("[data-restore]").first().click();
+    await expect(reopened.locator("#toast")).toContainText("That snapshot is no longer available");
+    const removed = await reopened.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      return { project:await store.get(id), revisions:(await store.history(id)).length };
+    }, originalId);
+    expect(removed).toEqual({ project:undefined, revisions:0 });
   } finally {
     await context.setOffline(false);
   }
@@ -165,6 +197,7 @@ test("local project writes and recovery snapshots commit together", async ({ pag
     const { store } = await import("/src/store.js");
     const id = "project-recovery-check";
     await store.save({ id, name:"First save" });
+    const initialSnapshot = await store.recover(id);
 
     const originalPut = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function (...args) {
@@ -176,6 +209,7 @@ test("local project writes and recovery snapshots commit together", async ({ pag
       for (const write of [
         () => store.save({ id, name:"Failed save" }),
         () => store.update(id, (project) => { project.name = "Failed metadata update"; }),
+        () => store.restore(id, initialSnapshot.id, { copySuffix:"failed copy" }),
       ]) {
         try {
           await write();
@@ -189,6 +223,7 @@ test("local project writes and recovery snapshots commit together", async ({ pag
     }
     const afterFailure = await store.get(id);
     const historyAfterFailure = await store.history(id);
+    const orphanedCopy = (await store.all()).some((project) => project.name.endsWith("(failed copy)"));
 
     const now = Date.now;
     const timestamp = now();
@@ -205,15 +240,17 @@ test("local project writes and recovery snapshots commit together", async ({ pag
       rejectedWrites,
       savedAfterFailure:afterFailure.name,
       snapshotsAfterFailure:historyAfterFailure.map(({ project }) => project.name),
+      orphanedCopy,
       snapshotCount:snapshots.length,
       newestSnapshotMatchesSavedVersion:snapshots[0]?.project.name === saved.name,
       deleted:(await store.get(id)) === undefined && (await store.history(id)).length === 0
     };
   });
   expect(result).toEqual({
-    rejectedWrites:2,
+    rejectedWrites:3,
     savedAfterFailure:"First save",
     snapshotsAfterFailure:["First save"],
+    orphanedCopy:false,
     snapshotCount:25,
     newestSnapshotMatchesSavedVersion:true,
     deleted:true
