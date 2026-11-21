@@ -304,6 +304,51 @@ test("analog input fault offsets stay constant through process scans and replay"
   await expect(page.locator("#modal .safety-copy").first()).toContainText("4 recorded scans · 0 replay divergences");
 });
 
+test("reviewed HMI recipe versions apply typed numeric inputs only after confirmation", async ({ page }) => {
+  const project = {
+    name:"Recipe version exercise", editorType:"LD", rungs:[],
+    tags:[{ name:"Level", type:"REAL", role:"input" }],
+    initialState:{ Level:40 },
+    hmi:{ widgets:[{ id:"level-value", type:"value", label:"Level", tag:"Level", x:0, y:0 }] }
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"recipe-versions.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  await page.locator("#hmiTab").click();
+  const value = page.locator('[data-hmi-value="level-value"]');
+  const setLevel = async (number) => {
+    const input = page.locator('#inputList [data-input="Level"]');
+    await input.fill(String(number));
+    await input.press("Tab");
+    await expect(value).toHaveText(String(number));
+  };
+  const saveVersion = async (version) => {
+    await page.locator("#recipesButton").click();
+    await page.locator("#recipeName").fill("Batch A");
+    await page.locator("#saveRecipeButton").click();
+    await expect(page.locator("#modal .project-row").filter({ hasText:`Batch A · v${version}` })).toBeVisible();
+    await page.locator("#modal .modal-close").click();
+  };
+  await expect(value).toHaveText("40");
+  await saveVersion(1);
+  await setLevel(60);
+  await saveVersion(2);
+  await setLevel(70);
+
+  await page.locator("#recipesButton").click();
+  const firstVersion = page.locator("#modal .project-row").filter({ hasText:"Batch A · v1" });
+  await firstVersion.locator("[data-recipe-apply]").click();
+  const review = page.locator("#modal tbody tr").filter({ hasText:"Level" });
+  await expect(review.locator("td").nth(1)).toHaveText("70.000000");
+  await expect(review.locator("td").nth(2)).toHaveText("40.000000");
+  await page.locator("#recipeReviewCancel").click();
+  await expect(value).toHaveText("70");
+  await firstVersion.locator("[data-recipe-apply]").click();
+  await page.locator("#recipeReviewApply").click();
+  await expect(value).toHaveText("40");
+});
+
 test("a simulated scan exposes configured PID limits in HMI", async ({ page }) => {
   const project = {
     name:"PID limit exercise", editorType:"LD", rungs:[],

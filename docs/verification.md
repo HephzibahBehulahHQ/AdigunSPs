@@ -2,7 +2,7 @@
 
 ## Analog fault offsets and process state — 2026-11-21
 
-A browser trace holds a raw analog input at 40, applies a +5 offset once per scan, and removes the offset to recover the original reading. The PID sees a steady effective value, the tank advances on each LD scan, and replay reports zero divergences. Regression checks also ensure output faults cannot modify raw analog inputs.
+A browser trace holds a raw analog input at 40, applies a +5 offset once per scan, and removes it to recover the original reading. The PID sees a steady effective value, the tank advances on each LD scan, and replay reports zero divergences. Browser and core regressions also cover edited numeric inputs, versioned recipe review and application, raw numeric recipe capture, and isolation from output faults.
 
 ## HMI alarm lifecycle — 2026-11-21
 

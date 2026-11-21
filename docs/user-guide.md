@@ -209,7 +209,7 @@ For the thermal process model, choose a heater input and an optional cooler inpu
 
 Set the PID output minimum and maximum in **Processes**. The controller holds the integral while disabled and limits further integral accumulation at an output bound. Changing the error in the opposite direction releases the output from that bound. With a run tag off, the simulated controller writes zero.
 
-An analog input fault adds its offset once per scan. The I/O field keeps the entered value, and Watch shows the effective value used by the simulation. Removing the fault restores the entered value.
+An analog input fault adds its offset once per scan. The I/O field keeps the entered value, and Watch shows the effective value used by the simulation. Removing the fault restores the entered value. Recipe capture and review use the entered numeric values.
 
 The screen and canvas controls share one compact row. Hover or keyboard-focus an icon to read its name; screen management, Snap, widgets, Processes, alarms, recipes, history, and trend export remain available.
 
