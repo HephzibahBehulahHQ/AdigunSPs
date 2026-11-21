@@ -44,6 +44,7 @@ import { renderHelpMarkdown } from "./help-markdown.js";
 
 import { ui, eventLogUi } from "./locale-ui.js";
 import { buildLocalizationReport, supportedLocales } from "./localization.js";
+import { compareSnapshotLogic } from "./snapshot-comparison.js";
 import { applicationMenuLabels, createApplicationMenuEntries } from "./app-menus.js";
 import { calculateRungWindow } from "./ladder-virtualization.js";
 import { createPlcopenXml, parsePlcopenXml } from "./plcopen.js";
@@ -1348,7 +1349,50 @@ async function showProjectProperties(projectId) {
     await saveProjectMetadata(projectId, fields, properties);
   };
 }
-async function showRecovery(projectId) {
+const snapshotComparisonCopy = {
+  en:{ compare:"Compare logic", title:"Compare saved logic", earlier:"Selected snapshot", latest:"Latest saved snapshot", back:"Back to snapshots", empty:"No logic changes in the compared sections.", line:"Line", editor:"Editor", ladder:"Ladder logic", blocks:"Function blocks", text:"Structured Text", chart:"Sequential chart", units:"Program units", tasks:"Tasks", tags:"Tags", io:"I/O", initial:"Initial values", processes:"Process models" },
+  de:{ compare:"Logik vergleichen", title:"Gespeicherte Logik vergleichen", earlier:"Ausgewählter Snapshot", latest:"Letzter gespeicherter Snapshot", back:"Zurück zu den Snapshots", empty:"Keine Logikänderungen in den verglichenen Abschnitten.", line:"Zeile", editor:"Editor", ladder:"Kontaktplan", blocks:"Funktionsbausteine", text:"Strukturierter Text", chart:"Ablaufsprache", units:"Programmeinheiten", tasks:"Aufgaben", tags:"Variablen", io:"E/A", initial:"Initialwerte", processes:"Prozessmodelle" },
+  yo:{ compare:"Fi ìlànà wé ara wọn", title:"Fi ìlànà tí a fipamọ́ wé ara wọn", earlier:"Ẹ̀dà tí a yàn", latest:"Ẹ̀dà tuntun tí a fipamọ́", back:"Padà sí àwọn ẹ̀dà", empty:"Kò sí ìyípadà nínú àwọn apá tí a fi wé ara wọn.", line:"Ìlà", editor:"Olóòtú", ladder:"Ìlànà ladder", blocks:"Àwọn function block", text:"Structured Text", chart:"Àwòrán ìtẹ̀lé ìpele", units:"Àwọn ẹ̀ka ètò", tasks:"Àwọn iṣẹ́", tags:"Àwọn tag", io:"I/O", initial:"Iye ìbẹ̀rẹ̀", processes:"Àwòṣe ìlànà iṣẹ́" },
+  pcm:{ compare:"Compare logic", title:"Compare saved logic", earlier:"Snapshot wey you choose", latest:"Latest saved snapshot", back:"Go back to snapshots", empty:"Logic for these sections no change.", line:"Line", editor:"Editor", ladder:"Ladder logic", blocks:"Function blocks", text:"Structured Text", chart:"Sequence chart", units:"Program units", tasks:"Tasks", tags:"Tags", io:"I/O", initial:"Starting values", processes:"Process models" }
+};
+
+function showSnapshotComparison(projectId, earlier, latest) {
+  const copy = snapshotComparisonCopy[language];
+  const changes = compareSnapshotLogic(earlier.project, latest.project);
+  modal(copy.title, `<div class="modal-body"><div class="snapshot-diff-versions"><p><b>${copy.earlier}</b><br>${formatLocaleDateTime(earlier.savedAt, language)}</p><p><b>${copy.latest}</b><br>${formatLocaleDateTime(latest.savedAt, language)}</p></div><div id="snapshotDiffSections"></div><div class="modal-actions"><button type="button" class="secondary" id="snapshotDiffBack">${copy.back}</button></div></div>`);
+  const sections = $("#snapshotDiffSections");
+  if (!changes.length) sections.textContent = copy.empty;
+  for (const change of changes) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = copy[change.key];
+    details.append(summary);
+    details.addEventListener("toggle", () => {
+      if (!details.open || details.childElementCount > 1) return;
+      const columns = document.createElement("div");
+      columns.className = "snapshot-diff-columns";
+      for (const [label, lines] of [[copy.earlier, change.before], [copy.latest, change.after]]) {
+        const column = document.createElement("div");
+        const heading = document.createElement("b");
+        heading.textContent = `${label} · ${copy.line} ${formatLocaleNumber(change.firstLine, language, 0)}`;
+        const source = document.createElement("pre");
+        source.tabIndex = 0;
+        source.setAttribute("aria-label", heading.textContent);
+        source.textContent = lines.join("\n");
+        column.append(heading, source);
+        columns.append(column);
+      }
+      details.append(columns);
+    });
+    sections.append(details);
+    if (sections.childElementCount === 1) details.open = true;
+  }
+  const back = $("#snapshotDiffBack");
+  back.onclick = () => showRecovery(projectId, earlier.id);
+  (sections.querySelector("summary") || back).focus();
+}
+
+async function showRecovery(projectId, focusSnapshot) {
   const copy = ({
     en:{ title:"Recover project snapshot", empty:"No earlier saved version yet", restore:"Restore", rungs:"rungs", copy:"Restore as copy", suffix:"recovered copy", unavailable:"That snapshot is no longer available", restored:"Project snapshot restored", copied:"Project snapshot opened as a copy" },
     de:{ title:"Projekt-Snapshot wiederherstellen", empty:"Keine frühere Version gespeichert", restore:"Wiederherstellen", rungs:"Netzwerke", copy:"Als Kopie wiederherstellen", suffix:"wiederhergestellte Kopie", unavailable:"Dieser Snapshot ist nicht mehr verfügbar", restored:"Projekt-Snapshot wiederhergestellt", copied:"Projekt-Snapshot als Kopie geöffnet" },
@@ -1357,7 +1401,13 @@ async function showRecovery(projectId) {
   })[language];
   const versions = await store.history(projectId);
   if (versions.length < 2) { toast(copy.empty); return; }
-  modal(copy.title, `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version) => `<div class="project-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · ${copy.restore}</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs.length,language,0)} ${copy.rungs}</span><button class="secondary" data-restore-copy="${escapeAttr(version.id)}">${copy.copy}</button></div>`).join("")}</div></div>`);
+  const compare = snapshotComparisonCopy[language].compare;
+  modal(copy.title, `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version, index) => `<div class="project-row snapshot-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · ${copy.restore}</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs?.length ?? 0,language,0)} ${copy.rungs}</span><button class="secondary" data-compare-snapshot="${index + 1}">${compare}</button><button class="secondary" data-restore-copy="${escapeAttr(version.id)}">${copy.copy}</button></div>`).join("")}</div></div>`);
+  document.querySelectorAll("[data-compare-snapshot]").forEach((button) => {
+    const version = versions[Number(button.dataset.compareSnapshot)];
+    button.onclick = () => showSnapshotComparison(projectId, version, versions[0]);
+    if (version.id === focusSnapshot) button.focus();
+  });
   document.querySelectorAll("[data-restore], [data-restore-copy]").forEach((button) => button.onclick = async () => {
     if (!(await confirmProjectChange())) return;
     const asCopy = button.hasAttribute("data-restore-copy");

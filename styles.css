@@ -158,3 +158,10 @@ body[data-theme="light"] .left-sidebar,body[data-theme="light"] .right-sidebar{b
 
 .mobile-panel-close{display:none}@media(max-width:760px){.mobile-panel-close{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:18px}}
 
+.snapshot-row{flex-wrap:wrap}
+.snapshot-diff-versions,.snapshot-diff-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#snapshotDiffSections details{margin-block:8px;border:1px solid var(--line);border-radius:6px;padding:10px}
+#snapshotDiffSections summary{cursor:pointer;font-weight:600}
+.snapshot-diff-columns{margin-top:12px}
+.snapshot-diff-columns pre{max-height:240px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:8px;background:var(--panel2);border-radius:4px}
+@media(max-width:520px){.snapshot-diff-columns{grid-template-columns:1fr}}

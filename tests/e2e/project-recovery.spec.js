@@ -55,6 +55,14 @@ test("a cached member can reopen and restore a local project while offline", asy
     }, name);
     await reopened.locator("#projectMenu").click();
     await reopened.locator(`[data-recover="${originalId}"]`).click();
+    const compare = reopened.getByRole("button", { name:"Compare logic" }).first();
+    await compare.click();
+    await expect(reopened.getByRole("dialog", { name:"Compare saved logic" })).toBeVisible();
+    await expect(reopened.locator("pre").filter({ hasText:"Original network" })).toBeVisible();
+    await expect(reopened.locator("pre").filter({ hasText:"Edited offline" })).toBeVisible();
+    await expect(reopenedComment).toHaveValue("Edited offline");
+    await reopened.getByRole("button", { name:"Back to snapshots" }).click();
+    await expect(compare).toBeFocused();
     await reopened.getByRole("button", { name:"Restore as copy" }).first().click();
     await expect(reopened.locator("#projectTitle")).toHaveText(`${name} (recovered copy)`);
     await expect(reopenedComment).toHaveValue("Original network");
