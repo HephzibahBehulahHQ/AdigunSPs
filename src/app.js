@@ -1335,9 +1335,33 @@ async function showProjectProperties(projectId) {
   };
 }
 async function showRecovery(projectId) {
-  const versions = await store.history(projectId); if (versions.length < 2) { toast("No earlier saved version yet"); return; }
-  modal("Recover project snapshot", `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version) => `<div class="project-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · local snapshot</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs.length,language,0)} rungs</span></div>`).join("")}</div></div>`);
-  document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = async () => { if (!(await confirmProjectChange())) return; const version = versions.find((item) => item.id === button.dataset.restore); if (!version) return; project = structuredClone(version.project); await store.save(project); setUnsavedChanges(false); stopSimulation(); $("#modal").close(); render(); toast("Project snapshot restored"); });
+  const copy = ({
+    en:{ title:"Recover project snapshot", empty:"No earlier saved version yet", restore:"Restore", rungs:"rungs", copy:"Restore as copy", suffix:"recovered copy", unavailable:"That snapshot is no longer available", restored:"Project snapshot restored", copied:"Project snapshot opened as a copy" },
+    de:{ title:"Projekt-Snapshot wiederherstellen", empty:"Keine frühere Version gespeichert", restore:"Wiederherstellen", rungs:"Netzwerke", copy:"Als Kopie wiederherstellen", suffix:"wiederhergestellte Kopie", unavailable:"Dieser Snapshot ist nicht mehr verfügbar", restored:"Projekt-Snapshot wiederhergestellt", copied:"Projekt-Snapshot als Kopie geöffnet" },
+    yo:{ title:"Mú àwòrán iṣẹ́ padà", empty:"Kò tíì sí ẹ̀dà tí a fipamọ́ ṣáájú", restore:"Mú padà", rungs:"nẹ́tíwọ́ọ̀kì", copy:"Mú padà gẹ́gẹ́ bí ẹ̀dà", suffix:"ẹ̀dà tí a mú padà", unavailable:"Àwòrán iṣẹ́ yẹn kò sí mọ́", restored:"A ti mú àwòrán iṣẹ́ padà", copied:"A ṣí àwòrán iṣẹ́ gẹ́gẹ́ bí ẹ̀dà" },
+    pcm:{ title:"Recover project snapshot", empty:"No earlier save yet", restore:"Restore", rungs:"rungs", copy:"Restore as copy", suffix:"recovered copy", unavailable:"That snapshot no dey available again", restored:"Project snapshot don restore", copied:"Project snapshot don open as copy" },
+  })[language];
+  const versions = await store.history(projectId);
+  if (versions.length < 2) { toast(copy.empty); return; }
+  modal(copy.title, `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version) => `<div class="project-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · ${copy.restore}</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs.length,language,0)} ${copy.rungs}</span><button class="secondary" data-restore-copy="${escapeAttr(version.id)}">${copy.copy}</button></div>`).join("")}</div></div>`);
+  document.querySelectorAll("[data-restore], [data-restore-copy]").forEach((button) => button.onclick = async () => {
+    if (!(await confirmProjectChange())) return;
+    const asCopy = button.hasAttribute("data-restore-copy");
+    let restored;
+    try {
+      restored = await store.restore(projectId, asCopy ? button.dataset.restoreCopy : button.dataset.restore, { copySuffix:asCopy ? copy.suffix : "" });
+    } catch (error) {
+      toast(error.message || copy.unavailable);
+      return;
+    }
+    if (!restored) { toast(copy.unavailable); return; }
+    project = restored;
+    setUnsavedChanges(false);
+    selection = null;
+    $("#modal").close();
+    stopSimulation();
+    toast(asCopy ? copy.copied : copy.restored);
+  });
 }
 function exportProject(projectToExport = serializeProject()) { if (accountAccess !== "member") { showAccount(); return false; } const identity = brandPresentation(language, currentBrandTheme()); const data = new Blob([JSON.stringify({ ...projectToExport, branding:{ product:identity.productName, company:identity.companyName, attribution:identity.attribution } }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = `${projectToExport.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.adigun.json`; a.click(); URL.revokeObjectURL(a.href); setUnsavedChanges(false); toast(t("exported")); return true; }
 async function saveProject() { if (accountAccess !== "member") { showAccount(); return false; } const name = prompt("Project name", project.name); if (!name?.trim()) return false; const projectToSave = { ...serializeProject(), name:name.trim() }; try { await accountService.saveCloudProject(accountUser, projectToSave); setUnsavedChanges(false); toast(accountText("saved")); return true; } catch (error) { toast(`${accountText("error")}: ${error.message}`); return false; } }
