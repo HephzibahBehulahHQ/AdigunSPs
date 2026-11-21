@@ -28,7 +28,8 @@ createServer((request, response) => {
     });
     return;
   }
-  const relative = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  const pathname = decodeURIComponent(url.pathname);
+  const relative = pathname.endsWith("/") ? `${pathname}index.html` : pathname;
   const path = resolve(root, `.${relative}`);
   if (path !== root && !path.startsWith(`${root}${sep}`)) { response.writeHead(403).end("Forbidden"); return; }
   readFile(path, (error, content) => {
