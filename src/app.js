@@ -43,7 +43,7 @@ import { bindMenuDismissal } from "./menu-dismissal.js";
 import { renderHelpMarkdown } from "./help-markdown.js";
 
 import { ui, eventLogUi } from "./locale-ui.js";
-import { buildLocalizationReport} from "./localization.js";
+import { buildLocalizationReport, supportedLocales } from "./localization.js";
 import { applicationMenuLabels, createApplicationMenuEntries } from "./app-menus.js";
 import { calculateRungWindow } from "./ladder-virtualization.js";
 import { createPlcopenXml, parsePlcopenXml } from "./plcopen.js";
@@ -67,7 +67,8 @@ const tour = {
   yo: { title:"Ìrìnàjò kúkúrú", steps:[["Káàbọ̀ sí ibi iṣẹ́ PLC rẹ", "Kọ́ àti ṣàyẹ̀wò ọgbọ́n ìṣàkóso lórí àgbègbè ladder."], ["Àpótí irinṣẹ́", "Ṣí Components láti fi àwòṣe ẹ̀rọ gbogbogbò tó wà sílẹ̀ kún un, tàbí Examples láti ṣàyẹ̀wò iṣẹ́ ẹ̀kọ́ 1,000 tí a dán wò ní ìṣàfarawé."], ["So àwọn waya pọ̀", "Nínú Components, yan Connect terminals, lẹ́yìn náà yan terminal méjì. Ṣe ìṣàfarawé láti rí ọ̀nà tó ń ṣiṣẹ́."], ["Pàdé Adigun BOT", "Béèrè lọ́wọ́ Adigun BOT nípa PLC tàbí àwọn ìbéèrè iṣẹ́ tó ṣe àtìlẹ́yìn. Ṣàyẹ̀wò àkọ́kọ́ iṣẹ́ kí o tó kó wọlé."], ["Ṣe scan", "Run ń ṣe scan léraléra; Step ṣe scan kan. Wo ọgbọ́n tó ń ṣiṣẹ́ àti àwòṣe ẹ̀rọ nínú HUD ìṣàfarawé."], ["Ṣàyẹ̀wò àwòṣe hardware", "Ṣètò àwòṣe ẹ̀rọ gbogbogbò nínú ibi iṣẹ́ iná. Ẹ̀dà yìí kò sopọ̀ mọ́ hardware gidi."]], previous:"Padà", next:"Tẹ̀síwájú", finish:"Parí", start:"Bẹ̀rẹ̀ ìrìnàjò", continue:"Tẹ̀síwájú", welcome:"Ṣe àwòrán ọgbọ́n PLC, ṣàyẹ̀wò iṣẹ́ ẹ̀kọ́ 1,000, kí o sì dán àwòṣe ẹ̀rọ tó wà lẹ́yìn rẹ̀ wò." },
   pcm: { title:"Quick tour", steps:[["Welcome to your PLC workspace", "Build and check control logic for the ladder canvas."], ["The toolbox", "Open Components to add supported generic device models, or choose Examples to explore 1,000 simulation-checked learning projects."], ["Connect the wires", "For Components, choose Connect terminals, then select two terminals. Run the model to see active paths."], ["Meet Adigun BOT", "Ask Adigun BOT about PLC learning or supported project prompts. Check any draft before you import am."], ["Run a scan", "Choose Run for continuous scans or Step for one scan. Watch active logic and device models in the simulation HUD."], ["Explore hardware models", "Set up generic component models in the electrical workspace. This build no connect to physical hardware."]], previous:"Go back", next:"Next", finish:"Finish", start:"Start quick tour", continue:"Continue", welcome:"Design PLC logic, explore 1,000 learning projects, and test supported device models in the built-in simulator." },
 };
-let language = localStorage.getItem("adigun-language") || "en";
+const savedLanguage = localStorage.getItem("adigun-language");
+let language = supportedLocales.includes(savedLanguage) ? savedLanguage : "en";
 let adigunAiMessages = [], adigunBotDraft = null, adigunBotRecognition = null, adigunBotWindow;
 let adigunAiRequest = null;
 let liveCopilotEnabled = localStorage.getItem("adigun-live-copilot") !== "off", copilotTypingUntil = 0, copilotPointerActive = false, copilotGoal = "", copilotGoalPending = false, copilotDebounce = 0, copilotTick = 0, copilotActiveState = {active:null,lastShownAt:0,dismissed:new Set()}, copilotFirstSeen = new Map();
@@ -2312,7 +2313,7 @@ let stEditRecorded = false, stSaveTimer, stCompileTimer;
 $("#stSource").addEventListener("focus", () => { if (!stEditRecorded) { pushHistory(); stEditRecorded = true; } });
 $("#stSource").addEventListener("input", () => { project.stSource = $("#stSource").value; compiledST = null; compiledSTSignature = ""; $("#compileState").textContent = "Compiling…"; clearTimeout(stSaveTimer); clearTimeout(stCompileTimer); stSaveTimer = setTimeout(() => persist(), 350); stCompileTimer = setTimeout(() => compileST(false), 350); });
 $("#stSource").addEventListener("blur", () => { stEditRecorded = false; });
-$("#projectMenu").addEventListener("click", () => showProjects()); $("#paletteButton").addEventListener("click", showPalette); $("#helpButton").addEventListener("click", showHelp); $("#footerHelpLink").addEventListener("click", showHelp); $("#zoomFit").addEventListener("click", fitZoom); $("#minimapButton").addEventListener("click", () => $("#minimap").classList.toggle("hidden")); $("#fullscreenButton").addEventListener("click", () => document.fullscreenElement ? document.exitFullscreen() : $(".editor-area").requestFullscreen?.()); $("#languageButton").addEventListener("click", () => { const order = ["en", "de", "yo", "pcm"]; language = order[(order.indexOf(language) + 1) % order.length]; localStorage.setItem("adigun-language", language); $("#languageButton").textContent = language.toUpperCase(); applyLocale(); toast(t("languageChanged")); render(); });
+$("#projectMenu").addEventListener("click", () => showProjects()); $("#paletteButton").addEventListener("click", showPalette); $("#helpButton").addEventListener("click", showHelp); $("#footerHelpLink").addEventListener("click", showHelp); $("#zoomFit").addEventListener("click", fitZoom); $("#minimapButton").addEventListener("click", () => $("#minimap").classList.toggle("hidden")); $("#fullscreenButton").addEventListener("click", () => document.fullscreenElement ? document.exitFullscreen() : $(".editor-area").requestFullscreen?.()); $("#languageButton").addEventListener("click", () => { language = supportedLocales[(supportedLocales.indexOf(language) + 1) % supportedLocales.length]; localStorage.setItem("adigun-language", language); $("#languageButton").textContent = language.toUpperCase(); applyLocale(); toast(t("languageChanged")); render(); });
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase(), modifier = event.ctrlKey || event.metaKey, active = document.activeElement;
   if (event.key === "Escape" && $("#modal").open) { $("#modal").close(); return; }
@@ -2352,7 +2353,7 @@ async function init() {
   setAccountAccess("checking");
   try { await store.all(); } catch {}
   project = defaultProject(); project.name = "Untitled project"; project.tags = []; project.io = { inputs:[], outputs:[] }; project.initialState = {}; project.rungs = []; project.lastOpenedAt = Date.now();
-  language = localStorage.getItem("adigun-language") || "en"; $("#languageButton").textContent = language.toUpperCase(); applyLocale();
+  $("#languageButton").textContent = language.toUpperCase(); applyLocale();
   await initializeAccountAccess();
   if (["guest", "guest-expired"].includes(accountAccess)) restoreGuestDraft();
   sim.values = { ...(project.initialState || {}) }; render();
