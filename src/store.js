@@ -55,7 +55,20 @@ export const store = {
     return projects.filter((project) => !expiredIds.has(project.id));
   },
   get: (id) => requestStore("projects", "readonly", (s) => s.get(id)),
-  touch: (project) => requestStore("projects", "readwrite", (s) => s.put(project)),
+  open: (id, prepareProject) => runTransaction(["projects"], "readwrite", (transaction, setResult, abort) => {
+    const projects = transaction.objectStore("projects"), request = projects.get(id);
+    request.onsuccess = () => {
+      if (!request.result) return;
+      try {
+        const opened = { ...request.result, lastOpenedAt:Date.now() };
+        prepareProject?.(opened);
+        projects.put(opened);
+        setResult(opened);
+      } catch (error) {
+        abort(error);
+      }
+    };
+  }),
   save: async (project) => {
     const updatedAt = Date.now();
     const savedProject = structuredClone({ ...project, updatedAt });
