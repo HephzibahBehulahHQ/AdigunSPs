@@ -93,7 +93,7 @@ If a step does not match the example, follow that project's **How to test** and 
 1. For signed-in users, autosave is enabled by default and stores changes in this browser. Guest autosave keeps only a temporary draft in the current tab. To change autosave, open **Settings** (⚙), adjust the preference, and select **Done**.
 2. After signing in, choose **Save** or **File → Save locally (JSON)** and save the downloaded project file. **Save as** creates a named copy; in **Account**, enter **Cloud project name** and select **Save to Cloud** (new copy). Guests must authenticate before permanently saving or exporting a project file.
 3. If autosave is off, select **Save** before closing. With unsaved edits, the browser asks before leaving; if storage is unavailable, export a JSON copy.
-4. To recover an earlier local version, open **Project manager** and select the curved-arrow recovery control beside the project. Choose a snapshot to restore it.
+4. In **Project manager**, use the recovery arrow beside a project to restore a snapshot. **File → Import** also accepts supported PLCopen LD, including TON.
 
 ## Using commands
 

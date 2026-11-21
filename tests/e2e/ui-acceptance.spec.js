@@ -71,6 +71,29 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#modal")).toBeHidden();
 });
 
+test("PLCopen TON XML round-trips through the browser parser and drives the coil after its preset", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scan } = await import("/src/engine.js");
+    const source = {
+      name:"TON exercise", editorType:"LD",
+      tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+      io:{ inputs:["Start"], outputs:["Lamp"] },
+      rungs:[{ branches:[[{ tag:"Start", mode:"NO" }]], coil:"Lamp",
+        timer:{ tag:"DelayTimer", type:"TON", preset:1500, output:"DN" } }]
+    };
+    const xml = createPlcopenXml(source);
+    const check = (importedXml) => {
+      const project = parsePlcopenXml(importedXml);
+      const first = scan(project, { Start:true }, {}, 750);
+      const second = scan(project, { Start:true }, first, 750);
+      return [first.outputs.Lamp, second.outputs.Lamp];
+    };
+    return [check(xml), check(xml.replace('refLocalId="4" formalParameter="Q"', 'refLocalId="4"'))];
+  });
+  expect(result).toEqual([[false, true], [false, true]]);
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");
