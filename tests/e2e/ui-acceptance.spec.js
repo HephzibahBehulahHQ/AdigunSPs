@@ -842,6 +842,61 @@ test("PLCopen SFC sequence round-trips step actions, conditions, and the initial
   await expect(ready).toHaveClass(/active/);
 });
 
+test("opening a palette result uses the latest saved project and cannot restore a deleted one", async ({ page }) => {
+  const writer = await page.context().newPage();
+  try {
+    await writer.route("**/project-store-fixture", (route) => route.fulfill({
+      contentType:"text/html", body:"<!doctype html><title>Second project tab</title>"
+    }));
+    await writer.goto(new URL("/project-store-fixture", page.url()).href);
+    const fixture = { id:"shared-local-project", name:"Saved before search", editorType:"LD", rungs:[], tags:[],
+      io:{ inputs:[], outputs:[] }, initialState:{} };
+    const deleted = { ...fixture, id:"deleted-local-project", name:"Project removed in another tab" };
+    await writer.evaluate(async (projects) => {
+      const { store } = await import("/src/store.js");
+      for (const project of projects) await store.save(project);
+    }, [fixture, deleted]);
+    const search = async (name) => {
+      await page.keyboard.press("Control+k");
+      await page.locator("#paletteSearch").fill(name);
+      const entry = page.getByRole("button", { name:`Project · ${name}`, exact:true });
+      await expect(entry).toBeVisible();
+      return entry;
+    };
+    const stale = await search(fixture.name);
+    const updated = { ...fixture, name:"Saved in the second tab", properties:{ version:"2" } };
+    await writer.evaluate(async (project) => {
+      const { store } = await import("/src/store.js");
+      await store.save(project);
+    }, updated);
+    await stale.click();
+    await expect(page.locator("#projectTitle")).toHaveText(updated.name);
+    const record = await writer.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      return { project:await store.get(id), revisions:(await store.history(id)).length };
+    }, fixture.id);
+    expect(record.project).toMatchObject({ name:updated.name, properties:{ version:"2" } });
+    expect(record.project.lastOpenedAt).toBeGreaterThanOrEqual(record.project.updatedAt);
+    expect(record.revisions).toBe(2);
+
+    const removed = await search(deleted.name);
+    await writer.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      await store.remove(id);
+    }, deleted.id);
+    await removed.click();
+    await expect(page.locator("#toast")).toContainText("Saved project is no longer available");
+    await expect(page.locator("#projectTitle")).toHaveText(updated.name);
+    const missing = await writer.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      return await store.get(id);
+    }, deleted.id);
+    expect(missing).toBeUndefined();
+  } finally {
+    await writer.close();
+  }
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");

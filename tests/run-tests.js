@@ -766,7 +766,7 @@ assert.match(app, /function alarmUiCopy\(\)/, "alarm labels share the four-local
 assert.ok(app.includes("./hardware.js") && serviceWorker.includes("./src/hardware.js"), "hardware inventory module is loaded and offline-cached");
 assert.ok(app.includes("createHardwareBomCsv(serializeProject()") && app.includes("createHardwareBomPrintHtml(serializeProject()"), "project inventory exports branded CSV and print BOMs");
 assert.ok(app.includes("function showProjectProperties(projectId)") && app.includes("data-properties=\"${p.id}\""), "project manager exposes editable project properties");
-assert.ok(app.includes("sortProjectsByRecent(await store.all())") && app.includes("await store.touch(project)"), "project manager orders by last open without creating snapshots on project open");
+assert.ok(app.includes("sortProjectsByRecent(await store.all())") && app.includes("await store.open(id,"), "project manager orders by last open without creating snapshots on project open");
 assert.ok(serviceWorker.includes("./src/project-list.js"), "offline shell caches recent-project sorting");
 assert.ok(app.includes("hmiPointerPosition(event.clientX, event.clientY, bounds") && app.includes('$("#snapToggle").addEventListener("change"'), "HMI snap control changes placement and persists its preference");
 assert.ok(serviceWorker.includes("./src/hmi-layout.js"), "offline shell caches HMI layout positioning");

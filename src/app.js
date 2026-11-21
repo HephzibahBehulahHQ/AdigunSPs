@@ -1254,11 +1254,28 @@ async function exportExampleTestReport() {
   const file = new Blob([`${headings}\r\n${rows.join("\r\n")}\r\n`], { type:"text/csv;charset=utf-8" });
   const link = document.createElement("a"); link.href = URL.createObjectURL(file); link.download = "adigunsps-example-test-report.csv"; link.click(); URL.revokeObjectURL(link.href); toast(t("exported"));
 }
+async function openSavedProject(id) {
+  if (!(await confirmProjectChange())) return;
+  let next;
+  try {
+    next = await store.open(id, ({ electrical }) => separateElectricalComponentOverlaps(electrical));
+  } catch (error) {
+    toast(error.message || t("projectUnavailable"));
+    return;
+  }
+  if (!next) { toast(t("projectUnavailable")); return; }
+  project = next;
+  setUnsavedChanges(false);
+  selection = null;
+  $("#modal").close();
+  stopSimulation();
+}
+
 async function showProjects() {
   if (accountAccess !== "member") { showAccount(); return; }
   const projects = sortProjectsByRecent(await store.all()), recentLabel = ({en:"Recent projects · last opened",de:"Zuletzt geöffnete Projekte",yo:"Àwọn iṣẹ́ tí a ṣí kẹ́yìn",pcm:"Projects wey person open last"})[language];
   modal(t("titleProjects"), `<div class="modal-body"><p class="safety-copy">${recentLabel}</p><div class="project-list">${projects.map((p) => `<div class="project-row"><button class="project-open" data-open="${p.id}"><b>${escapeHtml(p.name)}</b><small>${formatLocaleDateTime(p.lastOpenedAt || p.updatedAt,language)}</small></button><button data-properties="${p.id}" title="${({en:"Project properties",de:"Projekteigenschaften",yo:"Àwọn ànímọ́ iṣẹ́",pcm:"Project properties"})[language]}">⚙</button><button data-recover="${p.id}" title="Recover an earlier snapshot">↶</button><button data-duplicate="${p.id}" title="${t("duplicate")}">⧉</button><button data-rename="${p.id}" title="${t("rename")}">✎</button><button data-delete="${p.id}" title="${t("delete")}">×</button></div>`).join("")}</div><div class="modal-actions"><button class="primary" id="newProject">＋ ${t("new")}</button></div></div>`);
-  document.querySelectorAll("[data-open]").forEach((b) => b.onclick = async () => { if (!(await confirmProjectChange())) return; const next = await store.get(b.dataset.open); if (!next) return; project = next; separateElectricalComponentOverlaps(project.electrical); project.lastOpenedAt = Date.now(); await store.touch(project); setUnsavedChanges(false); selection = null; stopSimulation(); $("#modal").close(); render(); });
+  document.querySelectorAll("[data-open]").forEach((button) => button.onclick = () => openSavedProject(button.dataset.open));
   document.querySelectorAll("[data-properties]").forEach((b) => b.onclick = async () => showProjectProperties(b.dataset.properties));
   document.querySelectorAll("[data-recover]").forEach((b) => b.onclick = async () => showRecovery(b.dataset.recover));
   document.querySelectorAll("[data-duplicate]").forEach((b) => b.onclick = async () => { const source = await store.get(b.dataset.duplicate), copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.name += " copy"; copy.lastOpenedAt = Date.now(); await store.save(copy); showProjects(); });
@@ -1303,10 +1320,9 @@ async function showPalette() {
     const matches = entries.map((entry) => ({ entry, rank:query ? score(query, `${entry.label} ${entry.search || ""}`.toLocaleLowerCase()) : 0 })).filter((item) => item.rank < Infinity).sort((a, b) => a.rank - b.rank || a.entry.label.localeCompare(b.entry.label)).slice(0, 40);
     $("#paletteResults").innerHTML = matches.map(({entry}, index) => `<button class="palette-command" data-palette-index="${index}">${escapeHtml(entry.label)}</button>`).join("") || `<p class="safety-copy">${t("noMatches")}</p>`;
     $("#paletteResults").querySelectorAll("[data-palette-index]").forEach((button) => { const entry = matches[Number(button.dataset.paletteIndex)].entry; button.onclick = async () => {
-      if (entry.type === "project" && !(await confirmProjectChange())) return;
+      if (entry.type === "project") { await openSavedProject(entry.id); return; }
       $("#modal").close();
       if (entry.type === "command") { action(entry.action); return; }
-      if (entry.type === "project") { const target = projects.find((item) => item.id === entry.id); if (!target) return; stopSimulation(); project = target; separateElectricalComponentOverlaps(project.electrical); project.lastOpenedAt = Date.now(); await store.touch(project); setUnsavedChanges(false); sim = { outputs:{}, timers:{}, energized:{}, values:{ ...(project.initialState || {}) } }; scans = 0; render(); return; }
       if (entry.type === "tag") { showTags(); return; }
       await showExamples(entry.search);
     }; });
