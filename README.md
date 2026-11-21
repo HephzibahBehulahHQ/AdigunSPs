@@ -52,7 +52,7 @@ The application is designed for learning and early logic exploration. It does no
 
 - Create, open, rename, duplicate, save, autosave, import, and export browser-local projects; maintain recovery snapshots.
 - Manage BOOL, INT, REAL, and TIME tags, roles, aliases, addresses, initial values, and simulated I/O.
-- Convert supported simple LD networks to FBD with declared intermediate tags. PLCopen TC6 XML import/export supports series contacts and parallel OR paths with NO/NC contacts and normal coils; timers, counters, edge/set/reset coils, and other editor languages are rejected instead of silently discarded.
+- Convert supported simple LD networks to FBD with declared intermediate tags. PLCopen TC6 XML interchange supports series and parallel LD paths, NO/NC and edge contacts, normal/set/reset coils, and TON timers with an integer-millisecond preset and Q driving the coil. Other timer types, counters, and editor languages fall outside this subset.
 - Design multiple local HMI screens with simulated tag-bound controls, values, trends, alarms, recipes, and deterministic educational process models. The 2D process mimic is schematic, not engineering geometry.
 - Export I/O schedules, user-entered hardware inventories/BOMs, trend history, and simulation reports as CSV or print-ready HTML that can be saved as PDF through the browser's print dialog. Wiring worksheets and panel references contain user-entered data; they do not determine ratings or certify a design.
 - Use the offline Modbus TCP frame tool to inspect supported request/response frames and exceptions. It does not open a network connection or communicate with a PLC.
