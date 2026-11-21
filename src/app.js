@@ -188,7 +188,7 @@ function keyboardContactTarget(location, key) {
   const targetPath = rungPaths(project.rungs[rung])[branch];
   return targetPath?.length ? { rung, branch, contact:Math.min(location.contact, targetPath.length - 1) } : null;
 }
-function focusSelectedContact() { const target = selection; if (!target || target.kind !== "contact") return; requestAnimationFrame(() => $("#ladderCanvas").querySelector(`.contact[data-rung="${target.rung}"][data-branch="${target.branch}"][data-contact="${target.contact}"]`)?.focus()); }
+function focusSelectedContact() { const target = selection; if (!target || target.kind !== "contact") return; requestAnimationFrame(() => $("#ladderCanvas").querySelector(ladderInstructionSelector(target))?.focus()); }
 function setupContactPointerDrag(canvas) {
   if (canvas.dataset.pointerDragSetup) return; canvas.dataset.pointerDragSetup = "true";
   const clearTargets = () => canvas.querySelectorAll(".drop-target,.is-dragging").forEach((node) => node.classList.remove("drop-target","is-dragging"));
@@ -319,6 +319,10 @@ function bindLadderVirtualization(wrap) {
 }
 function renderLadder({ canvasOnly = false } = {}) {
   const canvas = $("#ladderCanvas"), wrap = $("#canvasWrap"), mode = project.editorType || "LD"; wrap.classList.toggle("hidden", workspaceView === "hmi" || workspaceView === "electrical" || mode !== "LD"); setupContactPointerDrag(canvas); bindLadderVirtualization(wrap); canvas.style.transform = `scale(${zoom / 100})`;
+  const active = document.activeElement;
+  const activeRung = active?.closest("#ladderCanvas article[data-rung]")?.dataset.rung;
+  const activeInstruction = activeRung !== undefined && active.matches(".contact, .coil") ?
+    ladderInstructionSelector({ rung:activeRung, kind:active.matches(".coil") ? "coil" : "contact", branch:active.dataset.branch, contact:active.dataset.contact }) : null;
   const virtualized = project.rungs.length > 80 && !ladderPrinting && (project.editorType || "LD") === "LD", layout = project.rungs.map(rungLayoutInfo), scale = zoom / 100;
   const canvasTop = canvas.getBoundingClientRect().top - (wrap.getBoundingClientRect().top + wrap.clientTop) + wrap.scrollTop;
   const windowRange = virtualized ? calculateRungWindow(layout.map((item) => item.height), Math.max(0, wrap.scrollTop - canvasTop), wrap.clientHeight, scale, Number.parseFloat(getComputedStyle(canvas).rowGap) || 16) : { start:0, end:project.rungs.length, top:0, bottom:0, total:0 };
@@ -358,6 +362,11 @@ function renderLadder({ canvasOnly = false } = {}) {
     if (paths.length > 1) logic.append(pathHost);
     if (rung.scale) { const block = document.createElement("div"), instructionLabel = ({ en:"SCALE instruction", de:"SCALE-Anweisung", yo:"Àṣẹ SCALE", pcm:"SCALE instruction" })[language] || "SCALE instruction"; block.className = "ladder-scale-block"; block.textContent = `SCALE ${rung.scale.inputTag} → ${rung.scale.outputTag} · ${rung.scale.rawMin}–${rung.scale.rawMax} → ${rung.scale.scaledMin}–${rung.scale.scaledMax}`; block.setAttribute("aria-label", `${instructionLabel}: ${block.textContent}`); logic.append(block); }
     const coil = document.createElement("div"), coilMode = rung.coilMode || "normal"; coil.className = `coil ${sim.outputs[rung.coil] ? "energized" : ""}`; coil.setAttribute("role", "button"); coil.setAttribute("tabindex", "0"); coil.setAttribute("aria-label", `${t("outputCoil")} ${rung.coil} ${coilMode}`); coil.innerHTML = `<span class="coil-label">${coilMode === "set" ? "S " : coilMode === "reset" ? "R " : ""}${escapeHtml(rung.coil || "Q0.0")}</span>`; coil.addEventListener("click", () => { selectedContacts.clear(); selection = { rung: rungIndex, kind: "coil" }; render(); }); logic.append(coil);
+    coil.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      coil.click();
+    });
     coil.addEventListener("contextmenu", (event) => { selectedContacts.clear(); selection = { rung:rungIndex, kind:"coil" }; render(); const copy = contextCopy[language] || contextCopy.en; showContextMenu(event, [{ label:copy.editCoil, action:() => $("#coilField")?.focus() }, { label:copy.deleteRung, danger:true, action:() => rungAction("delete", rungIndex) }]); });
     if (rung.timer) { const timer = document.createElement("div"); const elapsed = sim.timers[rung.timer.tag]?.elapsed || 0, remaining = Math.max(0, Number(rung.timer.preset) - elapsed); timer.className = `timer-chip ${sim.timers[rung.timer.tag]?.done ? "active" : ""}`; timer.textContent = `${rung.timer.type || "TON"} ${rung.timer.tag} · ${remaining} ms remaining`; timer.setAttribute("aria-label", `${rung.timer.type || "TON"} ${rung.timer.tag}, ${remaining} milliseconds remaining`); card.append(timer); }
     if (rung.counter) { const count = sim.counters?.[rung.counter.tag]?.count || 0, counter = document.createElement("button"); counter.className = `timer-chip ${sim.counters?.[rung.counter.tag]?.done ? "active" : ""}`; counter.textContent = `${rung.counter.type || "CTU"} ${rung.counter.tag} · ${count}/${rung.counter.preset}`; counter.setAttribute("aria-label", `${counterText} ${rung.counter.tag} ${count}/${rung.counter.preset}`); counter.onclick = () => { selectedContacts.clear(); selection = { rung:rungIndex, kind:"counter" }; render(); }; card.append(counter); }
@@ -375,6 +384,7 @@ function renderLadder({ canvasOnly = false } = {}) {
     const height = card.offsetHeight;
     if (height > 0) ladderRungHeights.set(rungLayout.key, { signature:rungLayout.signature, height });
   }
+  if (activeInstruction) canvas.querySelector(activeInstruction)?.focus({ preventScroll:true });
   if (canvasOnly) return;
   const names = inferTags();
   $("#inputCount").textContent = names.inputs.length; $("#outputCount").textContent = names.outputs.length;
@@ -462,38 +472,70 @@ function scrollFbdBlockIntoView(index, focus = false) {
   renderFbd();
   if (focus) root.querySelector(`[data-fbd-node="${index}"] [data-fbd-drag-handle]`)?.focus();
 }
+function ladderInstructionSelector(target) {
+  if (target.kind === "coil") return `article[data-rung="${target.rung}"] .coil`;
+  return `.contact[data-rung="${target.rung}"][data-branch="${target.branch}"][data-contact="${target.contact}"]`;
+}
+
+function bindLogicOutlineNavigation(tree, activateParent) {
+  const items = [...tree.querySelectorAll('[role="treeitem"]')];
+  let tabStop = items[0];
+  items.forEach((item, index) => { item.tabIndex = index === 0 ? 0 : -1; });
+  tree.onkeydown = (event) => {
+    const item = event.target.closest('[role="treeitem"]');
+    const index = items.indexOf(item);
+    if (index < 0) return;
+    if ((event.key === "Enter" || event.key === " ") && activateParent?.(item)) {
+      event.preventDefault();
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 :
+      Math.max(0, Math.min(items.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)));
+    event.preventDefault();
+    tabStop.tabIndex = -1;
+    tabStop = items[next];
+    tabStop.tabIndex = 0;
+    tabStop.focus();
+  };
+}
+
 function renderLogicOutline() {
   if (project.editorType === "FBD") {
     const tree = $("#fbdLogicTree"), summary = $("#fbdLogicOutlineSummary"); if (!tree || !summary) return;
     const copy = fbdAccessibilityCopy[language] || fbdAccessibilityCopy.en, blocks = project.fbdBlocks || [];
     summary.textContent = copy.title; tree.setAttribute("aria-label", copy.title);
-    tree.innerHTML = blocks.map((block, index) => `<button type="button" role="treeitem" tabindex="0" data-outline-fbd="${index}">${copy.block} ${index + 1} · ${escapeHtml(block.type)} · ${copy.output}: ${escapeHtml(block.outputTag || "—")} · ${copy.inputs}: ${escapeHtml((block.inputs || []).join(", ") || "—")}</button>`).join("");
+    tree.innerHTML = blocks.map((block, index) => `<button type="button" role="treeitem" data-outline-fbd="${index}">${copy.block} ${index + 1} · ${escapeHtml(block.type)} · ${copy.output}: ${escapeHtml(block.outputTag || "—")} · ${copy.inputs}: ${escapeHtml((block.inputs || []).join(", ") || "—")}</button>`).join("");
     tree.onclick = (event) => { const item = event.target.closest("[data-outline-fbd]"); if (!item) return; const index = Number(item.dataset.outlineFbd), block = project.fbdBlocks?.[index]; if (!block) return; fbdSelection.clear(); fbdSelection.add(block.id); scrollFbdBlockIntoView(index, true); };
-    tree.onkeydown = (event) => { if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return; const items = [...tree.querySelectorAll('[role="treeitem"]')], index = items.indexOf(event.target), next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : Math.max(0, Math.min(items.length - 1, index + (event.key === "ArrowDown" ? 1 : -1))); if (index < 0 || !items.length) return; event.preventDefault(); items[next].focus(); };
+    bindLogicOutlineNavigation(tree);
     return;
   }
   if (project.editorType === "SFC") {
     const tree = $("#sfcLogicTree"), summary = $("#sfcLogicOutlineSummary"); if (!tree || !summary) return;
     const copy = sfcAccessibilityCopy[language] || sfcAccessibilityCopy.en, model = project.sfc || makeDefaultSfc(), steps = model.steps || [], nameById = new Map(steps.map((step) => [step.id, step.name]));
     summary.textContent = copy.title; tree.setAttribute("aria-label", copy.title);
-    tree.innerHTML = `${steps.map((step) => `<button type="button" role="treeitem" tabindex="0" data-outline-sfc-step="${escapeAttr(step.id)}">${copy.step}: ${escapeHtml(step.name)} · ${escapeHtml((step.actions || []).join(", ") || "—")}</button>`).join("")}${(model.transitions || []).map((transition, index) => `<button type="button" role="treeitem" tabindex="0" data-outline-sfc-transition="${index}">${copy.transition}: ${escapeHtml(nameById.get(transition.from) || transition.from)} → ${escapeHtml(nameById.get(transition.to) || transition.to)} · ${copy.condition}: ${escapeHtml(transition.condition || "—")} (${escapeHtml(transition.mode || "NO")})</button>`).join("")}`;
+    tree.innerHTML = `${steps.map((step) => `<button type="button" role="treeitem" data-outline-sfc-step="${escapeAttr(step.id)}">${copy.step}: ${escapeHtml(step.name)} · ${escapeHtml((step.actions || []).join(", ") || "—")}</button>`).join("")}${(model.transitions || []).map((transition, index) => `<button type="button" role="treeitem" data-outline-sfc-transition="${index}">${copy.transition}: ${escapeHtml(nameById.get(transition.from) || transition.from)} → ${escapeHtml(nameById.get(transition.to) || transition.to)} · ${copy.condition}: ${escapeHtml(transition.condition || "—")} (${escapeHtml(transition.mode || "NO")})</button>`).join("")}`;
     tree.onclick = (event) => { const item = event.target.closest("[data-outline-sfc-step], [data-outline-sfc-transition]"); if (!item) return; const target = item.hasAttribute("data-outline-sfc-step") ? [...$("#sfcChart").querySelectorAll("[data-sfc-step]")].find((node) => node.dataset.sfcStep === item.dataset.outlineSfcStep) : $("#sfcChart").querySelector(`[data-sfc-transition="${item.dataset.outlineSfcTransition}"]`); if (!target) return; target.scrollIntoView({ block:"nearest", inline:"nearest" }); (target.matches(".sfc-step") ? target.querySelector("input") : target.querySelector('[data-transition-field="condition"]'))?.focus(); };
-    tree.onkeydown = (event) => { if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return; const items = [...tree.querySelectorAll('[role="treeitem"]')], index = items.indexOf(event.target), next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : Math.max(0, Math.min(items.length - 1, index + (event.key === "ArrowDown" ? 1 : -1))); if (index < 0 || !items.length) return; event.preventDefault(); items[next].focus(); };
+    bindLogicOutlineNavigation(tree);
     return;
   }
   const root = $("#logicOutline"); if (!root) return;
   const copy = ({ en:{title:"Logic outline",network:"Network",coil:"Output"}, de:{title:"Logikübersicht",network:"Netzwerk",coil:"Ausgang"}, yo:{title:"Àkótán ìlànà",network:"Nẹ́tíwọ́ọ̀kì",coil:"Ìjáde"}, pcm:{title:"Logic outline",network:"Network",coil:"Output"} })[language] || {title:"Logic outline",network:"Network",coil:"Output"};
   $("#logicOutlineSummary").textContent = copy.title; root.setAttribute("aria-label", copy.title);
   root.innerHTML = project.rungs.map((rung, rungIndex) => {
-    const contacts = rungPaths(rung).flatMap((branch, branchIndex) => branch.map((contact, contactIndex) => `<button type="button" role="treeitem" aria-level="2" tabindex="0" data-outline-rung="${rungIndex}" data-outline-branch="${branchIndex}" data-outline-contact="${contactIndex}">${escapeHtml(contact.tag)} · ${contact.mode}</button>`)).join("");
-    return `<div class="outline-node" role="treeitem" aria-expanded="true" tabindex="0" data-outline-parent="${rungIndex}"><span>${copy.network} ${String(rungIndex + 1).padStart(2, "0")} · ${escapeHtml(rung.comment || "")}</span><div role="group">${contacts}<button type="button" role="treeitem" aria-level="2" tabindex="0" data-outline-rung="${rungIndex}" data-outline-kind="coil">${copy.coil} · ${escapeHtml(rung.coil || "Q0.0")}</button></div></div>`;
+    const contacts = rungPaths(rung).flatMap((branch, branchIndex) => branch.map((contact, contactIndex) => `<button type="button" role="treeitem" aria-level="2" data-outline-rung="${rungIndex}" data-outline-branch="${branchIndex}" data-outline-contact="${contactIndex}">${escapeHtml(contact.tag)} · ${contact.mode}</button>`)).join("");
+    return `<div class="outline-node" role="treeitem" aria-expanded="true" data-outline-parent="${rungIndex}"><span>${copy.network} ${String(rungIndex + 1).padStart(2, "0")} · ${escapeHtml(rung.comment || "")}</span><div role="group">${contacts}<button type="button" role="treeitem" aria-level="2" data-outline-rung="${rungIndex}" data-outline-kind="coil">${copy.coil} · ${escapeHtml(rung.coil || "Q0.0")}</button></div></div>`;
   }).join("");
   root.onclick = (event) => {
     const item = event.target.closest("[data-outline-rung]");
-    if (item) { const rung = Number(item.dataset.outlineRung); if (item.dataset.outlineKind === "coil") { selectedContacts.clear(); selection = { rung, kind:"coil" }; } else { const location = { rung, branch:Number(item.dataset.outlineBranch), contact:Number(item.dataset.outlineContact), kind:"contact" }; selectedContacts = updateContactSelection(selectedContacts, location); selection = location; } render(); requestAnimationFrame(() => scrollToRung(rung)); return; }
+    if (item) { const rung = Number(item.dataset.outlineRung); if (item.dataset.outlineKind === "coil") { selectedContacts.clear(); selection = { rung, kind:"coil" }; } else { const location = { rung, branch:Number(item.dataset.outlineBranch), contact:Number(item.dataset.outlineContact), kind:"contact" }; selectedContacts = updateContactSelection(selectedContacts, location); selection = location; } const target = selection; render(); requestAnimationFrame(() => { scrollToRung(rung); $("#ladderCanvas").querySelector(ladderInstructionSelector(target))?.focus({ preventScroll:true }); }); return; }
     const parent = event.target.closest("[data-outline-parent]"); if (parent) scrollToRung(Number(parent.dataset.outlineParent));
   };
-  root.onkeydown = (event) => { if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-outline-parent]")) { event.preventDefault(); scrollToRung(Number(event.target.dataset.outlineParent)); return; } if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return; const items = [...root.querySelectorAll('[role="treeitem"]')], current = event.target.closest('[role="treeitem"]'), index = items.indexOf(current); if (index < 0) return; const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : Math.max(0, Math.min(items.length - 1, index + (event.key === "ArrowDown" ? 1 : -1))); event.preventDefault(); items[next].focus(); };
+  bindLogicOutlineNavigation(root, (item) => {
+    if (!item.hasAttribute("data-outline-parent")) return false;
+    scrollToRung(Number(item.dataset.outlineParent));
+    return true;
+  });
 }
 function renderInspector() {
   const root = $("#inspectorContent");

@@ -1,5 +1,9 @@
 # Verification record
 
+## Logic outline keyboard navigation — 2026-11-21
+
+Browser checks verify a single Tab entry point for LD, FBD, and SFC outlines. They cover selecting and focusing the final coil or block in a large import, activating a ladder coil with Enter, and moving from an SFC outline entry to its editor control. Screen-reader announcements still need manual verification.
+
 ## Offline project lifecycle — 2026-11-21
 
 Chrome, Playwright Firefox, and Playwright WebKit verified JSON import, autosave, reopening in a new tab, restoring an earlier snapshot, JSON download, and reimport while offline. The test uses a disposable cached member fixture and browser-local IndexedDB. Live authentication and cloud synchronization are separate acceptance items.
