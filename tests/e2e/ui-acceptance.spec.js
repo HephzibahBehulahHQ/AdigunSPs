@@ -749,7 +749,10 @@ test("SFC starts and resets to the configured step in an imported chart", async 
     io:{ inputs:["Advance"], outputs:["Lamp"] }, initialState:{ Advance:false },
     sfc:{ initialStep:"ready", outputs:["Lamp"],
       steps:[{ id:"idle", name:"Idle", actions:[] }, { id:"ready", name:"Ready", actions:["Lamp"] }],
-      transitions:[{ id:"advance", from:"ready", to:"idle", condition:"Advance", mode:"NO" }]
+      transitions:[
+        { id:"advance", from:"ready", to:"idle", condition:"Advance", mode:"NO" },
+        { id:"return", from:"idle", to:"ready", condition:"Advance", mode:"NC" }
+      ]
     }
   };
   await page.locator("#fileInput").setInputFiles({
@@ -771,6 +774,30 @@ test("SFC starts and resets to the configured step in an imported chart", async 
   await page.locator('[data-app-menu="plc"]').click();
   await page.getByRole("menuitem", { name:"Reset", exact:true }).click();
   await expect(ready).toHaveClass(/active/);
+
+  await page.locator('#inputList [data-input="Advance"]').uncheck();
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  const initial = page.getByRole("combobox", { name:"Initial step" });
+  await expect(initial).toHaveValue("ready");
+  await expect(ready).toHaveClass(/active/);
+  await initial.focus();
+  await initial.selectOption("idle");
+  await expect(initial).toBeFocused();
+  await expect(ready).toHaveClass(/active/);
+  const idle = page.locator('[data-sfc-step="idle"]');
+  await expect(idle.locator(".step-number")).toHaveText("●");
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Reset", exact:true }).click();
+  await expect(idle).toHaveClass(/active/);
+  await page.locator('[data-app-menu="file"]').click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name:"Export PLCopen XML", exact:true }).click()
+  ]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks).toString("utf8")).toMatch(/<step localId="\d+" name="Idle" initialStep="true">/);
 });
 
 test("PLCopen SFC sequence round-trips step actions, conditions, and the initial step", async ({ page }) => {
