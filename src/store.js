@@ -46,6 +46,23 @@ function projectVersions(snapshots, id) {
     .sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0) || b.savedAt - a.savedAt);
 }
 
+function putProjectRevision(transaction, project, abort) {
+  const { id, updatedAt } = project;
+  const snapshot = { id:`${id}:${updatedAt}:${crypto.randomUUID()}`, projectId:id, savedAt:updatedAt, project };
+  transaction.objectStore("projects").put(project);
+  const snapshots = transaction.objectStore("snapshots");
+  const previous = snapshots.getAll();
+  previous.onsuccess = () => {
+    try {
+      const versions = projectVersions(previous.result, id);
+      snapshots.put({ ...snapshot, revision:(versions[0]?.revision ?? 0) + 1 });
+      for (const item of versions.slice(24)) snapshots.delete(item.id);
+    } catch (error) {
+      abort(error);
+    }
+  };
+}
+
 export const store = {
   all: async () => {
     const projects = await requestStore("projects", "readonly", (s) => s.getAll());
@@ -72,24 +89,27 @@ export const store = {
   save: async (project) => {
     const updatedAt = Date.now();
     const savedProject = structuredClone({ ...project, updatedAt });
-    const snapshot = { id: `${project.id}:${updatedAt}:${crypto.randomUUID()}`, projectId: project.id, savedAt: updatedAt, project: savedProject };
     await runTransaction(["projects", "snapshots"], "readwrite", (transaction, _, abort) => {
-      transaction.objectStore("projects").put(savedProject);
-      const snapshots = transaction.objectStore("snapshots");
-      const previous = snapshots.getAll();
-      previous.onsuccess = () => {
-        try {
-          const versions = projectVersions(previous.result, savedProject.id);
-          snapshots.put({ ...snapshot, revision:(versions[0]?.revision ?? 0) + 1 });
-          for (const item of versions.slice(24)) snapshots.delete(item.id);
-        } catch (error) {
-          abort(error);
-        }
-      };
+      putProjectRevision(transaction, savedProject, abort);
     });
     project.updatedAt = updatedAt;
     return project;
   },
+  update: (id, apply) => runTransaction(["projects", "snapshots"], "readwrite", (transaction, setResult, abort) => {
+    const request = transaction.objectStore("projects").get(id);
+    request.onsuccess = () => {
+      const project = request.result;
+      if (!project) return;
+      try {
+        apply(project);
+        project.updatedAt = Date.now();
+        putProjectRevision(transaction, project, abort);
+        setResult(project);
+      } catch (error) {
+        abort(error);
+      }
+    };
+  }),
   remove: (id) => runTransaction(["projects", "snapshots"], "readwrite", (transaction) => {
     transaction.objectStore("projects").delete(id);
     const snapshots = transaction.objectStore("snapshots");

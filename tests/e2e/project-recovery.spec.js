@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("a cached member can reopen and restore a local project while offline", async ({ page, context }) => {
+async function useOfflineMember(page, context) {
   await page.goto("/?account=sign-in");
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   await page.evaluate(() => {
@@ -16,6 +16,10 @@ test("a cached member can reopen and restore a local project while offline", asy
     localStorage.setItem("adigun-safety-seen", "true");
   });
   await context.setOffline(true);
+}
+
+test("a cached member can reopen and restore a local project while offline", async ({ page, context }) => {
+  await useOfflineMember(page, context);
   try {
     await page.goto("/?offline-project=author", { waitUntil:"domcontentloaded" });
     await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
@@ -71,6 +75,90 @@ test("a cached member can reopen and restore a local project while offline", asy
   }
 });
 
+test("local project metadata edits preserve saves from another tab", async ({ page, context }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("adigun-preferences", JSON.stringify({ autosave:false }));
+  });
+  await useOfflineMember(page, context);
+  const writer = await context.newPage();
+  try {
+    await page.goto("/?offline-project=metadata", { waitUntil:"domcontentloaded" });
+    await writer.goto("/?offline-project=metadata-writer", { waitUntil:"domcontentloaded" });
+    await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
+    const id = "local-metadata-fixture", name = "Shared local metadata fixture";
+    await writer.evaluate(async ({ id, name }) => {
+      const { store } = await import("/src/store.js");
+      await store.save({ id, name, editorType:"LD",
+        tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+        io:{ inputs:["Start"], outputs:["Lamp"] }, initialState:{},
+        properties:{ author:"First author", version:"1" },
+        rungs:[{ id:"network", branches:[[{ tag:"Start", mode:"NO" }]], coil:"Lamp", comment:"First network" }] });
+    }, { id, name });
+    await page.locator("#projectMenu").click();
+    await page.locator(`[data-open="${id}"]`).click();
+    await expect(page.locator("#projectTitle")).toHaveText(name);
+    const workingComment = page.getByRole("textbox", { name:"Rung comment" });
+    await workingComment.fill("Unsaved first-tab draft");
+    await workingComment.press("Tab");
+    await expect(page.locator("#saveState")).toHaveText("Unsaved changes");
+    await page.locator("#projectMenu").click();
+    await page.locator(`[data-properties="${id}"]`).click();
+    await page.locator("#projectDescription").fill("Description from the first tab");
+    await writer.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      const project = await store.get(id);
+      project.properties.author = "Author from the second tab";
+      project.rungs[0].comment = "Network saved in the second tab";
+      await store.save(project);
+    }, id);
+    await page.locator("#saveProjectProperties").click();
+    await expect(page.locator(`[data-open="${id}"]`)).toBeVisible();
+    const read = () => writer.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      return { project:await store.get(id), count:(await store.history(id)).length };
+    }, id);
+    const afterProperties = await read();
+    expect(afterProperties.project.rungs[0].comment).toBe("Network saved in the second tab");
+    expect(afterProperties.project.properties).toMatchObject({
+      author:"Author from the second tab", description:"Description from the first tab"
+    });
+    expect(afterProperties.count).toBe(3);
+    await expect(workingComment).toHaveValue("Unsaved first-tab draft");
+
+    const renamed = "Renamed shared fixture";
+    const prompt = page.waitForEvent("dialog");
+    const click = page.locator(`[data-rename="${id}"]`).click();
+    const dialog = await prompt;
+    await writer.evaluate(async (id) => {
+      const { store } = await import("/src/store.js");
+      const project = await store.get(id);
+      project.properties.version = "2";
+      await store.save(project);
+    }, id);
+    await dialog.accept(renamed);
+    await click;
+    await expect(page.locator("#projectTitle")).toHaveText(renamed);
+    const afterRename = await read();
+    expect(afterRename.project.name).toBe(renamed);
+    expect(afterRename.project.properties.version).toBe("2");
+    expect(afterRename.count).toBe(5);
+
+    await page.locator(`[data-properties="${id}"]`).click();
+    await page.locator("#projectDescription").fill("Edited after deletion");
+    await writer.evaluate(async (projectId) => {
+      const { store } = await import("/src/store.js");
+      await store.remove(projectId);
+    }, id);
+    await page.locator("#saveProjectProperties").click();
+    await expect(page.locator("#toast")).toContainText("Saved project is no longer available");
+    expect(await read()).toEqual({ project:undefined, count:0 });
+    await expect(workingComment).toHaveValue("Unsaved first-tab draft");
+  } finally {
+    await context.setOffline(false);
+    await writer.close();
+  }
+});
+
 test("local project writes and recovery snapshots commit together", async ({ page }) => {
   await page.goto("/?account=sign-in");
   const result = await page.evaluate(async () => {
@@ -83,12 +171,19 @@ test("local project writes and recovery snapshots commit together", async ({ pag
       if (this.name === "snapshots") throw new Error("Injected snapshot failure");
       return originalPut.apply(this, args);
     };
-    let rejected = false;
+    let rejectedWrites = 0;
     try {
-      await store.save({ id, name:"Failed save" });
-    } catch (error) {
-      if (error.message !== "Injected snapshot failure") throw error;
-      rejected = true;
+      for (const write of [
+        () => store.save({ id, name:"Failed save" }),
+        () => store.update(id, (project) => { project.name = "Failed metadata update"; }),
+      ]) {
+        try {
+          await write();
+        } catch (error) {
+          if (error.message !== "Injected snapshot failure") throw error;
+          rejectedWrites++;
+        }
+      }
     } finally {
       IDBObjectStore.prototype.put = originalPut;
     }
@@ -107,7 +202,7 @@ test("local project writes and recovery snapshots commit together", async ({ pag
     const snapshots = await store.history(id);
     await store.remove(id);
     return {
-      rejected,
+      rejectedWrites,
       savedAfterFailure:afterFailure.name,
       snapshotsAfterFailure:historyAfterFailure.map(({ project }) => project.name),
       snapshotCount:snapshots.length,
@@ -116,7 +211,7 @@ test("local project writes and recovery snapshots commit together", async ({ pag
     };
   });
   expect(result).toEqual({
-    rejected:true,
+    rejectedWrites:2,
     savedAfterFailure:"First save",
     snapshotsAfterFailure:["First save"],
     snapshotCount:25,
