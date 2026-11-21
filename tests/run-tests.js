@@ -110,7 +110,7 @@ const plcopenTimerProject = {...defaultProject(), rungs:[{ id:"timer-rung", bran
 const plcopenTimerXml = createPlcopenXml(plcopenTimerProject);
 assert.ok(plcopenTimerXml.includes('<variable name="DelayTimer"><type><derived name="TON"/></type></variable>') && plcopenTimerXml.includes('typeName="TON" instanceName="DelayTimer"') && plcopenTimerXml.includes('<expression>T#1500ms</expression>'), "PLCopen TON export declares an instance and its TIME preset");
 assert.ok(plcopenTimerXml.includes('<block localId="4"') && plcopenTimerXml.includes('<connection refLocalId="4" formalParameter="Q"/>') && plcopenTimerXml.includes('<variable formalParameter="Q"><connectionPointOut>'), "PLCopen TON Q pin is represented and the output coil receives the block result");
-assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, type:"TOF"}}]}), /outside the supported PLCopen LD subset/, "non-TON timer export remains explicit");
+assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, type:"TP"}}]}), /outside the supported PLCopen LD subset/, "unsupported pulse timer export remains explicit");
 assert.throws(() => createPlcopenXml({...plcopenTimerProject, rungs:[{...plcopenTimerProject.rungs[0], timer:{...plcopenTimerProject.rungs[0].timer, preset:1.5}}]}), /outside the supported PLCopen LD subset/, "fractional millisecond timer presets are rejected rather than rounded");
 assert.throws(() => createPlcopenXml(makeProjectFromExample(examples[5])), /outside the supported PLCopen LD subset/, "PLCopen export refuses LD SCALE instructions without silent loss");
 assert.throws(() => parsePlcopenXml("<!DOCTYPE project [<!ENTITY x 'x'>]><project/>", null), /unsafe/, "PLCopen import rejects DTD and entity declarations");
@@ -137,7 +137,7 @@ const importedPlcopenTon = parsePlcopenXml("<project/>", PlcopenTonDomParserStub
 assert.deepEqual(importedPlcopenTon.rungs[0].timer, { tag:"DelayTimer", type:"TON", preset:1500, output:"DN" }, "PLCopen TON import restores the instance and integer-millisecond preset");
 let tonState = scan(importedPlcopenTon, { Start:true }, {}, 750); assert.equal(tonState.outputs.Motor, false);
 tonState = scan(importedPlcopenTon, { Start:true }, tonState, 750); assert.equal(tonState.outputs.Motor, true, "imported TON Q drives the coil after its preset");
-plcopenTonBlock.setAttribute("typeName", "TOF"); assert.throws(() => parsePlcopenXml("<project/>", PlcopenTonDomParserStub), /TON blocks only/, "PLCopen timer import rejects unsupported timer types"); plcopenTonBlock.setAttribute("typeName", "TON");
+plcopenTonBlock.setAttribute("typeName", "TP"); assert.throws(() => parsePlcopenXml("<project/>", PlcopenTonDomParserStub), /TON or TOF timer blocks only/, "PLCopen timer import rejects unsupported timer types"); plcopenTonBlock.setAttribute("typeName", "TON");
 const plcPous = descendantsForTest(plcRoot, "pous")[0].children;
 plcPous.push(node("pou", {pouType:"functionBlock"}));
 try {

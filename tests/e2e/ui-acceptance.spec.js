@@ -132,7 +132,7 @@ test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ p
     try {
       parsePlcopenXml(new XMLSerializer().serializeToString(ambiguous));
     } catch (error) {
-      if (!error.message.includes("multiple TON blocks")) throw error;
+      if (!error.message.includes("multiple timer blocks")) throw error;
       ambiguityRejected = true;
     }
     source.tags.push({ name:"adiguntimer_1", type:"BOOL" });
@@ -206,10 +206,10 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
 test("PLCopen Boolean FBD and numeric comparisons round-trip with direct dependencies", async ({ page }) => {
   const xml = await page.evaluate(async () => {
     const { createPlcopenXml } = await import("/src/plcopen.js");
-    return createPlcopenXml({
+    const authored = createPlcopenXml({
       name:"Boolean FBD XML exercise", editorType:"FBD",
       tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Stop", type:"BOOL", role:"input" },
-        { name:"Permit", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" },
+        { name:"Permit", type:"BOOL" }, { name:"fbdwire_1", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" },
         { name:"Temperature", type:"REAL", role:"input" }, { name:"Limit", type:"REAL", role:"input" },
         { name:"Above", type:"BOOL", role:"output" }, { name:"Below", type:"BOOL", role:"output" },
         { name:"Equal", type:"BOOL", role:"output" }],
@@ -222,6 +222,11 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
         { id:"equal", type:"EQ", inputs:["Temperature", "Limit"], outputTag:"Equal" }
       ]
     });
+    const document = new DOMParser().parseFromString(authored, "application/xml");
+    const wireOnly = [...document.getElementsByTagNameNS("*", "outVariable")]
+      .find((node) => node.getElementsByTagNameNS("*", "expression")[0]?.textContent === "Permit");
+    wireOnly.remove();
+    return new XMLSerializer().serializeToString(document);
   });
   expect(xml).toContain('<block localId="1" typeName="NOT"');
   expect(xml).toContain('<connection refLocalId="1" formalParameter="OUT"/>');
@@ -257,6 +262,8 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   const exported = Buffer.concat(chunks).toString("utf8");
   expect(exported).toContain("<FBD>");
+  expect(exported).toContain('<variable name="FbdWire_2"><type><BOOL/>');
+  expect(exported).toContain("<expression>FbdWire_2</expression>");
   for (const type of ["GT", "LT", "EQ"]) expect(exported).toContain(`typeName="${type}"`);
   await page.locator("#fileInput").setInputFiles({
     name:"mixed-comparison.xml", mimeType:"application/xml",
@@ -269,6 +276,46 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
   });
   await expect(page.locator("#toast")).toContainText("PLCopen FBD source must reference a variable or the OUT pin");
   await expect(page.locator("#projectTitle")).toHaveText("Boolean FBD XML exercise");
+});
+
+test("PLCopen LD TOF XML preserves off-delay coil behavior", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scan } = await import("/src/engine.js");
+    const source = {
+      name:"Off-delay exercise", editorType:"LD",
+      tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+      rungs:[{ branches:[[{ tag:"Start", mode:"NO" }]], coil:"Lamp",
+        timer:{ tag:"T0.0", type:"TOF", preset:200, output:"DN" } }]
+    };
+    const inputs = [false, true, false, false, true, false, true];
+    const execute = (project) => {
+      let state = {};
+      return inputs.map((Start) => {
+        state = scan(project, { Start }, state, 100);
+        return state.outputs.Lamp;
+      });
+    };
+    const xml = createPlcopenXml(source), restored = parsePlcopenXml(xml);
+    const timer = restored.rungs[0].timer;
+    let declarationError;
+    try {
+      parsePlcopenXml(xml.replace('<derived name="TOF"/>', '<derived name="TON"/>'));
+    } catch (error) {
+      declarationError = error.message;
+    }
+    const original = execute({ ...source, io:restored.io });
+    source.rungs[0].timer.output = "EN";
+    return {
+      timer, original,
+      delayed:execute(restored), immediate:execute(parsePlcopenXml(createPlcopenXml(source))), declarationError
+    };
+  });
+  expect(result.timer).toEqual({ tag:"T0.0", type:"TOF", preset:200, output:"DN" });
+  expect(result.delayed).toEqual([false, true, true, false, true, true, true]);
+  expect(result.delayed).toEqual(result.original);
+  expect(result.immediate).toEqual([false, true, false, false, true, false, true]);
+  expect(result.declarationError).toContain("declaration must match its block type");
 });
 
 test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {

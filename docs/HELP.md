@@ -56,7 +56,7 @@ Escape closes menus. Use arrow keys and Enter in logic outlines. Open phone draw
 
 ## Program Main
 
-In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `Start` and `Stop` inputs and a BOOL `Motor` output under **Tags and I/O**. Add a rung with Start NO and Stop NC before the Motor coil; add a Motor NO holding branch if needed. Set inputs in **Simulated inputs**, then use **Run** or **Step** and check diagnostics. Logic simulation does not imply motor physics.
+In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `Start` and `Stop` inputs and a BOOL `Motor` output under **Tags and I/O**. Add a rung with Start NO and Stop NC before the Motor coil; add a Motor NO holding branch if needed. Set inputs in **Simulated inputs**, then use **Run** or **Step** and check diagnostics. Logic simulation does not imply motor physics. PLCopen ladder interchange preserves TON on-delay and TOF off-delay timers with whole-millisecond presets.
 
 ## Components / Schematic
 
@@ -93,7 +93,7 @@ If a step does not match the example, follow that project's **How to test** and 
 1. For signed-in users, autosave is enabled by default and stores changes in this browser. Guest autosave keeps only a temporary draft in the current tab. To change autosave, open **Settings** (⚙), adjust the preference, and select **Done**.
 2. After signing in, choose **Save** or **File → Save locally (JSON)** and save the downloaded project file. **Save as** creates a named copy; in **Account**, enter **Cloud project name** and select **Save to Cloud** (new copy). Guests must authenticate before permanently saving or exporting a project file.
 3. If autosave is off, select **Save** before closing. With unsaved edits, the browser asks before leaving; if storage is unavailable, export a JSON copy.
-4. Restore snapshots via **Project manager**. PLCopen XML preserves one cyclic task assigned to the imported program. **File → Import** accepts supported PLCopen ladder, Structured Text, and FBD with Boolean gates and same-type numeric comparisons.
+4. Restore snapshots via **Project manager**. PLCopen XML preserves one cyclic task assigned to the imported program. **File → Import** accepts supported PLCopen ladder, Structured Text, and FBD with Boolean gates and same-type numeric comparisons. Direct block connections without a named output variable become local BOOL tags.
 
 ## Using commands
 
