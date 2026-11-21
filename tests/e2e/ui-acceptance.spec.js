@@ -1750,6 +1750,20 @@ test("all application menus stay reachable within desktop viewports", async ({ p
   await expect(page.locator("#modal")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(file).toBeFocused();
+
+  const edit = page.locator('[data-app-menu="edit"]');
+  const view = page.locator('[data-app-menu="view"]');
+  const editMenu = page.getByRole("menu", { name:"Edit", exact:true });
+  await edit.press("Enter");
+  await expect(editMenu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(editMenu).toBeHidden();
+  await expect(view).toBeFocused();
+  await edit.press("Enter");
+  await expect(editMenu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(editMenu).toBeHidden();
+  await expect(file).toBeFocused();
 });
 
 test("Help menu switches between workspace topics, quickstart, and the navigable manual", async ({ page }) => {
