@@ -206,6 +206,32 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen FBD negated gate outputs preserve their truth tables", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scanFBD } = await import("/src/engine.js");
+    const gates = ["NAND", "NOR", "XNOR"];
+    const project = {
+      name:"Negated gates", editorType:"FBD",
+      tags:[{ name:"A", type:"BOOL", role:"input" }, { name:"B", type:"BOOL", role:"input" },
+        ...gates.map((type) => ({ name:type + "Result", type:"BOOL", role:"output" }))],
+      fbdBlocks:gates.map((type) => ({ type, inputs:["A","B"], outputTag:type + "Result" }))
+    };
+    const xml = createPlcopenXml(project);
+    const restored = parsePlcopenXml(xml);
+    return {
+      negatedPins:(xml.match(/formalParameter="OUT" negated="true"/g) || []).length,
+      types:restored.fbdBlocks.map(({ type }) => type),
+      rows:[[false,false], [false,true], [true,false], [true,true]].map(([A,B]) => {
+        const { outputs } = scanFBD(restored.fbdBlocks, { A,B }, {}, restored.io.outputs);
+        return gates.map((type) => outputs[type + "Result"]);
+      })
+    };
+  });
+  expect(result).toEqual({ negatedPins:3, types:["NAND","NOR","XNOR"],
+    rows:[[true,true,true], [true,false,false], [true,false,false], [false,false,true]] });
+});
+
 test("PLCopen FBD arithmetic preserves typed unnamed wires", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
