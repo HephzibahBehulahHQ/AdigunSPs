@@ -79,6 +79,14 @@ test("a cached member can reopen and restore a local project while offline", asy
     await reopened.locator(`[data-recover="${originalId}"]`).click();
     await reopened.locator("[data-restore]").first().click();
     await expect(reopenedComment).toHaveValue("Original network");
+    await reopened.locator("#projectMenu").click();
+    await reopened.locator(`[data-recover="${originalId}"]`).click();
+    await reopened.getByRole("button", { name:"Compare logic" }).last().click();
+    await expect(reopened.getByText("No logic changes in the compared sections.")).toBeVisible();
+    await reopened.getByLabel("Compare with").selectOption("1");
+    await expect(reopened.locator("pre").filter({ hasText:"Original network" })).toBeVisible();
+    await expect(reopened.locator("pre").filter({ hasText:"Edited offline" })).toBeVisible();
+    await reopened.getByRole("button", { name:"Close dialog" }).click();
     await reopened.locator('[data-app-menu="file"]').click();
     const [download] = await Promise.all([
       reopened.waitForEvent("download"),
