@@ -312,18 +312,20 @@ function bindLadderVirtualization(wrap) {
   ladderVirtualEventsBound = true;
   wrap.addEventListener("scroll", () => {
     if (project.rungs.length <= 80 || ladderPrinting || project.editorType && project.editorType !== "LD" || ladderVirtualFrame) return;
-    ladderVirtualFrame = requestAnimationFrame(() => { ladderVirtualFrame = 0; renderLadder(); });
+    ladderVirtualFrame = requestAnimationFrame(() => { ladderVirtualFrame = 0; renderLadder({ canvasOnly:true }); });
   }, { passive:true });
   window.addEventListener("beforeprint", () => { ladderPrinting = true; renderLadder(); });
   window.addEventListener("afterprint", () => { ladderPrinting = false; renderLadder(); });
 }
-function renderLadder() {
-  const canvas = $("#ladderCanvas"), wrap = $("#canvasWrap"), mode = project.editorType || "LD"; wrap.classList.toggle("hidden", workspaceView === "hmi" || workspaceView === "electrical" || mode !== "LD"); setupContactPointerDrag(canvas); bindLadderVirtualization(wrap); canvas.style.transform = `scale(${zoom / 100})`; canvas.innerHTML = "";
+function renderLadder({ canvasOnly = false } = {}) {
+  const canvas = $("#ladderCanvas"), wrap = $("#canvasWrap"), mode = project.editorType || "LD"; wrap.classList.toggle("hidden", workspaceView === "hmi" || workspaceView === "electrical" || mode !== "LD"); setupContactPointerDrag(canvas); bindLadderVirtualization(wrap); canvas.style.transform = `scale(${zoom / 100})`;
   const virtualized = project.rungs.length > 80 && !ladderPrinting && (project.editorType || "LD") === "LD", layout = project.rungs.map(rungLayoutInfo), scale = zoom / 100;
   const canvasTop = canvas.getBoundingClientRect().top - (wrap.getBoundingClientRect().top + wrap.clientTop) + wrap.scrollTop;
   const windowRange = virtualized ? calculateRungWindow(layout.map((item) => item.height), Math.max(0, wrap.scrollTop - canvasTop), wrap.clientHeight, scale, Number.parseFloat(getComputedStyle(canvas).rowGap) || 16) : { start:0, end:project.rungs.length, top:0, bottom:0, total:0 };
   canvas.setAttribute("aria-setsize", String(project.rungs.length));
-  const addSpacer = (height, label) => { if (height <= 0) return; const spacer = document.createElement("div"); spacer.className = "rung-virtual-spacer"; spacer.setAttribute("aria-hidden", "true"); spacer.dataset.virtualSpace = label; spacer.style.height = `${height}px`; canvas.append(spacer); };
+  const visibleRungs = document.createDocumentFragment();
+  const measurements = [];
+  const addSpacer = (height, label) => { if (height <= 0) return; const spacer = document.createElement("div"); spacer.className = "rung-virtual-spacer"; spacer.setAttribute("aria-hidden", "true"); spacer.dataset.virtualSpace = label; spacer.style.height = `${height}px`; visibleRungs.append(spacer); };
   addSpacer(windowRange.top, "before");
   const multiSelectHint = ({ en:"Shift-click to add or remove from selection", de:"Umschalt-Klick fügt zur Auswahl hinzu oder entfernt", yo:"Tẹ Shift láti fi kún àṣàyàn tàbí yọ kúrò", pcm:"Hold Shift click to add or remove selection" })[language];
   const moveHint = ({ en:"Shift+Arrow keys move", de:"Umschalt+Pfeiltasten verschieben", yo:"Lo Shift àti ọfà láti gbé e", pcm:"Hold Shift with arrow keys to move" })[language];
@@ -364,10 +366,16 @@ function renderLadder() {
     card.querySelectorAll("[data-rung-action]").forEach((button) => button.addEventListener("click", () => rungAction(button.dataset.rungAction, rungIndex)));
     card.addEventListener("contextmenu", (event) => { if (event.target.closest(".contact, .coil, input, button, select, textarea")) return; const copy = contextCopy[language] || contextCopy.en; showContextMenu(event, [{ label:copy.addContact, action:() => rungAction("add", rungIndex) }, { label:copy.addBranch, action:() => rungAction("branch", rungIndex) }, { label:copy.addTimer, action:() => rungAction("timer", rungIndex) }, { label:copy.addCounter, action:() => rungAction("counter", rungIndex) }, { separator:true }, { label:copy.duplicateRung, action:() => { copiedRung = structuredClone(project.rungs[rungIndex]); selection = { rung:rungIndex, kind:"coil" }; pasteRung(); } }, { label:copy.deleteRung, danger:true, action:() => rungAction("delete", rungIndex) }]); });
     card.setAttribute("aria-posinset", String(rungIndex + 1)); card.setAttribute("aria-setsize", String(project.rungs.length));
-    canvas.append(card);
-    const actualHeight = card.offsetHeight; if (actualHeight > 0) ladderRungHeights.set(rungLayout.key, { signature:rungLayout.signature, height:actualHeight });
+    visibleRungs.append(card);
+    measurements.push({ card, rungLayout });
   });
   addSpacer(windowRange.bottom, "after");
+  canvas.replaceChildren(visibleRungs);
+  for (const { card, rungLayout } of measurements) {
+    const height = card.offsetHeight;
+    if (height > 0) ladderRungHeights.set(rungLayout.key, { signature:rungLayout.signature, height });
+  }
+  if (canvasOnly) return;
   const names = inferTags();
   $("#inputCount").textContent = names.inputs.length; $("#outputCount").textContent = names.outputs.length;
   const inputTypes = new Map((project.tags || []).map((tag) => [tag.name, tag.type || "BOOL"]));
@@ -439,7 +447,7 @@ function scrollToRung(index) {
   const layout = project.rungs.slice(0, index).reduce((height, item, itemIndex) => height + rungLayoutInfo(item, itemIndex).height + (itemIndex < index - 1 ? gap : 0), 0);
   const canvasTop = canvas.getBoundingClientRect().top - (wrap.getBoundingClientRect().top + wrap.clientTop) + wrap.scrollTop;
   wrap.scrollTo({ top:canvasTop + layout * zoom / 100, behavior:"auto" });
-  renderLadder();
+  renderLadder({ canvasOnly:true });
   const loaded = canvas.querySelector(`[data-rung="${index}"]`);
   if (loaded) wrap.scrollTo({ top:wrap.scrollTop + loaded.getBoundingClientRect().top - wrap.getBoundingClientRect().top, behavior:"smooth" });
 }
@@ -617,6 +625,7 @@ function bindFbdVirtualization(pane) {
   }, { passive:true });
 }
 function renderFbd() {
+  const focusedHandle = $("#fbdBlocks").contains(document.activeElement) ? document.activeElement.dataset.fbdDragHandle : null;
   const root = $("#fbdBlocks"), blocks = project.fbdBlocks || [], types = ["AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR", "TON", "TOF", "TP", "RTO", "CTU", "CTD", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"], scaleLabels = ({ en:["Raw minimum","Raw maximum","Scaled minimum","Scaled maximum"], de:["Rohwert Minimum","Rohwert Maximum","Skalierter Mindestwert","Skalierter Höchstwert"], yo:["Iye aise tó kéré jù","Iye aise tó pọ̀ jù","Iye àbájáde tó kéré jù","Iye àbájáde tó pọ̀ jù"], pcm:["Raw minimum","Raw maximum","Scaled minimum","Scaled maximum"] })[language], scaleFields = [["rawMin",scaleLabels[0],0],["rawMax",scaleLabels[1],1000],["scaledMin",scaleLabels[2],0],["scaledMax",scaleLabels[3],100]];
   const pane = $("#fbdPane"), retained = [...fbdSelection, ...(fbdKeyboardWireStart == null ? [] : [blocks[fbdKeyboardWireStart]?.id])].filter(Boolean); bindFbdVirtualization(pane); const positions = blocks.map(fbdBlockPosition), virtualized = blocks.length > 100, scale = zoom / 100, visibleIndices = virtualized ? fbdVisibleBlockIndices(blocks, { left:pane.scrollLeft / scale, top:Math.max(0, pane.scrollTop / scale - 9), width:pane.clientWidth / scale, height:pane.clientHeight / scale }, retained) : blocks.map((_, index) => index); root.setAttribute("aria-setsize", String(blocks.length));
   root.innerHTML = blocks.length ? `<svg class="fbd-wires" aria-hidden="true"></svg>${visibleIndices.map((index) => { const block = blocks[index], value = sim.values[block.outputTag], shown = typeof value === "boolean" ? String(value).toUpperCase() : Number.isFinite(Number(value)) ? String(value) : "0", inputs = block.inputs || []; return `<article class="fbd-block" data-fbd-node="${index}"><div class="fbd-index">${String(index + 1).padStart(2, "0")}</div><div class="fbd-input-ports">${inputs.map((tag, inputIndex) => `<button type="button" class="fbd-port fbd-input-port" data-fbd-input-handle="${index}" data-fbd-input-index="${inputIndex}" aria-label="Connect input ${escapeAttr(tag)} on block ${index + 1}">${escapeHtml(tag)}</button>`).join("")}</div><label>Function<select data-fbd-index="${index}" data-fbd-field="type">${types.map((type) => `<option ${type === block.type ? "selected" : ""}>${type}</option>`).join("")}</select></label><label>Inputs<input data-fbd-index="${index}" data-fbd-field="inputs" value="${escapeAttr(inputs.join(", "))}" placeholder="Start, Permit"></label><label>Output tag<input data-fbd-index="${index}" data-fbd-field="outputTag" value="${escapeAttr(block.outputTag || "")}"></label>${["CTU", "CTD"].includes(block.type) ? `<label>Count value tag (numeric)<input data-fbd-index="${index}" data-fbd-field="countTag" value="${escapeAttr(block.countTag || "")}" placeholder="PartCount"></label>` : ""}${["TON", "TOF", "TP", "RTO", "CTU", "CTD"].includes(block.type) ? `<label>${["CTU", "CTD"].includes(block.type) ? "Count preset" : "Preset ms"}<input type="number" min="1" data-fbd-index="${index}" data-fbd-field="preset" value="${Number(block.preset) || 1000}"></label>` : ""}${block.type === "SCALE" ? scaleFields.map(([key,label,fallback]) => `<label>${label}<input type="number" step="any" data-fbd-index="${index}" data-fbd-field="${key}" value="${Number.isFinite(Number(block[key])) ? block[key] : fallback}"></label>`).join("") : ""}<span class="fbd-value">${escapeHtml(block.outputTag || "Output")} = ${escapeHtml(shown)}${["CTU", "CTD"].includes(block.type) ? ` · CV ${sim.counters?.[block.id]?.count || 0}` : ""}</span><button type="button" class="fbd-port fbd-output-port" data-fbd-output-handle="${index}" aria-label="Drag output ${escapeAttr(block.outputTag || "Output")} from block ${index + 1}">${escapeHtml(block.outputTag || "Output")} ◉</button><button class="tag-remove" data-fbd-delete="${index}" aria-label="Delete function block">×</button></article>`; }).join("")}` : '<p class="empty-message">Add a function block and connect its output ports to downstream inputs.</p>';
@@ -648,6 +657,7 @@ function renderFbd() {
     event.preventDefault(); const id = handle.dataset.fbdDragHandle, selected = fbdSelection.has(id) ? [...fbdSelection] : [id], origins = Object.fromEntries(blocks.map((block,index) => [block.id, fbdBlockPosition(block,index)]));
     pushHistory(); project.fbdBlocks = moveFbdBlocks(blocks, selected, origins, ...directions[event.key], true); render(); persist(); root.querySelector(`[data-fbd-drag-handle="${CSS.escape(id)}"]`)?.focus();
   }));
+  if (focusedHandle) root.querySelector(`[data-fbd-drag-handle="${CSS.escape(focusedHandle)}"]`)?.focus({ preventScroll:true });
 }
 function drawFbdConnections(root, blocks) {
   const svg = root.querySelector(".fbd-wires"); if (!svg) return;

@@ -94,6 +94,54 @@ test("PLCopen TON XML round-trips through the browser parser and drives the coil
   expect(result).toEqual([[false, true], [false, true]]);
 });
 
+test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {
+  const count = 240;
+  const outputs = Array.from({ length:count }, (_, index) => `Output_${index}`);
+  const tags = [{ name:"Start", type:"BOOL", role:"input" },
+    ...outputs.map((name) => ({ name, type:"BOOL", role:"output" }))];
+  const shared = { tags, io:{ inputs:["Start"], outputs }, initialState:{} };
+  const importProject = async (project) => {
+    await page.locator("#fileInput").setInputFiles({
+      name:"large-project.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+    });
+    await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  };
+
+  await importProject({ ...shared, name:"Large ladder project", editorType:"LD",
+    rungs:outputs.map((coil, index) => ({ id:`rung-${index}`, branches:[[{ tag:"Start", mode:"NO" }]], coil }))
+  });
+  const ladder = page.locator("#ladderCanvas");
+  const rungs = ladder.locator(":scope > [data-rung]");
+  const lastRung = ladder.locator(`:scope > [data-rung="${count - 1}"]`);
+  await expect(ladder).toHaveAttribute("aria-setsize", String(count));
+  await expect(rungs.first()).toBeVisible();
+  expect(await rungs.count()).toBeLessThan(count / 4);
+  const outputRow = page.locator("#outputList .io-row").first();
+  await outputRow.evaluate((row) => { row.dataset.retainedDuringScroll = "true"; });
+  await page.locator("#logicOutlineSummary").press("Enter");
+  await page.locator(`[data-outline-parent="${count - 1}"]`).press("Enter");
+  await expect(lastRung).toBeInViewport();
+  await expect(outputRow).toHaveAttribute("data-retained-during-scroll", "true");
+  expect(await rungs.count()).toBeLessThan(count / 4);
+
+  await importProject({ ...shared, name:"Large block project", editorType:"FBD", rungs:[],
+    fbdBlocks:outputs.map((outputTag, index) => ({
+      id:`block-${index}`, type:"NOT", inputs:["Start"], outputTag, x:40, y:index * 300
+    }))
+  });
+  const blocks = page.locator("#fbdBlocks [data-fbd-node]");
+  const lastBlock = page.locator(`#fbdBlocks [data-fbd-node="${count - 1}"] [data-fbd-drag-handle]`);
+  await expect(blocks.first()).toBeVisible();
+  expect(await blocks.count()).toBeLessThan(count / 4);
+  await page.locator("#fbdLogicOutlineSummary").press("Enter");
+  await page.locator('[data-outline-fbd="0"]').press("End");
+  await expect(page.locator(`[data-outline-fbd="${count - 1}"]`)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(lastBlock).toBeFocused();
+  await expect(lastBlock).toBeInViewport();
+  expect(await blocks.count()).toBeLessThan(count / 4);
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");
