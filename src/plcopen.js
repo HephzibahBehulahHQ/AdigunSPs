@@ -1,6 +1,7 @@
 import { compileStructuredText } from "./structured-text.js";
 import { validateFbdBlocks } from "./fbd-validation.js";
 import { fbdBlockPosition } from "./fbd-layout.js";
+import { orderFbdBlocks } from "./engine.js";
 
 const NS = "http://www.plcopen.org/xml/tc6_0201";
 const XHTML = "http://www.w3.org/1999/xhtml";
@@ -111,13 +112,14 @@ function readStSource(body, tags) {
 }
 
 const FBD_COMPARISONS = new Set(["GT", "LT", "EQ"]);
+const FBD_ARITHMETIC = new Set(["ADD", "SUB", "MUL"]);
 
 function fbdPins(type, count) {
   if (type === "NOT" && count === 1) return ["IN"];
-  if (((type === "XOR" || FBD_COMPARISONS.has(type)) && count === 2) || (["AND", "OR"].includes(type) && count >= 2 && count <= 8)) {
+  if (((type === "XOR" || FBD_COMPARISONS.has(type) || FBD_ARITHMETIC.has(type)) && count === 2) || (["AND", "OR"].includes(type) && count >= 2 && count <= 8)) {
     return Array.from({ length:count }, (_, index) => `IN${index + 1}`);
   }
-  throw new Error("PLCopen FBD supports NOT, two-input XOR/GT/LT/EQ, and AND/OR with two to eight inputs.");
+  throw new Error("PLCopen FBD supports NOT, two-input XOR/GT/LT/EQ/ADD/SUB/MUL, and AND/OR with two to eight inputs.");
 }
 
 function checkedFbdBlocks(project) {
@@ -128,17 +130,19 @@ function checkedFbdBlocks(project) {
     const inputs = block.inputs || [];
     fbdPins(block.type, inputs.length);
     const output = tags.get(block.outputTag);
-    if (output?.type !== "BOOL" || output.role === "input" || project.io?.inputs?.includes(block.outputTag)) {
-      throw new Error("PLCopen FBD blocks require a declared BOOL result and cannot write to input tags.");
-    }
     const inputTypes = inputs.map((name) => tags.get(name)?.type);
-    const expectedType = inputTypes[0];
-    if (FBD_COMPARISONS.has(block.type)) {
-      if (!["INT", "REAL"].includes(expectedType) || inputTypes[1] !== expectedType) {
-        throw new Error("PLCopen FBD comparisons require two declared inputs of the same INT or REAL type.");
+    const [inputType, secondInputType] = inputTypes;
+    const arithmetic = FBD_ARITHMETIC.has(block.type);
+    if (FBD_COMPARISONS.has(block.type) || arithmetic) {
+      if (!["INT", "REAL"].includes(inputType) || secondInputType !== inputType) {
+        throw new Error(`PLCopen FBD ${arithmetic ? "arithmetic" : "comparisons"} require two declared inputs of the same INT or REAL type.`);
       }
     } else if (!inputTypes.every((type) => type === "BOOL")) {
       throw new Error("PLCopen FBD Boolean gates require declared BOOL inputs.");
+    }
+    const outputType = arithmetic ? inputType : "BOOL";
+    if (output?.type !== outputType || output.role === "input" || project.io?.inputs?.includes(block.outputTag)) {
+      throw new Error(`PLCopen FBD blocks require a declared ${outputType} result and cannot write to input tags.`);
     }
   }
   const errors = validateFbdBlocks(project);
@@ -348,8 +352,9 @@ function readFbdSource(node, nodes) {
   }
   const connection = connections[0], id = connection.getAttribute("refLocalId"), source = nodes.get(id);
   const pin = connection.getAttribute("formalParameter");
-  if (!source || (source.localName === "block" ? pin !== null && pin !== "OUT" : pin !== null)) {
-    throw new Error("PLCopen FBD source must reference a variable or the OUT pin of a supported block.");
+  const output = source?.localName === "block" ? child(child(source, "outputVariables"), "variable") : null;
+  if (!source || (pin !== null && pin !== output?.getAttribute("formalParameter"))) {
+    throw new Error("PLCopen FBD source must reference a variable or the declared output pin of a supported block.");
   }
   return source;
 }
@@ -381,7 +386,6 @@ function readFbdBody(body, imported) {
     let name;
     do { name = `FbdWire_${wireNumber++}`; } while (usedNames.has(name.toUpperCase()));
     usedNames.add(name.toUpperCase());
-    imported.tags.push({ name, type:"BOOL" });
     outputs.set(node, name);
     wireOutputs.add(node);
   }
@@ -394,7 +398,7 @@ function readFbdBody(body, imported) {
     const pinNames = new Map(pins.map((pin) => [pin.getAttribute("formalParameter"), pin]));
     const output = children(child(node, "outputVariables"), "variable");
     if (node.getAttribute("instanceName") || children(child(node, "inOutVariables"), "variable").length ||
-        output.length !== 1 || output[0].getAttribute("formalParameter") !== "OUT" ||
+        output.length !== 1 || !["OUT", "OUT1"].includes(output[0].getAttribute("formalParameter")) ||
         expectedPins.some((pin) => !pinNames.has(pin))) {
       throw new Error("PLCopen FBD block pins or output assignment are outside the supported subset.");
     }
@@ -423,6 +427,16 @@ function readFbdBody(body, imported) {
   }
   if ([...nodes.values()].some((node) => node.localName === "inVariable" && !usedInputs.has(node))) {
     throw new Error("PLCopen FBD contains an input variable outside the imported networks.");
+  }
+  const unnamedTags = new Set([...wireOutputs].map((node) => outputs.get(node)));
+  const ordered = orderFbdBlocks(blocks);
+  if (ordered.errors.length) throw new Error(ordered.errors[0]);
+  const types = new Map(imported.tags.map(({ name, type }) => [name, type]));
+  for (const block of ordered.blocks) {
+    if (!unnamedTags.has(block.outputTag)) continue;
+    const type = FBD_ARITHMETIC.has(block.type) ? types.get(block.inputs[0]) : "BOOL";
+    types.set(block.outputTag, type);
+    imported.tags.push({ name:block.outputTag, type });
   }
   return checkedFbdBlocks({ ...imported, fbdBlocks:blocks });
 }
