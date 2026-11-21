@@ -113,15 +113,21 @@ function readStSource(body, tags) {
 
 const FBD_COMPARISONS = new Set(["GT", "LT", "EQ"]);
 const FBD_ARITHMETIC = new Set(["ADD", "SUB", "MUL"]);
+const PLCOPEN_INT_MAX = 32767;
 const FBD_NEGATED_OUTPUT_TYPES = new Map([["AND", "NAND"], ["OR", "NOR"], ["XOR", "XNOR"]]);
 const FBD_BASE_TYPES = new Map([...FBD_NEGATED_OUTPUT_TYPES].map(([base, negated]) => [negated, base]));
 
 function fbdPins(type, count) {
   if ((type === "NOT" || TIMER_TYPES.has(type)) && count === 1) return ["IN"];
+  if (type === "CTU" && (count === 1 || count === 2)) return count === 1 ? ["CU"] : ["CU", "R"];
   if (((type === "XOR" || FBD_COMPARISONS.has(type) || FBD_ARITHMETIC.has(type)) && count === 2) || (["AND", "OR"].includes(type) && count >= 2 && count <= 8)) {
     return Array.from({ length:count }, (_, index) => `IN${index + 1}`);
   }
   throw new Error("PLCopen FBD supports NOT, two-input XOR/GT/LT/EQ/ADD/SUB/MUL, and AND/OR with two to eight inputs.");
+}
+
+function isFbdStateful(type) {
+  return TIMER_TYPES.has(type) || type === "CTU";
 }
 
 function checkedFbdBlocks(project) {
@@ -133,6 +139,13 @@ function checkedFbdBlocks(project) {
     fbdPins(FBD_BASE_TYPES.get(block.type) ?? block.type, inputs.length);
     if (TIMER_TYPES.has(block.type) && (!Number.isSafeInteger(Number(block.preset)) || Number(block.preset) <= 0)) {
       throw new Error("PLCopen timer preset must be a positive integer-millisecond literal.");
+    }
+    if (block.type === "CTU") {
+      const preset = Number(block.preset);
+      if (!Number.isInteger(preset) || preset < 1 || preset > PLCOPEN_INT_MAX ||
+          block.countTag || (block.maxCount != null && Number(block.maxCount) < preset)) {
+        throw new Error("PLCopen FBD CTU requires a positive INT preset, a reachable threshold, and Q-only wiring.");
+      }
     }
     const output = tags.get(block.outputTag);
     const inputTypes = inputs.map((name) => tags.get(name)?.type);
@@ -158,13 +171,13 @@ function checkedFbdBlocks(project) {
 function createFbdBody(project, localVariables, reserved) {
   const blocks = checkedFbdBlocks(project);
   const producers = new Map(blocks.map((block, index) => [
-    block.outputTag, { id:index + 1, pin:TIMER_TYPES.has(block.type) ? "Q" : "OUT" }
+    block.outputTag, { id:index + 1, pin:isFbdStateful(block.type) ? "Q" : "OUT" }
   ]));
   const externalTags = [...new Set(blocks.flatMap((block) => block.inputs).filter((tag) => !producers.has(tag)))];
   const inputs = new Map(externalTags.map((tag, index) => [tag, blocks.length + index + 1]));
   const inputNodes = externalTags.map((tag, index) =>
     `<inVariable localId="${inputs.get(tag)}"><position x="0" y="${24 + index * 28}"/><connectionPointOut/><expression>${esc(tag)}</expression></inVariable>`);
-  let nextTimerId = 1;
+  let nextInstanceId = 1;
   const blockNodes = blocks.map((block, index) => {
     const id = index + 1, { x, y } = fbdBlockPosition(block, index);
     const baseType = FBD_BASE_TYPES.get(block.type);
@@ -175,13 +188,16 @@ function createFbdBody(project, localVariables, reserved) {
       return `<variable formalParameter="${pin}"><connectionPointIn><connection refLocalId="${producer?.id ?? inputs.get(tag)}"${producer ? ` formalParameter="${producer.pin}"` : ""}/></connectionPointIn></variable>`;
     }).join("");
     let instanceAttribute = "";
-    if (TIMER_TYPES.has(type)) {
+    if (isFbdStateful(type)) {
       let instance;
-      do { instance = `AdigunTimer_${nextTimerId++}`; } while (reserved.has(instance.toUpperCase()));
+      const prefix = type === "CTU" ? "AdigunCounter" : "AdigunTimer";
+      do { instance = `${prefix}_${nextInstanceId++}`; } while (reserved.has(instance.toUpperCase()));
       reserved.add(instance.toUpperCase());
       localVariables.push(`<variable name="${instance}"><type><derived name="${type}"/></type></variable>`);
       instanceAttribute = ` instanceName="${instance}"`;
-      pins += `<variable formalParameter="PT"><connectionPointIn><expression>T#${Number(block.preset)}ms</expression></connectionPointIn></variable>`;
+      const presetPin = type === "CTU" ? "PV" : "PT";
+      const preset = type === "CTU" ? Number(block.preset) : `T#${Number(block.preset)}ms`;
+      pins += `<variable formalParameter="${presetPin}"><connectionPointIn><expression>${preset}</expression></connectionPointIn></variable>`;
     }
     const outputPin = producers.get(block.outputTag).pin;
     const outputId = blocks.length + inputs.size + id;
@@ -375,7 +391,9 @@ function readFbdSource(node, nodes) {
   }
   const connection = connections[0], id = connection.getAttribute("refLocalId"), source = nodes.get(id);
   const pin = connection.getAttribute("formalParameter");
-  const output = source?.localName === "block" ? child(child(source, "outputVariables"), "variable") : null;
+  const sourcePins = source?.localName === "block" ? children(child(source, "outputVariables"), "variable") : [];
+  const output = source?.getAttribute("typeName") === "CTU"
+    ? sourcePins.find((candidate) => candidate.getAttribute("formalParameter") === "Q") : sourcePins[0];
   if (!source || (pin !== null && pin !== output?.getAttribute("formalParameter"))) {
     throw new Error("PLCopen FBD source must reference a variable or the declared output pin of a supported block.");
   }
@@ -416,25 +434,30 @@ function readFbdBody(body, imported) {
   for (const [id, node] of nodes) {
     if (node.localName !== "block") continue;
     const type = node.getAttribute("typeName");
-    const timer = TIMER_TYPES.has(type);
+    const stateful = isFbdStateful(type);
     const pins = children(child(node, "inputVariables"), "variable");
-    const expectedPins = fbdPins(type, pins.length - Number(timer));
+    const expectedPins = fbdPins(type, pins.length - Number(stateful));
     const pinNames = new Map(pins.map((pin) => [pin.getAttribute("formalParameter"), pin]));
-    const output = children(child(node, "outputVariables"), "variable");
-    const validOutputPins = timer ? ["Q"] : ["OUT", "OUT1"];
-    if ((!timer && node.getAttribute("instanceName")) || children(child(node, "inOutVariables"), "variable").length ||
+    const declaredOutputs = children(child(node, "outputVariables"), "variable");
+    const unusedCount = type === "CTU" ? declaredOutputs.find((pin) => pin.getAttribute("formalParameter") === "CV") : undefined;
+    if (unusedCount) checkFbdModifiers(unusedCount);
+    const output = declaredOutputs.filter((pin) => pin !== unusedCount);
+    const validOutputPins = stateful ? ["Q"] : ["OUT", "OUT1"];
+    if ((!stateful && node.getAttribute("instanceName")) || children(child(node, "inOutVariables"), "variable").length ||
         output.length !== 1 || !validOutputPins.includes(output[0].getAttribute("formalParameter")) ||
         expectedPins.some((pin) => !pinNames.has(pin))) {
       throw new Error("PLCopen FBD block pins or output assignment are outside the supported subset.");
     }
     const negatedType = FBD_NEGATED_OUTPUT_TYPES.get(type);
     const negated = checkFbdModifiers(output[0], Boolean(negatedType));
-    let timerSettings = {};
-    if (timer) {
-      const ptPin = pinNames.get("PT");
-      if (!ptPin) throw new Error("PLCopen FBD timers require IN and PT inputs.");
-      checkFbdModifiers(ptPin);
-      timerSettings = { preset:readTimerPreset(ptPin) };
+    let settings = {};
+    if (stateful) {
+      const presetName = type === "CTU" ? "PV" : "PT";
+      const presetPin = pinNames.get(presetName);
+      if (!presetPin) throw new Error(`PLCopen FBD ${type} requires a ${presetName} input.`);
+      checkFbdModifiers(presetPin);
+      settings = type === "CTU" ? { preset:readCounterPreset(presetPin), maxCount:PLCOPEN_INT_MAX } :
+        { preset:readTimerPreset(presetPin) };
     }
     const inputs = expectedPins.map((name) => {
       const pin = pinNames.get(name);
@@ -453,7 +476,7 @@ function readFbdBody(body, imported) {
     const position = child(node, "position");
     const x = Number(position?.getAttribute("x")), y = Number(position?.getAttribute("y"));
     const layout = Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
-    blocks.push({ id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:outputs.get(node), ...timerSettings, ...(layout ? { layout } : {}) });
+    blocks.push({ id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:outputs.get(node), ...settings, ...(layout ? { layout } : {}) });
   }
   if ([...wireOutputs].some((node) => !usedSources.has(node))) {
     throw new Error("PLCopen FBD block outputs must connect to a variable or another block.");
@@ -575,6 +598,17 @@ function readTimerPreset(ptPin) {
   return preset;
 }
 
+function readCounterPreset(pin) {
+  const points = children(pin, "connectionPointIn"), expressions = children(points[0], "expression");
+  const literal = text(expressions[0]);
+  if (points.length !== 1 || expressions.length !== 1 || children(points[0], "connection").length) {
+    throw new Error("PLCopen FBD CTU PV must be a positive INT literal.");
+  }
+  const value = readScalarInitial(literal, "INT", "CTU PV");
+  if (value < 1 || value > PLCOPEN_INT_MAX) throw new Error("PLCopen FBD CTU PV must be from 1 to 32767.");
+  return value;
+}
+
 function contactPathKey(refs) {
   return JSON.stringify([...refs].sort());
 }
@@ -635,10 +669,14 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const byId = new Map(identified.map((node) => [node.getAttribute("localId"), node]));
   if (byId.size !== identified.length) throw new Error("PLCopen LD localIds must be unique.");
   const blocks = nodes.filter((node) => node.localName === "block"), timerInstances = new Map();
-  const timerBlocks = fbd ? children(fbd, "block").filter((block) => TIMER_TYPES.has(block.getAttribute("typeName"))) : blocks;
+  const timerBlocks = fbd ? children(fbd, "block").filter((block) => isFbdStateful(block.getAttribute("typeName"))) : blocks;
   for (const block of timerBlocks) {
     const name = block.getAttribute("instanceName");
-    if (!block.getAttribute("localId") || !TIMER_TYPES.has(block.getAttribute("typeName")) || !name || !IEC_IDENTIFIER.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely identified and named TON, TOF, or TP timer blocks only.");
+    if (!block.getAttribute("localId") || !(fbd ? isFbdStateful(block.getAttribute("typeName")) : TIMER_TYPES.has(block.getAttribute("typeName"))) ||
+        !name || !IEC_IDENTIFIER.test(name) || timerInstances.has(name)) {
+      throw new Error(fbd ? "PLCopen FBD stateful blocks require unique named instances." :
+        "PLCopen import supports uniquely identified and named TON, TOF, or TP timer blocks only.");
+    }
     timerInstances.set(name, block);
   }
   const variableNodes = descendants(child(pou, "interface"), "variable"), tags = [], initialState = {};
@@ -648,12 +686,13 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
     const type = typeNode?.localName;
     if (!type && name && timerInstances.has(name) && variable.parentElement?.localName === "localVars") {
       if (derived?.getAttribute("name") !== timerInstances.get(name).getAttribute("typeName")) {
-        throw new Error("PLCopen timer declaration must match its block type.");
+        const kind = timerInstances.get(name).getAttribute("typeName") === "CTU" ? "counter" : "timer";
+        throw new Error(`PLCopen ${kind} declaration must match its block type.`);
       }
       const notes = descendants(child(variable, "documentation"), "p").map(text).filter((line) => line.startsWith(TIMER_TAG_NOTE));
       const restoredTag = notes[0]?.slice(TIMER_TAG_NOTE.length);
       if (fbd && (notes.length || variable.hasAttribute("address") || child(variable, "initialValue"))) {
-        throw new Error("PLCopen FBD timer declarations must use an uninitialized local instance.");
+        throw new Error("PLCopen FBD stateful declarations must use an uninitialized local instance.");
       }
       if (timerDeclarations.has(name) || notes.length > 1 || (notes.length && !LADDER_TIMER_ADDRESS.test(restoredTag))) {
         throw new Error("PLCopen timer declaration has duplicate or invalid timer tag information.");
