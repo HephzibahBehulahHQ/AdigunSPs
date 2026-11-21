@@ -1391,24 +1391,28 @@ function renderSnapshotChanges(changes, copy, targetLabel) {
   for (const change of changes) {
     const details = document.createElement("details");
     const summary = document.createElement("summary");
-    summary.textContent = copy[change.key];
+    summary.textContent = `${copy[change.key]} · ${formatLocaleNumber(change.hunks.length, language, 0)}`;
     details.append(summary);
     details.addEventListener("toggle", () => {
       if (!details.open || details.childElementCount > 1) return;
-      const columns = document.createElement("div");
-      columns.className = "snapshot-diff-columns";
-      for (const [label, lines] of [[copy.earlier, change.before], [targetLabel, change.after]]) {
-        const column = document.createElement("div");
-        const heading = document.createElement("b");
-        heading.textContent = `${label} · ${copy.line} ${formatLocaleNumber(change.firstLine, language, 0)}`;
-        const source = document.createElement("pre");
-        source.tabIndex = 0;
-        source.setAttribute("aria-label", heading.textContent);
-        source.textContent = lines.join("\n");
-        column.append(heading, source);
-        columns.append(column);
+      const fragment = document.createDocumentFragment();
+      for (const hunk of change.hunks) {
+        const columns = document.createElement("div");
+        columns.className = "snapshot-diff-columns";
+        for (const [label, firstLine, lines] of [[copy.earlier, hunk.beforeLine, hunk.before], [targetLabel, hunk.afterLine, hunk.after]]) {
+          const column = document.createElement("div");
+          const heading = document.createElement("b");
+          heading.textContent = `${label} · ${copy.line} ${formatLocaleNumber(firstLine, language, 0)}`;
+          const source = document.createElement("pre");
+          source.tabIndex = 0;
+          source.setAttribute("aria-label", heading.textContent);
+          source.textContent = lines.join("\n") || "—";
+          column.append(heading, source);
+          columns.append(column);
+        }
+        fragment.append(columns);
       }
-      details.append(columns);
+      details.append(fragment);
     });
     sections.append(details);
     if (sections.childElementCount === 1) details.open = true;
