@@ -101,7 +101,7 @@ Commands control the workspace and simulator without reaching a PLC or shell. Ta
 
 Commands include **New project**, **Project manager**, **Example browser**, **Add rung**, **Add contact**, **Run**, **Step**, **Reset**, **Tags and I/O**, and **Safety and help**.
 
-Open **Search all commands** with Ctrl+K (⌘+K on Mac). Search commands, saved projects, tags, and examples. Opening a project loads its latest save.
+Open **Search all commands** with Ctrl+K (⌘+K on Mac). Search commands, saved projects, tags, and examples. Opening loads the latest save. Renaming or changing properties preserves saved logic.
 
 **Worked example:** Search “Run.” Select **Run** to start scans, **Pause** to halt, or **Reset** to clear outputs and timers.
 

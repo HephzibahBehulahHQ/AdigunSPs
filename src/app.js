@@ -1281,6 +1281,27 @@ async function openSavedProject(id) {
   stopSimulation();
 }
 
+async function saveProjectMetadata(id, fields, properties = {}) {
+  let saved;
+  try {
+    saved = await store.update(id, (latest) => {
+      Object.assign(latest, fields);
+      if (Object.keys(properties).length) latest.properties = { ...latest.properties, ...properties };
+    });
+  } catch (error) {
+    toast(error.message || t("projectUnavailable"));
+    return;
+  }
+  if (!saved) { toast(t("projectUnavailable")); return; }
+  if (project.id === id) {
+    project.name = saved.name;
+    project.language = saved.language;
+    project.properties = saved.properties;
+    render();
+  }
+  await showProjects();
+}
+
 async function showProjects() {
   if (accountAccess !== "member") { showAccount(); return; }
   const projects = sortProjectsByRecent(await store.all()), recentLabel = ({en:"Recent projects · last opened",de:"Zuletzt geöffnete Projekte",yo:"Àwọn iṣẹ́ tí a ṣí kẹ́yìn",pcm:"Projects wey person open last"})[language];
@@ -1289,7 +1310,12 @@ async function showProjects() {
   document.querySelectorAll("[data-properties]").forEach((b) => b.onclick = async () => showProjectProperties(b.dataset.properties));
   document.querySelectorAll("[data-recover]").forEach((b) => b.onclick = async () => showRecovery(b.dataset.recover));
   document.querySelectorAll("[data-duplicate]").forEach((b) => b.onclick = async () => { const source = await store.get(b.dataset.duplicate), copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.name += " copy"; copy.lastOpenedAt = Date.now(); await store.save(copy); showProjects(); });
-  document.querySelectorAll("[data-rename]").forEach((b) => b.onclick = async () => { const p = await store.get(b.dataset.rename), name = prompt(t("rename"), p.name); if (name?.trim()) { p.name = name.trim(); await store.save(p); if (project.id === p.id) { project = p; render(); } showProjects(); } });
+  document.querySelectorAll("[data-rename]").forEach((button) => button.onclick = async () => {
+    const id = button.dataset.rename, saved = await store.get(id);
+    if (!saved) { toast(t("projectUnavailable")); return; }
+    const name = prompt(t("rename"), saved.name)?.trim();
+    if (name && name !== saved.name) await saveProjectMetadata(id, { name });
+  });
   document.querySelectorAll("[data-delete]").forEach((b) => b.onclick = async () => { if (project.id === b.dataset.delete && !(await confirmProjectChange())) return; if (confirm(t("confirmDelete"))) { await store.remove(b.dataset.delete); if (project.id === b.dataset.delete) { project = defaultProject(); await persist(false, true, { markDirty:false, markSaved:true }); render(); } showProjects(); } });
   $("#newProject").onclick = async () => { if (!(await confirmProjectChange())) return; project = emptyProject(); project.lastOpenedAt = Date.now(); sim = { outputs: {}, timers: {}, energized: {}, values: {} }; await persist(false, true, { markDirty:false, markSaved:true }); $("#modal").close(); render(); };
 }
@@ -1299,7 +1325,14 @@ async function showProjectProperties(projectId) {
   target.properties ||= {};
   const projectLanguage = resolveProjectLanguage(target);
   modal(copy.title, `<div class="modal-body"><label class="field">${copy.description}<textarea id="projectDescription" maxlength="1000">${escapeHtml(target.properties.description || "")}</textarea></label><label class="field">${copy.author}<input id="projectAuthor" maxlength="120" value="${escapeAttr(target.properties.author || "")}"></label><label class="field">${copy.version}<input id="projectVersion" maxlength="40" value="${escapeAttr(target.properties.version || "")}"></label><label class="field">${copy.language}<select id="projectLanguage"><option value="en" ${projectLanguage === "en" ? "selected" : ""}>English</option><option value="de" ${projectLanguage === "de" ? "selected" : ""}>Deutsch</option><option value="yo" ${projectLanguage === "yo" ? "selected" : ""}>Yorùbá</option><option value="pcm" ${projectLanguage === "pcm" ? "selected" : ""}>Nigerian Pidgin</option></select></label><div class="modal-actions"><button class="primary" id="saveProjectProperties">${copy.save}</button></div></div>`);
-  $("#saveProjectProperties").onclick = async () => { target.properties = { ...target.properties, description:$("#projectDescription").value.trim(), author:$("#projectAuthor").value.trim(), version:$("#projectVersion").value.trim() }; target.language = $("#projectLanguage").value; target.updatedAt = Date.now(); await store.save(target); if (project.id === target.id) { project = target; await persist(); render(); } showProjects(); };
+  $("#saveProjectProperties").onclick = async () => {
+    const values = { description:$("#projectDescription").value.trim(), author:$("#projectAuthor").value.trim(), version:$("#projectVersion").value.trim() };
+    const properties = Object.fromEntries(Object.entries(values).filter(([key, value]) => value !== String(target.properties[key] ?? "").trim()));
+    const selectedLanguage = $("#projectLanguage").value;
+    const fields = selectedLanguage === projectLanguage ? {} : { language:selectedLanguage };
+    if (!Object.keys(fields).length && !Object.keys(properties).length) { await showProjects(); return; }
+    await saveProjectMetadata(projectId, fields, properties);
+  };
 }
 async function showRecovery(projectId) {
   const versions = await store.history(projectId); if (versions.length < 2) { toast("No earlier saved version yet"); return; }

@@ -795,7 +795,7 @@ assert.ok(serviceWorker.includes("./src/plcopen.js"), "PLCopen converter is incl
 assert.match(app, /dataset\.rungAction = "breakpoint"/, "ladder UI exposes rung breakpoints");
 assert.match(app, /function showEvents\(\)/, "runtime event log UI exists");
 assert.ok(app.includes('if (name === "standards") { showStandardsChecker(); return; }') && app.includes("runStandardsChecks(project)") && app.includes("does not assess IEC conformity") && serviceWorker.includes("./src/standards.js"), "standards checker runs cached consistency checks and states its limits");
-assert.ok(app.includes('target.language = $("#projectLanguage").value') && app.includes('function reportLanguage() { return resolveProjectLanguage(project, language); }'), "project document language is saved separately and drives generated reports");
+assert.ok(app.includes('const fields = selectedLanguage === projectLanguage ? {} : { language:selectedLanguage }') && app.includes('function reportLanguage() { return resolveProjectLanguage(project, language); }'), "project document language is saved separately and drives generated reports");
 assert.ok(app.includes('id="projectLanguage"') && app.includes('ui[docLanguage].safety'), "project language selector localizes document safety notices");
 assert.match(app, /function setupCanvasPanning\(\)/, "ladder canvas supports pointer-based panning");
 assert.match(app, /panSpaceHeld/, "ladder canvas exposes keyboard-assisted panning");
