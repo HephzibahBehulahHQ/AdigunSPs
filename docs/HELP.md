@@ -97,15 +97,13 @@ If a step does not match the example, follow that project's **How to test** and 
 
 ## Using commands
 
-Commands control the workspace and simulator. They never reach a PLC or shell.
+Commands control the workspace and simulator without reaching a PLC or shell. Tab and Shift+Tab close command menus.
 
-Commands include **New project** (start empty), **Project manager** (open saved work), **Example browser** (load a learning project), **Add rung**, **Add contact**, **Run**, **Step**, **Reset**, **Tags and I/O**, and **Safety and help**.
+Commands include **New project**, **Project manager**, **Example browser**, **Add rung**, **Add contact**, **Run**, **Step**, **Reset**, **Tags and I/O**, and **Safety and help**.
 
-**What you'll see:** Press **Ctrl+K** (or **⌘+K** on Mac), or click **Search all commands** to open the command palette.
+Open **Search all commands** with Ctrl+K (⌘+K on Mac). Type to find commands, projects, tags, and examples.
 
-1. Type a few letters in the search field.
-2. Select a result to run it. Search can also find projects, tags, and examples when you enter a search term.
-3. **Worked example:** Press Ctrl+K, search “Run,” and select **Run**. **Pause** halts scans. **Reset** clears simulated outputs and timers.
+**Worked example:** Search “Run.” Select **Run** to start scans, **Pause** to halt, or **Reset** to clear outputs and timers.
 
 ## Building a project
 

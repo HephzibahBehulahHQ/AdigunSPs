@@ -278,8 +278,26 @@ function showContextMenu(event, entries, menuLabel = (contextCopy[language] || c
   revealContextMenu(menu, trigger, "menu"); const width = menu.offsetWidth, height = menu.offsetHeight, anchor = event.currentTarget.matches?.("[data-app-menu]") ? event.currentTarget.getBoundingClientRect() : null, menuBar = anchor ? $(".app-menus").getBoundingClientRect() : null, left = anchor ? anchor.left : event.clientX, top = menuBar ? menuBar.bottom + 32 : event.clientY; menu.style.left = `${Math.max(8, Math.min(left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, Math.min(top, innerHeight - height - 8))}px`;
   contextMenuDismiss = bindMenuDismissal(event.currentTarget, menu, hideContextMenu);
   menu.querySelectorAll("[data-context-index]").forEach((button) => button.addEventListener("click", () => { const entry = entries[Number(button.dataset.contextIndex)]; hideContextMenu(); if (trigger.matches("[data-app-menu]")) trigger.focus({ preventScroll:true }); entry.action(); }));
-  menu.onkeydown = (keyEvent) => { const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement); if (keyEvent.key === "Escape") { keyEvent.preventDefault(); keyEvent.stopPropagation(); hideContextMenu(); trigger?.focus(); } else if (["ArrowDown", "ArrowUp"].includes(keyEvent.key)) { keyEvent.preventDefault(); buttons[(index + (keyEvent.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus(); } };
-  requestAnimationFrame(() => menu.querySelector("[role=menuitem]")?.focus());
+  menu.onkeydown = (keyEvent) => {
+    const { key } = keyEvent;
+    if (key === "Escape" || key === "Tab") {
+      if (key === "Escape") keyEvent.preventDefault();
+      keyEvent.stopPropagation();
+      hideContextMenu();
+      // Restart native Tab navigation at the trigger, since the popup lives at the end of the document.
+      trigger.focus({ preventScroll:true });
+      return;
+    }
+    if (key === "ArrowDown" || key === "ArrowUp") {
+      keyEvent.preventDefault();
+      const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement);
+      const offset = key === "ArrowDown" ? 1 : buttons.length - 1;
+      buttons[(index + offset) % buttons.length]?.focus();
+    }
+  };
+  requestAnimationFrame(() => {
+    if (contextMenuTrigger === trigger && !menu.hidden) menu.querySelector("[role=menuitem]")?.focus();
+  });
 }
 function hideContextMenu() { if (contextMenuTrigger?.matches("[data-app-menu]")) contextMenuTrigger.setAttribute("aria-expanded", "false"); contextMenuTrigger = null; contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.onkeydown = null; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
 let helpMarkdownPromise;
