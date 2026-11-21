@@ -241,9 +241,21 @@ function readFbdBody(body, imported) {
     if (node.localName !== "outVariable") continue;
     const source = readFbdSource(node, nodes), tag = text(child(node, "expression"));
     if (source.localName !== "block" || outputs.has(source) || !tag) {
-      throw new Error("PLCopen FBD requires a single declared output tag connected to each block.");
+      throw new Error("PLCopen FBD allows at most one declared output variable per block.");
     }
     outputs.set(source, tag);
+  }
+  const usedNames = new Set([...imported.tags.map(({ name }) => name), ...outputs.values()].map((name) => name.toUpperCase()));
+  const wireOutputs = new Set(), usedSources = new Set();
+  let wireNumber = 1;
+  for (const node of nodes.values()) {
+    if (node.localName !== "block" || outputs.has(node)) continue;
+    let name;
+    do { name = `FbdWire_${wireNumber++}`; } while (usedNames.has(name.toUpperCase()));
+    usedNames.add(name.toUpperCase());
+    imported.tags.push({ name, type:"BOOL" });
+    outputs.set(node, name);
+    wireOutputs.add(node);
   }
   const writtenTags = new Set(outputs.values()), usedInputs = new Set(), blocks = [];
   for (const [id, node] of nodes) {
@@ -254,7 +266,7 @@ function readFbdBody(body, imported) {
     const pinNames = new Map(pins.map((pin) => [pin.getAttribute("formalParameter"), pin]));
     const output = children(child(node, "outputVariables"), "variable");
     if (node.getAttribute("instanceName") || children(child(node, "inOutVariables"), "variable").length ||
-        output.length !== 1 || output[0].getAttribute("formalParameter") !== "OUT" || !outputs.has(node) ||
+        output.length !== 1 || output[0].getAttribute("formalParameter") !== "OUT" ||
         expectedPins.some((pin) => !pinNames.has(pin))) {
       throw new Error("PLCopen FBD block pins or output assignment are outside the supported subset.");
     }
@@ -263,7 +275,10 @@ function readFbdBody(body, imported) {
       const pin = pinNames.get(name);
       checkFbdModifiers(pin);
       const source = readFbdSource(pin, nodes);
-      if (source.localName === "block" && outputs.has(source)) return outputs.get(source);
+      if (source.localName === "block") {
+        usedSources.add(source);
+        return outputs.get(source);
+      }
       if (source.localName === "inVariable") {
         const tag = text(child(source, "expression"));
         if (!writtenTags.has(tag)) { usedInputs.add(source); return tag; }
@@ -274,6 +289,9 @@ function readFbdBody(body, imported) {
     const x = Number(position?.getAttribute("x")), y = Number(position?.getAttribute("y"));
     const layout = Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
     blocks.push({ id:`plcopen-block-${id}`, type, inputs, outputTag:outputs.get(node), ...(layout ? { layout } : {}) });
+  }
+  if ([...wireOutputs].some((node) => !usedSources.has(node))) {
+    throw new Error("PLCopen FBD block outputs must connect to a variable or another block.");
   }
   if ([...nodes.values()].some((node) => node.localName === "inVariable" && !usedInputs.has(node))) {
     throw new Error("PLCopen FBD contains an input variable outside the imported networks.");

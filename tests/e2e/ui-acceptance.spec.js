@@ -206,10 +206,10 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
 test("PLCopen Boolean FBD and numeric comparisons round-trip with direct dependencies", async ({ page }) => {
   const xml = await page.evaluate(async () => {
     const { createPlcopenXml } = await import("/src/plcopen.js");
-    return createPlcopenXml({
+    const authored = createPlcopenXml({
       name:"Boolean FBD XML exercise", editorType:"FBD",
       tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Stop", type:"BOOL", role:"input" },
-        { name:"Permit", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" },
+        { name:"Permit", type:"BOOL" }, { name:"fbdwire_1", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" },
         { name:"Temperature", type:"REAL", role:"input" }, { name:"Limit", type:"REAL", role:"input" },
         { name:"Above", type:"BOOL", role:"output" }, { name:"Below", type:"BOOL", role:"output" },
         { name:"Equal", type:"BOOL", role:"output" }],
@@ -222,6 +222,11 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
         { id:"equal", type:"EQ", inputs:["Temperature", "Limit"], outputTag:"Equal" }
       ]
     });
+    const document = new DOMParser().parseFromString(authored, "application/xml");
+    const wireOnly = [...document.getElementsByTagNameNS("*", "outVariable")]
+      .find((node) => node.getElementsByTagNameNS("*", "expression")[0]?.textContent === "Permit");
+    wireOnly.remove();
+    return new XMLSerializer().serializeToString(document);
   });
   expect(xml).toContain('<block localId="1" typeName="NOT"');
   expect(xml).toContain('<connection refLocalId="1" formalParameter="OUT"/>');
@@ -257,6 +262,8 @@ test("PLCopen Boolean FBD and numeric comparisons round-trip with direct depende
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   const exported = Buffer.concat(chunks).toString("utf8");
   expect(exported).toContain("<FBD>");
+  expect(exported).toContain('<variable name="FbdWire_2"><type><BOOL/>');
+  expect(exported).toContain("<expression>FbdWire_2</expression>");
   for (const type of ["GT", "LT", "EQ"]) expect(exported).toContain(`typeName="${type}"`);
   await page.locator("#fileInput").setInputFiles({
     name:"mixed-comparison.xml", mimeType:"application/xml",
