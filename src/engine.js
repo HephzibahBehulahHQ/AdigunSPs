@@ -2,6 +2,18 @@
 import { stepProcesses } from "./process.js";
 import { createExampleElectricalDiagram } from "./electrical.js";
 
+function updatePulseTimer(timer, input, preset, dt) {
+  if (timer.active) {
+    timer.elapsed = Math.min(preset, timer.elapsed + dt);
+    timer.active = timer.elapsed < preset;
+  } else if (input && !timer.prior) {
+    timer.elapsed = 0;
+    timer.active = true;
+  }
+  timer.prior = input;
+  timer.done = timer.active;
+}
+
 export function scan(project, inputs, state = {}, dt = 100, breakpoints = []) {
   const outputs = { ...(state.outputs || {}) };
   const timers = structuredClone(state.timers || {});
@@ -36,7 +48,7 @@ export function scan(project, inputs, state = {}, dt = 100, breakpoints = []) {
     if (rung.timer) {
       const type = rung.timer.type || "TON", preset = Math.max(1, Number(rung.timer.preset) || 1), timer = timers[rung.timer.tag] || { elapsed:0, done:false, prior:false, active:false };
       if (type === "TOF") { if (power) { timer.elapsed = 0; timer.done = true; } else if (timer.done) { timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed < preset; } else timer.elapsed = 0; }
-      else if (type === "TP") { if (power && !timer.prior) { timer.elapsed = 0; timer.active = true; } else if (timer.active) { timer.elapsed = Math.min(preset, timer.elapsed + dt); if (timer.elapsed >= preset) timer.active = false; } timer.prior = power; timer.done = timer.active; }
+      else if (type === "TP") updatePulseTimer(timer, power, preset, dt);
       else if (type === "RTO") { if (rung.timer.resetTag && Boolean(values[rung.timer.resetTag])) timer.elapsed = 0; else if (power) timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed >= preset; }
       else { timer.elapsed = power ? Math.min(preset, timer.elapsed + dt) : 0; timer.done = timer.elapsed >= preset; }
       timers[rung.timer.tag] = timer;
@@ -94,7 +106,7 @@ export function scanFBD(blocks, inputs, state = {}, outputNames = [], dt = 100, 
     if (block.type === "NOT") value = !Boolean(values[tags[0]]);
     if (block.type === "TRUE") value = true;
     if (block.type === "FALSE") value = false;
-    if (["TON", "TOF", "TP", "RTO"].includes(block.type)) { const preset = Math.max(1, Number(block.preset) || 1), timer = timers[block.id] || { elapsed:0, done:false, prior:false, active:false }; if (block.type === "TOF") { if (source[0]) { timer.elapsed = 0; timer.done = true; } else if (timer.done) { timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed < preset; } else timer.elapsed = 0; } else if (block.type === "TP") { if (source[0] && !timer.prior) { timer.elapsed = 0; timer.active = true; } else if (timer.active) { timer.elapsed = Math.min(preset, timer.elapsed + dt); if (timer.elapsed >= preset) timer.active = false; } timer.prior = source[0]; timer.done = timer.active; } else if (block.type === "RTO") { if (source[1]) timer.elapsed = 0; else if (source[0]) timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed >= preset; } else { timer.elapsed = source[0] ? Math.min(preset, timer.elapsed + dt) : 0; timer.done = timer.elapsed >= preset; } timers[block.id] = timer; value = timer.done; values[`${block.outputTag}.EN`] = source[0]; values[`${block.outputTag}.ET`] = timer.elapsed; }
+    if (["TON", "TOF", "TP", "RTO"].includes(block.type)) { const preset = Math.max(1, Number(block.preset) || 1), timer = timers[block.id] || { elapsed:0, done:false, prior:false, active:false }; if (block.type === "TOF") { if (source[0]) { timer.elapsed = 0; timer.done = true; } else if (timer.done) { timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed < preset; } else timer.elapsed = 0; } else if (block.type === "TP") updatePulseTimer(timer, source[0], preset, dt); else if (block.type === "RTO") { if (source[1]) timer.elapsed = 0; else if (source[0]) timer.elapsed = Math.min(preset, timer.elapsed + dt); timer.done = timer.elapsed >= preset; } else { timer.elapsed = source[0] ? Math.min(preset, timer.elapsed + dt) : 0; timer.done = timer.elapsed >= preset; } timers[block.id] = timer; value = timer.done; values[`${block.outputTag}.EN`] = source[0]; values[`${block.outputTag}.ET`] = timer.elapsed; }
     if (block.type === "R_TRIG" || block.type === "F_TRIG") { const prior = Boolean(edges[block.id]?.prior), current = source[0] || false; value = block.type === "R_TRIG" ? !prior && current : prior && !current; edges[block.id] = { prior:current }; }
     if (["CTU", "CTD"].includes(block.type)) { const down = block.type === "CTD", initial = Math.max(0, Number(block.initialCount ?? block.preset) || 0), counter = counters[block.id] || { count:down ? initial : 0, prior:false }; if (source[1]) counter.count = down ? initial : 0; else if (source[0] && !counter.prior) counter.count = down ? Math.max(0, counter.count - 1) : Math.min(Number(block.maxCount) || Number.MAX_SAFE_INTEGER, counter.count + 1); counter.prior = source[0]; value = down ? counter.count <= 0 : counter.count >= Math.max(1, Number(block.preset) || 1); counters[block.id] = counter; if (block.outputTag) values[`${block.outputTag}.CV`] = counter.count; if (block.countTag) { values[block.countTag] = counter.count; if (outputSet.has(block.countTag)) outputs[block.countTag] = counter.count; } }
     if (["ADD", "SUB", "MUL", "DIV"].includes(block.type)) { const left = numeric[0] || 0, right = numeric[1] || 0; value = block.type === "ADD" ? left + right : block.type === "SUB" ? left - right : block.type === "MUL" ? left * right : right === 0 ? 0 : left / right; }
