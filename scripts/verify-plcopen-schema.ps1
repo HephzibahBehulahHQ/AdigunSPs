@@ -10,7 +10,7 @@ $namespace = 'http://www.plcopen.org/xml/tc6_0201'
 
 Push-Location (Split-Path -Parent $PSScriptRoot)
 try {
-    $xml = @'
+    $fixturesJson = @'
 import { createPlcopenXml } from "./src/plcopen.js";
 
 const contacts = [[{ tag:"Start", mode:"NO" }]];
@@ -25,13 +25,18 @@ const project = {
     { branches:contacts, coil:"Immediate", timer:{ type:"TON", tag:"T0.1", preset:200, output:"EN" } }
   ]
 };
-process.stdout.write(createPlcopenXml(project));
+const structuredText = {
+  name:"PLCopen Structured Text schema fixture", editorType:"ST",
+  tags:[{ name:"Temperature", type:"REAL", role:"input" }, { name:"Control", type:"REAL", role:"output" }],
+  stSource:"(* Heat & control *)\nIF Temperature < 20.0 THEN Control := Temperature * 2.0; ELSE Control := 0.0; END_IF;"
+};
+process.stdout.write(JSON.stringify({ ladder:createPlcopenXml(project), st:createPlcopenXml(structuredText) }));
 '@ | node --input-type=module
     if ($LASTEXITCODE -ne 0) { throw 'Could not generate the PLCopen XML test fixture.' }
 } finally {
     Pop-Location
 }
-$xml = $xml -join [Environment]::NewLine
+$fixtures = ($fixturesJson -join [Environment]::NewLine) | ConvertFrom-Json
 
 $settings = [System.Xml.XmlReaderSettings]::new()
 $settings.ValidationType = [System.Xml.ValidationType]::Schema
@@ -55,11 +60,13 @@ function Assert-PlcopenXmlValid([string] $Content) {
     }
 }
 
-Assert-PlcopenXmlValid $xml
+Assert-PlcopenXmlValid $fixtures.ladder
 Write-Output 'PASS: TC6 2.01 validates delayed and immediate TON coils with default timer addresses.'
+Assert-PlcopenXmlValid $fixtures.st
+Write-Output 'PASS: TC6 2.01 validates a Structured Text body with declared scalar tags.'
 
-$invalidXml = [regex]::Replace($xml, '<contentHeader name="[^"]+"', '<contentHeader')
-if ($invalidXml -eq $xml) { throw 'Could not construct the invalid fixture.' }
+$invalidXml = [regex]::Replace($fixtures.ladder, '<contentHeader name="[^"]+"', '<contentHeader')
+if ($invalidXml -eq $fixtures.ladder) { throw 'Could not construct the invalid fixture.' }
 try {
     Assert-PlcopenXmlValid $invalidXml
     throw 'The invalid fixture unexpectedly passed schema validation.'
