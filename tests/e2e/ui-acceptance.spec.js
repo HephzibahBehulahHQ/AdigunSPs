@@ -206,6 +206,36 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen CTU CV preserves named outputs and unnamed direct wires", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scanFBD } = await import("/src/engine.js");
+    const xml = createPlcopenXml({
+      name:"CTU count value", editorType:"FBD",
+      tags:[{ name:"Pulse", type:"BOOL", role:"input" }, { name:"Target", type:"INT", role:"input" },
+        { name:"Matches", type:"BOOL", role:"output" }, { name:"Reached", type:"BOOL", role:"output" },
+        { name:"Count", type:"INT", role:"output" }],
+      fbdBlocks:[{ type:"EQ", inputs:["Count","Target"], outputTag:"Matches" },
+        { type:"CTU", inputs:["Pulse"], outputTag:"Reached", countTag:"Count", preset:2, maxCount:32767 }]
+    });
+    const named = parsePlcopenXml(xml);
+    const document = new DOMParser().parseFromString(xml, "application/xml");
+    for (const node of [...document.getElementsByTagNameNS("*","outVariable")]) {
+      if (["Count","Reached"].includes(node.textContent)) node.remove();
+    }
+    const unnamed = parsePlcopenXml(new XMLSerializer().serializeToString(document));
+    return [named, unnamed].map((project) => {
+      const counter = project.fbdBlocks.find(({ type }) => type === "CTU");
+      const state = scanFBD(project.fbdBlocks, { Pulse:true, Target:1 }, {}, project.io.outputs);
+      return { matches:state.outputs.Matches, count:state.values[counter.countTag],
+        countType:project.tags.find(({ name }) => name === counter.countTag).type,
+        exposed:project.io.outputs.includes(counter.countTag), errors:state.errors };
+    });
+  });
+  expect(result).toEqual([{ matches:true, count:1, countType:"INT", exposed:true, errors:[] },
+    { matches:true, count:1, countType:"INT", exposed:false, errors:[] }]);
+});
+
 test("PLCopen FBD CTU preserves the threshold and reset wiring", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");

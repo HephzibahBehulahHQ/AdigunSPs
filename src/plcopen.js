@@ -143,8 +143,15 @@ function checkedFbdBlocks(project) {
     if (block.type === "CTU") {
       const preset = Number(block.preset);
       if (!Number.isInteger(preset) || preset < 1 || preset > PLCOPEN_INT_MAX ||
-          block.countTag || (block.maxCount != null && Number(block.maxCount) < preset)) {
-        throw new Error("PLCopen FBD CTU requires a positive INT preset, a reachable threshold, and Q-only wiring.");
+          (block.maxCount != null && Number(block.maxCount) < preset)) {
+        throw new Error("PLCopen FBD CTU requires a positive INT preset and a reachable threshold.");
+      }
+      if (block.countTag) {
+        const count = tags.get(block.countTag);
+        if (count?.type !== "INT" || count.role === "input" || project.io?.inputs?.includes(block.countTag) ||
+            (block.maxCount != null && Number(block.maxCount) !== PLCOPEN_INT_MAX)) {
+          throw new Error("PLCopen FBD CTU CV requires a writable INT tag and the standard INT limit.");
+        }
       }
     }
     const output = tags.get(block.outputTag);
@@ -173,11 +180,15 @@ function createFbdBody(project, localVariables, reserved) {
   const producers = new Map(blocks.map((block, index) => [
     block.outputTag, { id:index + 1, pin:isFbdStateful(block.type) ? "Q" : "OUT" }
   ]));
+  blocks.forEach((block, index) => {
+    if (block.type === "CTU" && block.countTag) producers.set(block.countTag, { id:index + 1, pin:"CV" });
+  });
   const externalTags = [...new Set(blocks.flatMap((block) => block.inputs).filter((tag) => !producers.has(tag)))];
   const inputs = new Map(externalTags.map((tag, index) => [tag, blocks.length + index + 1]));
   const inputNodes = externalTags.map((tag, index) =>
     `<inVariable localId="${inputs.get(tag)}"><position x="0" y="${24 + index * 28}"/><connectionPointOut/><expression>${esc(tag)}</expression></inVariable>`);
   let nextInstanceId = 1;
+  let nextOutputId = blocks.length + inputs.size + 1;
   const blockNodes = blocks.map((block, index) => {
     const id = index + 1, { x, y } = fbdBlockPosition(block, index);
     const baseType = FBD_BASE_TYPES.get(block.type);
@@ -200,9 +211,13 @@ function createFbdBody(project, localVariables, reserved) {
       pins += `<variable formalParameter="${presetPin}"><connectionPointIn><expression>${preset}</expression></connectionPointIn></variable>`;
     }
     const outputPin = producers.get(block.outputTag).pin;
-    const outputId = blocks.length + inputs.size + id;
-    return `<block localId="${id}" typeName="${type}"${instanceAttribute} width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables><variable formalParameter="${outputPin}"${negation}><connectionPointOut/></variable></outputVariables></block>` +
-      `<outVariable localId="${outputId}"><position x="${x + 115}" y="${y}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="${outputPin}"/></connectionPointIn><expression>${esc(block.outputTag)}</expression></outVariable>`;
+    const results = [[outputPin, block.outputTag]];
+    if (type === "CTU" && block.countTag) results.push(["CV", block.countTag]);
+    const outputPins = results.map(([pin], index) =>
+      `<variable formalParameter="${pin}"${index === 0 ? negation : ""}><connectionPointOut/></variable>`).join("");
+    const outputNodes = results.map(([pin, tag], index) =>
+      `<outVariable localId="${nextOutputId++}"><position x="${x + 115}" y="${y + index * 24}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="${pin}"/></connectionPointIn><expression>${esc(tag)}</expression></outVariable>`).join("");
+    return `<block localId="${id}" typeName="${type}"${instanceAttribute} width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables>${outputPins}</outputVariables></block>${outputNodes}`;
   });
   return `<FBD>${inputNodes.join("")}${blockNodes.join("")}</FBD>`;
 }
@@ -392,12 +407,12 @@ function readFbdSource(node, nodes) {
   const connection = connections[0], id = connection.getAttribute("refLocalId"), source = nodes.get(id);
   const pin = connection.getAttribute("formalParameter");
   const sourcePins = source?.localName === "block" ? children(child(source, "outputVariables"), "variable") : [];
-  const output = source?.getAttribute("typeName") === "CTU"
-    ? sourcePins.find((candidate) => candidate.getAttribute("formalParameter") === "Q") : sourcePins[0];
-  if (!source || (pin !== null && pin !== output?.getAttribute("formalParameter"))) {
+  const output = pin === null && sourcePins.length === 1 ? sourcePins[0] :
+    sourcePins.find((candidate) => candidate.getAttribute("formalParameter") === pin);
+  if (!source || (source.localName === "block" ? !output : pin !== null)) {
     throw new Error("PLCopen FBD source must reference a variable or the declared output pin of a supported block.");
   }
-  return source;
+  return { source, output };
 }
 
 function readFbdBody(body, imported) {
@@ -413,24 +428,26 @@ function readFbdBody(body, imported) {
   const outputs = new Map();
   for (const node of nodes.values()) {
     if (node.localName !== "outVariable") continue;
-    const source = readFbdSource(node, nodes), tag = text(child(node, "expression"));
-    if (source.localName !== "block" || outputs.has(source) || !tag) {
-      throw new Error("PLCopen FBD allows at most one declared output variable per block.");
+    const { output } = readFbdSource(node, nodes), tag = text(child(node, "expression"));
+    if (!output || outputs.has(output) || !tag) {
+      throw new Error("PLCopen FBD allows at most one declared output variable per output pin.");
     }
-    outputs.set(source, tag);
+    outputs.set(output, tag);
   }
   const usedNames = new Set([...imported.tags.map(({ name }) => name), ...outputs.values()].map((name) => name.toUpperCase()));
-  const wireOutputs = new Set(), usedSources = new Set();
+  const wireOutputs = new Set(), usedOutputs = new Set();
+  const writtenTags = new Set(outputs.values()), usedInputs = new Set(), blocks = [];
   let wireNumber = 1;
-  for (const node of nodes.values()) {
-    if (node.localName !== "block" || outputs.has(node)) continue;
+  const wireTag = (pin) => {
+    if (outputs.has(pin)) return outputs.get(pin);
     let name;
     do { name = `FbdWire_${wireNumber++}`; } while (usedNames.has(name.toUpperCase()));
     usedNames.add(name.toUpperCase());
-    outputs.set(node, name);
-    wireOutputs.add(node);
-  }
-  const writtenTags = new Set(outputs.values()), usedInputs = new Set(), blocks = [];
+    outputs.set(pin, name);
+    wireOutputs.add(pin);
+    return name;
+  };
+  const counterPorts = new Map();
   for (const [id, node] of nodes) {
     if (node.localName !== "block") continue;
     const type = node.getAttribute("typeName");
@@ -439,9 +456,9 @@ function readFbdBody(body, imported) {
     const expectedPins = fbdPins(type, pins.length - Number(stateful));
     const pinNames = new Map(pins.map((pin) => [pin.getAttribute("formalParameter"), pin]));
     const declaredOutputs = children(child(node, "outputVariables"), "variable");
-    const unusedCount = type === "CTU" ? declaredOutputs.find((pin) => pin.getAttribute("formalParameter") === "CV") : undefined;
-    if (unusedCount) checkFbdModifiers(unusedCount);
-    const output = declaredOutputs.filter((pin) => pin !== unusedCount);
+    const count = type === "CTU" ? declaredOutputs.find((pin) => pin.getAttribute("formalParameter") === "CV") : undefined;
+    if (count) checkFbdModifiers(count);
+    const output = declaredOutputs.filter((pin) => pin !== count);
     const validOutputPins = stateful ? ["Q"] : ["OUT", "OUT1"];
     if ((!stateful && node.getAttribute("instanceName")) || children(child(node, "inOutVariables"), "variable").length ||
         output.length !== 1 || !validOutputPins.includes(output[0].getAttribute("formalParameter")) ||
@@ -462,10 +479,10 @@ function readFbdBody(body, imported) {
     const inputs = expectedPins.map((name) => {
       const pin = pinNames.get(name);
       checkFbdModifiers(pin);
-      const source = readFbdSource(pin, nodes);
-      if (source.localName === "block") {
-        usedSources.add(source);
-        return outputs.get(source);
+      const { source, output } = readFbdSource(pin, nodes);
+      if (output) {
+        usedOutputs.add(output);
+        return wireTag(output);
       }
       if (source.localName === "inVariable") {
         const tag = text(child(source, "expression"));
@@ -476,9 +493,16 @@ function readFbdBody(body, imported) {
     const position = child(node, "position");
     const x = Number(position?.getAttribute("x")), y = Number(position?.getAttribute("y"));
     const layout = Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
-    blocks.push({ id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:outputs.get(node), ...settings, ...(layout ? { layout } : {}) });
+    const block = { id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:wireTag(output[0]), ...settings, ...(layout ? { layout } : {}) };
+    if (count) counterPorts.set(block, { count, primary:output[0] });
+    blocks.push(block);
   }
-  if ([...wireOutputs].some((node) => !usedSources.has(node))) {
+  for (const [block, { count, primary }] of counterPorts) {
+    if (!outputs.has(count)) continue;
+    block.countTag = outputs.get(count);
+    usedOutputs.add(primary);
+  }
+  if ([...wireOutputs].some((pin) => !usedOutputs.has(pin))) {
     throw new Error("PLCopen FBD block outputs must connect to a variable or another block.");
   }
   if ([...nodes.values()].some((node) => node.localName === "inVariable" && !usedInputs.has(node))) {
@@ -489,6 +513,10 @@ function readFbdBody(body, imported) {
   if (ordered.errors.length) throw new Error(ordered.errors[0]);
   const types = new Map(imported.tags.map(({ name, type }) => [name, type]));
   for (const block of ordered.blocks) {
+    if (unnamedTags.has(block.countTag)) {
+      types.set(block.countTag, "INT");
+      imported.tags.push({ name:block.countTag, type:"INT" });
+    }
     if (!unnamedTags.has(block.outputTag)) continue;
     const type = FBD_ARITHMETIC.has(block.type) ? types.get(block.inputs[0]) : "BOOL";
     types.set(block.outputTag, type);
