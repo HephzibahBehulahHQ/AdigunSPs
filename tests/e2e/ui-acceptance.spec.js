@@ -340,6 +340,55 @@ for (const editorType of ["LD", "FBD"]) {
   });
 }
 
+test("scheduled FBD units carry outputs through 5,000 blocks over 60 scans", async ({ page }) => {
+  test.setTimeout(65_000);
+  const commonOutputs = Array.from({ length:993 }, (_, index) => "Common_" + index);
+  const stageOutputs = Array.from({ length:6 }, (_, index) => "Stage_" + (index + 1));
+  const programUnits = stageOutputs.map((stage, index) => {
+    const unitOutputs = [...(index === 5 ? commonOutputs.slice(0, 29) : commonOutputs), stage];
+    const input = stageOutputs[index - 1] || "Start";
+    return {
+      name:"Fbd_" + (index + 1), language:"FBD", outputs:unitOutputs,
+      blocks:unitOutputs.map((outputTag, blockIndex) => ({ id:"block-" + blockIndex, type:"NOT", inputs:[input], outputTag }))
+    };
+  });
+  expect(programUnits.reduce((count, unit) => count + unit.blocks.length, 0)).toBe(5_000);
+  const outputs = [...commonOutputs, ...stageOutputs];
+  const project = {
+    name:"Scheduled FBD workload", editorType:"FBD", rungs:[], fbdBlocks:programUnits[0].blocks,
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, ...outputs.map((name) => ({ name, type:"BOOL", role:"output" }))],
+    io:{ inputs:["Start"], outputs }, programUnits,
+    tasks:[{ name:"Cyclic", cycleMs:100, programs:programUnits.map((unit) => unit.name) }]
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"scheduled-workload.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  const chooseMenu = async (menu, name) => {
+    await page.locator('[data-app-menu="' + menu + '"]').click();
+    await page.getByRole("menuitem", { name, exact:true }).click();
+  };
+  await chooseMenu("online", "Record trace");
+  await chooseMenu("plc", "Run");
+  await expect.poll(async () => Number(await page.locator("#cycleCount").textContent()), { timeout:48_000 })
+    .toBeGreaterThanOrEqual(60);
+  await chooseMenu("plc", "Pause");
+  await chooseMenu("online", "Record trace");
+  await chooseMenu("debug", "Trace history");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const { frames } = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  expect(frames.length).toBeGreaterThanOrEqual(60);
+
+  // The six NOT stages alternate from true. The final stage rewrites only the first 29 common outputs.
+  const expected = Object.fromEntries([
+    ...commonOutputs.map((name, index) => [name, index >= 29]),
+    ...stageOutputs.map((name, index) => [name, index % 2 === 0])
+  ]);
+  for (const frame of frames) expect(frame.outputs).toEqual(expected);
+});
+
 test("HMI alarm hysteresis, acknowledgement, and exported history agree", async ({ page }) => {
   const project = {
     name:"Alarm hysteresis exercise", editorType:"LD", rungs:[],
