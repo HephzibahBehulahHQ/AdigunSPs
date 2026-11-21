@@ -233,10 +233,10 @@ const fbdAccessibilityCopy = {
   pcm:{title:"Function block outline",block:"Block",inputs:"Inputs",output:"Output",wiringHelp:"Keyboard wiring: select output port and press Enter, then select input port and press Enter. Press Escape to cancel.",chooseInput:"Output don select. Choose input port.",chooseOutput:"Choose output port first.",connected:"Function block connection don add.",typeError:"Connection no work: BOOL and numeric types no match.",cycleError:"Connection no work: e go create dependency cycle.",cancelled:"Connection don cancel."},
 };
 const sfcAccessibilityCopy = {
-  en:{title:"Sequence chart outline",step:"Step",transition:"Transition",condition:"Condition"},
-  de:{title:"Ablaufkettenübersicht",step:"Schritt",transition:"Transition",condition:"Bedingung"},
-  yo:{title:"Àkótán sequence chart",step:"Ìgbésẹ̀",transition:"Ìyípadà",condition:"Ipò"},
-  pcm:{title:"Sequence chart outline",step:"Step",transition:"Transition",condition:"Condition"},
+  en:{title:"Sequence chart outline",initial:"Initial step",step:"Step",transition:"Transition",condition:"Condition"},
+  de:{title:"Ablaufkettenübersicht",initial:"Initialschritt",step:"Schritt",transition:"Transition",condition:"Bedingung"},
+  yo:{title:"Àkótán sequence chart",initial:"Ìgbésẹ̀ àkọ́kọ́",step:"Ìgbésẹ̀",transition:"Ìyípadà",condition:"Ipò"},
+  pcm:{title:"Sequence chart outline",initial:"First step",step:"Step",transition:"Transition",condition:"Condition"},
 };
 function fbdIssueText(issue) { const copy = fbdValidationCopy[language] || fbdValidationCopy.en, key = ({ "fbd-input-tag":"missing", "fbd-numeric-type":"numeric", "fbd-input-type":"bool", "fbd-dependency":"duplicate", "fbd-cycle":"cycle", "fbd-input-count":"count", "fbd-output":"output", "fbd-output-tag":"output", "fbd-output-type":"outputType", "fbd-count-tag":"countTag", "fbd-count-type":"countType", "fbd-preset":"preset", "fbd-scale-range":"scale", "fbd-type":"type" })[issue.code]; return (copy[key] || copy.review).replace("{tag}", issue.tag || "").replace("{expected}", issue.expected === "numeric" ? (language === "de" ? "numerisch" : "numeric") : issue.expected || ""); }
 let fbdKeyboardWireStart = null;
@@ -752,6 +752,16 @@ function renderSfc() {
   const root = $("#sfcChart"), model = project.sfc || makeDefaultSfc(); project.sfc = model;
   const steps = model.steps || [], inputTags = inferTags().inputs;
   const initialStep = getSfcInitialStep(model)?.id;
+  const initialSelect = $("#sfcInitialStep"), initialLabel = $("#sfcInitialStepLabel");
+  const copy = sfcAccessibilityCopy[language] || sfcAccessibilityCopy.en;
+  const signature = JSON.stringify(steps.map(({ id, name }) => [id, name]));
+  if (initialSelect.dataset.steps !== signature) {
+    initialSelect.replaceChildren(...steps.map(({ id, name }) => new Option(name || id, id)));
+    initialSelect.dataset.steps = signature;
+  }
+  if (initialSelect.value !== (initialStep ?? "")) initialSelect.value = initialStep ?? "";
+  initialSelect.disabled = !steps.length;
+  if (initialLabel.textContent !== copy.initial) initialLabel.textContent = copy.initial;
   const activeStep = steps.find((step) => step.id === sim.activeStep)?.id ?? initialStep;
   root.innerHTML = `<div class="sfc-steps">${steps.map((step, index) => `<article class="sfc-step ${activeStep === step.id ? "active" : ""}" data-sfc-step="${escapeAttr(step.id)}"><span class="step-number">${step.id === initialStep ? "●" : index + 1}</span><label>Step name<input data-step-id="${escapeAttr(step.id)}" data-step-field="name" value="${escapeAttr(step.name)}"></label><label>Active outputs<input data-step-id="${escapeAttr(step.id)}" data-step-field="actions" value="${escapeAttr((step.actions || []).join(", "))}" placeholder="Motor, Lamp"></label><button class="tag-remove" data-step-delete="${escapeAttr(step.id)}" aria-label="Delete step">×</button></article>`).join("")}</div><div class="sfc-transitions"><h3>TRANSITIONS</h3>${(model.transitions || []).map((transition, index) => `<div class="sfc-transition" data-sfc-transition="${index}"><select data-transition-index="${index}" data-transition-field="from">${steps.map((step) => `<option value="${escapeAttr(step.id)}" ${step.id === transition.from ? "selected" : ""}>${escapeHtml(step.name)}</option>`).join("")}</select><span>→</span><select data-transition-index="${index}" data-transition-field="to">${steps.map((step) => `<option value="${escapeAttr(step.id)}" ${step.id === transition.to ? "selected" : ""}>${escapeHtml(step.name)}</option>`).join("")}</select><input data-transition-index="${index}" data-transition-field="condition" value="${escapeAttr(transition.condition)}" list="sfcInputTags" aria-label="Transition condition"><select data-transition-index="${index}" data-transition-field="mode"><option value="NO" ${transition.mode !== "NC" ? "selected" : ""}>NO</option><option value="NC" ${transition.mode === "NC" ? "selected" : ""}>NC</option></select><button class="tag-remove" data-transition-delete="${index}" aria-label="Delete transition">×</button></div>`).join("")}</div><datalist id="sfcInputTags">${inputTags.map((tag) => `<option value="${escapeAttr(tag)}">`).join("")}</datalist>`;
   root.querySelectorAll("[data-step-id]").forEach((field) => field.addEventListener("change", () => { const step = steps.find((item) => item.id === field.dataset.stepId); if (!step) return; pushHistory(); step[field.dataset.stepField] = field.dataset.stepField === "actions" ? field.value.split(",").map((x) => x.trim()).filter(Boolean) : field.value; model.outputs = [...new Set(steps.flatMap((item) => item.actions || []))]; render(); persist(); }));
@@ -2281,6 +2291,14 @@ async function init() {
 $("#accountButton").addEventListener("click", showAccount);
 $("#guestExpirySignIn").addEventListener("click", () => { showAccount(); $("#accountEmail")?.focus(); });
 $("#guestExpiryRegister").addEventListener("click", () => { showAccount(); $("#accountEmail")?.focus(); });
+$("#sfcInitialStep").addEventListener("change", (event) => {
+  const id = event.currentTarget.value, chart = project.sfc;
+  if (!chart?.steps?.some((step) => step.id === id) || chart.initialStep === id) return;
+  pushHistory();
+  chart.initialStep = id;
+  persist();
+  render();
+});
 applyPreferences(); $("#settingsButton").addEventListener("click", showSettings); document.querySelectorAll("[data-app-menu]").forEach((button) => button.addEventListener("click", showApplicationMenu)); $("#logicTab").addEventListener("click", () => { workspaceView = "logic"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#electricalTab").addEventListener("click", () => { workspaceView = "electrical"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); $("#hmiTab").addEventListener("click", () => { workspaceView = "hmi"; localStorage.setItem("adigun-workspace-view", workspaceView); render(); }); document.querySelectorAll("[data-project-view]").forEach((button)=>button.addEventListener("click",()=>{workspaceView=button.dataset.projectView;localStorage.setItem("adigun-workspace-view",workspaceView);render();})); $("#processesButton").addEventListener("click", showProcessManager); $("#addAlarmButton").addEventListener("click", showAlarmSetup); $("#manageAlarmsButton").addEventListener("click", showAlarmManager); $("#recipesButton").addEventListener("click", showRecipes); $("#alarmHistoryButton").addEventListener("click", showAlarmHistory); $("#exportTrendHistoryButton").addEventListener("click", exportTrendHistory);
 function setupAdigunBotWindow() {
   const identity = accountUser?.id || "guest", config = globalThis.ADIGUN_RUNTIME_CONFIG?.ai || {};
