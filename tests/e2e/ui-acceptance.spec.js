@@ -1725,6 +1725,23 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
   await expect(await readPersistedState()).toEqual(before);
 });
 
+test("workspace dialog controls follow the interface language", async ({ page }) => {
+  for (const [locale, closeLabel] of [["EN", "Close dialog"], ["DE", "Dialog schließen"], ["YO", "Pa àpótí ìjíròrò"], ["PCM", "Close this window"]]) {
+    await expect(page.locator("#languageButton")).toHaveText(locale);
+    await page.locator("#settingsButton").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.locator(".modal-close")).toHaveAccessibleName(closeLabel);
+    await page.locator("#localizationReport").click();
+    await expect(dialog.locator(".modal-close")).toHaveAccessibleName(closeLabel);
+    if (locale === "EN") {
+      await expect(dialog).toContainText("This report checks for missing translations.");
+    }
+    await dialog.locator(".modal-close").click();
+    await expect(dialog).toBeHidden();
+    if (locale !== "PCM") await cycleLanguage(page);
+  }
+});
+
 test("workspace layout remains bounded across all locales, themes, and scaled text", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await page.evaluate(() => { document.documentElement.style.fontSize = "125%"; });
