@@ -6,7 +6,7 @@ const NS = "http://www.plcopen.org/xml/tc6_0201";
 const XHTML = "http://www.w3.org/1999/xhtml";
 const TYPES = new Set(["BOOL", "INT", "REAL", "TIME"]);
 const IEC_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const LD_TIMER_TYPES = new Set(["TON", "TOF"]);
+const LD_TIMER_TYPES = new Set(["TON", "TOF", "TP"]);
 const LADDER_TIMER_ADDRESS = /^T\d+\.\d+$/i;
 const TIMER_TAG_NOTE = "AdigunSPs timer tag: ";
 const esc = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
@@ -408,7 +408,7 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const blocks = nodes.filter((node) => node.localName === "block"), timerInstances = new Map();
   for (const block of blocks) {
     const name = block.getAttribute("instanceName");
-    if (!block.getAttribute("localId") || !LD_TIMER_TYPES.has(block.getAttribute("typeName")) || !name || !IEC_IDENTIFIER.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely identified and named TON or TOF timer blocks only.");
+    if (!block.getAttribute("localId") || !LD_TIMER_TYPES.has(block.getAttribute("typeName")) || !name || !IEC_IDENTIFIER.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely identified and named TON, TOF, or TP timer blocks only.");
     timerInstances.set(name, block);
   }
   const variableNodes = descendants(child(pou, "interface"), "variable"), tags = [], initialState = {};

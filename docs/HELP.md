@@ -56,7 +56,7 @@ Escape closes menus. Use arrow keys and Enter in logic outlines. Open phone draw
 
 ## Program Main
 
-In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `Start` and `Stop` inputs and a BOOL `Motor` output under **Tags and I/O**. Add a rung with Start NO and Stop NC before the Motor coil; add a Motor NO holding branch if needed. Set inputs in **Simulated inputs**, then use **Run** or **Step** and check diagnostics. Logic simulation does not imply motor physics. PLCopen ladder interchange preserves TON on-delay and TOF off-delay timers with whole-millisecond presets, including compound TIME literals.
+In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `Start` and `Stop` inputs and a BOOL `Motor` output under **Tags and I/O**. Add a rung with Start NO and Stop NC before the Motor coil; add a Motor NO holding branch if needed. Set inputs in **Simulated inputs**, then use **Run** or **Step** and check diagnostics. Logic simulation does not imply motor physics. PLCopen ladder interchange preserves TON on-delay, TOF off-delay, and TP pulse timers with whole-millisecond presets, including compound TIME literals.
 
 ## Components / Schematic
 
