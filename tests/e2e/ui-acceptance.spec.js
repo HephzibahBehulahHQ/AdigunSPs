@@ -239,8 +239,10 @@ test("PLCopen Boolean FBD gates round-trip with direct dependencies", async ({ p
 });
 
 test("large imported ladder and function-block projects keep canvas rendering bounded", async ({ page }) => {
-  const count = 240;
-  const outputs = Array.from({ length:count }, (_, index) => `Output_${index}`);
+  const rungCount = 2_000;
+  const blockCount = 5_000;
+  const mountedLimit = 60;
+  const outputs = Array.from({ length:999 }, (_, index) => `Output_${index}`);
   const tags = [{ name:"Start", type:"BOOL", role:"input" },
     ...outputs.map((name) => ({ name, type:"BOOL", role:"output" }))];
   const shared = { tags, io:{ inputs:["Start"], outputs }, initialState:{} };
@@ -252,25 +254,25 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   };
 
   await importProject({ ...shared, name:"Large ladder project", editorType:"LD",
-    rungs:outputs.map((coil, index) => ({ id:`rung-${index}`, branches:[[{ tag:"Start", mode:"NO" }]], coil }))
+    rungs:Array.from({ length:rungCount }, (_, index) => ({ id:`rung-${index}`, branches:[[{ tag:"Start", mode:"NO" }]], coil:outputs[index % outputs.length] }))
   });
   const ladder = page.locator("#ladderCanvas");
   const rungs = ladder.locator(":scope > [data-rung]");
-  const lastRung = ladder.locator(`:scope > [data-rung="${count - 1}"]`);
-  await expect(ladder).toHaveAttribute("aria-setsize", String(count));
+  const lastRung = ladder.locator(`:scope > [data-rung="${rungCount - 1}"]`);
+  await expect(ladder).toHaveAttribute("aria-setsize", String(rungCount));
   await expect(rungs.first()).toBeVisible();
-  expect(await rungs.count()).toBeLessThan(count / 4);
+  expect(await rungs.count()).toBeLessThan(mountedLimit);
   const outputRow = page.locator("#outputList .io-row").first();
   await outputRow.evaluate((row) => { row.dataset.retainedDuringScroll = "true"; });
   await page.locator("#logicOutlineSummary").press("Enter");
-  await page.locator(`[data-outline-parent="${count - 1}"]`).press("Enter");
+  await page.locator(`[data-outline-parent="${rungCount - 1}"]`).press("Enter");
   await expect(lastRung).toBeInViewport();
   await expect(outputRow).toHaveAttribute("data-retained-during-scroll", "true");
-  expect(await rungs.count()).toBeLessThan(count / 4);
+  expect(await rungs.count()).toBeLessThan(mountedLimit);
   const ladderOutline = page.locator("#logicOutline");
   await expect(ladderOutline.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(1);
   await ladderOutline.locator('[data-outline-parent="0"]').press("End");
-  const outlineCoil = ladderOutline.locator(`[data-outline-rung="${count - 1}"][data-outline-kind="coil"]`);
+  const outlineCoil = ladderOutline.locator(`[data-outline-rung="${rungCount - 1}"][data-outline-kind="coil"]`);
   await expect(outlineCoil).toBeFocused();
   await expect(outlineCoil).toHaveAttribute("tabindex", "0");
   await page.keyboard.press("Enter");
@@ -280,22 +282,22 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   await expect(coil).toBeFocused();
 
   await importProject({ ...shared, name:"Large block project", editorType:"FBD", rungs:[],
-    fbdBlocks:outputs.map((outputTag, index) => ({
-      id:`block-${index}`, type:"NOT", inputs:["Start"], outputTag, x:40, y:index * 300
+    fbdBlocks:Array.from({ length:blockCount }, (_, index) => ({
+      id:`block-${index}`, type:"NOT", inputs:["Start"], outputTag:outputs[index % outputs.length], x:40, y:index * 300
     }))
   });
   const blocks = page.locator("#fbdBlocks [data-fbd-node]");
-  const lastBlock = page.locator(`#fbdBlocks [data-fbd-node="${count - 1}"] [data-fbd-drag-handle]`);
+  const lastBlock = page.locator(`#fbdBlocks [data-fbd-node="${blockCount - 1}"] [data-fbd-drag-handle]`);
   await expect(blocks.first()).toBeVisible();
-  expect(await blocks.count()).toBeLessThan(count / 4);
+  expect(await blocks.count()).toBeLessThan(mountedLimit);
   await page.locator("#fbdLogicOutlineSummary").press("Enter");
   await expect(page.locator('#fbdLogicTree [role="treeitem"][tabindex="0"]')).toHaveCount(1);
   await page.locator('[data-outline-fbd="0"]').press("End");
-  await expect(page.locator(`[data-outline-fbd="${count - 1}"]`)).toBeFocused();
+  await expect(page.locator(`[data-outline-fbd="${blockCount - 1}"]`)).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(lastBlock).toBeFocused();
   await expect(lastBlock).toBeInViewport();
-  expect(await blocks.count()).toBeLessThan(count / 4);
+  expect(await blocks.count()).toBeLessThan(mountedLimit);
 });
 
 test("HMI alarm hysteresis, acknowledgement, and exported history agree", async ({ page }) => {

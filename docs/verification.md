@@ -46,7 +46,7 @@ The browser round-trip checks Q-driven coils, older exports with an implicit Q p
 
 ## Large imported logic projects — 2026-11-21
 
-Browser acceptance uses separate 240-network LD and 240-block FBD imports. Fewer than 60 canvas elements mount at once. The ladder outline reaches the last network without replacing the I/O controls, and the FBD outline reaches and retains focus on the last block. This covers bounded rendering and keyboard navigation for these fixtures. Maximum-size projects and sustained scan performance remain open.
+Browser acceptance uses separate 2,000-network LD and 5,000-block FBD imports, each with 1,000 declared tags. Chrome, Firefox, and Playwright WebKit passed against the deployed application. Fewer than 60 canvas elements mount at the start and end of each canvas. The ladder outline reaches the last network without replacing the I/O controls, and the FBD outline reaches and retains focus on the last block. Sustained scan performance remains open.
 
 ## Local project recovery transactions — 2026-11-21
 

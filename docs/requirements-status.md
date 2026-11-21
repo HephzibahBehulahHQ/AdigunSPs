@@ -4,7 +4,7 @@
 
 - Extend the documented PLCopen interchange subset in verified increments. Preserve project behavior on round-trip and reject ambiguous structures.
 - Verify project lifecycle through the browser, including offline reopen, recovery, and interchange. The IndexedDB transaction checks cover rollback and concurrent snapshot retention.
-- Expand workspace assurance from the current cross-browser, touch-emulated, offline, and 240-item fixtures to maximum-size workloads, sustained scans, and assistive-technology checks.
+- Extend workspace assurance beyond cross-browser import and navigation at the LD/FBD count limits to sustained scans and assistive-technology checks.
 - Keep account inbox, physical-device testing, and translation review as separate acceptance items with their own evidence and test prerequisites.
 
 See the [verification record](verification.md) for current coverage. The historical release note below describes the November 12 baseline.
