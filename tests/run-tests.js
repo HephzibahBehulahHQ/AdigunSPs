@@ -720,7 +720,8 @@ assert.match(app, /project\.viewState = \{ .*scrollLeft/, "ladder canvas persist
 assert.match(html, /id="logicOutline" role="tree"/, "logic outline provides a screen-reader tree alternative");
 assert.match(app, /function scrollToRung\(index\)/, "minimap and logic outline navigate to a selected network");
 assert.match(app, /event\.key === "ArrowDown"/, "logic outline supports keyboard tree navigation");
-assert.match(app, /event\.key === "Enter" \|\| event\.key === " "[\s\S]*scrollToRung\(Number\(event\.target\.dataset\.outlineParent\)\)/, "focused ladder network activates navigation with Enter or Space");
+assert.match(app, /event\.key === "Enter" \|\| event\.key === " "[\s\S]*activateParent\?\.\(item\)/, "Enter and Space activate a focused outline parent");
+assert.match(app, /bindLogicOutlineNavigation\(root,[\s\S]*scrollToRung\(Number\(item\.dataset\.outlineParent\)\)/, "the ladder outline navigates to the active network");
 assert.match(app, /function fitZoom\(\)/, "zoom-to-fit adjusts the ladder canvas to the available width");
 assert.match(app, /class="analog-value"/, "simulated I/O exposes editable analog inputs");
 assert.match(app, /input\.type === "checkbox" \? input\.checked : Number\(input\.value\)/, "simulated I/O stores BOOL and numeric input values with matching types");

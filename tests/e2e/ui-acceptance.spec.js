@@ -160,6 +160,17 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   await expect(lastRung).toBeInViewport();
   await expect(outputRow).toHaveAttribute("data-retained-during-scroll", "true");
   expect(await rungs.count()).toBeLessThan(count / 4);
+  const ladderOutline = page.locator("#logicOutline");
+  await expect(ladderOutline.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(1);
+  await ladderOutline.locator('[data-outline-parent="0"]').press("End");
+  const outlineCoil = ladderOutline.locator(`[data-outline-rung="${count - 1}"][data-outline-kind="coil"]`);
+  await expect(outlineCoil).toBeFocused();
+  await expect(outlineCoil).toHaveAttribute("tabindex", "0");
+  await page.keyboard.press("Enter");
+  const coil = lastRung.locator(".coil");
+  await expect(coil).toBeFocused();
+  await coil.press("Enter");
+  await expect(coil).toBeFocused();
 
   await importProject({ ...shared, name:"Large block project", editorType:"FBD", rungs:[],
     fbdBlocks:outputs.map((outputTag, index) => ({
@@ -171,6 +182,7 @@ test("large imported ladder and function-block projects keep canvas rendering bo
   await expect(blocks.first()).toBeVisible();
   expect(await blocks.count()).toBeLessThan(count / 4);
   await page.locator("#fbdLogicOutlineSummary").press("Enter");
+  await expect(page.locator('#fbdLogicTree [role="treeitem"][tabindex="0"]')).toHaveCount(1);
   await page.locator('[data-outline-fbd="0"]').press("End");
   await expect(page.locator(`[data-outline-fbd="${count - 1}"]`)).toBeFocused();
   await page.keyboard.press("Enter");
@@ -801,6 +813,13 @@ test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electri
   const initialSteps = await steps.count();
   await page.locator('#editorToolboxDock [data-editor-toolbox-mode="SFC"] [data-action="add-sfc-step"]').click();
   await expect(steps).toHaveCount(initialSteps + 1);
+  await page.locator("#sfcLogicOutlineSummary").press("Enter");
+  const sfcTree = page.locator("#sfcLogicTree");
+  await expect(sfcTree.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(1);
+  await sfcTree.locator('[role="treeitem"]').first().press("ArrowDown");
+  await expect(sfcTree.locator('[role="treeitem"]').nth(1)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(steps.nth(1).locator("input").first()).toBeFocused();
 
   await page.locator('[data-action="tags"]').click();
   await page.locator("#addTag").click();

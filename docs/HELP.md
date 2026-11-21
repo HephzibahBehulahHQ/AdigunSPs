@@ -52,7 +52,7 @@ Switch guides with **Help topics**, **2-minute start**, and **Full manual** in t
 | Components / Schematic | Named electrical parts, terminals, and routed wires | Select a component to inspect its pins |
 | HMI | Operator screens connected to project tags | Add a widget and bind its tag |
 
-Press Escape or click outside to close menus. Hover or focus canvas icons for labels. Open phone drawers with **Panel layout** and close with **×** or **Escape**.
+Escape closes menus. Use arrow keys and Enter in logic outlines. Open phone drawers with **Panel layout** and close with **×** or **Escape**.
 
 ## Program Main
 
