@@ -1363,15 +1363,29 @@ const snapshotPairCopy = {
   pcm:{ with:"Compare with", other:"Snapshot for comparison" }
 };
 
+const snapshotHistoryCopy = {
+  en:{ save:"Project saved", properties:"Project properties edited", restore:"Restored from", copy:"Copied from", empty:"No older snapshots yet" },
+  de:{ save:"Projekt gespeichert", properties:"Projekteigenschaften bearbeitet", restore:"Wiederhergestellt aus", copy:"Kopiert aus", empty:"Noch keine älteren Snapshots vorhanden" },
+  yo:{ save:"A fipamọ́ iṣẹ́", properties:"A ṣàtúnṣe ànímọ́ iṣẹ́", restore:"A mú padà láti", copy:"A ṣe ẹ̀dà láti", empty:"Kò tíì sí ẹ̀dà àtijọ́" },
+  pcm:{ save:"Project don save", properties:"Project properties don change", restore:"Restore from", copy:"Copy from", empty:"No older snapshot yet" }
+};
+
+function snapshotVersionLabel(version) {
+  const when = formatLocaleDateTime(version.savedAt, language);
+  return version.revision ? `#${formatLocaleNumber(version.revision, language, 0)} · ${when}` : when;
+}
+
+function snapshotChangeLabel(version) {
+  const { kind, source } = version.change ?? {};
+  const label = Object.hasOwn(snapshotHistoryCopy[language], kind) ? snapshotHistoryCopy[language][kind] : "";
+  return label && source ? `${label} ${source.projectName} · ${snapshotVersionLabel(source)}` : label;
+}
+
 function showSnapshotComparison(projectId, earlier, versions) {
   const copy = snapshotComparisonCopy[language];
   const labels = snapshotPairCopy[language];
   const targets = versions.filter((version) => version.id !== earlier.id);
-  const versionLabel = (version) => {
-    const when = formatLocaleDateTime(version.savedAt, language);
-    return version.revision ? `#${formatLocaleNumber(version.revision, language, 0)} · ${when}` : when;
-  };
-  modal(copy.title, `<div class="modal-body"><div class="snapshot-diff-versions"><p><b>${copy.earlier}</b><br>${escapeHtml(versionLabel(earlier))}</p><label class="field">${labels.with}<select id="snapshotDiffTarget">${targets.map((version, index) => `<option value="${index}">${version === versions[0] ? `${copy.latest} · ` : ""}${escapeHtml(versionLabel(version))}</option>`).join("")}</select></label></div><div id="snapshotDiffSections"></div><div class="modal-actions"><button type="button" class="secondary" id="snapshotDiffBack">${copy.back}</button></div></div>`);
+  modal(copy.title, `<div class="modal-body"><div class="snapshot-diff-versions"><p><b>${copy.earlier}</b><br>${escapeHtml(snapshotVersionLabel(earlier))}</p><label class="field">${labels.with}<select id="snapshotDiffTarget">${targets.map((version, index) => `<option value="${index}">${version === versions[0] ? `${copy.latest} · ` : ""}${escapeHtml(snapshotVersionLabel(version))}</option>`).join("")}</select></label></div><div id="snapshotDiffSections"></div><div class="modal-actions"><button type="button" class="secondary" id="snapshotDiffBack">${copy.back}</button></div></div>`);
   const targetSelect = $("#snapshotDiffTarget");
   const update = () => {
     const target = targets[Number(targetSelect.value)];
@@ -1423,9 +1437,15 @@ async function showRecovery(projectId, focusSnapshot) {
     pcm:{ title:"Recover project snapshot", empty:"No earlier save yet", restore:"Restore", rungs:"rungs", copy:"Restore as copy", suffix:"recovered copy", unavailable:"That snapshot no dey available again", restored:"Project snapshot don restore", copied:"Project snapshot don open as copy" },
   })[language];
   const versions = await store.history(projectId);
-  if (versions.length < 2) { toast(copy.empty); return; }
-  const compare = snapshotComparisonCopy[language].compare;
-  modal(copy.title, `<div class="modal-body"><div class="project-list">${versions.slice(1).map((version, index) => `<div class="project-row snapshot-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${formatLocaleDateTime(version.savedAt,language)}</b><small>${escapeHtml(version.project.name)} · ${copy.restore}</small></button><span class="io-address">${formatLocaleNumber(version.project.rungs?.length ?? 0,language,0)} ${copy.rungs}</span><button class="secondary" data-compare-snapshot="${index + 1}">${compare}</button><button class="secondary" data-restore-copy="${escapeAttr(version.id)}">${copy.copy}</button></div>`).join("")}</div></div>`);
+  if (!versions.length) { toast(copy.empty); return; }
+  const { compare, latest } = snapshotComparisonCopy[language];
+  const current = versions[0];
+  const history = versions.slice(1).map((version, index) => {
+    const change = snapshotChangeLabel(version);
+    return `<div class="project-row snapshot-row"><button class="project-open" data-restore="${escapeAttr(version.id)}"><b>${escapeHtml(snapshotVersionLabel(version))}</b><small>${escapeHtml(version.project.name)} · ${copy.restore}</small>${change ? `<small>${escapeHtml(change)}</small>` : ""}</button><span class="io-address">${formatLocaleNumber(version.project.rungs?.length ?? 0,language,0)} ${copy.rungs}</span><button class="secondary" data-compare-snapshot="${index + 1}">${compare}</button><button class="secondary" data-restore-copy="${escapeAttr(version.id)}">${copy.copy}</button></div>`;
+  }).join("");
+  const currentChange = snapshotChangeLabel(current);
+  modal(copy.title, `<div class="modal-body"><p id="snapshotLatest"><b>${latest}</b> · ${escapeHtml(snapshotVersionLabel(current))}${currentChange ? `<br>${escapeHtml(currentChange)}` : ""}</p><div class="project-list">${history || `<p>${snapshotHistoryCopy[language].empty}</p>`}</div></div>`);
   document.querySelectorAll("[data-compare-snapshot]").forEach((button) => {
     const version = versions[Number(button.dataset.compareSnapshot)];
     button.onclick = () => showSnapshotComparison(projectId, version, versions);
