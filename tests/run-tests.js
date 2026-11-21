@@ -667,6 +667,9 @@ const sfc = { steps:[{ id:"idle", actions:[] }, { id:"run", actions:["Motor"] }]
 assert.equal(scanSFC(sfc, { Start:true }, {}).outputs.Motor, true, "SFC moves to its next step when the transition is true");
 const sfcReturn = { ...sfc, transitions:[{ from:"run", to:"idle", condition:"Stop", mode:"NC" }] };
 assert.equal(scanSFC(sfcReturn, { Stop:false }, { activeStep:"run" }).outputs.Motor, false, "SFC supports NC transition conditions");
+const configuredSfc = { ...sfc, initialStep:"run" };
+assert.equal(scanSFC(configuredSfc, { Start:false }).outputs.Motor, true, "SFC starts at its configured step even when the step is listed later");
+assert.equal(scanSFC(configuredSfc, { Start:false }, { activeStep:"idle" }).activeStep, "idle", "SFC preserves an existing active step");
 assert.equal(isApprovedExternalUrl("https://github.com/HephzibahBehulahHQ/AdigunSPs"), true, "the official organization repository is an approved resource");
 assert.equal(isApprovedExternalUrl("http://github.com/HephzibahBehulahHQ/AdigunSPs"), false, "external links require HTTPS");
 assert.equal(isApprovedExternalUrl("https://github.com.evil.example/HephzibahBehulahHQ/AdigunSPs"), false, "unapproved domains are rejected");

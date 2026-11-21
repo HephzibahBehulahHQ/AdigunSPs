@@ -725,6 +725,37 @@ test("Operations CSV includes active and idle Boolean outputs shown in the dashb
   expect(csv).not.toContain("AnalogOutput");
 });
 
+test("SFC starts and resets to the configured step in an imported chart", async ({ page }) => {
+  const project = {
+    name:"Configured SFC start", editorType:"SFC", rungs:[],
+    tags:[{ name:"Advance", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+    io:{ inputs:["Advance"], outputs:["Lamp"] }, initialState:{ Advance:false },
+    sfc:{ initialStep:"ready", outputs:["Lamp"],
+      steps:[{ id:"idle", name:"Idle", actions:[] }, { id:"ready", name:"Ready", actions:["Lamp"] }],
+      transitions:[{ id:"advance", from:"ready", to:"idle", condition:"Advance", mode:"NO" }]
+    }
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"sfc-start.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  const ready = page.locator('[data-sfc-step="ready"]');
+  await expect(ready).toHaveClass(/active/);
+  await expect(ready.locator(".step-number")).toHaveText("●");
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Step", exact:true }).click();
+  await expect(ready).toHaveClass(/active/);
+  await page.locator('[data-app-menu="debug"]').click();
+  await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
+  await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("true");
+  await page.locator("#modal .modal-close").click();
+  await page.locator('#inputList [data-input="Advance"]').check();
+  await expect(page.locator('[data-sfc-step="idle"]')).toHaveClass(/active/);
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Reset", exact:true }).click();
+  await expect(ready).toHaveClass(/active/);
+});
+
 test("status strip shows editor and PLC state, local autosave setting, and electrical grid context", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
   await expect(page.locator("#editorReadyStatus")).toHaveText("EDITOR READY");

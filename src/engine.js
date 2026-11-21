@@ -117,8 +117,13 @@ export function scanFBD(blocks, inputs, state = {}, outputNames = [], dt = 100, 
   return { outputs, values, timers, counters, edges, errors, energized: {}, scanMs: dt };
 }
 
+export function getSfcInitialStep(model) {
+  const steps = model?.steps || [];
+  return steps.find((step) => step.id === model?.initialStep) || steps[0];
+}
+
 export function scanSFC(model, inputs, state = {}) {
-  const steps = model?.steps || [], activeStep = steps.find((step) => step.id === state.activeStep) || steps[0];
+  const steps = model?.steps || [], activeStep = steps.find((step) => step.id === state.activeStep) || getSfcInitialStep(model);
   const values = { ...inputs, ...(state.outputs || {}) }, transitions = (model?.transitions || []).filter((item) => item.from === activeStep?.id);
   const transition = transitions.find((item) => { const raw = Boolean(values[item.condition]); return item.mode === "NC" ? !raw : raw; });
   const nextStep = transition ? steps.find((step) => step.id === transition.to) : activeStep;
