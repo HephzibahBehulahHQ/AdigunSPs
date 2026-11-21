@@ -266,16 +266,22 @@ const operationsCopy = {
   yo:{ button:"⌁ Iṣẹ́ ẹ̀rọ", title:"Ìṣírò iṣẹ́ ẹ̀rọ", note:"Àkókò iṣẹ́ ìṣàfarawé fún ìgbà yìí nìkan. Ìṣírò agbára àti owó dá lórí iye tí ìwọ tẹ̀ sí i; owó náà lo ẹyọ owó kan náà bí owó kWh rẹ. Kì í ṣe ìwọ̀n gidi tàbí àyẹ̀wò ààbò/ìtọ́jú.", tariff:"Owó rẹ fún kWh", threshold:"Ààlà ìṣàyẹ̀wò duty cycle (àṣàyàn, %)", output:"Àbájáde", load:"Agbára tí o tẹ̀ sí i (kW)", average:"Agbára àárín tí a fojú díwọ̀n (kW)", runtime:"Àkókò iṣẹ́ ìgbà yìí (wákàtí)", duty:"Duty cycle (%)", energy:"Agbára tí a fojú díwọ̀n (kWh)", cost:"Owó tí a fojú díwọ̀n", advisory:"Ó kọjá ààlà ìṣàyẹ̀wò", elapsed:"Àkókò ìṣàfarawé (wákàtí)", save:"Fipamọ́ àwọn iye wọ̀nyí", refresh:"Tún ìṣírò ṣe", export:"Gbé CSV jáde", none:"Kò sí tag àbájáde tí a ṣètò.", invalid:"Lo nọ́ńbà tí kò kéré sí odo; duty threshold kò gbọ́dọ̀ ju 100 lọ.", unentered:"Tẹ iye kan láti ṣírò" },
   pcm:{ button:"⌁ Operations", title:"Operations estimate", note:"This session simulation runtime only. Energy and cost na estimate from load and tariff wey you enter, and cost dey use the same currency unit as the tariff. E no be meter or maintenance/safety check.", tariff:"Your tariff per kWh", threshold:"Optional duty-cycle review limit (%)", output:"Output", load:"Load wey you enter (kW)", average:"Estimated average power (kW)", runtime:"Runtime this session (h)", duty:"Duty cycle (%)", energy:"Estimated energy (kWh)", cost:"Estimated cost", advisory:"E pass review limit", elapsed:"Simulated time (h)", save:"Save the inputs", refresh:"Refresh numbers", export:"Export CSV", none:"No output tags dey configured.", invalid:"Enter numbers wey no be below zero; duty limit no fit pass 100.", unentered:"Enter value to calculate" },
 };
-let contextMenuDismiss = null;
+let contextMenuDismiss = null, contextMenuTrigger = null;
+function revealContextMenu(menu, trigger, role) {
+  contextMenuTrigger = trigger;
+  if (trigger.matches("[data-app-menu]")) trigger.setAttribute("aria-expanded", "true");
+  menu.setAttribute("role", role);
+  menu.hidden = false;
+}
 function showContextMenu(event, entries, menuLabel = (contextCopy[language] || contextCopy.en).menu) {
   event.preventDefault(); const trigger = event.currentTarget; hideContextMenu(); const menu = $("#contextMenu"); menu.setAttribute("aria-label", menuLabel); menu.innerHTML = entries.map((entry, index) => `${entry.separator ? `<div class="menu-separator" role="separator"></div>` : `<button type="button" role="menuitem" tabindex="-1" class="${entry.danger ? "danger" : ""}" data-context-index="${index}">${escapeHtml(entry.label)}</button>`}`).join("");
-  menu.hidden = false; const width = menu.offsetWidth, height = menu.offsetHeight, anchor = event.currentTarget.matches?.("[data-app-menu]") ? event.currentTarget.getBoundingClientRect() : null, menuBar = anchor ? $(".app-menus").getBoundingClientRect() : null, left = anchor ? anchor.left : event.clientX, top = menuBar ? menuBar.bottom + 32 : event.clientY; menu.style.left = `${Math.max(8, Math.min(left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, Math.min(top, innerHeight - height - 8))}px`;
+  revealContextMenu(menu, trigger, "menu"); const width = menu.offsetWidth, height = menu.offsetHeight, anchor = event.currentTarget.matches?.("[data-app-menu]") ? event.currentTarget.getBoundingClientRect() : null, menuBar = anchor ? $(".app-menus").getBoundingClientRect() : null, left = anchor ? anchor.left : event.clientX, top = menuBar ? menuBar.bottom + 32 : event.clientY; menu.style.left = `${Math.max(8, Math.min(left, innerWidth - width - 8))}px`; menu.style.top = `${Math.max(8, Math.min(top, innerHeight - height - 8))}px`;
   contextMenuDismiss = bindMenuDismissal(event.currentTarget, menu, hideContextMenu);
-  menu.querySelectorAll("[data-context-index]").forEach((button) => button.addEventListener("click", () => { const entry = entries[Number(button.dataset.contextIndex)]; hideContextMenu(); entry.action(); }));
+  menu.querySelectorAll("[data-context-index]").forEach((button) => button.addEventListener("click", () => { const entry = entries[Number(button.dataset.contextIndex)]; hideContextMenu(); if (trigger.matches("[data-app-menu]")) trigger.focus({ preventScroll:true }); entry.action(); }));
   menu.onkeydown = (keyEvent) => { const buttons = [...menu.querySelectorAll("[role=menuitem]")], index = buttons.indexOf(document.activeElement); if (keyEvent.key === "Escape") { keyEvent.preventDefault(); keyEvent.stopPropagation(); hideContextMenu(); trigger?.focus(); } else if (["ArrowDown", "ArrowUp"].includes(keyEvent.key)) { keyEvent.preventDefault(); buttons[(index + (keyEvent.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus(); } };
   requestAnimationFrame(() => menu.querySelector("[role=menuitem]")?.focus());
 }
-function hideContextMenu() { contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.onkeydown = null; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
+function hideContextMenu() { if (contextMenuTrigger?.matches("[data-app-menu]")) contextMenuTrigger.setAttribute("aria-expanded", "false"); contextMenuTrigger = null; contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.onkeydown = null; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
 let helpMarkdownPromise;
 const helpDocuments = { topics:{file:"HELP.md",label:"Help topics"}, quickstart:{file:"QUICKSTART.md",label:"2-minute start"}, manual:{file:"user-guide.md",label:"Full manual"} };
 const helpDocumentCache = new Map();
@@ -295,7 +301,7 @@ function renderHelpDocument(menu,id,markdown) {
 function showHelpGuideMenu(event) {
   event.preventDefault(); hideContextMenu();
   const menu=$("#contextMenu"),trigger=event.currentTarget,keyboardOpened=event.detail===0,generation=++helpDocumentGeneration;
-  menu.classList.add("help-guide-menu");menu.setAttribute("aria-label","AdigunSPs Help and guides");menu.innerHTML=`<div class="help-guide-loading" role="status">Loading Help topics…</div>`;menu.hidden=false;
+  menu.classList.add("help-guide-menu");menu.setAttribute("aria-label","AdigunSPs Help and guides");menu.innerHTML=`<div class="help-guide-loading" role="status">Loading Help topics…</div>`;revealContextMenu(menu, trigger, "region");
   const rect=trigger.getBoundingClientRect(),width=Math.min(760,innerWidth-16),top=Math.min(rect.bottom+4,innerHeight-120);
   menu.style.width=`${width}px`;menu.style.maxHeight=`${Math.max(120,innerHeight-top-8)}px`;menu.style.left=`${Math.max(8,Math.min(rect.left,innerWidth-width-8))}px`;menu.style.top=`${Math.max(8,top)}px`;
   contextMenuDismiss=bindMenuDismissal(trigger,menu,hideContextMenu);
@@ -1946,7 +1952,7 @@ function showHelp() { const repo = resources.find((resource) => resource.id === 
 function showApplicationMenu(event) {
   if (event.currentTarget.dataset.appMenu === "help") { showHelpGuideMenu(event); return; }
   const entries = createApplicationMenuEntries(language)[event.currentTarget.dataset.appMenu].map((entry) => ({ label:entry.label, action:() => action(entry.action) }));
-  showContextMenu(event, entries);
+  showContextMenu(event, entries, event.currentTarget.textContent);
 }
 function showMixedPrograms() {
   const projectId = project.id;
