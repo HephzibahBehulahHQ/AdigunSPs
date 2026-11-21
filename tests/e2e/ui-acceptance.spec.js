@@ -288,6 +288,20 @@ test.describe("touch workspace", () => {
   });
 });
 
+test("mobile drawer keyboard focus enters each drawer and returns on Escape", async ({ page }) => {
+  await page.setViewportSize({ width:390, height:844 });
+  const opener = page.locator("#panelLayoutButton");
+  for (const [side, choice] of [["left", "#mobileProjectPanel"], ["right", "#mobileInspectorPanel"]]) {
+    await opener.press("Enter");
+    await page.locator(choice).press("Enter");
+    const close = page.locator(`[data-mobile-drawer-close="${side}"]`);
+    await expect(close).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(close).toBeHidden();
+    await expect(opener).toBeFocused();
+  }
+});
+
 test("contextual toolboxes keep the existing editor actions reachable", async ({ page }) => {
   await expect(page.locator("#electricalTab")).toHaveAttribute("aria-label", "Components / Schematic");
   const logicTab = page.locator("#logicTab");
