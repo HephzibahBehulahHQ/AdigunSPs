@@ -113,6 +113,8 @@ function readStSource(body, tags) {
 
 const FBD_COMPARISONS = new Set(["GT", "LT", "EQ"]);
 const FBD_ARITHMETIC = new Set(["ADD", "SUB", "MUL"]);
+const FBD_NEGATED_OUTPUT_TYPES = new Map([["AND", "NAND"], ["OR", "NOR"], ["XOR", "XNOR"]]);
+const FBD_BASE_TYPES = new Map([...FBD_NEGATED_OUTPUT_TYPES].map(([base, negated]) => [negated, base]));
 
 function fbdPins(type, count) {
   if (type === "NOT" && count === 1) return ["IN"];
@@ -128,7 +130,7 @@ function checkedFbdBlocks(project) {
   const tags = new Map((project.tags || []).map((tag) => [tag.name, tag]));
   for (const block of blocks) {
     const inputs = block.inputs || [];
-    fbdPins(block.type, inputs.length);
+    fbdPins(FBD_BASE_TYPES.get(block.type) ?? block.type, inputs.length);
     const output = tags.get(block.outputTag);
     const inputTypes = inputs.map((name) => tags.get(name)?.type);
     const [inputType, secondInputType] = inputTypes;
@@ -159,12 +161,15 @@ function createFbdBody(project) {
     `<inVariable localId="${inputs.get(tag)}"><position x="0" y="${24 + index * 28}"/><connectionPointOut/><expression>${esc(tag)}</expression></inVariable>`);
   const blockNodes = blocks.map((block, index) => {
     const id = index + 1, { x, y } = fbdBlockPosition(block, index);
-    const pins = fbdPins(block.type, block.inputs.length).map((pin, inputIndex) => {
+    const baseType = FBD_BASE_TYPES.get(block.type);
+    const type = baseType ?? block.type;
+    const negation = baseType ? ' negated="true"' : "";
+    const pins = fbdPins(type, block.inputs.length).map((pin, inputIndex) => {
       const tag = block.inputs[inputIndex], producer = producers.get(tag);
       return `<variable formalParameter="${pin}"><connectionPointIn><connection refLocalId="${producer ?? inputs.get(tag)}"${producer ? ' formalParameter="OUT"' : ""}/></connectionPointIn></variable>`;
     }).join("");
     const outputId = blocks.length + inputs.size + id;
-    return `<block localId="${id}" typeName="${block.type}" width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables><variable formalParameter="OUT"><connectionPointOut/></variable></outputVariables></block>` +
+    return `<block localId="${id}" typeName="${type}" width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables><variable formalParameter="OUT"${negation}><connectionPointOut/></variable></outputVariables></block>` +
       `<outVariable localId="${outputId}"><position x="${x + 115}" y="${y}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="OUT"/></connectionPointIn><expression>${esc(block.outputTag)}</expression></outVariable>`;
   });
   return `<FBD>${inputNodes.join("")}${blockNodes.join("")}</FBD>`;
@@ -338,11 +343,13 @@ function connectionRefs(node) {
   if (!connections.length) throw new Error("PLCopen LD element has no incoming connection.");
   return connections.map((connection) => connection.getAttribute("refLocalId"));
 }
-function checkFbdModifiers(node) {
-  if (xmlBoolean(node.getAttribute("negated"), "FBD negated") || xmlBoolean(node.getAttribute("hidden"), "FBD hidden") ||
+function checkFbdModifiers(node, allowNegation = false) {
+  const negated = xmlBoolean(node.getAttribute("negated"), "FBD negated");
+  if ((negated && !allowNegation) || xmlBoolean(node.getAttribute("hidden"), "FBD hidden") ||
       (node.getAttribute("edge") || "none") !== "none" || (node.getAttribute("storage") || "none") !== "none") {
     throw new Error("PLCopen FBD pin and variable modifiers are outside the supported subset.");
   }
+  return negated;
 }
 
 function readFbdSource(node, nodes) {
@@ -402,7 +409,8 @@ function readFbdBody(body, imported) {
         expectedPins.some((pin) => !pinNames.has(pin))) {
       throw new Error("PLCopen FBD block pins or output assignment are outside the supported subset.");
     }
-    checkFbdModifiers(output[0]);
+    const negatedType = FBD_NEGATED_OUTPUT_TYPES.get(type);
+    const negated = checkFbdModifiers(output[0], Boolean(negatedType));
     const inputs = expectedPins.map((name) => {
       const pin = pinNames.get(name);
       checkFbdModifiers(pin);
@@ -420,7 +428,7 @@ function readFbdBody(body, imported) {
     const position = child(node, "position");
     const x = Number(position?.getAttribute("x")), y = Number(position?.getAttribute("y"));
     const layout = Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
-    blocks.push({ id:`plcopen-block-${id}`, type, inputs, outputTag:outputs.get(node), ...(layout ? { layout } : {}) });
+    blocks.push({ id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:outputs.get(node), ...(layout ? { layout } : {}) });
   }
   if ([...wireOutputs].some((node) => !usedSources.has(node))) {
     throw new Error("PLCopen FBD block outputs must connect to a variable or another block.");
