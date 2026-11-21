@@ -206,6 +206,32 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen FBD CTU preserves the threshold and reset wiring", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const { scanFBD } = await import("/src/engine.js");
+    const xml = createPlcopenXml({
+      name:"CTU threshold exercise", editorType:"FBD",
+      tags:[{ name:"Pulse", type:"BOOL", role:"input" }, { name:"Reset", type:"BOOL", role:"input" },
+        { name:"Reached", type:"BOOL", role:"output" }],
+      fbdBlocks:[{ type:"CTU", inputs:["Pulse","Reset"], outputTag:"Reached", preset:2 }]
+    });
+    const imported = parsePlcopenXml(xml);
+    let state = {};
+    const rows = [[true,false], [true,false], [false,false], [true,false], [true,true], [true,false], [false,false], [true,false]].map(([Pulse,Reset]) => {
+      state = scanFBD(imported.fbdBlocks, { Pulse,Reset }, state, imported.io.outputs);
+      return [state.outputs.Reached, state.values["Reached.CV"]];
+    });
+    let rejection;
+    try { parsePlcopenXml(xml.replace("<expression>2</expression>", "<expression>32768</expression>")); }
+    catch (error) { rejection = error.message; }
+    return { rows, rejection, inputs:imported.fbdBlocks[0].inputs };
+  });
+  expect(result.inputs).toEqual(["Pulse","Reset"]);
+  expect(result.rows).toEqual([[false,1], [false,1], [false,1], [true,2], [false,0], [false,0], [false,0], [false,1]]);
+  expect(result.rejection).toContain("PV must be from 1 to 32767");
+});
+
 test("PLCopen FBD timers preserve Q wiring and scan timing", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
