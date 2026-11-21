@@ -187,17 +187,23 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
-test("PLCopen Boolean FBD gates round-trip with direct dependencies", async ({ page }) => {
+test("PLCopen Boolean FBD and numeric comparisons round-trip with direct dependencies", async ({ page }) => {
   const xml = await page.evaluate(async () => {
     const { createPlcopenXml } = await import("/src/plcopen.js");
     return createPlcopenXml({
       name:"Boolean FBD XML exercise", editorType:"FBD",
       tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Stop", type:"BOOL", role:"input" },
-        { name:"Permit", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" }],
-      initialState:{ Start:true, Stop:false },
+        { name:"Permit", type:"BOOL" }, { name:"Lamp", type:"BOOL", role:"output" },
+        { name:"Temperature", type:"REAL", role:"input" }, { name:"Limit", type:"REAL", role:"input" },
+        { name:"Above", type:"BOOL", role:"output" }, { name:"Below", type:"BOOL", role:"output" },
+        { name:"Equal", type:"BOOL", role:"output" }],
+      initialState:{ Start:true, Stop:false, Temperature:12.5, Limit:10 },
       fbdBlocks:[
         { id:"stop-invert", type:"NOT", inputs:["Stop"], outputTag:"Permit", layout:{ x:360, y:140 } },
-        { id:"enable", type:"AND", inputs:["Start", "Permit"], outputTag:"Lamp", layout:{ x:740, y:140 } }
+        { id:"enable", type:"AND", inputs:["Start", "Permit", "Above"], outputTag:"Lamp", layout:{ x:740, y:140 } },
+        { id:"above", type:"GT", inputs:["Temperature", "Limit"], outputTag:"Above" },
+        { id:"below", type:"LT", inputs:["Temperature", "Limit"], outputTag:"Below" },
+        { id:"equal", type:"EQ", inputs:["Temperature", "Limit"], outputTag:"Equal" }
       ]
     });
   });
@@ -213,6 +219,9 @@ test("PLCopen Boolean FBD gates round-trip with direct dependencies", async ({ p
   await page.locator('[data-app-menu="debug"]').click();
   await page.getByRole("menuitem", { name:"Watch table", exact:true }).click();
   await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("true");
+  await expect(page.locator('[data-watch-value="Above"]')).toHaveText("true");
+  await expect(page.locator('[data-watch-value="Below"]')).toHaveText("false");
+  await expect(page.locator('[data-watch-value="Equal"]')).toHaveText("false");
   await page.locator("#modal .modal-close").click();
   await page.locator('[data-app-menu="plc"]').click();
   await page.getByRole("menuitem", { name:"I/O and tags", exact:true }).click();
@@ -230,7 +239,14 @@ test("PLCopen Boolean FBD gates round-trip with direct dependencies", async ({ p
   ]);
   const chunks = [];
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-  expect(Buffer.concat(chunks).toString("utf8")).toContain("<FBD>");
+  const exported = Buffer.concat(chunks).toString("utf8");
+  expect(exported).toContain("<FBD>");
+  for (const type of ["GT", "LT", "EQ"]) expect(exported).toContain(`typeName="${type}"`);
+  await page.locator("#fileInput").setInputFiles({
+    name:"mixed-comparison.xml", mimeType:"application/xml",
+    buffer:Buffer.from(xml.replace('<variable name="Limit"><type><REAL/>', '<variable name="Limit"><type><INT/>'))
+  });
+  await expect(page.locator("#toast")).toContainText("comparisons require two declared inputs of the same INT or REAL type");
   await page.locator("#fileInput").setInputFiles({
     name:"invalid-fbd.xml", mimeType:"application/xml",
     buffer:Buffer.from(xml.replace('refLocalId="1" formalParameter="OUT"', 'refLocalId="1" formalParameter="ET"'))
