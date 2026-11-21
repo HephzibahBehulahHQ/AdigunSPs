@@ -7,7 +7,7 @@ const NS = "http://www.plcopen.org/xml/tc6_0201";
 const XHTML = "http://www.w3.org/1999/xhtml";
 const TYPES = new Set(["BOOL", "INT", "REAL", "TIME"]);
 const IEC_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const LD_TIMER_TYPES = new Set(["TON", "TOF", "TP"]);
+const TIMER_TYPES = new Set(["TON", "TOF", "TP"]);
 const LADDER_TIMER_ADDRESS = /^T\d+\.\d+$/i;
 const TIMER_TAG_NOTE = "AdigunSPs timer tag: ";
 const esc = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
@@ -81,7 +81,7 @@ function supportedRungs(project) {
   return project.rungs.map((rung, index) => {
     const paths = rung.branches?.length ? rung.branches : [rung.contacts || []];
     const timer = rung.timer;
-    const supportedTimer = !timer || (LD_TIMER_TYPES.has(timer.type || "TON") && Number.isSafeInteger(Number(timer.preset)) && Number(timer.preset) > 0 && !timer.resetTag && (timer.output === undefined || timer.output === "DN" || timer.output === "EN") && (IEC_IDENTIFIER.test(timer.tag || "") || LADDER_TIMER_ADDRESS.test(timer.tag || "")));
+    const supportedTimer = !timer || (TIMER_TYPES.has(timer.type || "TON") && Number.isSafeInteger(Number(timer.preset)) && Number(timer.preset) > 0 && !timer.resetTag && (timer.output === undefined || timer.output === "DN" || timer.output === "EN") && (IEC_IDENTIFIER.test(timer.tag || "") || LADDER_TIMER_ADDRESS.test(timer.tag || "")));
     if (!Array.isArray(paths) || paths.some((path) => !Array.isArray(path)) || !rung.coil || !supportedTimer || rung.counter || rung.scale || ![undefined, "normal", "set", "reset"].includes(rung.coilMode) || paths.flat().some((contact) => !["NO", "NC", "R_TRIG", "F_TRIG"].includes(contact.mode))) {
       throw new Error(`Network ${index + 1} uses instructions outside the supported PLCopen LD subset.`);
     }
@@ -117,7 +117,7 @@ const FBD_NEGATED_OUTPUT_TYPES = new Map([["AND", "NAND"], ["OR", "NOR"], ["XOR"
 const FBD_BASE_TYPES = new Map([...FBD_NEGATED_OUTPUT_TYPES].map(([base, negated]) => [negated, base]));
 
 function fbdPins(type, count) {
-  if (type === "NOT" && count === 1) return ["IN"];
+  if ((type === "NOT" || TIMER_TYPES.has(type)) && count === 1) return ["IN"];
   if (((type === "XOR" || FBD_COMPARISONS.has(type) || FBD_ARITHMETIC.has(type)) && count === 2) || (["AND", "OR"].includes(type) && count >= 2 && count <= 8)) {
     return Array.from({ length:count }, (_, index) => `IN${index + 1}`);
   }
@@ -131,6 +131,9 @@ function checkedFbdBlocks(project) {
   for (const block of blocks) {
     const inputs = block.inputs || [];
     fbdPins(FBD_BASE_TYPES.get(block.type) ?? block.type, inputs.length);
+    if (TIMER_TYPES.has(block.type) && (!Number.isSafeInteger(Number(block.preset)) || Number(block.preset) <= 0)) {
+      throw new Error("PLCopen timer preset must be a positive integer-millisecond literal.");
+    }
     const output = tags.get(block.outputTag);
     const inputTypes = inputs.map((name) => tags.get(name)?.type);
     const [inputType, secondInputType] = inputTypes;
@@ -152,25 +155,38 @@ function checkedFbdBlocks(project) {
   return blocks;
 }
 
-function createFbdBody(project) {
+function createFbdBody(project, localVariables, reserved) {
   const blocks = checkedFbdBlocks(project);
-  const producers = new Map(blocks.map((block, index) => [block.outputTag, index + 1]));
+  const producers = new Map(blocks.map((block, index) => [
+    block.outputTag, { id:index + 1, pin:TIMER_TYPES.has(block.type) ? "Q" : "OUT" }
+  ]));
   const externalTags = [...new Set(blocks.flatMap((block) => block.inputs).filter((tag) => !producers.has(tag)))];
   const inputs = new Map(externalTags.map((tag, index) => [tag, blocks.length + index + 1]));
   const inputNodes = externalTags.map((tag, index) =>
     `<inVariable localId="${inputs.get(tag)}"><position x="0" y="${24 + index * 28}"/><connectionPointOut/><expression>${esc(tag)}</expression></inVariable>`);
+  let nextTimerId = 1;
   const blockNodes = blocks.map((block, index) => {
     const id = index + 1, { x, y } = fbdBlockPosition(block, index);
     const baseType = FBD_BASE_TYPES.get(block.type);
     const type = baseType ?? block.type;
     const negation = baseType ? ' negated="true"' : "";
-    const pins = fbdPins(type, block.inputs.length).map((pin, inputIndex) => {
+    let pins = fbdPins(type, block.inputs.length).map((pin, inputIndex) => {
       const tag = block.inputs[inputIndex], producer = producers.get(tag);
-      return `<variable formalParameter="${pin}"><connectionPointIn><connection refLocalId="${producer ?? inputs.get(tag)}"${producer ? ' formalParameter="OUT"' : ""}/></connectionPointIn></variable>`;
+      return `<variable formalParameter="${pin}"><connectionPointIn><connection refLocalId="${producer?.id ?? inputs.get(tag)}"${producer ? ` formalParameter="${producer.pin}"` : ""}/></connectionPointIn></variable>`;
     }).join("");
+    let instanceAttribute = "";
+    if (TIMER_TYPES.has(type)) {
+      let instance;
+      do { instance = `AdigunTimer_${nextTimerId++}`; } while (reserved.has(instance.toUpperCase()));
+      reserved.add(instance.toUpperCase());
+      localVariables.push(`<variable name="${instance}"><type><derived name="${type}"/></type></variable>`);
+      instanceAttribute = ` instanceName="${instance}"`;
+      pins += `<variable formalParameter="PT"><connectionPointIn><expression>T#${Number(block.preset)}ms</expression></connectionPointIn></variable>`;
+    }
+    const outputPin = producers.get(block.outputTag).pin;
     const outputId = blocks.length + inputs.size + id;
-    return `<block localId="${id}" typeName="${type}" width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables><variable formalParameter="OUT"${negation}><connectionPointOut/></variable></outputVariables></block>` +
-      `<outVariable localId="${outputId}"><position x="${x + 115}" y="${y}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="OUT"/></connectionPointIn><expression>${esc(block.outputTag)}</expression></outVariable>`;
+    return `<block localId="${id}" typeName="${type}"${instanceAttribute} width="100" height="72"><position x="${x}" y="${y}"/><inputVariables>${pins}</inputVariables><inOutVariables/><outputVariables><variable formalParameter="${outputPin}"${negation}><connectionPointOut/></variable></outputVariables></block>` +
+      `<outVariable localId="${outputId}"><position x="${x + 115}" y="${y}"/><connectionPointIn><connection refLocalId="${id}" formalParameter="${outputPin}"/></connectionPointIn><expression>${esc(block.outputTag)}</expression></outVariable>`;
   });
   return `<FBD>${inputNodes.join("")}${blockNodes.join("")}</FBD>`;
 }
@@ -323,7 +339,7 @@ export function createPlcopenXml(project) {
     return nodes.join("");
   }).join("");
   const body = mode === "ST" ? `<ST><xhtml:pre>${esc(stBody)}</xhtml:pre></ST>` :
-    mode === "FBD" ? createFbdBody(project) :
+    mode === "FBD" ? createFbdBody(project, groups.localVars, reserved) :
     mode === "SFC" ? createSfcBody(project, tags.filter((tag) => !isInput(tag) && isOutput(tag)).map((tag) => tag.name)) : `<LD>${ladderBody}</LD>`;
   const vars = Object.entries(groups).map(([name, items]) => items.length ? `<${name}>${items.join("")}</${name}>` : "").join("");
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "");
@@ -400,17 +416,26 @@ function readFbdBody(body, imported) {
   for (const [id, node] of nodes) {
     if (node.localName !== "block") continue;
     const type = node.getAttribute("typeName");
+    const timer = TIMER_TYPES.has(type);
     const pins = children(child(node, "inputVariables"), "variable");
-    const expectedPins = fbdPins(type, pins.length);
+    const expectedPins = fbdPins(type, pins.length - Number(timer));
     const pinNames = new Map(pins.map((pin) => [pin.getAttribute("formalParameter"), pin]));
     const output = children(child(node, "outputVariables"), "variable");
-    if (node.getAttribute("instanceName") || children(child(node, "inOutVariables"), "variable").length ||
-        output.length !== 1 || !["OUT", "OUT1"].includes(output[0].getAttribute("formalParameter")) ||
+    const validOutputPins = timer ? ["Q"] : ["OUT", "OUT1"];
+    if ((!timer && node.getAttribute("instanceName")) || children(child(node, "inOutVariables"), "variable").length ||
+        output.length !== 1 || !validOutputPins.includes(output[0].getAttribute("formalParameter")) ||
         expectedPins.some((pin) => !pinNames.has(pin))) {
       throw new Error("PLCopen FBD block pins or output assignment are outside the supported subset.");
     }
     const negatedType = FBD_NEGATED_OUTPUT_TYPES.get(type);
     const negated = checkFbdModifiers(output[0], Boolean(negatedType));
+    let timerSettings = {};
+    if (timer) {
+      const ptPin = pinNames.get("PT");
+      if (!ptPin) throw new Error("PLCopen FBD timers require IN and PT inputs.");
+      checkFbdModifiers(ptPin);
+      timerSettings = { preset:readTimerPreset(ptPin) };
+    }
     const inputs = expectedPins.map((name) => {
       const pin = pinNames.get(name);
       checkFbdModifiers(pin);
@@ -428,7 +453,7 @@ function readFbdBody(body, imported) {
     const position = child(node, "position");
     const x = Number(position?.getAttribute("x")), y = Number(position?.getAttribute("y"));
     const layout = Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
-    blocks.push({ id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:outputs.get(node), ...(layout ? { layout } : {}) });
+    blocks.push({ id:`plcopen-block-${id}`, type:negated ? negatedType : type, inputs, outputTag:outputs.get(node), ...timerSettings, ...(layout ? { layout } : {}) });
   }
   if ([...wireOutputs].some((node) => !usedSources.has(node))) {
     throw new Error("PLCopen FBD block outputs must connect to a variable or another block.");
@@ -535,6 +560,10 @@ function readLdTimerBlock(block) {
       outputs.length !== 1 || outputs[0].getAttribute("formalParameter") !== "Q") {
     throw new Error("PLCopen timer import supports only IN/PT inputs and the Q output.");
   }
+  return { tag:block.getAttribute("instanceName"), type:block.getAttribute("typeName"), preset:readTimerPreset(ptPin), refs:connectionRefs(inPin) };
+}
+
+function readTimerPreset(ptPin) {
   const ptPoints = children(ptPin, "connectionPointIn");
   const ptPoint = ptPoints[0];
   const expressions = children(ptPoint, "expression");
@@ -543,7 +572,7 @@ function readLdTimerBlock(block) {
       !Number.isSafeInteger(preset) || preset <= 0) {
     throw new Error("PLCopen timer preset must be a positive integer-millisecond literal.");
   }
-  return { tag:block.getAttribute("instanceName"), type:block.getAttribute("typeName"), preset, refs:connectionRefs(inPin) };
+  return preset;
 }
 
 function contactPathKey(refs) {
@@ -606,9 +635,10 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
   const byId = new Map(identified.map((node) => [node.getAttribute("localId"), node]));
   if (byId.size !== identified.length) throw new Error("PLCopen LD localIds must be unique.");
   const blocks = nodes.filter((node) => node.localName === "block"), timerInstances = new Map();
-  for (const block of blocks) {
+  const timerBlocks = fbd ? children(fbd, "block").filter((block) => TIMER_TYPES.has(block.getAttribute("typeName"))) : blocks;
+  for (const block of timerBlocks) {
     const name = block.getAttribute("instanceName");
-    if (!block.getAttribute("localId") || !LD_TIMER_TYPES.has(block.getAttribute("typeName")) || !name || !IEC_IDENTIFIER.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely identified and named TON, TOF, or TP timer blocks only.");
+    if (!block.getAttribute("localId") || !TIMER_TYPES.has(block.getAttribute("typeName")) || !name || !IEC_IDENTIFIER.test(name) || timerInstances.has(name)) throw new Error("PLCopen import supports uniquely identified and named TON, TOF, or TP timer blocks only.");
     timerInstances.set(name, block);
   }
   const variableNodes = descendants(child(pou, "interface"), "variable"), tags = [], initialState = {};
@@ -622,6 +652,9 @@ export function parsePlcopenXml(xml, DOMParserImpl = globalThis.DOMParser) {
       }
       const notes = descendants(child(variable, "documentation"), "p").map(text).filter((line) => line.startsWith(TIMER_TAG_NOTE));
       const restoredTag = notes[0]?.slice(TIMER_TAG_NOTE.length);
+      if (fbd && (notes.length || variable.hasAttribute("address") || child(variable, "initialValue"))) {
+        throw new Error("PLCopen FBD timer declarations must use an uninitialized local instance.");
+      }
       if (timerDeclarations.has(name) || notes.length > 1 || (notes.length && !LADDER_TIMER_ADDRESS.test(restoredTag))) {
         throw new Error("PLCopen timer declaration has duplicate or invalid timer tag information.");
       }
