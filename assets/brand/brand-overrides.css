@@ -322,6 +322,8 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .inspector-tabs { min-width: 0; max-width: 100%; overflow: hidden; }
 .inspector-tabs button { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+#fbdPane, #sfcPane { position: relative; }
+
 .panel-layout-width { display: none; }
 @media (min-width: 1051px) {
   .panel-layout-width { display: grid; grid-template-columns: minmax(0, 1fr) 7em; align-items: center; }
