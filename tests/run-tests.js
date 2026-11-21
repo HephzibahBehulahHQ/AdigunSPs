@@ -209,6 +209,7 @@ assert.deepEqual(applyInputFaults({ Sensor:false, Start:true }, [{ tag:"Sensor",
 assert.deepEqual(applyInputFaults({ Motor:false }, [{ tag:"Motor", target:"output", kind:"stuck-high" }]), { Motor:false }, "output faults do not alter input values");
 assert.deepEqual(applyOutputFaults({ Motor:false, Speed:10 }, [{ tag:"Motor", target:"output", kind:"stuck-high" }, { tag:"Speed", target:"output", kind:"offset", offset:2.5 }]), { Motor:true, Speed:12.5 }, "output faults force digital outputs and offset numeric outputs");
 assert.deepEqual(applyAnalogFaults({ Level:40, Output:12 }, [{ tag:"Level", kind:"offset", offset:5 }, { tag:"Level", kind:"offset", offset:-2 }, { tag:"Output", kind:"offset", offset:100 }], ["Level"]), { Level:43, Output:12 }, "analog offsets combine and only affect configured analog input tags");
+assert.deepEqual(applyAnalogFaults({ Level:40 }, [{ tag:"Level", target:"output", kind:"offset", offset:5 }], ["Level"]), { Level:40 }, "output faults never alter the raw analog input");
 const trendHistory = {};
 for (let sample = 1; sample <= 4; sample++) appendTrendSample(trendHistory, "Level", { time:sample * 1000, value:sample * 10 }, 3);
 assert.deepEqual(trendHistory.Level.map((sample) => sample.time), [2000, 3000, 4000], "trend retention keeps only the configured newest samples");
@@ -831,9 +832,13 @@ assert.doesNotMatch(appSource,/prompt\("Recipe name"\)/,"recipes do not depend o
 assert.match(appSource,/saveHmiRecipe\(field.value\)\) showRecipes\(\)/,"recipe list refreshes only after a successful save");
 
 const saveRecipeFlowSource=appSource.slice(appSource.indexOf("function saveHmiRecipe("),appSource.indexOf("function showRecipes()"));
+const numericRecipeSource=appSource.slice(appSource.indexOf("function numericInputValue("),appSource.indexOf("function rungPaths("));
 const recipeFlowProject={tags:recipeTags,hmi:{recipes:[]}}; let recipePersisted=0;
 const recipeFlowContext={language:"en",project:recipeFlowProject,sim:{values:recipeValues},hmiModel:()=>recipeFlowProject.hmi,inferTags:()=>({inputs:recipeTags.map(tag=>tag.name)}),captureRecipeInputs,saveRecipe,pushHistory:()=>{},logEvent:()=>{},persist:()=>recipePersisted++,toast:()=>{}};
-assert.equal(runInNewContext(saveRecipeFlowSource+'saveHmiRecipe("QA numeric inputs");',recipeFlowContext),true);
+recipeFlowContext.analogInputNames = () => ["Speed", "Count", "Delay"];
+recipeFlowContext.sim.numericInputValues = { Speed:12.75, Count:7, Delay:1500 };
+recipeFlowContext.sim.values = { ...recipeValues, Speed:18 };
+assert.equal(runInNewContext(numericRecipeSource+saveRecipeFlowSource+'saveHmiRecipe("QA numeric inputs");',recipeFlowContext),true);
 assert.deepEqual(recipeFlowProject.hmi.recipes[0].values,recipeValues,"actual recipe UI save captures typed inputs");
 assert.equal(recipePersisted,1);
 assert.equal(runInNewContext(saveRecipeFlowSource+'saveHmiRecipe("   ");',recipeFlowContext),false);
@@ -847,10 +852,13 @@ const reviewSource=appSource.slice(appSource.indexOf("function showRecipeReview(
 assert.ok(reviewSource.includes("recipeReviewApply"));
 const reviewProject={tags:recipeTags,initialState:{},hmi:structuredClone(reviewNumericModel)}; const reviewButtons={}; let reviewScans=0,reviewSaves=0,reviewHtml="";
 const reviewContext={project:reviewProject,sim:{values:{Start:false,Speed:1,Count:7,Delay:1500}},accountUser:{id:"qa-reviewer"},language:"en",hmiModel:()=>reviewContext.project.hmi,recipeUiCopy:()=>({reviewTitle:"Review",tag:"Tag",before:"Current",after:"Recipe",apply:"Apply",cancel:"Back",unchanged:"Unchanged",invalid:"Invalid",applied:"Applied"}),recipeInputChanges,applyRecipe,captureRecipeInputs,formatLocaleNumber:String,escapeHtml:String,modal:(_title,html)=>{reviewHtml=html;},$:id=>reviewButtons[id]||=(id==="#modal"?{close:()=>{}}:{}),showRecipes:()=>{},inferTags:()=>({inputs:recipeTags.map(tag=>tag.name)}),pushHistory:()=>{},logEvent:()=>{},doScan:()=>reviewScans++,persist:()=>reviewSaves++,toast:()=>{},Date};
-runInNewContext(reviewSource+`showRecipeReview("${reviewNumericModel.recipes[0].id}");`,reviewContext);
+reviewContext.analogInputNames = () => ["Speed", "Count", "Delay"];
+reviewContext.sim.numericInputValues = { Speed:1, Count:7, Delay:1500 };
+runInNewContext(numericRecipeSource+reviewSource+`showRecipeReview("${reviewNumericModel.recipes[0].id}");`,reviewContext);
 assert.equal(reviewContext.sim.values.Speed,1,"review opening never applies the recipe"); assert.ok(reviewHtml.includes("12.75"));
 reviewButtons["#recipeReviewCancel"].onclick(); assert.equal(reviewSaves,0,"cancel does not persist or apply");
 reviewButtons["#recipeReviewApply"].onclick(); assert.equal(reviewContext.sim.values.Speed,12.75); assert.equal(reviewScans,1); assert.equal(reviewSaves,1);
+assert.equal(reviewContext.sim.numericInputValues.Speed,12.75,"applying a reviewed recipe replaces the entered analog value");
 assert.equal(reviewProject.hmi.recipeEvents[0].actor,"qa-reviewer"); assert.equal(reviewProject.hmi.recipeEvents[0].changes.find(row=>row.tag==="Speed").before,1);
 reviewContext.project=structuredClone(reviewProject); reviewContext.sim.values.Speed=3; reviewButtons["#recipeReviewApply"].onclick(); assert.equal(reviewContext.sim.values.Speed,3,"stale review cannot change another project");
 

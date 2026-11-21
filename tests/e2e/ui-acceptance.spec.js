@@ -255,6 +255,100 @@ test("HMI alarm hysteresis, acknowledgement, and exported history agree", async 
   ]);
 });
 
+test("analog input fault offsets stay constant through process scans and replay", async ({ page }) => {
+  const project = {
+    name:"Analog offset exercise", editorType:"LD", rungs:[],
+    tags:[{ name:"Level", type:"REAL", role:"input" }, { name:"Fill", type:"BOOL", role:"input" },
+      { name:"Control", type:"REAL" }, { name:"TankLevel", type:"REAL" }],
+    initialState:{ Level:40, Fill:true },
+    processes:[
+      { id:"control", type:"pid", name:"Process controller", inputTag:"Level", outputTag:"Control", setpoint:50, kp:1 },
+      { id:"tank", type:"tank", name:"Fill tank", controlTag:"Fill", outputTag:"TankLevel", initial:0, capacity:100, fillRate:10 }
+    ]
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"analog-offset.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  const chooseMenu = async (menu, name) => {
+    await page.locator(`[data-app-menu="${menu}"]`).click();
+    await page.getByRole("menuitem", { name, exact:true }).click();
+  };
+  await chooseMenu("online", "Record trace");
+  await chooseMenu("online", "Fault injection");
+  await page.locator("#faultTag").selectOption("Level");
+  await page.locator("#faultOffset").fill("5");
+  await page.locator("#faultCreate").click();
+  await page.locator("#modal .modal-close").click();
+  await chooseMenu("plc", "Step");
+  await chooseMenu("plc", "Step");
+  await chooseMenu("online", "Fault injection");
+  await page.getByRole("button", { name:"Remove fault" }).click();
+  await page.locator("#modal .modal-close").click();
+  await chooseMenu("online", "Record trace");
+
+  await chooseMenu("debug", "Trace history");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const { frames } = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  expect(frames.map((frame) => frame.numericInputs.Level)).toEqual([40, 40, 40, 40]);
+  expect(frames.map((frame) => frame.processValues.Control)).toEqual([5, 5, 5, 10]);
+  expect(frames.map((frame) => frame.processValues.TankLevel)).toEqual([1, 2, 3, 4]);
+  await page.locator("#modal .modal-close").click();
+  await chooseMenu("online", "Replay trace");
+  await expect(page.locator("#plcStatus")).toHaveText("RUNNING");
+  await expect(page.locator("#plcStatus")).toHaveText("STOPPED");
+  await expect(page.locator("#cycleCount")).toHaveText("4");
+  await chooseMenu("debug", "Trace history");
+  await expect(page.locator("#modal .safety-copy").first()).toContainText("4 recorded scans · 0 replay divergences");
+});
+
+test("reviewed HMI recipe versions apply typed numeric inputs only after confirmation", async ({ page }) => {
+  const project = {
+    name:"Recipe version exercise", editorType:"LD", rungs:[],
+    tags:[{ name:"Level", type:"REAL", role:"input" }],
+    initialState:{ Level:40 },
+    hmi:{ widgets:[{ id:"level-value", type:"value", label:"Level", tag:"Level", x:0, y:0 }] }
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"recipe-versions.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  await page.locator("#hmiTab").click();
+  const value = page.locator('[data-hmi-value="level-value"]');
+  const setLevel = async (number) => {
+    const input = page.locator('#inputList [data-input="Level"]');
+    await input.fill(String(number));
+    await input.press("Tab");
+    await expect(value).toHaveText(String(number));
+  };
+  const saveVersion = async (version) => {
+    await page.locator("#recipesButton").click();
+    await page.locator("#recipeName").fill("Batch A");
+    await page.locator("#saveRecipeButton").click();
+    await expect(page.locator("#modal .project-row").filter({ hasText:`Batch A · v${version}` })).toBeVisible();
+    await page.locator("#modal .modal-close").click();
+  };
+  await expect(value).toHaveText("40");
+  await saveVersion(1);
+  await setLevel(60);
+  await saveVersion(2);
+  await setLevel(70);
+
+  await page.locator("#recipesButton").click();
+  const firstVersion = page.locator("#modal .project-row").filter({ hasText:"Batch A · v1" });
+  await firstVersion.locator("[data-recipe-apply]").click();
+  const review = page.locator("#modal tbody tr").filter({ hasText:"Level" });
+  await expect(review.locator("td").nth(1)).toHaveText("70.000000");
+  await expect(review.locator("td").nth(2)).toHaveText("40.000000");
+  await page.locator("#recipeReviewCancel").click();
+  await expect(value).toHaveText("70");
+  await firstVersion.locator("[data-recipe-apply]").click();
+  await page.locator("#recipeReviewApply").click();
+  await expect(value).toHaveText("40");
+});
+
 test("a simulated scan exposes configured PID limits in HMI", async ({ page }) => {
   const project = {
     name:"PID limit exercise", editorType:"LD", rungs:[],
