@@ -206,6 +206,37 @@ test("a PLCopen Structured Text body imports and executes with its declared tags
   await expect(page.locator("#stSource")).toHaveValue(source);
 });
 
+test("PLCopen FBD reads connected preset literals and older inline presets", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
+    const xml = createPlcopenXml({
+      name:"FBD presets", editorType:"FBD",
+      tags:[{ name:"Pulse", type:"BOOL", role:"input" }, { name:"Threshold", type:"INT", role:"input" },
+        { name:"Reached", type:"BOOL", role:"output" }, { name:"Timed", type:"BOOL", role:"output" }],
+      fbdBlocks:[{ type:"CTU", inputs:["Pulse"], outputTag:"Reached", preset:2 },
+        { type:"TON", inputs:["Pulse"], outputTag:"Timed", preset:1250 }]
+    });
+    const document = new DOMParser().parseFromString(xml, "application/xml");
+    const byId = new Map([...document.getElementsByTagNameNS("*","inVariable")].map((node) => [node.getAttribute("localId"),node]));
+    const presetPins = [...document.getElementsByTagNameNS("*","variable")].filter((pin) => ["PT","PV"].includes(pin.getAttribute("formalParameter")));
+    for (const pin of presetPins) {
+      const point = pin.firstElementChild;
+      const source = byId.get(point.firstElementChild.getAttribute("refLocalId"));
+      const expression = source.getElementsByTagNameNS("*","expression")[0];
+      point.replaceChildren(expression);
+      source.remove();
+    }
+    let rejection;
+    try { parsePlcopenXml(xml.replace("<expression>2</expression>", "<expression>Threshold</expression>")); }
+    catch (error) { rejection = error.message; }
+    const presets = (markup) => parsePlcopenXml(markup).fbdBlocks.map(({ preset }) => preset);
+    return { connected:presets(xml), inline:presets(new XMLSerializer().serializeToString(document)), rejection };
+  });
+  expect(result.connected).toEqual([2,1250]);
+  expect(result.inline).toEqual(result.connected);
+  expect(result.rejection).toContain("CTU PV");
+});
+
 test("PLCopen CTU CV preserves named outputs and unnamed direct wires", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { createPlcopenXml, parsePlcopenXml } = await import("/src/plcopen.js");
