@@ -2704,6 +2704,6 @@ mobileDrawerViewport.addEventListener("change", (event) => {
 });
 startAdigunCopilotObservers();
 init().then(setupAdigunBotWindow);
-if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js", { updateViaCache:"none" }).catch(() => {});
 
 
