@@ -58,10 +58,27 @@ for (const { mode, logic, hmi, mixed } of [
     tasks: [
       { name: "Inputs", cycleMs: 100, priority: 0, enabled: true, programs: ["Readiness", "SignalCheck"] },
       { name: "Indicator", cycleMs: 200, priority: 1, enabled: true, programs: ["PermitCheck", "Indicator"] }
-    ]
+    ],
+    hmi: { activeScreenId: "status", screens: [{ id: "status", title: "Scheduled status", widgets: [
+      { id: "schedule-lamp", type: "lamp", label: "Schedule lamp", tag: "Lamp", col: 2, row: 2 }
+    ] }] },
+    electrical: {
+      components: [
+        { id: "ps1", type: "supply24vdc", reference: "PS1", label: "24 V DC supply", x: 80, y: 80, terminals: ["+", "−"] },
+        { id: "s1", type: "siemens3SU1400NOContact", reference: "S1", label: "Start contact", x: 320, y: 80, terminals: ["3", "4"] },
+        { id: "h1", type: "pilotLamp", reference: "H1", label: "Schematic lamp", x: 560, y: 80, terminals: ["X1", "X2"] }
+      ],
+      wires: [
+        { id: "feed", from: { componentId: "ps1", terminal: "+" }, to: { componentId: "s1", terminal: "3" } },
+        { id: "switched", from: { componentId: "s1", terminal: "4" }, to: { componentId: "h1", terminal: "X1" },
+          waypoints: [{ x: 480, y: 240 }, { x: 540, y: 240 }] },
+        { id: "return", from: { componentId: "h1", terminal: "X2" }, to: { componentId: "ps1", terminal: "−" } }
+      ],
+      inputStates: { S1: false }
+    }
   } }
 ]) {
-  const subject = mixed ? "mixed-language task scheduling" : hmi ? "HMI screens and live tag bindings" : `${mode} execution`;
+  const subject = mixed ? "mixed-language task scheduling, HMI, and wiring" : hmi ? "HMI screens and live tag bindings" : `${mode} execution`;
   test(`offline program round-trip preserves ${subject}`, async ({ page, context }) => {
     test.setTimeout(60_000);
     await useOfflineMember(page, context);
@@ -104,6 +121,29 @@ for (const { mode, logic, hmi, mixed } of [
             await expect(tab.locator(`[data-watch-value="${tag}"]`)).toHaveText(String(value));
           }
           await tab.getByRole("button", { name: "Close dialog" }).click();
+        }
+        if (mixed) {
+          await tab.locator("#hmiTab").click();
+          await expect(tab.locator("#hmiScreenSelect")).toHaveValue("status");
+          await expect(tab.locator('[data-hmi-lamp="schedule-lamp"]')).toHaveClass(/\bon\b/);
+
+          await tab.locator("#electricalTab").click();
+          const wire = tab.locator('#electricalBoard [data-wire-id="switched"]');
+          await expect(wire).toHaveAttribute("d", /L480 240.*L540 240/);
+          await tab.locator('#electricalCanvasContext [data-electrical-action="simulate"]').click();
+          const contactInput = tab.locator('[data-electrical-input="S1"]');
+          const lamp = tab.locator('#electricalBoard [data-component-id="h1"]');
+          await expect(contactInput).not.toBeChecked();
+          await expect(lamp).not.toHaveClass(/\benergized\b/);
+          await contactInput.press("Space");
+          await expect(contactInput).toBeChecked();
+          await expect(lamp).toHaveClass(/\benergized\b/);
+          await expect(contactInput).toBeFocused();
+          await tab.keyboard.press("Space");
+          await expect(contactInput).not.toBeChecked();
+          await expect(contactInput).toBeFocused();
+          await expect(lamp).not.toHaveClass(/\benergized\b/);
+          await expect(wire).toHaveAttribute("d", /L480 240.*L540 240/);
         }
         if (!hmi) return;
 
