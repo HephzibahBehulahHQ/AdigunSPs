@@ -2062,6 +2062,13 @@ test("workspace dialog controls follow the interface language", async ({ page })
 });
 
 test("workspace layout remains bounded across all locales, themes, and scaled text", async ({ page }) => {
+  const name = "Workspace acceptance project — ".padEnd(64, "W");
+  await page.locator("#fileInput").setInputFiles({
+    name: "long-project-name.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ name, editorType: "LD", tags: [], rungs: [] }))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(name);
   await page.locator("#electricalTab").click();
   await page.evaluate(() => { document.documentElement.style.fontSize = "125%"; });
 
@@ -2076,9 +2083,10 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
       await page.locator("#prefTheme").selectOption(theme);
       await page.locator("#settingsDone").click();
       await expect(page.locator("body")).toHaveAttribute("data-theme", theme);
-      await page.locator("#projectTitle").evaluate((element) => { element.textContent = "Workspace acceptance project — ".padEnd(64, "W"); });
+      await expect(page.locator("#projectTitle")).toHaveText(name);
+      await expect(page.locator("#treeProjectName")).toHaveText(name);
 
-      for (const viewport of [{ width: 1894, height: 704, minBoardHeight: 300 }, { width: 390, height: 844, minBoardHeight: 200 }]) {
+      for (const viewport of viewportCases) {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         if (viewport.width <= 760) {
           await page.locator("#panelLayoutButton").click();
@@ -2106,7 +2114,7 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
             if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlaps.push([a.selector, b.selector]);
           }
           const emptyHintGeometry = { hint:hintRect && {left:hintRect.left,right:hintRect.right,top:hintRect.top,bottom:hintRect.bottom}, viewport:boardRect && {left:boardRect.left,right:boardRect.right,top:boardRect.top,bottom:boardRect.bottom}, className:emptyHint?.className };
-          const overflowNodes = [...document.querySelectorAll("body *")].map((element) => { const rect = element.getBoundingClientRect(); return { tag:element.tagName, id:element.id, className:String(element.className || ""), right:Math.round(rect.right), width:Math.round(rect.width) }; }).filter((element) => element.width > 0 && element.right > innerWidth + 1).slice(0, 12);
+          const overflowNodes = [...document.querySelectorAll("body *")].map((element) => { const rect = element.getBoundingClientRect(); return { tag:element.tagName, id:element.id, className:String(element.className || ""), right:rect.right, width:rect.width }; }).filter((element) => element.width > 0 && element.right > innerWidth).slice(0, 12);
           return { scrollWidth:document.documentElement.scrollWidth, boardHeight:boardRect?.height ?? 0, emptyHintWithinViewport, emptyHintGeometry, buttons, overlaps, overflowNodes };
         });
 

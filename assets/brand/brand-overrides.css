@@ -290,6 +290,11 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 @media(min-width:1501px){.header-quick-commands button[data-action="run"]{min-width:210px;max-width:210px;text-transform:uppercase}}@media(min-width:1200px) and (max-width:1500px){.header-quick-commands button[data-action="run"]{min-width:0;max-width:160px;text-transform:uppercase}}
 
 /* Match the approved 1894px workspace header and panel proportions. */
+@media (min-width: 1200px) and (max-width: 1500px) {
+  .topbar { gap: 8px; padding-inline: 12px; }
+  .header-quick-commands { gap: 5px; }
+  .header-quick-commands button { padding-inline: 8px; }
+}
 @media (min-width: 1501px) {
   .product-brand { flex: 0 0 354px; min-width: 354px; }
   .product-brand strong { font-size: 20px; }
