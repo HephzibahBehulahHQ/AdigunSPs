@@ -540,6 +540,7 @@ function bindLogicOutlineNavigation(tree, activateParent) {
   };
 }
 
+let sfcOutlineMarkup;
 function renderLogicOutline() {
   if (project.editorType === "FBD") {
     const tree = $("#fbdLogicTree"), summary = $("#fbdLogicOutlineSummary"); if (!tree || !summary) return;
@@ -554,9 +555,19 @@ function renderLogicOutline() {
     const tree = $("#sfcLogicTree"), summary = $("#sfcLogicOutlineSummary"); if (!tree || !summary) return;
     const copy = sfcAccessibilityCopy[language] || sfcAccessibilityCopy.en, model = project.sfc || makeDefaultSfc(), steps = model.steps || [], nameById = new Map(steps.map((step) => [step.id, step.name]));
     summary.textContent = copy.title; tree.setAttribute("aria-label", copy.title);
-    tree.innerHTML = `${steps.map((step) => `<button type="button" role="treeitem" data-outline-sfc-step="${escapeAttr(step.id)}">${copy.step}: ${escapeHtml(step.name)} · ${escapeHtml((step.actions || []).join(", ") || "—")}</button>`).join("")}${(model.transitions || []).map((transition, index) => `<button type="button" role="treeitem" data-outline-sfc-transition="${index}">${copy.transition}: ${escapeHtml(nameById.get(transition.from) || transition.from)} → ${escapeHtml(nameById.get(transition.to) || transition.to)} · ${copy.condition}: ${escapeHtml(transition.condition || "—")} (${escapeHtml(transition.mode || "NO")})</button>`).join("")}`;
+    const markup = `${steps.map((step) => `<button type="button" role="treeitem" data-outline-sfc-step="${escapeAttr(step.id)}">${copy.step}: ${escapeHtml(step.name)} · ${escapeHtml((step.actions || []).join(", ") || "—")}</button>`).join("")}${(model.transitions || []).map((transition, index) => `<button type="button" role="treeitem" data-outline-sfc-transition="${index}">${copy.transition}: ${escapeHtml(nameById.get(transition.from) || transition.from)} → ${escapeHtml(nameById.get(transition.to) || transition.to)} · ${copy.condition}: ${escapeHtml(transition.condition || "—")} (${escapeHtml(transition.mode || "NO")})</button>`).join("")}`;
+    if (markup !== sfcOutlineMarkup) {
+      tree.innerHTML = markup;
+      sfcOutlineMarkup = markup;
+      bindLogicOutlineNavigation(tree);
+    }
+    const activeStep = getActiveSfcStep(model);
+    for (const item of tree.querySelectorAll("[data-outline-sfc-step]")) {
+      if (item.dataset.outlineSfcStep === activeStep) {
+        if (!item.hasAttribute("aria-current")) item.setAttribute("aria-current", "step");
+      } else item.removeAttribute("aria-current");
+    }
     tree.onclick = (event) => { const item = event.target.closest("[data-outline-sfc-step], [data-outline-sfc-transition]"); if (!item) return; const target = item.hasAttribute("data-outline-sfc-step") ? [...$("#sfcChart").querySelectorAll("[data-sfc-step]")].find((node) => node.dataset.sfcStep === item.dataset.outlineSfcStep) : $("#sfcChart").querySelector(`[data-sfc-transition="${item.dataset.outlineSfcTransition}"]`); if (!target) return; target.scrollIntoView({ block:"nearest", inline:"nearest" }); (target.matches(".sfc-step") ? target.querySelector("input") : target.querySelector('[data-transition-field="condition"]'))?.focus(); };
-    bindLogicOutlineNavigation(tree);
     return;
   }
   const root = $("#logicOutline"); if (!root) return;
@@ -776,6 +787,10 @@ function drawFbdConnections(root, blocks) {
   }
   svg.innerHTML = paths.join("");
 }
+function getActiveSfcStep(model) {
+  return model.steps?.find((step) => step.id === sim.activeStep)?.id ?? getSfcInitialStep(model)?.id;
+}
+
 function renderSfc() {
   const root = $("#sfcChart"), model = project.sfc || makeDefaultSfc(); project.sfc = model;
   const steps = model.steps || [], inputTags = inferTags().inputs;
@@ -790,7 +805,7 @@ function renderSfc() {
   if (initialSelect.value !== (initialStep ?? "")) initialSelect.value = initialStep ?? "";
   initialSelect.disabled = !steps.length;
   if (initialLabel.textContent !== copy.initial) initialLabel.textContent = copy.initial;
-  const activeStep = steps.find((step) => step.id === sim.activeStep)?.id ?? initialStep;
+  const activeStep = getActiveSfcStep(model);
   root.innerHTML = `<div class="sfc-steps">${steps.map((step, index) => `<article class="sfc-step ${activeStep === step.id ? "active" : ""}" data-sfc-step="${escapeAttr(step.id)}"><span class="step-number">${step.id === initialStep ? "●" : index + 1}</span><label>Step name<input data-step-id="${escapeAttr(step.id)}" data-step-field="name" value="${escapeAttr(step.name)}"></label><label>Active outputs<input data-step-id="${escapeAttr(step.id)}" data-step-field="actions" value="${escapeAttr((step.actions || []).join(", "))}" placeholder="Motor, Lamp"></label><button class="tag-remove" data-step-delete="${escapeAttr(step.id)}" aria-label="Delete step">×</button></article>`).join("")}</div><div class="sfc-transitions"><h3>TRANSITIONS</h3>${(model.transitions || []).map((transition, index) => `<div class="sfc-transition" data-sfc-transition="${index}"><select data-transition-index="${index}" data-transition-field="from">${steps.map((step) => `<option value="${escapeAttr(step.id)}" ${step.id === transition.from ? "selected" : ""}>${escapeHtml(step.name)}</option>`).join("")}</select><span>→</span><select data-transition-index="${index}" data-transition-field="to">${steps.map((step) => `<option value="${escapeAttr(step.id)}" ${step.id === transition.to ? "selected" : ""}>${escapeHtml(step.name)}</option>`).join("")}</select><input data-transition-index="${index}" data-transition-field="condition" value="${escapeAttr(transition.condition)}" list="sfcInputTags" aria-label="Transition condition"><select data-transition-index="${index}" data-transition-field="mode"><option value="NO" ${transition.mode !== "NC" ? "selected" : ""}>NO</option><option value="NC" ${transition.mode === "NC" ? "selected" : ""}>NC</option></select><button class="tag-remove" data-transition-delete="${index}" aria-label="Delete transition">×</button></div>`).join("")}</div><datalist id="sfcInputTags">${inputTags.map((tag) => `<option value="${escapeAttr(tag)}">`).join("")}</datalist>`;
   root.querySelectorAll("[data-step-id]").forEach((field) => field.addEventListener("change", () => { const step = steps.find((item) => item.id === field.dataset.stepId); if (!step) return; pushHistory(); step[field.dataset.stepField] = field.dataset.stepField === "actions" ? field.value.split(",").map((x) => x.trim()).filter(Boolean) : field.value; model.outputs = [...new Set(steps.flatMap((item) => item.actions || []))]; render(); persist(); }));
   root.querySelectorAll("[data-transition-index]").forEach((field) => field.addEventListener("change", () => { pushHistory(); model.transitions[Number(field.dataset.transitionIndex)][field.dataset.transitionField] = field.value; render(); persist(); }));
