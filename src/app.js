@@ -1908,10 +1908,10 @@ async function loadCloudProjectList() {
 }
 function productAccountLabels() {
   return ({
-    en:{ code:"Email code", verify:"Verify code", sent:"Enter the code we emailed you.", active:"Account created. Sign in with your AdigunSPs password.", reset:"Password reset. Sign in with your new AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"That code is incorrect or expired.", registrationUnavailable:"This registration could not be completed. If you already created your AdigunSPs account, sign in or reset your password.", retry:"Wait before requesting another code." },
-    de:{ code:"E-Mail-Code", verify:"Code prüfen", sent:"Geben Sie den zugesandten Code ein.", active:"Konto erstellt. Melden Sie sich mit Ihrem AdigunSPs-Passwort an.", reset:"Passwort geändert. Melden Sie sich mit Ihrem neuen Passwort an.", restart:"Neu beginnen", invalid:"Prüfen Sie Ihre AdigunSPs-E-Mail und Ihr Passwort.", wrongCode:"Der Code ist falsch oder abgelaufen.", registrationUnavailable:"Die Registrierung konnte nicht abgeschlossen werden. Wenn Sie schon ein AdigunSPs-Konto erstellt haben, melden Sie sich an oder setzen Sie Ihr Passwort zurück.", retry:"Warten Sie, bevor Sie einen neuen Code anfordern." },
-    yo:{ code:"Kóòdù ímeèlì", verify:"Ṣàyẹ̀wò kóòdù", sent:"Tẹ kóòdù tá a fi ránṣẹ́ sí ímeèlì rẹ.", active:"A ti dá àkọọ́lẹ̀. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà AdigunSPs rẹ.", reset:"A ti yí ọ̀rọ̀ aṣínà rẹ padà. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà tuntun.", restart:"Bẹ̀rẹ̀ padà", invalid:"Ṣàyẹ̀wò ímeèlì àti ọ̀rọ̀ aṣínà AdigunSPs rẹ.", wrongCode:"Kóòdù kò tọ́ tàbí ó ti parí.", registrationUnavailable:"Ìforúkọsílẹ̀ kò parí. Tí o bá ti dá àkọọ́lẹ̀ AdigunSPs, wọlé tàbí tún ọ̀rọ̀ aṣínà rẹ ṣe.", retry:"Dúró kí o tó béèrè fún kóòdù míì." },
-    pcm:{ code:"Email code", verify:"Check code", sent:"Put di code we send go your email.", active:"Account don ready. Sign in with your AdigunSPs password.", reset:"Password don change. Sign in with your new AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"Di code wrong or e don expire.", registrationUnavailable:"Registration no complete. If you don create AdigunSPs account before, sign in or reset your password.", retry:"Wait before you ask for another code." }
+    en:{ code:"Email code", verify:"Verify code", sent:"Enter the code we emailed you.", active:"Account created. Sign in with your AdigunSPs password.", reset:"Password reset. Sign in with your new AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"That code is incorrect or expired.", requestExpired:"The code request expired or was replaced. Request a fresh code in this tab.", registrationUnavailable:"This registration could not be completed. If you already created your AdigunSPs account, sign in or reset your password.", retry:"Wait before requesting another code." },
+    de:{ code:"E-Mail-Code", verify:"Code prüfen", sent:"Geben Sie den zugesandten Code ein.", active:"Konto erstellt. Melden Sie sich mit Ihrem AdigunSPs-Passwort an.", reset:"Passwort geändert. Melden Sie sich mit Ihrem neuen Passwort an.", restart:"Neu beginnen", invalid:"Prüfen Sie Ihre AdigunSPs-E-Mail und Ihr Passwort.", wrongCode:"Der Code ist falsch oder abgelaufen.", requestExpired:"Die Code-Anfrage ist abgelaufen oder wurde ersetzt. Fordern Sie in diesem Tab einen neuen Code an.", registrationUnavailable:"Die Registrierung konnte nicht abgeschlossen werden. Wenn Sie schon ein AdigunSPs-Konto erstellt haben, melden Sie sich an oder setzen Sie Ihr Passwort zurück.", retry:"Warten Sie, bevor Sie einen neuen Code anfordern." },
+    yo:{ code:"Kóòdù ímeèlì", verify:"Ṣàyẹ̀wò kóòdù", sent:"Tẹ kóòdù tá a fi ránṣẹ́ sí ímeèlì rẹ.", active:"A ti dá àkọọ́lẹ̀. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà AdigunSPs rẹ.", reset:"A ti yí ọ̀rọ̀ aṣínà rẹ padà. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà tuntun.", restart:"Bẹ̀rẹ̀ padà", invalid:"Ṣàyẹ̀wò ímeèlì àti ọ̀rọ̀ aṣínà AdigunSPs rẹ.", wrongCode:"Kóòdù kò tọ́ tàbí ó ti parí.", requestExpired:"Ìbéèrè kóòdù ti parí tàbí a ti rọ́pò rẹ̀. Béèrè fún kóòdù tuntun ní ojú ìwé yìí.", registrationUnavailable:"Ìforúkọsílẹ̀ kò parí. Tí o bá ti dá àkọọ́lẹ̀ AdigunSPs, wọlé tàbí tún ọ̀rọ̀ aṣínà rẹ ṣe.", retry:"Dúró kí o tó béèrè fún kóòdù míì." },
+    pcm:{ code:"Email code", verify:"Check code", sent:"Put di code we send go your email.", active:"Account don ready. Sign in with your AdigunSPs password.", reset:"Password don change. Sign in with your new AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"Di code wrong or e don expire.", requestExpired:"Di code request don expire or another one don replace am. Ask for fresh code for this tab.", registrationUnavailable:"Registration no complete. If you don create AdigunSPs account before, sign in or reset your password.", retry:"Wait before you ask for another code." }
   })[language];
 }
 
@@ -1994,7 +1994,12 @@ function showAccount() {
           $("#accountOtp")?.focus();
         }
       } catch (error) {
-        if (error.code === "product-registration-unavailable") {
+        if (error.code === "email-code-request-required") {
+          productAccountCodePending = false;
+          showAccount();
+          $("#accountFeedback").textContent = productLabels.requestExpired;
+          $("#accountPassword")?.focus();
+        } else if (error.code === "product-registration-unavailable") {
           productAccountCodePending = false;
           productAccountRecovery = false;
           showAccount();
