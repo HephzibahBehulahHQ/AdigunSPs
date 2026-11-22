@@ -1372,6 +1372,30 @@ test("mobile drawer keyboard focus enters each drawer and returns on Escape", as
   }
 });
 
+test("inspector and mobile drawer keyboard controls expose the current panel", async ({ page }) => {
+  await page.setViewportSize({ width:390, height:844 });
+  await expect.poll(() => page.evaluate(() => matchMedia("(max-width: 760px)").matches)).toBe(true);
+  await page.locator("#panelLayoutButton").press("Enter");
+  await page.locator("#mobileInspectorPanel").press("Enter");
+  const properties = page.getByRole("button", { name:/^properties$/i });
+  const issues = page.getByRole("button", { name:/^issues$/i });
+  await expect(properties).toHaveAttribute("aria-pressed", "true");
+  await issues.press("Enter");
+  await expect(issues).toHaveAttribute("aria-pressed", "true");
+  await expect(properties).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("region", { name:/^issues$/i })).toBeVisible();
+  await expect(page.locator("#inspectorContent")).toBeHidden();
+  const watch = page.getByRole("button", { name:/^watch$/i });
+  await expect(watch).toHaveAttribute("aria-haspopup", "dialog");
+  await watch.press("Enter");
+  await expect(page.getByRole("dialog", { name:/Watch table/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(issues).toHaveAttribute("aria-pressed", "true");
+  await properties.press("Space");
+  await expect(page.getByRole("region", { name:/^properties$/i })).toBeVisible();
+  await expect(issues).toHaveAttribute("aria-pressed", "false");
+});
+
 test("contextual toolboxes keep the existing editor actions reachable", async ({ page }) => {
   await expect(page.locator("#electricalTab")).toHaveAttribute("aria-label", "Components / Schematic");
   const logicTab = page.locator("#logicTab");
