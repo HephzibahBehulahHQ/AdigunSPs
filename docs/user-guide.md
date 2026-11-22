@@ -65,7 +65,7 @@ Open **Project → PLC/device profile** to record a vendor, CPU/device model, pl
 
 ## Edit logic
 
-In the LD, FBD, and SFC outlines, Tab enters the outline once. Use Up, Down, Home, or End to move through it. Enter or Space activates the selected entry. The SFC outline identifies the active step and retains focus during simulation scans. Activating an instruction moves focus to its editor control.
+In the LD, FBD, and SFC outlines, Tab enters the outline once. Use Up, Down, Home, or End to move through it. Enter or Space activates the selected entry. The logic outlines retain keyboard focus during simulation scans. The SFC outline identifies the active step. Activating an instruction moves focus to its editor control.
 
 Select an output coil to choose **Normal**, **Set and retain**, or **Reset and retain** behavior. SET and RESET coils retain their BOOL state across scans and can be combined into multi-step ladder sequences; Reset coils clear only when their rung is energized. The coil properties also select an MCR section **Start** or **End**; the Start rung condition enables following rungs until End. One non-nested section is supported per project. Add a timer with **T** and select TON, TOF, TP, or retentive RTO; RTO keeps elapsed time while disabled and accepts an optional BOOL reset tag. In LD and FBD, a TP timer ignores further rising edges until its active pulse expires. Add **C** for a CTU/CTD counter, set its preset/reset input, or use **R** to add a rung-level RES instruction and select the counter it resets.
 

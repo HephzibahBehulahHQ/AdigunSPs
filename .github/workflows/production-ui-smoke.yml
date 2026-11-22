@@ -58,7 +58,7 @@ jobs:
             sleep 5
           done
 
-          npx playwright test --grep "offline PWA navigation|cached member|local project metadata edits preserve|opening a palette result uses the latest saved project|mobile drawer keyboard|Issues tab shows|SFC starts and resets|project explorer switches|project header shows the reference breadcrumb|workspace layout remains bounded|canvas toolbars stay compact|retains its viewport|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
+          npx playwright test --grep "offline PWA navigation|cached member|local project metadata edits preserve|opening a palette result uses the latest saved project|mobile drawer keyboard|Issues tab shows|Ladder and Function Block outlines|SFC starts and resets|project explorer switches|project header shows the reference breadcrumb|workspace layout remains bounded|canvas toolbars stay compact|retains its viewport|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
 
           served_sha=$(read_release) || served_sha=""
           if [[ "$served_sha" != "$EXPECTED_RELEASE_SHA" ]]; then
