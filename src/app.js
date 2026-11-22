@@ -2549,6 +2549,8 @@ function selectInspectorTab(tab) {
   const issues = tab === "issues";
   $("#propertiesTab").classList.toggle("active", !issues);
   $("#issuesTab").classList.toggle("active", issues);
+  $("#propertiesTab").setAttribute("aria-pressed", String(!issues));
+  $("#issuesTab").setAttribute("aria-pressed", String(issues));
   $("#inspectorContent").hidden = issues;
   $("#issuesContent").hidden = !issues;
   if (issues) renderIssuesPanel();
