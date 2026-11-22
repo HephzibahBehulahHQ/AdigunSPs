@@ -112,6 +112,15 @@ async function verify(body, request, env, origin, adminOrigin) {
   if (!accepted) return reply(registration ? 409 : 401, { error:"product-account-not-authorized" }, cleared);
   if (registration) return reply(200, { step:"registered" }, cleared);
   if (recovery) return reply(200, { step:"password-reset" }, cleared);
+  if (adminOrigin) {
+    if (!session.user.id || !Number.isFinite(session.expires_in) || session.expires_in <= 0) {
+      return reply(503, { error:"account-unavailable" }, cleared);
+    }
+    return reply(200, { step:"signed-in", session:{
+      access_token:session.access_token, expires_in:session.expires_in,
+      user:{ id:session.user.id, email:session.user.email, role:session.user.app_metadata.role }
+    } }, cleared);
+  }
   return reply(200, { step:"signed-in", session:{ access_token:session.access_token, refresh_token:session.refresh_token } }, cleared);
 }
 

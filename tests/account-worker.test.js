@@ -107,8 +107,8 @@ test("only the configured Admin origin can request an admin-only session", async
   const provider = mock.method(globalThis, "fetch", async url => {
     if (url.pathname === "/auth/v1/otp") return Response.json({});
     if (url.pathname === "/auth/v1/verify") return Response.json({
-      access_token:"admin-test-access", refresh_token:"admin-test-refresh",
-      user:{ email, email_confirmed_at:"2026-11-22", app_metadata:{ role:adminRole ? "admin" : "member" } }
+      access_token:"admin-test-access", refresh_token:"admin-test-refresh", expires_in:3600,
+      user:{ id:"admin-fixture", email, email_confirmed_at:"2026-11-22", app_metadata:{ role:adminRole ? "admin" : "member" } }
     });
     if (url.pathname.endsWith("/adigun_verify_product_session")) verified++;
     return Response.json(true);
@@ -133,7 +133,11 @@ test("only the configured Admin origin can request an admin-only session", async
     assert.equal(verified, 0);
     adminRole = true;
     const admin = await send(adminOrigin, complete, cookieFrom(await send(adminOrigin, start)));
-    assert.equal((await admin.json()).step, "signed-in");
+    const result = await admin.json();
+    assert.equal(result.step, "signed-in");
+    assert.equal(result.session.user.role, "admin");
+    assert.equal(result.session.expires_in, 3600);
+    assert.equal(result.session.refresh_token, undefined);
     assert.equal(verified, 1);
   } finally {
     provider.mock.restore();
