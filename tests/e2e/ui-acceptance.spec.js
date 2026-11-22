@@ -2071,6 +2071,7 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
   await expect(page.locator("#projectTitle")).toHaveText(name);
   await page.locator("#electricalTab").click();
   await page.evaluate(() => { document.documentElement.style.fontSize = "125%"; });
+  const layoutCases = [...viewportCases, { width: 1200, height: 768, minBoardHeight: 280 }];
 
   for (const locale of ["en", "de", "yo", "pcm"]) {
     for (let attempt = 0; attempt < 4 && (await page.locator("#languageButton").textContent())?.toLowerCase() !== locale; attempt++) {
@@ -2086,7 +2087,7 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
       await expect(page.locator("#projectTitle")).toHaveText(name);
       await expect(page.locator("#treeProjectName")).toHaveText(name);
 
-      for (const viewport of viewportCases) {
+      for (const viewport of layoutCases) {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         if (viewport.width <= 760) {
           await page.locator("#panelLayoutButton").click();
