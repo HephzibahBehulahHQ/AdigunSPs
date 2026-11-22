@@ -18,23 +18,33 @@ async function useOfflineMember(page, context) {
   await context.setOffline(true);
 }
 
-for (const { mode, logic } of [
+for (const { mode, logic, hmi } of [
   { mode: "FBD", logic: { fbdBlocks: [{ id: "invert", type: "NOT", inputs: ["Start"], outputTag: "Lamp", x: 80, y: 80 }] } },
   { mode: "ST", logic: { stSource: "Lamp := NOT Start;" } },
   { mode: "SFC", logic: { sfc: { initialStep: "ready", outputs: ["Lamp"], steps: [
     { id: "idle", name: "Idle", actions: [] }, { id: "ready", name: "Ready", actions: ["Lamp"] }
-  ], transitions: [{ id: "stop", from: "ready", to: "idle", condition: "Start", mode: "NO" }] } } }
+  ], transitions: [{ id: "stop", from: "ready", to: "idle", condition: "Start", mode: "NO" }] } } },
+  { mode: "LD", logic: { rungs: [{ id: "indicator-rung", branches: [[{ tag: "Start", mode: "NC" }]], coil: "Lamp" }] },
+    hmi: { activeScreenId: "diagnostics", screens: [
+      { id: "controls", title: "Operator controls", widgets: [
+        { id: "start-switch", type: "switch", label: "Start switch", tag: "Start", col: 1, row: 1 },
+        { id: "operator-lamp", type: "lamp", label: "Operator lamp", tag: "Lamp", col: 3, row: 2 }
+      ] },
+      { id: "diagnostics", title: "Diagnostics", widgets: [
+        { id: "diagnostic-lamp", type: "lamp", label: "Diagnostic lamp", tag: "Lamp", col: 2, row: 3 }
+      ] }
+    ] } }
 ]) {
-  test(`offline program round-trip preserves ${mode} execution`, async ({ page, context }) => {
+  test(`offline program round-trip preserves ${hmi ? "HMI screens and live tag bindings" : `${mode} execution`}`, async ({ page, context }) => {
     test.setTimeout(60_000);
     await useOfflineMember(page, context);
     try {
       await page.goto("/?offline-program=author", { waitUntil: "domcontentloaded" });
       await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
-      const name = `${mode} offline round-trip`;
+      const name = `${hmi ? "HMI" : mode} offline round-trip`;
       const project = { name, editorType: mode, rungs: [], initialState: { Start: false },
         tags: [{ name: "Start", type: "BOOL", role: "input" }, { name: "Lamp", type: "BOOL", role: "output" }],
-        io: { inputs: ["Start"], outputs: ["Lamp"] }, ...logic };
+        io: { inputs: ["Start"], outputs: ["Lamp"] }, ...logic, ...(hmi && { hmi }) };
       const importJson = (tab, filename, buffer) => tab.locator("#fileInput").setInputFiles({
         name: filename, mimeType: "application/json", buffer
       });
@@ -43,6 +53,7 @@ for (const { mode, logic } of [
         await tab.getByRole("menuitem", { name: label, exact: true }).click();
       };
       const checkExecution = async (tab) => {
+        await tab.locator("#logicTab").click();
         await expect(tab.locator("#editorMode")).toHaveValue(mode);
         await openMenuItem(tab, "plc", "Reset");
         await openMenuItem(tab, "plc", "Step");
@@ -50,6 +61,28 @@ for (const { mode, logic } of [
         await openMenuItem(tab, "debug", "Watch table");
         await expect(tab.locator('[data-watch-value="Lamp"]')).toHaveText("true");
         await tab.getByRole("button", { name: "Close dialog" }).click();
+        if (!hmi) return;
+
+        await tab.locator("#hmiTab").click();
+        const screens = tab.locator("#hmiScreenSelect");
+        const diagnosticLamp = tab.locator('[data-hmi-lamp="diagnostic-lamp"]');
+        const operatorLamp = tab.locator('[data-hmi-lamp="operator-lamp"]');
+        const input = tab.locator('[data-hmi-toggle="start-switch"]');
+        await expect(screens.locator("option")).toHaveText(["Operator controls", "Diagnostics"]);
+        await expect(screens).toHaveValue("diagnostics");
+        await expect(diagnosticLamp).toHaveClass(/\bon\b/);
+        await screens.selectOption("controls");
+        await expect(operatorLamp).toHaveClass(/\bon\b/);
+        await expect(input).toHaveAttribute("aria-pressed", "false");
+        await input.press("Space");
+        await expect(input).toHaveAttribute("aria-pressed", "true");
+        await expect(operatorLamp).not.toHaveClass(/\bon\b/);
+        await screens.selectOption("diagnostics");
+        await expect(diagnosticLamp).not.toHaveClass(/\bon\b/);
+        await screens.selectOption("controls");
+        await input.press("Space");
+        await expect(operatorLamp).toHaveClass(/\bon\b/);
+        await screens.selectOption("diagnostics");
       };
       const savedIds = (tab) => tab.evaluate(async (projectName) => {
         const { store } = await import("/src/store.js");
@@ -76,7 +109,7 @@ for (const { mode, logic } of [
       const chunks = [];
       for await (const chunk of await download.createReadStream()) chunks.push(chunk);
       const exported = Buffer.concat(chunks);
-      expect(JSON.parse(exported.toString("utf8"))).toMatchObject({ name, editorType: mode, ...logic });
+      expect(JSON.parse(exported.toString("utf8"))).toMatchObject(project);
       await importJson(reopened, download.suggestedFilename(), exported);
       await expect.poll(() => savedIds(reopened)).toHaveLength(2);
       await checkExecution(reopened);
