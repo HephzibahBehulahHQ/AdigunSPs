@@ -1336,7 +1336,9 @@ test.describe("touch workspace", () => {
 });
 
 test("mobile drawer keyboard focus enters each drawer and returns on Escape", async ({ page }) => {
+  const phoneLayout = () => page.evaluate(() => matchMedia("(max-width: 760px)").matches);
   await page.setViewportSize({ width:390, height:844 });
+  await expect.poll(phoneLayout).toBe(true);
   const opener = page.locator("#panelLayoutButton");
   for (const [side, choice] of [["left", "#mobileProjectPanel"], ["right", "#mobileInspectorPanel"]]) {
     await opener.press("Enter");
@@ -1362,8 +1364,10 @@ test("mobile drawer keyboard focus enters each drawer and returns on Escape", as
     await opener.press("Enter");
     await page.locator(choice).press("Enter");
     await page.setViewportSize({ width:1024, height:768 });
+    await expect.poll(phoneLayout).toBe(false);
     await expect(page.locator(".workspace")).not.toHaveClass(/mobile-(left|right)-open/);
     await page.setViewportSize({ width:390, height:844 });
+    await expect.poll(phoneLayout).toBe(true);
     await expect(close).toBeHidden();
   }
 });
