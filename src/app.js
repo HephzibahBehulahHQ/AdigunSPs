@@ -813,6 +813,13 @@ function renderHmi() {
   const model = hmiModel(), root = $("#hmiBoard"), tags = inferTags();
   const copy = hmiScreenCopy[language] || hmiScreenCopy.en;
   const previousScroll = {left:root.scrollLeft,top:root.scrollTop};
+  const active = document.activeElement;
+  const activeWidget = root.contains(active) ? active.closest("[data-hmi-widget]") : null;
+  const focusAttribute = activeWidget && ["data-hmi-select", "data-hmi-toggle", "data-hmi-move", "data-hmi-field"]
+    .find((attribute) => active.hasAttribute(attribute));
+  const focusSelector = focusAttribute
+    ? `[data-hmi-widget="${CSS.escape(activeWidget.dataset.hmiWidget)}"] [${focusAttribute}="${CSS.escape(active.getAttribute(focusAttribute))}"]`
+    : null;
   if (!model.widgets.some((widget) => widget.id === selectedHmiWidgetId)) selectedHmiWidgetId = null;
   const gesturePointers = createSinglePointerGesture();
   const pointerPosition = (event) => { const bounds = root.getBoundingClientRect(), style = getComputedStyle(root), columns = style.gridTemplateColumns.split(" ").map(parseFloat).filter(Number.isFinite), gapX = parseFloat(style.columnGap)||12, gapY = parseFloat(style.rowGap)||12, paddingLeft = parseFloat(style.paddingLeft)||0, paddingTop = parseFloat(style.paddingTop)||0, cellH = root.querySelector("[data-hmi-widget]")?.getBoundingClientRect().height || 125; return hmiPointerPosition(event.clientX, event.clientY, bounds, { scrollLeft:root.scrollLeft, scrollTop:root.scrollTop, paddingLeft, paddingTop, cellW:columns[0]||115, cellH, gapX, gapY, snap:preferences.snap }); };
@@ -869,6 +876,7 @@ function renderHmi() {
     button.onclick = () => { if (Date.now() < suppressClickUntil) return; addHmiWidget(button.dataset.hmiAdd); };
   });
   renderHmiInspector(model,copy); root.scrollLeft = previousScroll.left; root.scrollTop = previousScroll.top;
+  if (focusSelector) root.querySelector(focusSelector)?.focus({ preventScroll:true });
   renderHmiAlarms(); renderProcessPanel();
 }
 function showAlarmManager() {
