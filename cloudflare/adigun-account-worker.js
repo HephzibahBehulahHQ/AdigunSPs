@@ -6,28 +6,50 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname !== "/api/account") return reply(404, { error:"not-found" });
-    if (request.method !== "POST" || request.headers.get("Origin") !== url.origin) {
-      return reply(403, { error:"origin-required" });
+    const origin = request.headers.get("Origin");
+    const adminOrigin = origin && origin === env.ACCOUNT_ADMIN_ORIGIN && origin !== url.origin;
+    if (!adminOrigin && origin !== url.origin) return reply(403, { error:"origin-required" });
+    if (request.method === "OPTIONS" && adminOrigin) {
+      return forAdmin(new Response(null, { status:204, headers:{
+        "Access-Control-Allow-Methods":"POST", "Access-Control-Allow-Headers":"Content-Type", "Cache-Control":"no-store"
+      } }), origin);
     }
-    if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY || !env.ACCOUNT_SECRET ||
-        !env.ACCOUNT_RPC_PROOF || !env.ACCOUNT_LIMITER) {
-      return reply(503, { error:"account-unavailable" });
-    }
-    try {
-      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-      if (!(await env.ACCOUNT_LIMITER.limit({ key:"ip:" + ip })).success) return reply(429, { error:"wait-and-retry" });
-      if (!request.headers.get("Content-Type")?.startsWith("application/json")) return reply(415, { error:"json-required" });
-      const body = await request.json().catch(() => null);
-      if (body?.step === "begin") return await begin(body, env);
-      if (body?.step === "verify") return await verify(body, request, env);
-      return reply(400, { error:"invalid-request" });
-    } catch {
-      return reply(503, { error:"account-unavailable" });
-    }
+    if (request.method !== "POST") return reply(405, { error:"method-not-allowed" });
+    const result = await handleRequest(request, env, origin, adminOrigin);
+    return adminOrigin ? forAdmin(result, origin) : result;
   }
 };
 
-async function begin(body, env) {
+function forAdmin(response, origin) {
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set("Access-Control-Allow-Credentials", "true");
+  headers.set("Vary", "Origin");
+  return new Response(response.body, { status:response.status, headers });
+}
+
+async function handleRequest(request, env, origin, adminOrigin) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY || !env.ACCOUNT_SECRET ||
+      !env.ACCOUNT_RPC_PROOF || !env.ACCOUNT_LIMITER) {
+    return reply(503, { error:"account-unavailable" });
+  }
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!(await env.ACCOUNT_LIMITER.limit({ key:"ip:" + ip })).success) return reply(429, { error:"wait-and-retry" });
+    if (!request.headers.get("Content-Type")?.startsWith("application/json")) return reply(415, { error:"json-required" });
+    const body = await request.json().catch(() => null);
+    if (body?.step === "begin") {
+      if (adminOrigin && body.mode !== "sign-in") return reply(403, { error:"admin-sign-in-only" });
+      return await begin(body, env, origin);
+    }
+    if (body?.step === "verify") return await verify(body, request, env, origin, adminOrigin);
+    return reply(400, { error:"invalid-request" });
+  } catch {
+    return reply(503, { error:"account-unavailable" });
+  }
+}
+
+async function begin(body, env, origin) {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const { mode, password } = body;
   if (!["register", "sign-in", "reset-password"].includes(mode) || email.length > 254 ||
@@ -55,15 +77,15 @@ async function begin(body, env) {
     }
   }
 
-  const challenge = await seal(env, { mode, email, passwordProof, expiresAt:Date.now() + challengeTime });
+  const challenge = await seal(env, { mode, email, passwordProof, origin, expiresAt:Date.now() + challengeTime });
   return reply(200, { step:"verify" }, cookie(challenge, challengeTime / 1000));
 }
 
-async function verify(body, request, env) {
+async function verify(body, request, env, origin, adminOrigin) {
   const saved = request.headers.get("Cookie")?.split(";").map(value => value.trim())
     .find(value => value.startsWith(cookieName + "="))?.slice(cookieName.length + 1);
   const challenge = await open(env, saved);
-  if (!challenge || challenge.expiresAt <= Date.now()) return reply(400, { error:"email-code-request-required" });
+  if (!challenge || challenge.origin !== origin || challenge.expiresAt <= Date.now()) return reply(400, { error:"email-code-request-required" });
   if (typeof body.code !== "string" || !/^\d{6,10}$/.test(body.code)) return reply(400, { error:"invalid-email-code" });
   const checked = await provider(env, "/auth/v1/verify", { email:challenge.email, token:body.code, type:"email" });
   if (checked.status === 429) return reply(429, { error:"wait-and-retry" });
@@ -73,6 +95,10 @@ async function verify(body, request, env) {
   if (!session?.access_token || !session.refresh_token || !session.user?.email_confirmed_at ||
       session.user.is_anonymous || session.user.email?.toLowerCase() !== challenge.email) {
     return reply(503, { error:"account-unavailable" });
+  }
+
+  if (adminOrigin && session.user.app_metadata?.role !== "admin") {
+    return reply(403, { error:"admin-account-required" }, cookie("", 0));
   }
 
   const registration = challenge.mode === "register";

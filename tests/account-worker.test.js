@@ -98,3 +98,44 @@ test("product registration and every sign-in require email OTP before releasing 
   }
 });
 
+
+test("only the configured Admin origin can request an admin-only session", async () => {
+  const adminOrigin = "https://admin.example.com";
+  const bindings = { ...env, ACCOUNT_ADMIN_ORIGIN:adminOrigin };
+  let adminRole = false;
+  let verified = 0;
+  const provider = mock.method(globalThis, "fetch", async url => {
+    if (url.pathname === "/auth/v1/otp") return Response.json({});
+    if (url.pathname === "/auth/v1/verify") return Response.json({
+      access_token:"admin-test-access", refresh_token:"admin-test-refresh",
+      user:{ email, email_confirmed_at:"2026-11-22", app_metadata:{ role:adminRole ? "admin" : "member" } }
+    });
+    if (url.pathname.endsWith("/adigun_verify_product_session")) verified++;
+    return Response.json(true);
+  });
+  const send = (from, body, cookie = "") => worker.fetch(new Request(origin + "/api/account", {
+    method:body ? "POST" : "OPTIONS",
+    headers:{ Origin:from, Cookie:cookie, "Content-Type":"application/json" },
+    body:body ? JSON.stringify(body) : undefined
+  }), bindings);
+  try {
+    assert.equal((await send("https://other.example.com")).status, 403);
+    const allowed = await send(adminOrigin);
+    assert.equal(allowed.status, 204);
+    assert.equal(allowed.headers.get("Access-Control-Allow-Origin"), adminOrigin);
+    assert.equal(allowed.headers.get("Access-Control-Allow-Credentials"), "true");
+    assert.equal((await send(adminOrigin, {step:"begin",mode:"register",email,password})).status, 403);
+    const start = {step:"begin",mode:"sign-in",email,password};
+    const complete = {step:"verify",code:"123456"};
+    const challenge = cookieFrom(await send(adminOrigin, start));
+    assert.equal((await send(origin, complete, challenge)).status, 400);
+    assert.equal((await send(adminOrigin, complete, challenge)).status, 403);
+    assert.equal(verified, 0);
+    adminRole = true;
+    const admin = await send(adminOrigin, complete, cookieFrom(await send(adminOrigin, start)));
+    assert.equal((await admin.json()).step, "signed-in");
+    assert.equal(verified, 1);
+  } finally {
+    provider.mock.restore();
+  }
+});
