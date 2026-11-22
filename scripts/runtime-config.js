@@ -27,6 +27,7 @@ async function readLocalEnvironment(root) {
 export async function loadAdigunRuntimeConfig(root) {
   const local = await readLocalEnvironment(root);
   return {
+    productAccount: process.env.ADIGUN_PRODUCT_ACCOUNT === "true",
     supabase: {
       projectRef: ADIGUN_SUPABASE_PROJECT_REF,
       url: process.env.ADIGUN_SUPABASE_URL || local.ADIGUN_SUPABASE_URL || ADIGUN_SUPABASE_URL,

@@ -61,6 +61,23 @@ export function createAdigunAIWorker({ fetchImpl = fetch } = {}) {
       try { user = await userResponse.json(); } catch { return response({ error: "invalid-session" }, 401, origin); }
       if (!user?.id || user.is_anonymous === true) return response({ error: "signed-in-account-required" }, 401, origin);
 
+      if (env.ADIGUN_AI_REQUIRE_VERIFIED_PRODUCT_SESSION === "true") {
+        try {
+          const verified = await fetchImpl(new URL("/rest/v1/rpc/adigun_has_verified_product_session", env.SUPABASE_URL), {
+            method: "POST",
+            headers: {
+              apikey: env.SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${token}`,
+              "content-profile": "adigunsps", "content-type": "application/json"
+            },
+            body: "{}", signal: AbortSignal.timeout(10000)
+          });
+          if (!verified.ok) return response({ error: "authentication-service-unavailable" }, 503, origin);
+          if (await verified.json() !== true) return response({ error: "signed-in-account-required" }, 401, origin);
+        } catch {
+          return response({ error: "authentication-service-unavailable" }, 503, origin);
+        }
+      }
+
       try {
         const result = await env.AI.run(MODEL, {
           messages: [

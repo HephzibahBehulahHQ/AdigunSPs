@@ -41,6 +41,13 @@ assert.deepEqual(rpcCalls, ["adigun_ensure_guest_session", "adigun_ensure_guest_
 await assert.rejects(() => service.ensureGuestSession({ id:"u1", is_anonymous:false }), (error) => error.code === "guest-session-not-anonymous");
 const expiredService = createAccountService({ ...client, rpc:async () => ({ data:[{ started_at:"2030-01-01T00:00:00.000Z", expires_at:"2030-01-01T00:04:00.000Z", server_now:"2030-01-01T00:04:00.000Z" }], error:null }) });
 assert.equal((await expiredService.ensureGuestSession({ id:"g2", is_anonymous:true })).remainingMs, 0, "expired server sessions are not restarted");
+const tooLongService = createAccountService({ ...client, rpc:async () => ({ data:[{
+  started_at:"2030-01-01T00:00:00.000Z",
+  expires_at:"2030-01-01T00:04:00.001Z",
+  server_now:"2030-01-01T00:00:00.000Z"
+}], error:null }) });
+await assert.rejects(() => tooLongService.ensureGuestSession({ id:"g2", is_anonymous:true }),
+  (error) => error.code === "guest-session-invalid", "a guest deadline cannot exceed four minutes");
 await assert.rejects(() => service.saveCloudProject({ id:"g1", is_anonymous:true }, { name:"Guest" }), (error) => error.code === "authentication-required");
 await service.beginGuestUpgradeEmail({ id:"g1", is_anonymous:true }, " person@example.test ", "https://app.example.test/");
 assert.deepEqual(authCalls.find((call) => call[0] === "updateUser")[1], { email:"person@example.test", options:{ emailRedirectTo:"https://app.example.test/" } }, "guest upgrade sends an email-confirmation link to the app");

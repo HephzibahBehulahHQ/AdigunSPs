@@ -29,6 +29,19 @@ const anonymousWorker=createAdigunAIWorker({fetchImpl:async()=>Response.json({id
 assert.equal((await anonymousWorker.fetch(makeRequest(payload),aiEnv)).status,401,"anonymous Supabase guest session cannot access hosted AI");
 assert.equal(modelCalls,0,"rejected requests never reach Workers AI");
 
+let productSessionVerified = false;
+const productWorker=createAdigunAIWorker({fetchImpl:async(url,options)=>{
+  if(url.pathname==="/auth/v1/user") return Response.json({id:"real-user",is_anonymous:false});
+  assert.equal(url.pathname,"/rest/v1/rpc/adigun_has_verified_product_session");
+  assert.equal(options.headers["content-profile"],"adigunsps");
+  assert.equal(options.headers.authorization,"Bearer signed-in-token");
+  return Response.json(productSessionVerified);
+}});
+const rolloutEnv={...aiEnv,ADIGUN_AI_REQUIRE_VERIFIED_PRODUCT_SESSION:"true"};
+assert.equal((await productWorker.fetch(makeRequest(payload),rolloutEnv)).status,401,"provider identity alone cannot use hosted AI");
+productSessionVerified=true;
+assert.equal((await productWorker.fetch(makeRequest(payload),{...rolloutEnv,AI:env.AI})).status,200);
+
 const accepted=await testWorker.fetch(makeRequest({...payload,model:"@cf/moonshotai/kimi-k2.6"}),aiEnv);
 assert.equal(accepted.status,200);assert.equal(accepted.headers.get("access-control-allow-origin"),"https://hephzibahbehulahhq.github.io");
 assert.equal((await accepted.json()).answer,"Reviewed PLC explanation.");

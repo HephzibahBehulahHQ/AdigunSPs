@@ -30,7 +30,32 @@ function requirePermanentUser(user) {
 export function createAccountService(client) {
   if (!client?.auth || typeof client.from !== "function") return null;
 
+  async function requestProductAccount(body) {
+    const response = await fetch("/api/account", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(body), credentials:"same-origin", cache:"no-store"
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result) throw new AccountError(result?.error || "account-unavailable", "The account request could not be completed.");
+    return result;
+  }
+
   return {
+    beginProductAccount(mode, email, password) {
+      return requestProductAccount({ step:"begin", mode, email, password });
+    },
+    async verifyProductAccount(code) {
+      const result = await requestProductAccount({ step:"verify", code });
+      if (["registered", "password-reset"].includes(result.step)) return result;
+      if (result.step !== "signed-in" || !result.session?.access_token || !result.session?.refresh_token) {
+        throw new AccountError("account-unavailable", "The account service did not return a verified session.");
+      }
+      const data = requireResult(await client.auth.setSession(result.session));
+      return { step:result.step, user:data?.user || data?.session?.user };
+    },
+    async hasVerifiedProductSession() {
+      return requireResult(await client.rpc("adigun_has_verified_product_session")) === true;
+    },
     signInWithPassword(email, password) {
       return client.auth.signInWithPassword({ email:email.trim(), password });
     },
@@ -77,7 +102,7 @@ export function createAccountService(client) {
       const result = requireResult(await client.rpc("adigun_ensure_guest_session"));
       const row = Array.isArray(result) ? result[0] : result;
       const startedAt = Date.parse(row?.started_at), expiresAt = Date.parse(row?.expires_at), serverNow = Date.parse(row?.server_now);
-      if (![startedAt, expiresAt, serverNow].every(Number.isFinite) || expiresAt <= startedAt || expiresAt - startedAt > 4 * 60_000 + 5_000) throw new AccountError("guest-session-invalid", "The account service returned an invalid guest session.");
+      if (![startedAt, expiresAt, serverNow].every(Number.isFinite) || expiresAt <= startedAt || serverNow < startedAt || expiresAt - startedAt > 4 * 60_000) throw new AccountError("guest-session-invalid", "The account service returned an invalid guest session.");
       return { startedAt, expiresAt, serverNow, remainingMs:Math.max(0, expiresAt - serverNow), serverIssued:true };
     },
     async startGuestSession() {

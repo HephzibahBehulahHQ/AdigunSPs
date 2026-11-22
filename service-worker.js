@@ -11,25 +11,34 @@ self.addEventListener("activate", (event) => event.waitUntil(
 ));
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin || requestUrl.pathname === "/__live") return;
+  const { request } = event;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname === "/__live" || url.pathname.startsWith("/api/")) return;
 
-  event.respondWith(caches.match(event.request, { cacheName: CACHE }).then((cached) => {
-    if (cached) return cached;
-    return fetch(event.request).then((response) => {
-      const contentType = response.headers.get("content-type") || "";
-      if (response.ok && !contentType.includes("text/event-stream")) {
-        const cacheCopy = response.clone();
-        event.waitUntil(caches.open(CACHE).then((cache) => cache.put(event.request, cacheCopy)).catch(() => {}));
-      }
-      return response;
-    }).catch(() => event.request.mode === "navigate"
-      ? caches.match(new URL("./index.html", self.location.href).href, { cacheName: CACHE }).then((shell) => shell || Response.error())
-      : Response.error());
-  }));
+  const appRoot = new URL("./", self.location.href);
+  const releaseEntry = ["runtime-config.js", "src/app.js", "src/account.js", "src/supabase-client.js"]
+    .some(path => new URL(path, appRoot).pathname === url.pathname);
+  const navigate = request.mode === "navigate";
+  const networkFirst = navigate || releaseEntry;
+
+  async function fromNetwork() {
+    const response = await fetch(request, networkFirst ? { cache:"no-cache" } : undefined);
+    const contentType = response.headers.get("content-type") || "";
+    if (response.ok && !contentType.includes("text/event-stream")) {
+      const cacheCopy = response.clone();
+      event.waitUntil(caches.open(CACHE).then(cache => cache.put(request, cacheCopy)).catch(() => {}));
+    }
+    return response;
+  }
+
+  async function fromCache() {
+    const cached = await caches.match(request, { cacheName:CACHE });
+    if (cached || !navigate) return cached;
+    return caches.match(new URL("index.html", appRoot).href, { cacheName:CACHE });
+  }
+
+  event.respondWith(networkFirst
+    ? fromNetwork().catch(async () => await fromCache() || Response.error())
+    : fromCache().then(cached => cached || fromNetwork()).catch(() => Response.error()));
 });
-
-
-
-

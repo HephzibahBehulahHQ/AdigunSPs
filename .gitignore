@@ -8,3 +8,6 @@ playwright-report/
 *.log
 .DS_Store
 Thumbs.db
+/supabase/.temp/
+/.wrangler/
+/supabase/.branches/
