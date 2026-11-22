@@ -6,7 +6,7 @@ const styles = readFileSync("styles.css", "utf8");
 const app = readFileSync("src/app.js", "utf8");
 const html = readFileSync("index.html", "utf8");
 
-assert.match(app, /matchMedia\("\(max-width: 760px\)"\)\.matches/, "panel controls must switch to drawer behavior at the tablet breakpoint");
+assert.match(app, /const mobileDrawerBreakpoint = "\(max-width: 760px\)"/, "panel controls must switch to drawer behavior at the tablet breakpoint");
 assert.match(styles, /@media\(max-width:760px\)\{body\{height:100dvh\}/, "compact toolbar and mobile workspace layout must include 710px viewports");
 assert.match(styles, /@media\(max-width:760px\)\{\.workspace:not\(\.mobile-left-open\) \.left-sidebar,\.workspace:not\(\.mobile-right-open\) \.right-sidebar\{display:none\}\}/, "tablet workspace sidebars must close behind drawer controls");
 assert.match(styles, /@media\(max-width:760px\)\{\.workspace\{position:relative\}\.workspace\.mobile-left-open/, "tablet side drawers must have a positioned workspace container");

@@ -1033,6 +1033,9 @@ function applyPanelLayout() {
     else workspace.style.setProperty(property, `${width}px`);
   }
 }
+const mobileDrawerBreakpoint = "(max-width: 760px)";
+const mobileDrawerViewport = matchMedia(mobileDrawerBreakpoint);
+
 function setMobileDrawer(side) {
   const workspace = $(".workspace");
   const wasOpen = workspace.matches(".mobile-left-open, .mobile-right-open");
@@ -1042,9 +1045,23 @@ function setMobileDrawer(side) {
   else if (wasOpen) $("#panelLayoutButton").focus();
   return wasOpen;
 }
+
+function leaveMobileDrawerAtTabBoundary(event) {
+  if (event.key !== "Tab" || event.defaultPrevented || $("#modal").open || !$("#contextMenu").hidden) return false;
+  const drawer = $(".mobile-left-open .left-sidebar, .mobile-right-open .right-sidebar");
+  if (!drawer?.contains(document.activeElement) || !matchMedia(mobileDrawerBreakpoint).matches) return false;
+  const stops = [...drawer.querySelectorAll("a[href],button,input,select,textarea,[tabindex]")]
+    .filter((element) => element.tabIndex >= 0 && !element.matches(":disabled") &&
+      element.getClientRects().length && getComputedStyle(element).visibility === "visible");
+  const boundary = event.shiftKey ? stops[0] : stops.at(-1);
+  if (document.activeElement !== boundary) return false;
+  event.preventDefault();
+  setMobileDrawer(null);
+  return true;
+}
 function showPanelLayout() {
   const copy = ({ en:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"}, de:{title:"Panelanordnung",left:"Projekt- und E/A-Bereich",right:"Inspektor und Diagnose",showProject:"Projekt- und E/A-Bereich öffnen",showInspector:"Inspektor und Diagnose öffnen",close:"Seitenbereiche schließen"}, yo:{title:"Ìṣètò pánẹ́lì",left:"Pánẹ́lì iṣẹ́ àti I/O",right:"Olùṣàyẹ̀wò àti àyẹ̀wò ètò",showProject:"Ṣí pánẹ́lì iṣẹ́ àti I/O",showInspector:"Ṣí olùṣàyẹ̀wò àti àyẹ̀wò ètò",close:"Pa àwọn pánẹ́lì ẹ̀gbẹ́"}, pcm:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"} })[language];
-  const mobile = matchMedia("(max-width: 760px)").matches;
+  const mobile = matchMedia(mobileDrawerBreakpoint).matches;
   if (mobile) {
     modal(copy.title, `<div class="modal-body"><button class="secondary panel-layout-button" id="mobileProjectPanel">${copy.showProject}</button><button class="secondary panel-layout-button" id="mobileInspectorPanel">${copy.showInspector}</button><button class="secondary panel-layout-button" id="mobileClosePanels">${copy.close}</button></div>`);
     const open = (side) => { $("#modal").close(); setMobileDrawer(side); };
@@ -2428,7 +2445,8 @@ document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase(), modifier = event.ctrlKey || event.metaKey, active = document.activeElement;
   if (event.key === "Escape" && $("#modal").open) { $("#modal").close(); return; }
   if (event.key === "Escape" && !$("#contextMenu").hidden) { hideContextMenu(); return; }
-  if (event.key === "Escape" && !event.defaultPrevented && matchMedia("(max-width: 760px)").matches && setMobileDrawer(null)) {
+  if (leaveMobileDrawerAtTabBoundary(event)) return;
+  if (event.key === "Escape" && !event.defaultPrevented && matchMedia(mobileDrawerBreakpoint).matches && setMobileDrawer(null)) {
     event.preventDefault();
     return;
   }
@@ -2538,6 +2556,9 @@ function selectInspectorTab(tab) {
 $("#propertiesTab").addEventListener("click", () => selectInspectorTab("properties"));
 $("#issuesTab").addEventListener("click", () => selectInspectorTab("issues"));
 for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) button.addEventListener("click", () => setMobileDrawer(null));
+mobileDrawerViewport.addEventListener("change", (event) => {
+  if (!event.matches) setMobileDrawer(null);
+});
 startAdigunCopilotObservers();
 init().then(setupAdigunBotWindow);
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js").catch(() => {});
