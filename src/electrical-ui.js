@@ -168,7 +168,8 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
   let electricalZoom = Number.isInteger(project.viewState.electricalZoom) ? Math.min(150, Math.max(30, project.viewState.electricalZoom)) : 100;
   let electricalGridVisible = project.viewState.electricalGridVisible !== false;
   let electricalSnapToGrid = project.viewState.electricalSnapToGrid !== false;
-  let selectedId = root.dataset.selectedComponent || diagram.components[0]?.id || "", selectedWireId = "", pendingTerminal = null, pendingWaypoints=[], resumingWireId=null, rewireEndpoint=null, wireArmed=false, routeDrag=null, simulatedOutputs = diagram.simulation?.energized || {};
+  const savedSelection = diagram.components.find((component) => component.id === root.dataset.selectedComponent);
+  let selectedId = savedSelection?.id ?? diagram.components[0]?.id ?? "", selectedWireId = "", pendingTerminal = null, pendingWaypoints=[], resumingWireId=null, rewireEndpoint=null, wireArmed=false, routeDrag=null, simulatedOutputs = diagram.simulation?.energized || {};
   const expandedInspectorSections = new Set();
   let viewport = electricalViewports.get(root);
   if (viewport?.project !== project) {

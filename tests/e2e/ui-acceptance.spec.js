@@ -1758,11 +1758,21 @@ test("electrical duplicate placement avoids rotated component collisions", async
   const rotate=page.locator('#electricalToolboxDock [data-electrical-action="rotate"]');
   const duplicate=page.locator('#electricalToolboxDock [data-electrical-action="duplicate"]');
   await add.click();
+  await add.click();
   await rotate.click();
+  const components = page.locator("#electricalBoard [data-component-id]");
+  const terminals = page.locator("#electricalBoard [data-terminal-component]");
+  await page.locator('#electricalToolboxDock [data-electrical-action="wire"]').click();
+  await terminals.first().click();
+  await terminals.last().click();
+  const wire = page.locator("#electricalBoard .electrical-wire");
+  await expect(wire).toHaveCount(1);
+  const wireId = await wire.getAttribute("data-wire-id");
+  const wirePath = await wire.getAttribute("d");
   await duplicate.click();
   await duplicate.click();
 
-  const boxes=await page.locator("#electricalBoard [data-component-id]").evaluateAll(nodes=>nodes.map(node=>{
+  const boxes=await components.evaluateAll(nodes=>nodes.map(node=>{
     const {left,top,right,bottom}=node.getBoundingClientRect();
     return {left,top,right,bottom};
   }));
@@ -1771,8 +1781,28 @@ test("electrical duplicate placement avoids rotated component collisions", async
     const a=boxes[i],b=boxes[j];
     if(a.left<b.right-1&&a.right>b.left+1&&a.top<b.bottom-1&&a.bottom>b.top+1)collisions.push([i,j]);
   }
-  expect(boxes.length).toBeGreaterThanOrEqual(3);
+  expect(boxes).toHaveLength(4);
   expect(collisions).toEqual([]);
+
+  const componentState = () => components.evaluateAll((nodes) => nodes.map((node) => ({
+    id: node.dataset.componentId, left: node.style.left, top: node.style.top, transform: node.style.transform
+  })));
+  const duplicated = await componentState();
+  await page.locator('[data-app-menu="edit"]').click();
+  await page.getByRole("menuitem", { name: "Undo", exact: true }).click();
+  await expect(components).toHaveCount(3);
+  expect(await componentState()).toEqual(duplicated.slice(0, -1));
+  await expect(page.locator("#electricalBoard [data-component-id].selected")).toHaveCount(1);
+  await expect(duplicate).toBeEnabled();
+  await expect(wire).toHaveAttribute("data-wire-id", wireId);
+  await expect(wire).toHaveAttribute("d", wirePath);
+
+  await page.locator('[data-app-menu="edit"]').click();
+  await page.getByRole("menuitem", { name: "Redo", exact: true }).click();
+  await expect(components).toHaveCount(4);
+  expect(await componentState()).toEqual(duplicated);
+  await expect(wire).toHaveAttribute("data-wire-id", wireId);
+  await expect(wire).toHaveAttribute("d", wirePath);
 });
 test("component toolbox uses the approved placement and wire labels without losing actions", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
