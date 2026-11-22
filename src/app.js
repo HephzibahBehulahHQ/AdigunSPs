@@ -2398,7 +2398,7 @@ function applyLocale() {
   document.documentElement.lang = { en:"en", de:"de", yo:"yo", pcm:"pcm" }[language];
   $("#projectHeading").textContent = chrome.project; $("#workspaceBreadcrumb").textContent = ({en:"Main program",de:"Hauptprogramm",yo:"Ètò pàtàkì",pcm:"Main program"})[language]; $("#inputsHeading").textContent = chrome.inputs; $("#outputsHeading").textContent = chrome.outputs; $("#propertiesTab").textContent = chrome.properties; $("#watchTab").textContent = chrome.watch;
   $("#programTreeLabel").textContent = chrome.program; $("#programTabLabel").textContent = chrome.program.replace(" [LD]", ""); $("#tagsTreeLabel").textContent = chrome.tags; $("#exampleTreeLabel").textContent = chrome.library; $("#educationLabel").textContent = chrome.education; $("#noHardwareLabel").textContent = chrome.hardware; $("#programCrumb").textContent = t("program"); $("#subbarTitle").textContent = chrome.routine; $("#ladderBadge").textContent = language === "de" ? "KOP" : "LADDER"; $("#snapLabelText").textContent = chrome.snap; $("#snapToggle").checked = preferences.snap; $("#minimapButton").textContent = chrome.minimap; $("#commandHint").textContent = chrome.commands; $("#offlineLabel").textContent = chrome.offline; $("#scanTimeLabel").textContent = chrome.scanTime; $("#cycleLabel").textContent = chrome.cycle; $("#savedOnDeviceLabel").textContent = chrome.status; $("#editorReadyStatus").textContent=chrome.editorReady; $("#plcPrefix").textContent=chrome.plcPrefix; $("#gridSizeStatus").textContent=chrome.gridStatus; $("#educationalStatus").textContent=chrome.educationalFooter;
-  for (const [actionName, label] of Object.entries({ new:chrome.new, examples:chrome.examples, save:chrome.save, "save-as":chrome.saveAs, import:chrome.import, export:chrome.export, run:chrome.run, pause:chrome.pause, step:chrome.step, stop:chrome.stop, "add-contact":chrome.contact, "add-rung":chrome.rung })) { const span = document.querySelector(`[data-action="${actionName}"] span`); if (span) span.textContent = label; } const globalRun=$("#globalQuickCommands [data-action=\"run\"]"); if(globalRun){const label=({en:"Run simulation",de:"Simulation starten",yo:"Bẹ̀rẹ̀ àfarawé",pcm:"Run simulation"})[language]||"Run simulation"; const text=globalRun.querySelector("span"); if(text)text.textContent=label; globalRun.setAttribute("aria-label",label); globalRun.title=label;}
+  for (const [actionName, label] of Object.entries({ new:chrome.new, examples:chrome.examples, save:chrome.save, "save-as":chrome.saveAs, import:chrome.import, export:chrome.export, run:chrome.run, pause:chrome.pause, step:chrome.step, stop:chrome.stop, "add-contact":chrome.contact, "add-rung":chrome.rung })) { const span = document.querySelector(`[data-action="${actionName}"] span`); if (span) span.textContent = label; } updateGlobalRunLabel();
   $("#scenarioButton").textContent = ({ en:"▹ Scenario", de:"▹ Szenario", yo:"▹ Ìtẹ̀lé", pcm:"▹ Scenario" })[language];
   const trendExportLabel = ({ en:"Export trend CSV", de:"Trend-CSV exportieren", yo:"Gba trend CSV jáde", pcm:"Export trend CSV" })[language]; $("#exportTrendHistoryButton").setAttribute("aria-label", trendExportLabel); $("#exportTrendHistoryButton").title = trendExportLabel;
   $("#saveState").textContent = t("saved"); $("#languageStatus").textContent = t("lang"); applyBrand();
@@ -2534,6 +2534,17 @@ function setupAdigunBotWindow() {
   $("#adigunBotWindow").querySelector("[data-window-resize]").setAttribute("aria-label",labels[4]);
   if(adigunBotWindow.isOpen())showAdigunAI();
 }
+function updateGlobalRunLabel() {
+  const run = document.querySelector('#globalQuickCommands [data-action="run"], .toolbar [data-action="run"]');
+  if (!run) return;
+  const label = run.closest("#globalQuickCommands")
+    ? ({en:"Run simulation", de:"Simulation starten", yo:"Bẹ̀rẹ̀ àfarawé", pcm:"Run simulation"})[language] || "Run simulation"
+    : t("run");
+  const text = run.querySelector("span");
+  if (text) text.textContent = label;
+  run.setAttribute("aria-label", label);
+  run.title = label;
+}
 function setupResponsiveGlobalCommandDocks() {
   // Move already-bound real buttons, never clone or duplicate global commands.
   const actions=["undo","redo","save","run"].map((key)=>document.querySelector(`.toolbar [data-action="${key}"]`)).filter(Boolean);
@@ -2544,7 +2555,7 @@ function setupResponsiveGlobalCommandDocks() {
     if(desktop.matches) { const header=$("#globalQuickCommands"); for(const button of actions) header.append(button); header.insertBefore(offline,header.firstChild); $("#menuCommandDock").append(palette); }
     else { for(const {button,parent,next} of [...moved].reverse()) { if(next?.parentNode===parent) parent.insertBefore(button,next); else parent.append(button); } const host=workspaceView==="electrical"?$(".statusbar-main"):$(".editor-footer"); if(offline&&host&&offline.parentElement!==host)host.append(offline); }
   };
-  position(); desktop.addEventListener?.("change",position);
+  position(); desktop.addEventListener?.("change", () => { position(); updateGlobalRunLabel(); });
 }
 function setupContextualEditorToolbox() {
   const host = $("#editorToolboxDock");

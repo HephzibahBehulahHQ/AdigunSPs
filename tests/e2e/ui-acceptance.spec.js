@@ -1160,7 +1160,7 @@ test("status strip shows editor and PLC state, local autosave setting, and elect
 
 test("global header places offline readiness before Undo, Redo, Save, and Run", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
-  await expect(page.locator("#offlineLabel")).toHaveText("Offline ready");
+  await expect(page.locator("#globalQuickCommands #offlineLabel")).toHaveText("Offline ready");
   const state=await page.evaluate(()=>({inHeader:document.querySelector("#offlineLabel").closest("#globalQuickCommands")!==null,commandOrder:[...document.querySelectorAll("#globalQuickCommands button")].map(button=>button.dataset.action)}));
   expect(state.inHeader).toBe(true);
   expect(state.commandOrder).toEqual(["undo","redo","save","run"]);
@@ -1168,6 +1168,7 @@ test("global header places offline readiness before Undo, Redo, Save, and Run", 
 
 test("wide workspace header matches the reference proportions and keeps secondary actions in menus", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
+  await expect(page.locator('#globalQuickCommands [data-action="run"]')).toHaveAccessibleName("Run simulation");
   await page.locator("#electricalTab").click();
   await expect(page.locator(".electrical-empty")).toHaveCount(0);
   const layout = await page.evaluate(() => {
@@ -1211,6 +1212,8 @@ test("global Run action matches the reference simulation label without losing it
   await expect(run.locator("span")).toHaveText("Run simulation");
   await expect(run).toHaveCSS("text-transform","uppercase");
   expect((await run.boundingBox()).width).toBe(210);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await expect(page.locator('.toolbar [data-action="run"]')).toHaveAccessibleName("Run");
 });
 
 test("fresh AdigunSPs workspaces use the approved dark interface by default", async ({ page }) => {
