@@ -457,16 +457,29 @@ function setupFbdPanning() {
   window.addEventListener("keydown", (event) => { if (event.code === "Space" && !editable(event.target)) { panSpaceHeld = true; pane.classList.add("pan-enabled"); event.preventDefault(); } });
   window.addEventListener("keyup", (event) => { if (event.code === "Space") { panSpaceHeld = false; pane.classList.remove("pan-enabled"); } });
 }
+const issuePanelCopy = {
+  en:{ title:"Active workspace issues", empty:"No issues found for the active workspace.", error:"Error", warning:"Warning", errors:"Errors", warnings:"Warnings" },
+  de:{ title:"Probleme im aktiven Arbeitsbereich", empty:"Keine Probleme im aktiven Arbeitsbereich gefunden.", error:"Fehler", warning:"Warnung", errors:"Fehler", warnings:"Warnungen" },
+  yo:{ title:"Àwọn ìṣòro iṣẹ́ tó ṣí sílẹ̀", empty:"A kò rí ìṣòro nínú iṣẹ́ tó ṣí sílẹ̀.", error:"Àṣìṣe", warning:"Ìkìlọ̀", errors:"Àwọn àṣìṣe", warnings:"Àwọn ìkìlọ̀" },
+  pcm:{ title:"Active workspace issues", empty:"No issues found for the active workspace.", error:"Error", warning:"Warning", errors:"Errors", warnings:"Warnings" }
+};
+
 function renderIssuesPanel() {
-  const panel = $("#issuesContent");
+  const panel = $("#issuesDetails");
   if (!panel || !project) return;
   const issues = workspaceView === "electrical"
     ? validateElectricalDiagram(project.electrical || { components:[], wires:[] }, project.tags || [])
     : validateProject(project);
   const errors = issues.filter((issue) => issue.level === "error").length;
-  const title = ({ en:"Active workspace issues", de:"Probleme im aktiven Arbeitsbereich", yo:"Àwọn ìṣòro iṣẹ́ tó ṣí sílẹ̀", pcm:"Active workspace issues" })[language];
-  const empty = ({ en:"No issues found for the active workspace.", de:"Keine Probleme im aktiven Arbeitsbereich gefunden.", yo:"A kò rí ìṣòro nínú iṣẹ́ tó ṣí sílẹ̀.", pcm:"No issues found for the active workspace." })[language];
-  panel.innerHTML = `<div class="issues-heading"><h3>${escapeHtml(title)}</h3><span class="issues-count ${errors ? "has-errors" : ""}">${issues.length}</span></div>${issues.length ? `<ul class="issues-list">${issues.map((issue) => `<li class="${issue.level === "error" ? "error" : "warning"}"><strong>${escapeHtml(issue.level === "error" ? "ERROR" : "WARNING")}</strong><span>${escapeHtml(issue.message)}</span></li>`).join("")}</ul>` : `<p class="issues-empty">${escapeHtml(empty)}</p>`}`;
+  const copy = issuePanelCopy[language];
+  const count = (value) => formatLocaleNumber(value, language, 0);
+  const announcement = `${copy.errors} ${count(errors)}. ${copy.warnings} ${count(issues.length - errors)}.`;
+  const status = $("#issuesAnnouncement");
+  if (status.textContent !== announcement) status.textContent = announcement;
+  panel.innerHTML = `<div class="issues-heading"><h3>${escapeHtml(copy.title)}</h3><span aria-hidden="true" class="issues-count ${errors ? "has-errors" : ""}">${count(issues.length)}</span></div>${issues.length ? `<ul class="issues-list">${issues.map((issue) => {
+    const severity = issue.level === "error" ? "error" : "warning";
+    return `<li class="${severity}"><strong>${escapeHtml(copy[severity].toLocaleUpperCase())}</strong><span>${escapeHtml(issue.message)}</span></li>`;
+  }).join("")}</ul>` : `<p class="issues-empty">${escapeHtml(copy.empty)}</p>`}`;
 }
 function renderDiagnostics() {
   const issues = validateProject(project), errors = issues.filter((issue) => issue.level === "error").length;

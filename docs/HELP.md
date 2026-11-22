@@ -64,7 +64,7 @@ Open **Components / Schematic**, search for a named model, and choose **Place co
 
 ## HMI
 
-In **HMI**, add a **Switch**, **Lamp**, **Value**, or **Trend** and bind it in **Properties**. Use BOOL for switches and lamps, numeric tags for values and trends. **Processes** sets PID limits. **Issues** shows diagnostics. **Watch** opens fault-adjusted values.
+In **HMI**, add a **Switch**, **Lamp**, **Value**, or **Trend** and bind it in **Properties**. Use BOOL for switches and lamps, numeric tags for values and trends. **Processes** sets PID limits. **Issues** announces changed validation counts. **Watch** opens fault-adjusted values.
 
 ## First project: use all three workspaces
 

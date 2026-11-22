@@ -1760,6 +1760,21 @@ test("Issues tab shows active-workspace validation and returns to properties", a
   await expect(page.locator("#issuesContent")).toBeVisible();
   await expect(page.locator("#issuesContent")).toContainText("Active workspace issues");
   await expect(page.locator(".issues-count")).toHaveText(/\d+/);
+  await page.locator("#editorMode").selectOption("FBD");
+  const status = page.locator("#issuesContent").getByRole("status");
+  await expect(status).toHaveText(/Errors \d+\. Warnings \d+\./);
+  const initial = await status.textContent();
+  await page.locator('#editorToolboxDock [data-editor-toolbox-mode="FBD"] [data-action="add-fbd-block"]').click();
+  await expect(status).not.toHaveText(initial);
+  const repeated = await status.evaluate((element) => {
+    const observer = new MutationObserver(() => {});
+    observer.observe(element, { childList:true, characterData:true, subtree:true });
+    document.querySelector("#issuesTab").click();
+    const mutations = observer.takeRecords().length;
+    observer.disconnect();
+    return mutations;
+  });
+  expect(repeated).toBe(0);
   await page.locator("#electricalTab").click();
   await issuesTab.click();
   await expect(page.locator("#issuesContent")).toContainText("Active workspace issues");
