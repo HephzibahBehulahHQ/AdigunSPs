@@ -26,11 +26,12 @@ const cookieFrom = response => response.headers.get("Set-Cookie").split(";")[0];
 test("product registration and every sign-in require email OTP before releasing a session", async () => {
   let account;
   let sent = 0;
+  let repeatRegistration = false;
   const mocked = mock.method(globalThis, "fetch", async (url, init) => {
     const payload = JSON.parse(init.body);
     if (url.pathname === "/auth/v1/otp") {
       assert.equal(payload.email, email);
-      assert.equal(payload.create_user, !account);
+      assert.equal(payload.create_user, !account || repeatRegistration);
       sent++;
       return Response.json({});
     }
@@ -49,6 +50,7 @@ test("product registration and every sign-in require email OTP before releasing 
     }
     assert.equal(init.headers.Authorization, "Bearer auth-access");
     if (url.pathname.endsWith("/adigun_activate_product_account")) {
+      if (account) return Response.json(false);
       account = payload.password_proof;
       return Response.json(true);
     }
@@ -93,6 +95,12 @@ test("product registration and every sign-in require email OTP before releasing 
     assert.deepEqual(await (await verify(cookieFrom(recovery))).json(), {step:"password-reset"});
     assert.equal((await begin("sign-in")).status, 401);
     assert.equal((await begin("sign-in", replacement)).status, 200);
+    repeatRegistration = true;
+    const retry = await begin("register");
+    const duplicate = await verify(cookieFrom(retry));
+    assert.equal(duplicate.status, 409);
+    assert.deepEqual(await duplicate.json(), { error:"product-registration-unavailable" });
+    assert.match(duplicate.headers.get("Set-Cookie"), /Max-Age=0/);
   } finally {
     mocked.mock.restore();
   }

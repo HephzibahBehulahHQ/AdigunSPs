@@ -109,7 +109,7 @@ async function verify(body, request, env, origin, adminOrigin) {
     email_address:challenge.email, password_proof:challenge.passwordProof
   }, session.access_token);
   const cleared = cookie("", 0);
-  if (!accepted) return reply(registration ? 409 : 401, { error:"product-account-not-authorized" }, cleared);
+  if (!accepted) return reply(registration ? 409 : 401, { error:registration ? "product-registration-unavailable" : "product-account-not-authorized" }, cleared);
   if (registration) return reply(200, { step:"registered" }, cleared);
   if (recovery) return reply(200, { step:"password-reset" }, cleared);
   if (adminOrigin) {
