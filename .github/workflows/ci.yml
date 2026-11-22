@@ -11,6 +11,33 @@ permissions:
   contents: read
 
 jobs:
+  cloud-project-policies:
+    name: Cloud project access policies
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local-ci-only
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify cloud membership with PostgreSQL
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          cat tests/sql/supabase-cloud-fixture.sql \
+            supabase/migrations/20261030131133_adigunsps_auth_cloud.sql \
+            supabase/migrations/20261101075618_adigunsps_schema_and_guest_upgrade.sql \
+            supabase/migrations/20261101114255_adigunsps_rls_query_performance.sql \
+            supabase/migrations/20261121230000_adigunsps_cloud_project_memberships.sql \
+            tests/sql/cloud-project-memberships.sql |
+            docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres
+
   verify:
     name: Tests and static build
     runs-on: ubuntu-latest

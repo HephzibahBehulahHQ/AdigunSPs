@@ -40,3 +40,8 @@ Copy `.env.example` to `.env` for local development and set the AdigunSPs publis
 
 
 
+### Cloud project membership
+
+Migration `20261121230000_adigunsps_cloud_project_memberships` adds per-project memberships for engineers, technicians, reviewers, and viewers. Ownership continues to come from the cloud project row. A permanent owner can grant, change, or revoke access. The four member roles can read a shared project and its versions. Cloud project and version changes still require ownership. A member sees their own membership, and the owner can list all members on that project.
+
+The GitHub CI policy check runs the cloud migrations on disposable PostgreSQL and exercises owner, reviewer, nonmember, and anonymous sessions. The migration is applied separately from the GitHub Pages deployment.
