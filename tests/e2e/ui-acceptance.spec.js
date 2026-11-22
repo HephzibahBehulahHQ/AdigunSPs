@@ -1751,7 +1751,14 @@ test("electrical inspector identifies the selected component above its editable 
   await expect(summary.locator("h2")).toContainText(reference);
   await expect(summary.locator("p")).toContainText("simulation model");
   await expect(page.locator("#electricalProperties input[name=\"reference\"]")).toHaveValue(reference);
-  await expect(page.locator("#electricalProperties input[name=\"label\"]")).toBeVisible();
+  const label = page.locator('#electricalProperties input[name="label"]');
+  await label.fill("Inspector focus check");
+  await label.press("Enter");
+  await expect(label).toHaveValue("Inspector focus check");
+  await expect(label).toBeFocused();
+  const apply = page.locator('#electricalProperties button[type="submit"]');
+  await apply.press("Space");
+  await expect(apply).toBeFocused();
 });
 
 test("Issues tab shows active-workspace validation and returns to properties", async ({ page }) => {
