@@ -1035,7 +1035,12 @@ function applyWorkspaceView() {
   editorToolbox.classList.toggle("hidden", electrical);
   for (const group of editorToolbox.querySelectorAll("[data-editor-toolbox-mode]")) group.hidden = group.dataset.editorToolboxMode !== toolboxMode;
   canvas.classList.toggle("hidden", other || mode !== "LD"); $("#stPane").classList.toggle("hidden", other || mode !== "ST"); $("#fbdPane").classList.toggle("hidden", other || mode !== "FBD"); $("#sfcPane").classList.toggle("hidden", other || mode !== "SFC");
-  $("#logicTab").classList.toggle("active", !other); $("#electricalTab").classList.toggle("active", electrical); $("#hmiTab").classList.toggle("active", hmi);
+  for (const [selector, active] of [["#logicTab", !other], ["#electricalTab", electrical], ["#hmiTab", hmi]]) {
+    const button = $(selector);
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  }
   for (const item of document.querySelectorAll("[data-project-view]")) { const active = item.dataset.projectView === workspaceView; item.classList.toggle("selected", active); if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current"); }
   if (wasCanvasHidden && !other && mode === "LD" && project.rungs.length > 80) requestAnimationFrame(renderLadder);
 }
@@ -2372,6 +2377,7 @@ function action(name) {
   if (name === "new") { void (async () => { if (!(await confirmProjectChange())) return; project = emptyProject(); project.lastOpenedAt = Date.now(); stopSimulation(); await persist(false, true, { markDirty:false, markSaved:true }); render(); })(); } else if (name === "examples") showExamples(); else if (name === "import") importProject(); else if (name === "export") exportProject(); else if (name === "add-rung") addRung(); else if (name === "add-contact") { if (selection?.rung != null) rungAction("add", selection.rung); else addRung(); } else if (name === "undo") undo(); else if (name === "redo") redo(); else if (name === "run") runSimulation(); else if (name === "pause") { if (runTimer) { clearInterval(runTimer); runTimer = null; logEvent("pause", "Simulation paused"); addNarratorEntry("Simulation paused; outputs retain their current simulated state."); window.adigunPaused = true; updateSimulationHud(); updateStatus(); } } else if (name === "step") { if (runTimer) return; addNarratorEntry("Single PLC scan requested."); doScan(); } else if (name === "stop") { stopSimulation(); toast(t("resetDone")); } else if (name === "sound") { soundEnabled = !soundEnabled; const button = $("#soundToggle"); button.setAttribute("aria-pressed", String(soundEnabled)); button.textContent = soundEnabled ? "♫ Sound on" : "♫ Sound off"; if (soundEnabled) { playSimulationTone("click"); button.title = "Turn simulation sounds off"; } else button.title = "Turn simulation sounds on"; updateMotorHum(); } else if (name === "zoom-in") setZoom(zoom + 10); else if (name === "zoom-out") setZoom(zoom - 10); else if (name === "grid") { grid = !grid; $("#canvasWrap").classList.toggle("no-grid", !grid); $("#gridToggle").classList.toggle("active", grid); } else if (name === "projects") showProjects(); else if (name === "tags") showTags(); else if (name === "help") showHelp();
 }
 function applyLocale() {
+  $(".editor-tabs .tab-add").setAttribute("aria-label", t("addRung"));
   $("#issuesTab").textContent = ({ en:"ISSUES", de:"PROBLEME", yo:"ÌṢÒRO", pcm:"ISSUES" })[language];
   for (const button of document.querySelectorAll("[data-app-menu]")) button.textContent = applicationMenuLabels[language]?.[button.dataset.appMenu] || applicationMenuLabels.en[button.dataset.appMenu];
   const panelTitle = ({ en:"Panel layout", de:"Panelanordnung", yo:"Ìṣètò pánẹ́lì", pcm:"Panel layout" })[language]; $("#panelLayoutButton").title = panelTitle; $("#panelLayoutButton").setAttribute("aria-label", panelTitle);

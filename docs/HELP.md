@@ -74,7 +74,7 @@ In **HMI**, add **Switch**, **Lamp**, **Value**, or **Trend** widgets. Bind tags
 4. In **HMI**, bind a Switch to a BOOL input and a Lamp to a BOOL output. Run again and check both.
 5. Save signed-in work to the cloud or choose **Save locally (JSON)**. Guest changes are temporary.
 
-If a step does not match the example, follow that project's **How to test** and inspect **Issues/Diagnostics** before changing the model.
+Editor buttons announce the current workspace. For example-specific steps, follow **How to test** and check **Issues/Diagnostics**.
 
 ## Creating a project
 
