@@ -2114,7 +2114,14 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
             if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlaps.push([a.selector, b.selector]);
           }
           const emptyHintGeometry = { hint:hintRect && {left:hintRect.left,right:hintRect.right,top:hintRect.top,bottom:hintRect.bottom}, viewport:boardRect && {left:boardRect.left,right:boardRect.right,top:boardRect.top,bottom:boardRect.bottom}, className:emptyHint?.className };
-          const overflowNodes = [...document.querySelectorAll("body *")].map((element) => { const rect = element.getBoundingClientRect(); return { tag:element.tagName, id:element.id, className:String(element.className || ""), right:rect.right, width:rect.width }; }).filter((element) => element.width > 0 && element.right > innerWidth).slice(0, 12);
+          const overflowNodes = [...document.querySelectorAll("body *")].flatMap((element) => {
+            const rect = element.getBoundingClientRect();
+            if (!rect.width || rect.right <= innerWidth) return [];
+            for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+              if (getComputedStyle(parent).overflowX !== "visible" && parent.getBoundingClientRect().right <= innerWidth) return [];
+            }
+            return [{ tag: element.tagName, id: element.id, className: String(element.className || ""), right: rect.right }];
+          }).slice(0, 12);
           return { scrollWidth:document.documentElement.scrollWidth, boardHeight:boardRect?.height ?? 0, emptyHintWithinViewport, emptyHintGeometry, buttons, overlaps, overflowNodes };
         });
 
