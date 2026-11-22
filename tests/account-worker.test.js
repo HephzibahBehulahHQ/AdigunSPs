@@ -95,6 +95,8 @@ test("product registration and every sign-in require email OTP before releasing 
     assert.deepEqual(await (await verify(cookieFrom(recovery))).json(), {step:"password-reset"});
     assert.equal((await begin("sign-in")).status, 401);
     assert.equal((await begin("sign-in", replacement)).status, 200);
+    const existing = await begin("register", replacement);
+    assert.deepEqual(await (await verify(cookieFrom(existing))).json(), {step:"signed-in", session:{access_token:"auth-access", refresh_token:"auth-refresh"}});
     repeatRegistration = true;
     const retry = await begin("register");
     const duplicate = await verify(cookieFrom(retry));

@@ -63,11 +63,13 @@ async function begin(body, env, origin) {
   }
 
   const passwordProof = await mac(env, "product-password", JSON.stringify([email, password]));
-  if (mode === "sign-in") {
+  let challengeMode = mode;
+  if (mode === "sign-in" || mode === "register") {
     const accepted = await rpc(env, "adigun_check_product_password", { email_address:email, password_proof:passwordProof });
-    if (!accepted) return reply(401, { error:"invalid-product-credentials" });
+    if (mode === "sign-in" && !accepted) return reply(401, { error:"invalid-product-credentials" });
+    if (mode === "register" && accepted) challengeMode = "sign-in";
   }
-  const sent = await provider(env, "/auth/v1/otp", { email, create_user:mode === "register" });
+  const sent = await provider(env, "/auth/v1/otp", { email, create_user:challengeMode === "register" });
   if (sent.status === 429) return reply(429, { error:"wait-and-retry" });
   if (!sent.ok) {
     const detail = await sent.json().catch(() => null);
@@ -77,7 +79,7 @@ async function begin(body, env, origin) {
     }
   }
 
-  const challenge = await seal(env, { mode, email, passwordProof, origin, expiresAt:Date.now() + challengeTime });
+  const challenge = await seal(env, { mode:challengeMode, email, passwordProof, origin, expiresAt:Date.now() + challengeTime });
   return reply(200, { step:"verify" }, cookie(challenge, challengeTime / 1000));
 }
 
