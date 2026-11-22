@@ -1221,12 +1221,20 @@ test("fresh AdigunSPs workspaces use the approved dark interface by default", as
 });
 
 test("project explorer switches between the existing logic, electrical, and HMI workspaces", async ({ page }) => {
+  const activeEditor = page.locator('.editor-tabs [aria-current="page"]');
+  await expect(activeEditor).toHaveAttribute("id", "logicTab");
+  await expect(page.locator(".editor-tabs .tab-add")).toHaveAccessibleName("Add rung");
   await page.locator('[data-project-view="electrical"]').click();
   await expect(page.locator("#electricalPane")).toBeVisible();
+  await expect(activeEditor).toHaveAttribute("id", "electricalTab");
   await expect(page.locator('[data-project-view="electrical"]')).toHaveAttribute("aria-current", "page");
   await page.locator('[data-project-view="hmi"]').click();
   await expect(page.locator("#hmiPane")).toBeVisible();
+  await expect(activeEditor).toHaveAttribute("id", "hmiTab");
   await expect(page.locator('[data-project-view="hmi"]')).toHaveAttribute("aria-current", "page");
+  await page.locator("#logicTab").press("Enter");
+  await expect(activeEditor).toHaveAttribute("id", "logicTab");
+  await expect(page.locator('[data-project-view="logic"]')).toHaveAttribute("aria-current", "page");
   await page.locator('[data-project-view="logic"]').click();
   await expect(page.locator("#logicTab")).toHaveClass(/active/);
   await expect(page.locator('[data-project-view="logic"]')).toHaveAttribute("aria-current", "page");
@@ -1239,6 +1247,7 @@ test("project header shows the reference breadcrumb at desktop widths and locali
   await expect(page.locator("#workspaceBreadcrumb")).toHaveText("Main program");
   await cycleLanguage(page);
   await expect(page.locator("#workspaceBreadcrumb")).toHaveText("Hauptprogramm");
+  await expect(page.locator(".editor-tabs .tab-add")).toHaveAccessibleName("Netzwerk hinzufügen");
   await page.setViewportSize({ width: 1366, height: 768 });
   await expect(page.locator("#workspaceBreadcrumb")).toBeHidden();
 });
