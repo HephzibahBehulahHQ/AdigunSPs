@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           for browser in firefox webkit; do
-            ADIGUNSP_TEST_BROWSER="$browser" npm run test:e2e -- --grep 'offline PWA navigation|recovery snapshots commit together|cached member|opening a palette result|metadata edits preserve|touch workspace|mobile drawer keyboard|Issues tab shows|large imported ladder|continuous scans preserve|trace history exports|HMI alarm hysteresis|analog input fault offsets|reviewed HMI recipe|PLCopen TON XML|PLCopen LD TOF|PLCopen Structured Text body|PLCopen Boolean FBD|all application menus|without overlap|core LD|retains its viewport|SFC starts and resets|project explorer switches|project header shows the reference breadcrumb|workspace layout remains bounded|canvas toolbars stay compact|side-panel layout changes|wire endpoints track'
+            ADIGUNSP_TEST_BROWSER="$browser" npm run test:e2e -- --grep 'offline PWA navigation|recovery snapshots commit together|cached member|opening a palette result|metadata edits preserve|touch workspace|mobile drawer keyboard|Issues tab shows|large imported ladder|continuous scans preserve|trace history exports|HMI alarm hysteresis|analog input fault offsets|reviewed HMI recipe|PLCopen TON XML|PLCopen LD TOF|PLCopen Structured Text body|PLCopen Boolean FBD|all application menus|without overlap|core LD|retains its viewport|Ladder and Function Block outlines|SFC starts and resets|project explorer switches|project header shows the reference breadcrumb|workspace layout remains bounded|canvas toolbars stay compact|side-panel layout changes|wire endpoints track'
           done
       - name: Build static application
         run: npm run build

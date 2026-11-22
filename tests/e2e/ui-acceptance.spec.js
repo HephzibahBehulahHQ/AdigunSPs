@@ -959,6 +959,41 @@ test("Operations CSV includes active and idle Boolean outputs shown in the dashb
   expect(csv).not.toContain("AnalogOutput");
 });
 
+test("Ladder and Function Block outlines retain keyboard focus during scans", async ({ page }) => {
+  const fixtures = [
+    { mode: "LD", summary: "#logicOutlineSummary", outline: "#logicOutline", logic: { rungs: [
+      { id: "rung-1", branches: [[{ tag: "Start", mode: "NO" }]], coil: "Lamp" }
+    ] } },
+    { mode: "FBD", summary: "#fbdLogicOutlineSummary", outline: "#fbdLogicTree", logic: { rungs: [], fbdBlocks: [
+      { id: "block-1", type: "NOT", inputs: ["Start"], outputTag: "Signal", x: 40, y: 40 },
+      { id: "block-2", type: "NOT", inputs: ["Signal"], outputTag: "Lamp", x: 260, y: 40 }
+    ] } }
+  ];
+  for (const { mode, summary, outline, logic } of fixtures) {
+    const project = { name: `${mode} keyboard outline`, editorType: mode,
+      tags: [{ name: "Start", type: "BOOL", role: "input" }, { name: "Lamp", type: "BOOL", role: "output" }],
+      io: { inputs: ["Start"], outputs: ["Lamp"] }, ...logic };
+    await page.locator("#fileInput").setInputFiles({
+      name: "outline.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(project))
+    });
+    await expect(page.locator("#projectTitle")).toHaveText(project.name);
+    await page.locator(summary).press("Enter");
+    await page.locator('[data-app-menu="plc"]').click();
+    await page.getByRole("menuitem", { name: "Run", exact: true }).click();
+    const items = page.locator(outline).getByRole("treeitem");
+    await items.first().press("End");
+    const cycle = page.locator("#cycleCount");
+    const before = Number(await cycle.textContent());
+    await expect.poll(async () => Number(await cycle.textContent())).toBeGreaterThan(before);
+    await expect(items.last()).toBeFocused();
+    await expect(items.last()).toHaveAttribute("tabindex", "0");
+    await page.keyboard.press("Home");
+    await expect(items.first()).toBeFocused();
+    await page.locator('[data-app-menu="plc"]').click();
+    await page.getByRole("menuitem", { name: "Pause", exact: true }).click();
+  }
+});
+
 test("SFC starts and resets to the configured step in an imported chart", async ({ page }) => {
   const project = {
     name:"Configured SFC start", editorType:"SFC", rungs:[],
