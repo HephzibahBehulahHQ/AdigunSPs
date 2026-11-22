@@ -158,6 +158,8 @@ export function electricalSymbolSvg(component) {
   return `<svg class="electrical-standard-symbol" viewBox="${viewBox}" role="img" aria-label="${escape(spec.name)}"><title>${escape(spec.name)}</title>${body}</svg>`;
 }
 
+const electricalViewports = new WeakMap();
+
 export function renderElectricalWorkspace(root, project, {language="en",toolboxHost=null,inspectorHost=null,onBeforeChange=()=>{},onChange=()=>{},onInputChange=()=>{},onViewChange=()=>{},inputValues={},outputValues={}} = {}) {
   const t = langText(language); project.electrical ||= {components:[],wires:[],inputStates:{}}; const diagram = project.electrical;
   diagram.components ||= []; diagram.wires ||= []; diagram.inputStates ||= {};
@@ -168,6 +170,11 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
   let electricalSnapToGrid = project.viewState.electricalSnapToGrid !== false;
   let selectedId = root.dataset.selectedComponent || diagram.components[0]?.id || "", selectedWireId = "", pendingTerminal = null, pendingWaypoints=[], resumingWireId=null, rewireEndpoint=null, wireArmed=false, routeDrag=null, simulatedOutputs = diagram.simulation?.energized || {};
   const expandedInspectorSections = new Set();
+  let viewport = electricalViewports.get(root);
+  if (viewport?.project !== project) {
+    viewport = { project, left:0, top:0, host:null };
+    electricalViewports.set(root, viewport);
+  }
   const renderPropertyResult = (message, active) => {
     const selector = active?.name ? `[name="${CSS.escape(active.name)}"]` : active?.type === "submit" ? '[type="submit"]' : null;
     const start = active?.selectionStart, end = active?.selectionEnd, direction = active?.selectionDirection;
@@ -179,7 +186,14 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       replacement.setSelectionRange(start, end, direction);
     }
   };
-  const render = (message = t.statusReady) => {
+  const render = (message = t.statusReady, { resetViewport = false } = {}) => {
+    if (resetViewport) {
+      viewport.left = 0;
+      viewport.top = 0;
+    } else if (viewport.host?.clientWidth) {
+      viewport.left = viewport.host.scrollLeft;
+      viewport.top = viewport.host.scrollTop;
+    }
     root._electricalCanvasRouteHandler=(event,board)=>{
       if(!wireArmed||!pendingTerminal||event.target.closest?.("[data-component-id]")||event.target.closest?.(".electrical-waypoint-handle")||event.target.closest?.(".electrical-wire-draft-end"))return;
       const rect=board.getBoundingClientRect(),scale=electricalZoom/100,x=Math.max(0,Math.min(2200,Math.round((event.clientX-rect.left)/scale/20)*20)),y=Math.max(0,Math.min(1400,Math.round((event.clientY-rect.top)/scale/20)*20));
@@ -257,7 +271,7 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       else if(action==="snap"){electricalSnapToGrid=!electricalSnapToGrid;project.viewState.electricalSnapToGrid=electricalSnapToGrid;onViewChange();render();}
       else if(action==="expand"){const editor=root.closest(".editor-area");if(document.fullscreenElement)document.exitFullscreen();else editor?.requestFullscreen?.();}
       else if(action==="zoom-in"||action==="zoom-out"){electricalZoom=Math.min(150,Math.max(30,electricalZoom+(action==="zoom-in"?10:-10)));project.viewState.electricalZoom=electricalZoom;onViewChange();render();}
-      else if(action==="fit-view"){const viewport=root.querySelector(".electrical-board-scroll"),scale=Math.min(viewport.clientWidth/2200,viewport.clientHeight/1400,1);electricalZoom=Math.max(30,Math.floor(scale*100/5)*5);project.viewState.electricalZoom=electricalZoom;onViewChange();render();}
+      else if(action==="fit-view"){const viewport=root.querySelector(".electrical-board-scroll"),scale=Math.min(viewport.clientWidth/2200,viewport.clientHeight/1400,1);electricalZoom=Math.max(30,Math.floor(scale*100/5)*5);project.viewState.electricalZoom=electricalZoom;onViewChange();render(t.statusReady,{resetViewport:true});}
       else if(action==="validate"){const errors=issues.some((item)=>item.level==="error"),warnings=issues.filter((item)=>item.level==="warning").length;render(errors?t.invalid:warnings?`${t.valid} · ${warnings} ${warnings===1?t.warning:t.warnings}`:t.valid);}
       else if(action==="simulate"){const result=simulateElectricalDiagram(diagram,{...inputValues,...diagram.inputStates},outputValues);diagram.simulation=result;simulatedOutputs=result.energized;render(electricalSimulationStatus(result,diagram.components,t));}
     }));
@@ -308,6 +322,19 @@ const workflows=document.createElement("section"),workflowsTitle=document.create
       const inspector=root.querySelector(".electrical-inspector");
       if (inspector) inspectorHost.replaceChildren(inspector);
     }
+    const scrollHost = root.querySelector(".electrical-board-scroll");
+    viewport.host = scrollHost;
+    if (!scrollHost) return;
+    scrollHost.addEventListener("scroll", () => {
+      if (viewport.host !== scrollHost || !scrollHost.clientWidth) return;
+      viewport.left = scrollHost.scrollLeft;
+      viewport.top = scrollHost.scrollTop;
+    }, { passive:true });
+    const restoreViewport = () => {
+      if (viewport.host === scrollHost && scrollHost.isConnected) scrollHost.scrollTo(viewport.left, viewport.top);
+    };
+    if (scrollHost.clientWidth) restoreViewport();
+    else requestAnimationFrame(restoreViewport);
   };
   render();
 }
