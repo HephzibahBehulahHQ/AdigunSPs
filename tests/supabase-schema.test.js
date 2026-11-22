@@ -54,6 +54,17 @@ for (const table of ["hardware_client_heartbeats", "hardware_device_state", "har
   assert.match(hardwareDelivery, new RegExp(`tablename = '${table}'[\\s\\S]*?alter publication supabase_realtime\\s+add table adigunsps\\.${table}`, "i"), `${table} is included in Realtime`);
 }
 
-console.log("AdigunSPs schema, owner/admin RLS semantics, guest expiry, JWT policy caching, and index checks passed.");
 
 
+
+
+// The stricter product gate is additive and never extends a guest lease.
+const verifiedGate = await readFile(new URL("../supabase/migrations/20261122152445_adigunsps_require_verified_product_session.sql", import.meta.url), "utf8");
+assert.match(verifiedGate, /as restrictive for all to authenticated/);
+assert.match(verifiedGate, /using \(\(select adigunsps_private\.has_verified_session\(\)\)\)/);
+assert.match(verifiedGate, /with check \(\(select adigunsps_private\.has_verified_session\(\)\)\)/);
+assert.match(verifiedGate, /bucket_id <> 'adigun-avatars'/);
+assert.doesNotMatch(verifiedGate, /'adigun_guest_sessions'|'my_data'/);
+
+
+console.log("AdigunSPs schema, guest expiry, and verified product policy checks passed.");
