@@ -18,7 +18,9 @@ async function useOfflineMember(page, context) {
   await context.setOffline(true);
 }
 
-for (const { mode, logic, hmi } of [
+const mixedOutputs = ["Ready", "Signal", "Permit", "Lamp"];
+
+for (const { mode, logic, hmi, mixed } of [
   { mode: "FBD", logic: { fbdBlocks: [{ id: "invert", type: "NOT", inputs: ["Start"], outputTag: "Lamp", x: 80, y: 80 }] } },
   { mode: "ST", logic: { stSource: "Lamp := NOT Start;" } },
   { mode: "SFC", logic: { sfc: { initialStep: "ready", outputs: ["Lamp"], steps: [
@@ -33,15 +35,40 @@ for (const { mode, logic, hmi } of [
       { id: "diagnostics", title: "Diagnostics", widgets: [
         { id: "diagnostic-lamp", type: "lamp", label: "Diagnostic lamp", tag: "Lamp", col: 2, row: 3 }
       ] }
-    ] } }
+    ] } },
+  { mode: "LD", mixed: true, logic: {
+    tags: [{ name: "Start", type: "BOOL", role: "input" },
+      ...mixedOutputs.map((name) => ({ name, type: "BOOL", role: "output" }))],
+    io: { inputs: ["Start"], outputs: mixedOutputs },
+    task: { name: "Base scan", cycleMs: 100, mode: "cyclic" },
+    programUnits: [
+      { name: "Readiness", language: "LD", outputs: ["Ready"], rungs: [
+        { id: "readiness", branches: [[{ tag: "Start", mode: "NC" }]], coil: "Ready" }
+      ] },
+      { name: "SignalCheck", language: "FBD", outputs: ["Signal"], blocks: [
+        { id: "signal-check", type: "NOT", inputs: ["Start"], outputTag: "Signal", x: 80, y: 80 }
+      ] },
+      { name: "PermitCheck", language: "ST", outputs: ["Permit"], source: "Permit := Ready AND Signal;" },
+      { name: "Indicator", language: "SFC", outputs: ["Lamp"], chart: {
+        initialStep: "idle", outputs: ["Lamp"],
+        steps: [{ id: "idle", name: "Idle", actions: [] }, { id: "lit", name: "Lit", actions: ["Lamp"] }],
+        transitions: [{ id: "enable", from: "idle", to: "lit", condition: "Permit", mode: "NO" }]
+      } }
+    ],
+    tasks: [
+      { name: "Inputs", cycleMs: 100, priority: 0, enabled: true, programs: ["Readiness", "SignalCheck"] },
+      { name: "Indicator", cycleMs: 200, priority: 1, enabled: true, programs: ["PermitCheck", "Indicator"] }
+    ]
+  } }
 ]) {
-  test(`offline program round-trip preserves ${hmi ? "HMI screens and live tag bindings" : `${mode} execution`}`, async ({ page, context }) => {
+  const subject = mixed ? "mixed-language task scheduling" : hmi ? "HMI screens and live tag bindings" : `${mode} execution`;
+  test(`offline program round-trip preserves ${subject}`, async ({ page, context }) => {
     test.setTimeout(60_000);
     await useOfflineMember(page, context);
     try {
       await page.goto("/?offline-program=author", { waitUntil: "domcontentloaded" });
       await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
-      const name = `${hmi ? "HMI" : mode} offline round-trip`;
+      const name = `${mixed ? "Mixed-language" : hmi ? "HMI" : mode} offline round-trip`;
       const project = { name, editorType: mode, rungs: [], initialState: { Start: false },
         tags: [{ name: "Start", type: "BOOL", role: "input" }, { name: "Lamp", type: "BOOL", role: "output" }],
         io: { inputs: ["Start"], outputs: ["Lamp"] }, ...logic, ...(hmi && { hmi }) };
@@ -55,12 +82,29 @@ for (const { mode, logic, hmi } of [
       const checkExecution = async (tab) => {
         await tab.locator("#logicTab").click();
         await expect(tab.locator("#editorMode")).toHaveValue(mode);
+        if (mixed) {
+          await openMenuItem(tab, "project", "Cyclic ST tasks");
+          for (const [index, task] of logic.tasks.entries()) {
+            const row = tab.locator(`[data-cyclic-task="${index}"]`);
+            await expect(row.locator('[data-task-field="name"]')).toHaveValue(task.name);
+            await expect(row.locator('[data-task-field="cycleMs"]')).toHaveValue(String(task.cycleMs));
+            await expect(row.locator('[data-task-field="programs"]')).toHaveValue(task.programs.join(", "));
+          }
+          await tab.getByRole("button", { name: "Close dialog" }).click();
+        }
         await openMenuItem(tab, "plc", "Reset");
-        await openMenuItem(tab, "plc", "Step");
-        await expect(tab.locator("#cycleCount")).toHaveText("1");
-        await openMenuItem(tab, "debug", "Watch table");
-        await expect(tab.locator('[data-watch-value="Lamp"]')).toHaveText("true");
-        await tab.getByRole("button", { name: "Close dialog" }).click();
+        const expectedScans = mixed
+          ? [{ Ready: true, Signal: true, Permit: false, Lamp: false }, { Ready: true, Signal: true, Permit: true, Lamp: true }]
+          : [{ Lamp: true }];
+        for (const [index, outputs] of expectedScans.entries()) {
+          await openMenuItem(tab, "plc", "Step");
+          await expect(tab.locator("#cycleCount")).toHaveText(String(index + 1));
+          await openMenuItem(tab, "debug", "Watch table");
+          for (const [tag, value] of Object.entries(outputs)) {
+            await expect(tab.locator(`[data-watch-value="${tag}"]`)).toHaveText(String(value));
+          }
+          await tab.getByRole("button", { name: "Close dialog" }).click();
+        }
         if (!hmi) return;
 
         await tab.locator("#hmiTab").click();
