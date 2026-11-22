@@ -88,7 +88,7 @@ let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor =
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
 const accountService = createAccountService(supabaseClient);
 const productAccountEnabled = globalThis.ADIGUN_RUNTIME_CONFIG?.productAccount === true;
-let productAccountCodePending = false;
+let productAccountCodePending = false, productAccountRecovery = false;
 let accountUser = null, accountAccess = "checking", guestTimer = null, guestDeadline = 0, guestDraftStorageKey = null, accountAvatarRequestId = 0, accountGuestSignInMode = false;
 const guestUpgradeStorageKey = "adigunsps-guest-upgrade-email";
 function guestUpgradeEmail() { try { return localStorage.getItem(guestUpgradeStorageKey) || ""; } catch { return ""; } }
@@ -1907,10 +1907,10 @@ async function loadCloudProjectList() {
 }
 function productAccountLabels() {
   return ({
-    en:{ code:"Email code", verify:"Verify code", sent:"Enter the code we emailed you.", active:"Account created. Sign in with your AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"That code is incorrect or expired.", retry:"Wait before requesting another code." },
-    de:{ code:"E-Mail-Code", verify:"Code prüfen", sent:"Geben Sie den zugesandten Code ein.", active:"Konto erstellt. Melden Sie sich mit Ihrem AdigunSPs-Passwort an.", restart:"Neu beginnen", invalid:"Prüfen Sie Ihre AdigunSPs-E-Mail und Ihr Passwort.", wrongCode:"Der Code ist falsch oder abgelaufen.", retry:"Warten Sie, bevor Sie einen neuen Code anfordern." },
-    yo:{ code:"Kóòdù ímeèlì", verify:"Ṣàyẹ̀wò kóòdù", sent:"Tẹ kóòdù tá a fi ránṣẹ́ sí ímeèlì rẹ.", active:"A ti dá àkọọ́lẹ̀. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà AdigunSPs rẹ.", restart:"Bẹ̀rẹ̀ padà", invalid:"Ṣàyẹ̀wò ímeèlì àti ọ̀rọ̀ aṣínà AdigunSPs rẹ.", wrongCode:"Kóòdù kò tọ́ tàbí ó ti parí.", retry:"Dúró kí o tó béèrè fún kóòdù míì." },
-    pcm:{ code:"Email code", verify:"Check code", sent:"Put di code we send go your email.", active:"Account don ready. Sign in with your AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"Di code wrong or e don expire.", retry:"Wait before you ask for another code." }
+    en:{ code:"Email code", verify:"Verify code", sent:"Enter the code we emailed you.", active:"Account created. Sign in with your AdigunSPs password.", reset:"Password reset. Sign in with your new AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"That code is incorrect or expired.", retry:"Wait before requesting another code." },
+    de:{ code:"E-Mail-Code", verify:"Code prüfen", sent:"Geben Sie den zugesandten Code ein.", active:"Konto erstellt. Melden Sie sich mit Ihrem AdigunSPs-Passwort an.", reset:"Passwort geändert. Melden Sie sich mit Ihrem neuen Passwort an.", restart:"Neu beginnen", invalid:"Prüfen Sie Ihre AdigunSPs-E-Mail und Ihr Passwort.", wrongCode:"Der Code ist falsch oder abgelaufen.", retry:"Warten Sie, bevor Sie einen neuen Code anfordern." },
+    yo:{ code:"Kóòdù ímeèlì", verify:"Ṣàyẹ̀wò kóòdù", sent:"Tẹ kóòdù tá a fi ránṣẹ́ sí ímeèlì rẹ.", active:"A ti dá àkọọ́lẹ̀. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà AdigunSPs rẹ.", reset:"A ti yí ọ̀rọ̀ aṣínà rẹ padà. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà tuntun.", restart:"Bẹ̀rẹ̀ padà", invalid:"Ṣàyẹ̀wò ímeèlì àti ọ̀rọ̀ aṣínà AdigunSPs rẹ.", wrongCode:"Kóòdù kò tọ́ tàbí ó ti parí.", retry:"Dúró kí o tó béèrè fún kóòdù míì." },
+    pcm:{ code:"Email code", verify:"Check code", sent:"Put di code we send go your email.", active:"Account don ready. Sign in with your AdigunSPs password.", reset:"Password don change. Sign in with your new AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"Di code wrong or e don expire.", retry:"Wait before you ask for another code." }
   })[language];
 }
 
@@ -1923,9 +1923,12 @@ function showAccount() {
   const guestUpgradeReady = !!pendingGuestEmail && pendingGuestEmail.toLowerCase() === String(accountUser?.email || "").toLowerCase() && !!(accountUser?.email_confirmed_at || accountUser?.confirmed_at);
   const guestSignInMode = isGuest && accountGuestSignInMode;
   const productLabels = productAccountLabels();
+  const productButtons = productAccountRecovery
+    ? `<button class="primary" id="accountProductReset" type="submit">${accountAuthText("newPassword")}</button><button class="secondary" id="accountRecoveryCancel" type="button">${accountText("signIn")}</button>`
+    : `<button class="primary" id="accountProductSignIn" type="submit">${accountText("signIn")}</button><button class="secondary" id="accountProductRegister" type="submit">${accountText("register")}</button><button class="text-link" id="accountRecoveryStart" type="button">${accountAuthText("forgotPassword")}</button>`;
   const productForm = productAccountCodePending
     ? `<form class="account-form" id="accountForm"><label class="field">${productLabels.code}<input id="accountOtp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required></label><div class="modal-actions"><button class="primary" id="accountVerifyOtp" type="submit">${productLabels.verify}</button><button class="secondary" id="accountRestart" type="button">${productLabels.restart}</button></div></form>`
-    : `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountAuthText("password")}<input id="accountPassword" type="password" minlength="12" maxlength="256" required></label><div class="modal-actions"><button class="primary" id="accountProductSignIn" type="submit">${accountText("signIn")}</button><button class="secondary" id="accountProductRegister" type="submit">${accountText("register")}</button></div></form>`;
+    : `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountAuthText(productAccountRecovery ? "newPassword" : "password")}<input id="accountPassword" type="password" autocomplete="${productAccountRecovery ? "new-password" : "current-password"}" minlength="12" maxlength="256" required></label><div class="modal-actions">${productButtons}</div></form>`;
   const authForm = productAccountEnabled ? productForm : isGuest && !guestSignInMode && guestUpgradeReady ? `<form class="account-form" id="accountForm"><p class="safety-copy">${escapeHtml(accountUser.email)} · ${accountAuthText("guestUpgradeWaiting")}</p><label class="field">${accountAuthText("newPassword")}<input id="accountNewPassword" type="password" autocomplete="new-password" minlength="8" required></label><div class="modal-actions"><button class="primary" id="accountFinishGuestUpgrade" type="button">${accountAuthText("finishAccount")}</button></div></form>` : isGuest && !guestSignInMode && pendingGuestEmail ? `<form class="account-form" id="accountForm"><p class="safety-copy">${accountAuthText("guestUpgradeWaiting")}</p><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" value="${escapeAttr(pendingGuestEmail)}" readonly required></label><div class="modal-actions"><button class="primary" id="accountResendGuestConfirmation" type="button">${accountAuthText("resendConfirmation")}</button><button class="secondary" id="accountChangeGuestEmail" type="button">${accountAuthText("changeEmail")}</button></div></form>` : isGuest && !guestSignInMode ? `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><p class="safety-copy">${accountAuthText("guestUpgradeIntro")}</p><div class="modal-actions"><button class="primary" id="accountRegister" type="button">${accountText("preserveProject")}</button><button class="secondary" id="accountGuestSignIn" type="button">${accountText("signIn")}</button></div></form>` : `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountAuthText("password")}<input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required></label><button class="text-link" id="accountSendReset" type="button">${accountAuthText("forgotPassword")}</button>${!isGuest ? `<label class="field">${accountText("name")}<input id="accountName" maxlength="120" autocomplete="name"></label>` : ""}<div class="modal-actions"><button class="primary" id="accountSignIn" type="button">${accountText("signIn")}</button><button class="secondary" id="accountRegister" type="button">${accountText("register")}</button>${guestSignInMode ? `<button class="secondary" id="accountBackToGuestCreate" type="button">${accountText("preserveProject")}</button>` : ""}</div></form>`;
   const memberContent = signedIn ? `<p class="safety-copy">${accountText("member")}: ${escapeHtml(accountUser.email || "")}</p><label class="field">${accountText("name")}<input id="accountName" maxlength="120" value="${escapeAttr(accountUser.user_metadata?.display_name || "")}"></label><label class="field">${accountText("avatar")}<input id="accountAvatar" type="file" accept="image/png,image/jpeg,image/webp"></label><label class="field">${({en:"Cloud project name",de:"Name des Cloud-Projekts",yo:"Orúkọ iṣẹ́ lórí awọsánmà",pcm:"Cloud project name"})[language]}<input id="accountCloudProjectName" maxlength="120" required value="${escapeAttr(project.name)}"></label><div class="modal-actions"><button class="secondary" id="accountProfileSave">${accountText("saveProfile")}</button><button class="primary" id="accountCloudSave">${accountText("saveCloud")}</button><button class="secondary" id="accountCloudRefresh">${accountText("refresh")}</button>${accountService.isAdministrator(accountUser) ? `<button class="secondary" id="accountAdminShow">${accountText("admin")}</button>` : ""}<button class="secondary" id="accountSignOut">${accountText("signOut")}</button></div><div id="cloudProjectList" class="project-list"></div><div id="accountAdminList" class="project-list"></div>` : authForm;
   const guestMessage = !signedIn && isGuest ? `<p class="safety-copy">${accountText("guestInfo")}</p>` : "";
@@ -1943,6 +1946,15 @@ function showAccount() {
       "wait-and-retry":productLabels.retry
     };
     if (productAccountCodePending) setFeedback(productLabels.sent);
+    $("#accountRecoveryStart")?.addEventListener("click", () => {
+      productAccountRecovery = true;
+      showAccount();
+      $("#accountEmail")?.focus();
+    });
+    $("#accountRecoveryCancel")?.addEventListener("click", () => {
+      productAccountRecovery = false;
+      showAccount();
+    });
     $("#accountRestart")?.addEventListener("click", () => {
       productAccountCodePending = false;
       showAccount();
@@ -1958,7 +1970,12 @@ function showAccount() {
         if (productAccountCodePending) {
           const result = await accountService.verifyProductAccount($("#accountOtp").value);
           productAccountCodePending = false;
-          if (result.step === "registered") { showAccount(); $("#accountFeedback").textContent = productLabels.active; return; }
+          if (result.step === "registered" || result.step === "password-reset") {
+            productAccountRecovery = false;
+            showAccount();
+            $("#accountFeedback").textContent = result.step === "registered" ? productLabels.active : productLabels.reset;
+            return;
+          }
           if (!result.user || result.user.is_anonymous || !await accountService.hasVerifiedProductSession()) {
             throw new Error("The account service did not grant access.");
           }
@@ -1966,7 +1983,8 @@ function showAccount() {
           if (new URLSearchParams(location.search).has("account")) history.replaceState(null, "", location.pathname);
           $("#modal").close();
         } else {
-          const mode = submitter.id === "accountProductRegister" ? "register" : "sign-in";
+          const mode = productAccountRecovery ? "reset-password"
+            : submitter.id === "accountProductRegister" ? "register" : "sign-in";
           await accountService.beginProductAccount(mode, $("#accountEmail").value, $("#accountPassword").value);
           productAccountCodePending = true;
           showAccount();

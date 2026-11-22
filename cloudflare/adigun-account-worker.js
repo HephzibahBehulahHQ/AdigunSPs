@@ -30,7 +30,7 @@ export default {
 async function begin(body, env) {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const { mode, password } = body;
-  if (!["register", "sign-in"].includes(mode) || email.length > 254 ||
+  if (!["register", "sign-in", "reset-password"].includes(mode) || email.length > 254 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== "string" ||
       password.length < 12 || password.length > 256) {
     return reply(400, { error:"invalid-email-or-password" });
@@ -47,7 +47,13 @@ async function begin(body, env) {
   }
   const sent = await provider(env, "/auth/v1/otp", { email, create_user:mode === "register" });
   if (sent.status === 429) return reply(429, { error:"wait-and-retry" });
-  if (!sent.ok) return reply(503, { error:"email-code-unavailable" });
+  if (!sent.ok) {
+    const detail = await sent.json().catch(() => null);
+    const code = detail?.error_code ?? detail?.code;
+    if (mode !== "reset-password" || !["otp_disabled", "user_not_found"].includes(code)) {
+      return reply(503, { error:"email-code-unavailable" });
+    }
+  }
 
   const challenge = await seal(env, { mode, email, passwordProof, expiresAt:Date.now() + challengeTime });
   return reply(200, { step:"verify" }, cookie(challenge, challengeTime / 1000));
@@ -70,12 +76,16 @@ async function verify(body, request, env) {
   }
 
   const registration = challenge.mode === "register";
-  const accepted = await rpc(env, registration ? "adigun_activate_product_account" : "adigun_verify_product_session", {
+  const recovery = challenge.mode === "reset-password";
+  const operation = registration ? "adigun_activate_product_account"
+    : recovery ? "adigun_reset_product_password" : "adigun_verify_product_session";
+  const accepted = await rpc(env, operation, {
     email_address:challenge.email, password_proof:challenge.passwordProof
   }, session.access_token);
   const cleared = cookie("", 0);
   if (!accepted) return reply(registration ? 409 : 401, { error:"product-account-not-authorized" }, cleared);
   if (registration) return reply(200, { step:"registered" }, cleared);
+  if (recovery) return reply(200, { step:"password-reset" }, cleared);
   return reply(200, { step:"signed-in", session:{ access_token:session.access_token, refresh_token:session.refresh_token } }, cleared);
 }
 

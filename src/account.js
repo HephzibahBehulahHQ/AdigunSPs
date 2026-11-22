@@ -46,7 +46,7 @@ export function createAccountService(client) {
     },
     async verifyProductAccount(code) {
       const result = await requestProductAccount({ step:"verify", code });
-      if (result.step === "registered") return result;
+      if (["registered", "password-reset"].includes(result.step)) return result;
       if (result.step !== "signed-in" || !result.session?.access_token || !result.session?.refresh_token) {
         throw new AccountError("account-unavailable", "The account service did not return a verified session.");
       }

@@ -52,6 +52,10 @@ test("product registration and every sign-in require email OTP before releasing 
       account = payload.password_proof;
       return Response.json(true);
     }
+    if (url.pathname.endsWith("/adigun_reset_product_password")) {
+      account = payload.password_proof;
+      return Response.json(true);
+    }
     assert.ok(url.pathname.endsWith("/adigun_verify_product_session"));
     return Response.json(account === payload.password_proof);
   });
@@ -82,6 +86,13 @@ test("product registration and every sign-in require email OTP before releasing 
     assert.equal(signedIn.headers.get("Cache-Control"), "no-store");
     assert.match(signedIn.headers.get("Set-Cookie"), /Max-Age=0/);
     assert.deepEqual(await signedIn.json(), {step:"signed-in", session:{access_token:"auth-access", refresh_token:"auth-refresh"}});
+    const replacement = "New product password 222";
+    const recovery = await begin("reset-password", replacement);
+    assert.deepEqual(await recovery.json(), {step:"verify"});
+    assert.equal((await verify(cookieFrom(recovery), "000000")).status, 401);
+    assert.deepEqual(await (await verify(cookieFrom(recovery))).json(), {step:"password-reset"});
+    assert.equal((await begin("sign-in")).status, 401);
+    assert.equal((await begin("sign-in", replacement)).status, 200);
   } finally {
     mocked.mock.restore();
   }

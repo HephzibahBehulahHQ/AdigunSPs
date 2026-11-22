@@ -53,7 +53,7 @@ On first use, the welcome popup explains the workspace and offers **Start quick 
 
 ## Account access and guest work
 
-In the product-account preview, open **Project → Account** to create a separate AdigunSPs account with your email and a password of at least 12 characters. Enter the code we email you to activate the account. Each sign-in requires the AdigunSPs password and a new email code.
+In the product-account preview, open **Project → Account** to create a separate AdigunSPs account with your email and a password of at least 12 characters. Enter the code we email you to activate the account. Each sign-in requires the AdigunSPs password and a new email code. If you forget your product password, choose **Forgot password?**, enter a new password, and confirm the emailed code. Sign in again with the new password.
 
 Open **Project → Account** to open the account panel. Enter your email and password, then choose **Sign in**. To register, enter your details and choose **Create account**; confirm your address using the email before signing in. Select **Forgot password?** below the password field to request a recovery email; open it, set and confirm your new password on the **Reset password** page at `/reset-password`, and return to sign in. Expired recovery links can be replaced by requesting another email.
 
