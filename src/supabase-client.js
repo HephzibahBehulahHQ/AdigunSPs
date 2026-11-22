@@ -19,7 +19,10 @@ export function createAdigunSupabaseClient(runtimeConfig = globalThis.ADIGUN_RUN
   const publishableKey = typeof configured.publishableKey === "string" ? configured.publishableKey.trim() : "";
   let status = { ready:false, projectRef:ADIGUN_SUPABASE_PROJECT_REF, reason:"missing-publishable-key" };
 
-  if (url !== ADIGUN_SUPABASE_URL) {
+  const localAccountPreview = runtimeConfig?.productAccount === true &&
+    url === "http://127.0.0.1:54321" &&
+    ["127.0.0.1", "localhost"].includes(globalThis.location?.hostname);
+  if (url !== ADIGUN_SUPABASE_URL && !localAccountPreview) {
     status = { ...status, reason:"unexpected-project-url" };
     return { client:null, status };
   }
