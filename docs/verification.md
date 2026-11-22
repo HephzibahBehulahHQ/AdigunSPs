@@ -99,6 +99,14 @@ When user-facing labels, options, or workflows change, update both `docs/HELP.md
 - Applied Supabase migration `20261101151429_adigunsps_four_minute_guest_access` to project `fqcbfnktdvqojyezxeis`. A read-only query verified 15 total guest rows, 0 active, 15 expired, and 0 rows with expiry beyond four minutes after the migration.
 - At the time this implementation note was written, the frontend had not yet been deployed. The release and current delivery status are recorded above. Live email OTP delivery remains unverified; confirm the Supabase Magic Link and Change Email Address templates include `{{ .Token }}`.
 
+## Reconstructed workspace baseline
+
+Chrome rendered the files from `c9ed3d219e91c36584bf3e940d038f24c8192961` at 1894×704. This commit immediately precedes the workspace rebuild in `630e95e`. The capture used a synthetic local account and the representative project from the current editor visual matrix. It includes six screenshots and six JSON files downloaded through the historical Export command. The current project importer successfully normalized all six exports, including their HMI widgets and electrical wire.
+
+These captures were recreated after the rebuild. The checked Git tree and Actions runs for the original baseline and first rebuild commits had no capture archive. [Reconstructed baseline archive](ui-redesign/adigunsps-pre-rebuild-c9ed3d2.zip) · [Original baseline CI](https://github.com/HephzibahBehulahHQ/AdigunSPs/actions/runs/43305367096) · [First rebuild CI](https://github.com/HephzibahBehulahHQ/AdigunSPs/actions/runs/43330815733)
+
+Archive SHA-256 `7517f307a11b349187186b51d4cb32cb38bb644c970052e0f4bd2588d63a3a3b`.
+
 ## Baseline verification — commit 24625e1, before the OTP release
 
 - On 2026-11-01, the current source audit used organization `main` commit `24625e1cbf61cd4deb862f42a9b96478b2ab8bf3`. GitHub Actions CI run #104 and Pages deploy #61 completed successfully. In a fresh worktree, `npm ci`, `npm test`, and `npm run build` passed locally; the suite covers all 200 examples, 1,317 logic cases, 903 schematic checks, and 1,317 integrated PLC-to-component cases. The source service-worker shell cache is v112.
