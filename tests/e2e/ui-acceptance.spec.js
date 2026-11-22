@@ -979,6 +979,10 @@ test("SFC starts and resets to the configured step in an imported chart", async 
   const ready = page.locator('[data-sfc-step="ready"]');
   await expect(ready).toHaveClass(/active/);
   await expect(ready.locator(".step-number")).toHaveText("●");
+  await page.locator("#sfcLogicOutlineSummary").press("Enter");
+  const outline = page.locator("#sfcLogicTree");
+  const currentStep = outline.locator('[aria-current="step"]');
+  await expect(currentStep).toHaveAccessibleName(/Step: Ready/);
   await page.locator('[data-app-menu="plc"]').click();
   await page.getByRole("menuitem", { name:"Step", exact:true }).click();
   await expect(ready).toHaveClass(/active/);
@@ -988,9 +992,23 @@ test("SFC starts and resets to the configured step in an imported chart", async 
   await page.locator("#modal .modal-close").click();
   await page.locator('#inputList [data-input="Advance"]').check();
   await expect(page.locator('[data-sfc-step="idle"]')).toHaveClass(/active/);
+  await expect(currentStep).toHaveAccessibleName(/Step: Idle/);
   await page.locator('[data-app-menu="plc"]').click();
   await page.getByRole("menuitem", { name:"Reset", exact:true }).click();
   await expect(ready).toHaveClass(/active/);
+  await expect(currentStep).toHaveAccessibleName(/Step: Ready/);
+
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Run", exact:true }).click();
+  const firstOutlineItem = outline.getByRole("treeitem").first();
+  await firstOutlineItem.press("End");
+  const transition = outline.getByRole("treeitem").last();
+  const cycle = page.locator("#cycleCount");
+  const before = Number(await cycle.textContent());
+  await expect.poll(async () => Number(await cycle.textContent())).toBeGreaterThan(before);
+  await expect(transition).toBeFocused();
+  await page.locator('[data-app-menu="plc"]').click();
+  await page.getByRole("menuitem", { name:"Pause", exact:true }).click();
 
   await page.locator('#inputList [data-input="Advance"]').uncheck();
   await page.locator('[data-app-menu="plc"]').click();
