@@ -2283,6 +2283,14 @@ test("canvas toolbars stay compact, accessible, single-line, and operational", a
     await page.locator(`#editorToolboxDock [data-editor-toolbox-mode="HMI"] [data-hmi-add="${type}"]`).click();
     await expect(widgets).toHaveCount(count + 1);
   }
+  const widgetTitle = widgets.first().locator("[data-hmi-select]");
+  await widgetTitle.press("Enter");
+  await expect(widgetTitle).toBeFocused();
+  const toggle = widgets.first().locator("[data-hmi-toggle]");
+  const initial = await toggle.getAttribute("aria-pressed");
+  await toggle.press("Space");
+  await expect(toggle).not.toHaveAttribute("aria-pressed", initial);
+  await expect(toggle).toBeFocused();
   await page.locator("#processesButton").click();
   await expect(page.locator("#modal")).toBeVisible();
   if (process.env.ADIGUNSP_HMI_SCREENSHOT_PATH) {
