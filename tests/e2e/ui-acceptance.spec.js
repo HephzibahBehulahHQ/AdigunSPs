@@ -1650,6 +1650,27 @@ test("electrical canvas view controls zoom and grid without changing component g
   await expect(page.locator("[data-electrical-zoom]")).not.toHaveText("110%");
 });
 
+test("electrical canvas retains its viewport across workspace switches and redraws", async ({ page }) => {
+  const electrical = page.locator("#electricalTab");
+  const hmi = page.locator("#hmiTab");
+  await electrical.press("Enter");
+  const canvas = page.locator(".electrical-board-scroll");
+  await expect(canvas).toBeVisible();
+  const position = () => canvas.evaluate((host) => [host.scrollLeft, host.scrollTop]);
+  await canvas.evaluate((host) => host.scrollTo(360, 240));
+  await expect.poll(position).toEqual([360, 240]);
+  await hmi.press("Enter");
+  await expect(hmi).toBeFocused();
+  await expect(canvas).toBeHidden();
+  await electrical.press("Enter");
+  await expect(electrical).toBeFocused();
+  await expect.poll(position).toEqual([360, 240]);
+  await page.locator('[data-electrical-action="grid"]').click();
+  await expect.poll(position).toEqual([360, 240]);
+  await page.locator('[data-electrical-action="fit-view"]').click();
+  await expect.poll(position).toEqual([0, 0]);
+});
+
 test("electrical inspector exposes live rotate, duplicate, and delete actions", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await page.locator("#electricalToolboxDock [data-electrical-action=\"add\"]").click();
