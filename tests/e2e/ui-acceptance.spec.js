@@ -1341,6 +1341,65 @@ test("electrical workspace uses one compact status row and docks the bot without
   expect(await page.locator("#offlineLabel").evaluate((node)=>node.closest("#globalQuickCommands")!==null)).toBe(true);
 });
 
+test("editor visual matrix keeps all workspaces usable at required viewports", async ({ page }) => {
+  test.setTimeout(90_000);
+  const project = {
+    name: "Workspace visual example", editorType: "LD",
+    tags: [{ name: "Start", type: "BOOL", role: "input" }, { name: "Lamp", type: "BOOL", role: "output" }],
+    io: { inputs: ["Start"], outputs: ["Lamp"] },
+    rungs: [{ id: "lamp", branches: [[{ tag: "Start", mode: "NO" }]], coil: "Lamp" }],
+    fbdBlocks: [{ id: "invert", type: "NOT", inputs: ["Start"], outputTag: "Lamp", x: 60, y: 60 }],
+    stSource: "Lamp := NOT Start;",
+    sfc: { initialStep: "idle", outputs: ["Lamp"], steps: [
+      { id: "idle", name: "Idle", actions: [] }, { id: "run", name: "Running", actions: ["Lamp"] }
+    ], transitions: [{ id: "start", from: "idle", to: "run", condition: "Start", mode: "NO" }] },
+    hmi: { title: "Main panel", widgets: [
+      { id: "switch", type: "switch", label: "Start", tag: "Start", col: 1, row: 1 },
+      { id: "lamp", type: "lamp", label: "Lamp", tag: "Lamp", col: 2, row: 1 }
+    ] },
+    electrical: { components: [
+      { id: "s1", type: "pushbuttonNO", reference: "S1", label: "Start", x: 40, y: 60, terminals: ["13", "14"] },
+      { id: "h1", type: "pilotLamp", reference: "H1", label: "Lamp", x: 280, y: 60, terminals: ["X1", "X2"] }
+    ], wires: [{ id: "lamp-wire", from: { componentId: "s1", terminal: "14" }, to: { componentId: "h1", terminal: "X1" } }] }
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name: "workspace-visual-example.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(project))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  if (process.env.ADIGUNSP_EDITOR_SCREENSHOT_DIR) await expect(page.locator("#toast")).not.toHaveClass(/\bshow\b/);
+  const editors = [
+    { mode: "LD", panel: "#canvasWrap", content: ".rung" },
+    { mode: "FBD", panel: "#fbdPane", content: ".fbd-block" },
+    { mode: "ST", panel: "#stPane", content: "#stSource" },
+    { mode: "SFC", panel: "#sfcPane", content: ".sfc-step" },
+    { mode: "HMI", button: "#hmiTab", panel: "#hmiPane", content: ".hmi-widget" },
+    { mode: "Electrical", button: "#electricalTab", panel: "#electricalPane", content: ".electrical-component" }
+  ];
+  for (const { mode, button, panel, content } of editors) {
+    await page.setViewportSize({ width: 1280, height: 768 });
+    if (button) await page.locator(button).click();
+    else await page.locator("#editorMode").selectOption(mode);
+    const editor = page.locator(panel);
+    await expect(editor.locator(content).first()).toBeVisible();
+
+    for (const { width, height, minBoardHeight } of viewportCases) {
+      await page.setViewportSize({ width, height });
+      const context = `${mode} at ${width}×${height}`;
+      const bounds = await editor.boundingBox();
+      const tabs = await page.locator(".editor-tabs").boundingBox();
+      const dock = await page.locator(".editor-area").boundingBox();
+      expect(bounds.height, `${context} has usable editor height`).toBeGreaterThanOrEqual(minBoardHeight);
+      expect(bounds.y + 1, `${context} editor stays below its tabs`).toBeGreaterThanOrEqual(tabs.y + tabs.height);
+      expect(bounds.x + bounds.width, `${context} editor stays within its dock`).toBeLessThanOrEqual(dock.x + dock.width + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), `${context} has no page overflow`).toBeLessThanOrEqual(width);
+      if (process.env.ADIGUNSP_EDITOR_SCREENSHOT_DIR) {
+        const filename = `${mode.toLowerCase()}-${width}x${height}.png`;
+        await page.screenshot({ path: `${process.env.ADIGUNSP_EDITOR_SCREENSHOT_DIR}/${filename}`, animations: "disabled" });
+      }
+    }
+  }
+});
+
 test("electrical workspace stays usable without overlap at required viewports", async ({ page }) => {
   await page.locator("#electricalTab").click();
   await expect(page.locator("#electricalBoard")).toBeVisible();
