@@ -87,6 +87,8 @@ let runTimer = null, scans = 0, zoom = 100, selection = null, selectedHmiWidgetI
 let traceFrames = [], traceRecording = false, traceReplay = false, traceCursor = 0, traceInitial = null, traceInitialFaults = [], traceProjectKey = "", traceMismatches = [], traceBreakpoints = new Set();
 let simulationFaults = [], contactPointerDrag = null, suppressContactClick = false, sessionOperations = { elapsedMs:0, outputRuntimeMs:{} };
 const accountService = createAccountService(supabaseClient);
+const productAccountEnabled = globalThis.ADIGUN_RUNTIME_CONFIG?.productAccount === true;
+let productAccountCodePending = false;
 let accountUser = null, accountAccess = "checking", guestTimer = null, guestDeadline = 0, guestDraftStorageKey = null, accountAvatarRequestId = 0, accountGuestSignInMode = false;
 const guestUpgradeStorageKey = "adigunsps-guest-upgrade-email";
 function guestUpgradeEmail() { try { return localStorage.getItem(guestUpgradeStorageKey) || ""; } catch { return ""; } }
@@ -1872,7 +1874,15 @@ async function initializeAccountAccess() {
     const user = data?.session?.user;
     if (new URLSearchParams(location.search).get("account") === "sign-in" && !user) { accountUser = null; setAccountAccess("account-required"); return; }
     if (user?.is_anonymous) { accountUser = user; const session = await accountService.ensureGuestSession(user); setAccountAccess(session.remainingMs > 0 ? "guest" : "guest-expired", session); delete project.__adigunGuestExpiresAt; return; }
-    if (user) { accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; return; }
+    if (user) {
+      if (productAccountEnabled && !await accountService.hasVerifiedProductSession()) {
+        await supabaseClient.auth.signOut({ scope:"local" });
+        accountUser = null;
+        setAccountAccess("account-required");
+        return;
+      }
+      accountUser = user; setAccountAccess("member"); delete project.__adigunGuestExpiresAt; return;
+    }
     if (new URLSearchParams(location.search).get("account") === "sign-in") { accountUser = null; setAccountAccess("account-required"); return; }
     const session = await accountService.startGuestSession();
     const current = await supabaseClient.auth.getUser(); accountUser = current.data?.user || null;
@@ -1895,6 +1905,15 @@ async function loadCloudProjectList() {
     catch (error) { toast(`${accountText("error")}: ${error.message}`); }
   }));
 }
+function productAccountLabels() {
+  return ({
+    en:{ code:"Email code", verify:"Verify code", sent:"Enter the code we emailed you.", active:"Account created. Sign in with your AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"That code is incorrect or expired.", retry:"Wait before requesting another code." },
+    de:{ code:"E-Mail-Code", verify:"Code prüfen", sent:"Geben Sie den zugesandten Code ein.", active:"Konto erstellt. Melden Sie sich mit Ihrem AdigunSPs-Passwort an.", restart:"Neu beginnen", invalid:"Prüfen Sie Ihre AdigunSPs-E-Mail und Ihr Passwort.", wrongCode:"Der Code ist falsch oder abgelaufen.", retry:"Warten Sie, bevor Sie einen neuen Code anfordern." },
+    yo:{ code:"Kóòdù ímeèlì", verify:"Ṣàyẹ̀wò kóòdù", sent:"Tẹ kóòdù tá a fi ránṣẹ́ sí ímeèlì rẹ.", active:"A ti dá àkọọ́lẹ̀. Wọlé pẹ̀lú ọ̀rọ̀ aṣínà AdigunSPs rẹ.", restart:"Bẹ̀rẹ̀ padà", invalid:"Ṣàyẹ̀wò ímeèlì àti ọ̀rọ̀ aṣínà AdigunSPs rẹ.", wrongCode:"Kóòdù kò tọ́ tàbí ó ti parí.", retry:"Dúró kí o tó béèrè fún kóòdù míì." },
+    pcm:{ code:"Email code", verify:"Check code", sent:"Put di code we send go your email.", active:"Account don ready. Sign in with your AdigunSPs password.", restart:"Start again", invalid:"Check your AdigunSPs email and password.", wrongCode:"Di code wrong or e don expire.", retry:"Wait before you ask for another code." }
+  })[language];
+}
+
 function showAccount() {
   const presentation = brandPresentation(language, currentBrandTheme());
   const signedIn = accountUser && !accountUser.is_anonymous;
@@ -1903,15 +1922,63 @@ function showAccount() {
   const pendingGuestEmail = isGuest ? guestUpgradeEmail() : "";
   const guestUpgradeReady = !!pendingGuestEmail && pendingGuestEmail.toLowerCase() === String(accountUser?.email || "").toLowerCase() && !!(accountUser?.email_confirmed_at || accountUser?.confirmed_at);
   const guestSignInMode = isGuest && accountGuestSignInMode;
-  const authForm = isGuest && !guestSignInMode && guestUpgradeReady ? `<form class="account-form" id="accountForm"><p class="safety-copy">${escapeHtml(accountUser.email)} · ${accountAuthText("guestUpgradeWaiting")}</p><label class="field">${accountAuthText("newPassword")}<input id="accountNewPassword" type="password" autocomplete="new-password" minlength="8" required></label><div class="modal-actions"><button class="primary" id="accountFinishGuestUpgrade" type="button">${accountAuthText("finishAccount")}</button></div></form>` : isGuest && !guestSignInMode && pendingGuestEmail ? `<form class="account-form" id="accountForm"><p class="safety-copy">${accountAuthText("guestUpgradeWaiting")}</p><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" value="${escapeAttr(pendingGuestEmail)}" readonly required></label><div class="modal-actions"><button class="primary" id="accountResendGuestConfirmation" type="button">${accountAuthText("resendConfirmation")}</button><button class="secondary" id="accountChangeGuestEmail" type="button">${accountAuthText("changeEmail")}</button></div></form>` : isGuest && !guestSignInMode ? `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><p class="safety-copy">${accountAuthText("guestUpgradeIntro")}</p><div class="modal-actions"><button class="primary" id="accountRegister" type="button">${accountText("preserveProject")}</button><button class="secondary" id="accountGuestSignIn" type="button">${accountText("signIn")}</button></div></form>` : `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountAuthText("password")}<input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required></label><button class="text-link" id="accountSendReset" type="button">${accountAuthText("forgotPassword")}</button>${!isGuest ? `<label class="field">${accountText("name")}<input id="accountName" maxlength="120" autocomplete="name"></label>` : ""}<div class="modal-actions"><button class="primary" id="accountSignIn" type="button">${accountText("signIn")}</button><button class="secondary" id="accountRegister" type="button">${accountText("register")}</button>${guestSignInMode ? `<button class="secondary" id="accountBackToGuestCreate" type="button">${accountText("preserveProject")}</button>` : ""}</div></form>`;
+  const productLabels = productAccountLabels();
+  const productForm = productAccountCodePending
+    ? `<form class="account-form" id="accountForm"><label class="field">${productLabels.code}<input id="accountOtp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required></label><div class="modal-actions"><button class="primary" id="accountVerifyOtp" type="submit">${productLabels.verify}</button><button class="secondary" id="accountRestart" type="button">${productLabels.restart}</button></div></form>`
+    : `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountAuthText("password")}<input id="accountPassword" type="password" minlength="12" maxlength="256" required></label><div class="modal-actions"><button class="primary" id="accountProductSignIn" type="submit">${accountText("signIn")}</button><button class="secondary" id="accountProductRegister" type="submit">${accountText("register")}</button></div></form>`;
+  const authForm = productAccountEnabled ? productForm : isGuest && !guestSignInMode && guestUpgradeReady ? `<form class="account-form" id="accountForm"><p class="safety-copy">${escapeHtml(accountUser.email)} · ${accountAuthText("guestUpgradeWaiting")}</p><label class="field">${accountAuthText("newPassword")}<input id="accountNewPassword" type="password" autocomplete="new-password" minlength="8" required></label><div class="modal-actions"><button class="primary" id="accountFinishGuestUpgrade" type="button">${accountAuthText("finishAccount")}</button></div></form>` : isGuest && !guestSignInMode && pendingGuestEmail ? `<form class="account-form" id="accountForm"><p class="safety-copy">${accountAuthText("guestUpgradeWaiting")}</p><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" value="${escapeAttr(pendingGuestEmail)}" readonly required></label><div class="modal-actions"><button class="primary" id="accountResendGuestConfirmation" type="button">${accountAuthText("resendConfirmation")}</button><button class="secondary" id="accountChangeGuestEmail" type="button">${accountAuthText("changeEmail")}</button></div></form>` : isGuest && !guestSignInMode ? `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><p class="safety-copy">${accountAuthText("guestUpgradeIntro")}</p><div class="modal-actions"><button class="primary" id="accountRegister" type="button">${accountText("preserveProject")}</button><button class="secondary" id="accountGuestSignIn" type="button">${accountText("signIn")}</button></div></form>` : `<form class="account-form" id="accountForm"><label class="field">${accountText("email")}<input id="accountEmail" type="email" autocomplete="email" required></label><label class="field">${accountAuthText("password")}<input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required></label><button class="text-link" id="accountSendReset" type="button">${accountAuthText("forgotPassword")}</button>${!isGuest ? `<label class="field">${accountText("name")}<input id="accountName" maxlength="120" autocomplete="name"></label>` : ""}<div class="modal-actions"><button class="primary" id="accountSignIn" type="button">${accountText("signIn")}</button><button class="secondary" id="accountRegister" type="button">${accountText("register")}</button>${guestSignInMode ? `<button class="secondary" id="accountBackToGuestCreate" type="button">${accountText("preserveProject")}</button>` : ""}</div></form>`;
   const memberContent = signedIn ? `<p class="safety-copy">${accountText("member")}: ${escapeHtml(accountUser.email || "")}</p><label class="field">${accountText("name")}<input id="accountName" maxlength="120" value="${escapeAttr(accountUser.user_metadata?.display_name || "")}"></label><label class="field">${accountText("avatar")}<input id="accountAvatar" type="file" accept="image/png,image/jpeg,image/webp"></label><label class="field">${({en:"Cloud project name",de:"Name des Cloud-Projekts",yo:"Orúkọ iṣẹ́ lórí awọsánmà",pcm:"Cloud project name"})[language]}<input id="accountCloudProjectName" maxlength="120" required value="${escapeAttr(project.name)}"></label><div class="modal-actions"><button class="secondary" id="accountProfileSave">${accountText("saveProfile")}</button><button class="primary" id="accountCloudSave">${accountText("saveCloud")}</button><button class="secondary" id="accountCloudRefresh">${accountText("refresh")}</button>${accountService.isAdministrator(accountUser) ? `<button class="secondary" id="accountAdminShow">${accountText("admin")}</button>` : ""}<button class="secondary" id="accountSignOut">${accountText("signOut")}</button></div><div id="cloudProjectList" class="project-list"></div><div id="accountAdminList" class="project-list"></div>` : authForm;
   const guestMessage = !signedIn && isGuest ? `<p class="safety-copy">${accountText("guestInfo")}</p>` : "";
   modal(`${presentation.productName} · ${accountText("account")}`, `<div class="modal-body"><section class="about-brand"><div class="about-brand-logos"><img src="${presentation.companyLogo}" alt="${presentation.companyName} official corporate logo"><div class="about-product-wordmark">${presentation.productName}<small>${presentation.divisionLabel}</small></div></div><p class="brand-attribution">${presentation.attribution}</p></section>${accountService ? "" : `<p class="safety-copy" role="alert">${lockedText}</p>`}${memberContent}${guestMessage}${!signedIn && accountService ? `<p class="safety-copy" id="accountFeedback" role="status">${accountAccess === "guest-expired" ? (guestSessionCopy[language]?.expired || guestSessionCopy.en.expired) : accountAccess === "guest" ? accountText("guest") : lockedText}</p>${accountAccess !== "guest-expired" ? `<button class="secondary" id="accountStartGuest">${accountText("guestStart")}</button>` : ""}` : ""}<div class="modal-actions"><button class="primary" id="accountClose">${accountCopy[language]?.close || (language === "de" ? "Schließen" : language === "yo" ? "Pade" : "Close")}</button></div></div>`);
-  if (!signedIn && !isGuest) $("#accountForm")?.insertAdjacentHTML("beforeend", `<div class="modal-actions"><button class="secondary" id="accountResendSignup" type="button">${accountAuthText("resendSignupConfirmation")}</button></div>`);
+  if (!productAccountEnabled && !signedIn && !isGuest) $("#accountForm")?.insertAdjacentHTML("beforeend", `<div class="modal-actions"><button class="secondary" id="accountResendSignup" type="button">${accountAuthText("resendSignupConfirmation")}</button></div>`);
   $("#accountClose").onclick = () => $("#modal").close();
   $("#accountGuestSignIn")?.addEventListener("click", () => { accountGuestSignInMode = true; showAccount(); $("#accountEmail")?.focus(); });
   $("#accountBackToGuestCreate")?.addEventListener("click", () => { accountGuestSignInMode = false; showAccount(); });
   const setFeedback = (message) => { const target = $("#accountFeedback"); if (target) target.textContent = message; };
+  if (productAccountEnabled && !signedIn) {
+    const errors = {
+      "invalid-product-credentials":productLabels.invalid,
+      "invalid-or-expired-email-code":productLabels.wrongCode,
+      "email-code-request-required":productLabels.wrongCode,
+      "wait-and-retry":productLabels.retry
+    };
+    if (productAccountCodePending) setFeedback(productLabels.sent);
+    $("#accountRestart")?.addEventListener("click", () => {
+      productAccountCodePending = false;
+      showAccount();
+    });
+    $("#accountForm")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const submitter = event.submitter;
+      if (!submitter || submitter.disabled) return;
+      const form = event.currentTarget;
+      const buttons = [...form.querySelectorAll("button[type='submit']")];
+      buttons.forEach(button => { button.disabled = true; });
+      try {
+        if (productAccountCodePending) {
+          const result = await accountService.verifyProductAccount($("#accountOtp").value);
+          productAccountCodePending = false;
+          if (result.step === "registered") { showAccount(); $("#accountFeedback").textContent = productLabels.active; return; }
+          if (!result.user || result.user.is_anonymous || !await accountService.hasVerifiedProductSession()) {
+            throw new Error("The account service did not grant access.");
+          }
+          await updateAccountAfterAuth(result.user);
+          if (new URLSearchParams(location.search).has("account")) history.replaceState(null, "", location.pathname);
+          $("#modal").close();
+        } else {
+          const mode = submitter.id === "accountProductRegister" ? "register" : "sign-in";
+          await accountService.beginProductAccount(mode, $("#accountEmail").value, $("#accountPassword").value);
+          productAccountCodePending = true;
+          showAccount();
+          $("#accountOtp")?.focus();
+        }
+      } catch (error) {
+        setFeedback(errors[error.code] || accountText("error"));
+      } finally {
+        buttons.forEach(button => { button.disabled = false; });
+      }
+    });
+  }
   const emailRedirectTo = "https://adigunsps.hephzibahbehulah.com/";
   const resetPasswordRedirectTo = "https://adigunsps.hephzibahbehulah.com/reset-password";
   const accountEmail = () => $("#accountEmail")?.value.trim().toLowerCase() || "";

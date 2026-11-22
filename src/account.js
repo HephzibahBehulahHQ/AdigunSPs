@@ -30,7 +30,32 @@ function requirePermanentUser(user) {
 export function createAccountService(client) {
   if (!client?.auth || typeof client.from !== "function") return null;
 
+  async function requestProductAccount(body) {
+    const response = await fetch("/api/account", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(body), credentials:"same-origin", cache:"no-store"
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result) throw new AccountError(result?.error || "account-unavailable", "The account request could not be completed.");
+    return result;
+  }
+
   return {
+    beginProductAccount(mode, email, password) {
+      return requestProductAccount({ step:"begin", mode, email, password });
+    },
+    async verifyProductAccount(code) {
+      const result = await requestProductAccount({ step:"verify", code });
+      if (result.step === "registered") return result;
+      if (result.step !== "signed-in" || !result.session?.access_token || !result.session?.refresh_token) {
+        throw new AccountError("account-unavailable", "The account service did not return a verified session.");
+      }
+      const data = requireResult(await client.auth.setSession(result.session));
+      return { step:result.step, user:data?.user || data?.session?.user };
+    },
+    async hasVerifiedProductSession() {
+      return requireResult(await client.rpc("adigun_has_verified_product_session")) === true;
+    },
     signInWithPassword(email, password) {
       return client.auth.signInWithPassword({ email:email.trim(), password });
     },
