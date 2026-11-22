@@ -1033,7 +1033,8 @@ function applyPanelLayout() {
     else workspace.style.setProperty(property, `${width}px`);
   }
 }
-const mobileDrawerViewport = matchMedia("(max-width: 760px)");
+const mobileDrawerBreakpoint = "(max-width: 760px)";
+const mobileDrawerViewport = matchMedia(mobileDrawerBreakpoint);
 
 function setMobileDrawer(side) {
   const workspace = $(".workspace");
@@ -1048,7 +1049,7 @@ function setMobileDrawer(side) {
 function leaveMobileDrawerAtTabBoundary(event) {
   if (event.key !== "Tab" || event.defaultPrevented || $("#modal").open || !$("#contextMenu").hidden) return false;
   const drawer = $(".mobile-left-open .left-sidebar, .mobile-right-open .right-sidebar");
-  if (!mobileDrawerViewport.matches || !drawer?.contains(document.activeElement)) return false;
+  if (!drawer?.contains(document.activeElement) || !matchMedia(mobileDrawerBreakpoint).matches) return false;
   const stops = [...drawer.querySelectorAll("a[href],button,input,select,textarea,[tabindex]")]
     .filter((element) => element.tabIndex >= 0 && !element.matches(":disabled") &&
       element.getClientRects().length && getComputedStyle(element).visibility === "visible");
@@ -1060,7 +1061,7 @@ function leaveMobileDrawerAtTabBoundary(event) {
 }
 function showPanelLayout() {
   const copy = ({ en:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"}, de:{title:"Panelanordnung",left:"Projekt- und E/A-Bereich",right:"Inspektor und Diagnose",showProject:"Projekt- und E/A-Bereich öffnen",showInspector:"Inspektor und Diagnose öffnen",close:"Seitenbereiche schließen"}, yo:{title:"Ìṣètò pánẹ́lì",left:"Pánẹ́lì iṣẹ́ àti I/O",right:"Olùṣàyẹ̀wò àti àyẹ̀wò ètò",showProject:"Ṣí pánẹ́lì iṣẹ́ àti I/O",showInspector:"Ṣí olùṣàyẹ̀wò àti àyẹ̀wò ètò",close:"Pa àwọn pánẹ́lì ẹ̀gbẹ́"}, pcm:{title:"Panel layout",left:"Project and I/O panel",right:"Inspector and diagnostics",showProject:"Open project and I/O panel",showInspector:"Open inspector and diagnostics",close:"Close side panels"} })[language];
-  const mobile = mobileDrawerViewport.matches;
+  const mobile = matchMedia(mobileDrawerBreakpoint).matches;
   if (mobile) {
     modal(copy.title, `<div class="modal-body"><button class="secondary panel-layout-button" id="mobileProjectPanel">${copy.showProject}</button><button class="secondary panel-layout-button" id="mobileInspectorPanel">${copy.showInspector}</button><button class="secondary panel-layout-button" id="mobileClosePanels">${copy.close}</button></div>`);
     const open = (side) => { $("#modal").close(); setMobileDrawer(side); };
@@ -2445,7 +2446,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && $("#modal").open) { $("#modal").close(); return; }
   if (event.key === "Escape" && !$("#contextMenu").hidden) { hideContextMenu(); return; }
   if (leaveMobileDrawerAtTabBoundary(event)) return;
-  if (event.key === "Escape" && !event.defaultPrevented && mobileDrawerViewport.matches && setMobileDrawer(null)) {
+  if (event.key === "Escape" && !event.defaultPrevented && matchMedia(mobileDrawerBreakpoint).matches && setMobileDrawer(null)) {
     event.preventDefault();
     return;
   }
