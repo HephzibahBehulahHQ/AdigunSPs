@@ -2050,6 +2050,41 @@ test("electrical canvas draws, edits, pauses, and resumes routed wires", async (
 
 
 test("side-panel layout changes do not mutate saved PLC or electrical project data", async ({ page }) => {
+  const fixture = {
+    name: "Workspace execution and wiring parity", editorType: "LD",
+    tags: [{ name: "Start", type: "BOOL", role: "input" }, { name: "Lamp", type: "BOOL", role: "output" }],
+    io: { inputs: ["Start"], outputs: ["Lamp"] }, initialState: { Start: true },
+    rungs: [{ id: "run-lamp", branches: [[{ tag: "Start", mode: "NO" }]], coil: "Lamp" }],
+    electrical: {
+      components: [
+        { id: "switch", type: "pushbuttonNO", reference: "S1", label: "Start", x: 140, y: 140, terminals: ["13", "14"] },
+        { id: "lamp", type: "pilotLamp", reference: "H1", label: "Lamp", x: 500, y: 140, terminals: ["X1", "X2"] }
+      ],
+      wires: [{ id: "lamp-wire", from: { componentId: "switch", terminal: "14" },
+        to: { componentId: "lamp", terminal: "X1" }, waypoints: [{ x: 380, y: 220 }] }]
+    }
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name: "workspace-parity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(fixture))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(fixture.name);
+  const runAndCheckLamp = async () => {
+    await page.locator('[data-app-menu="plc"]').click();
+    await page.getByRole("menuitem", { name: "Reset", exact: true }).click();
+    await page.locator('[data-app-menu="plc"]').click();
+    await page.getByRole("menuitem", { name: "Step", exact: true }).click();
+    await expect(page.locator("#cycleCount")).toHaveText("1");
+    await page.locator('[data-app-menu="debug"]').click();
+    await page.getByRole("menuitem", { name: "Watch table", exact: true }).click();
+    await expect(page.locator('[data-watch-value="Lamp"]')).toHaveText("true");
+    await page.locator("#modal .modal-close").click();
+  };
+  await runAndCheckLamp();
+  const wire = page.locator('#electricalBoard [data-wire-id="lamp-wire"]');
+  await page.locator("#electricalTab").click();
+  await expect(wire).toHaveAttribute("d", /L380 220/);
+  const originalPath = await wire.getAttribute("d");
+  await page.locator("#logicTab").click();
   const readPersistedState = () => page.evaluate(() => new Promise((resolve, reject) => {
     const guestDrafts=Object.keys(sessionStorage).filter(key=>key.startsWith("adigunsps-guest-draft-")).map(key=>[key,sessionStorage.getItem(key)]);
     const request=indexedDB.open("adigunsps-local");
@@ -2063,7 +2098,7 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
     };
   }));
   const before = await readPersistedState();
-  expect(before.guestDrafts.length + before.projects.length).toBeGreaterThan(0);
+  expect(JSON.stringify(before)).toContain(fixture.name);
 
   await page.setViewportSize({ width: 1280, height: 768 });
   await page.locator("#panelLayoutButton").click();
@@ -2079,6 +2114,7 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
     .toEqual({ left:true, right:true, leftWidth:310, rightWidth:345 });
   await page.setViewportSize({ width: 1894, height: 704 });
   await page.locator("#electricalTab").click();
+  await expect(wire).toHaveAttribute("d", originalPath);
   await expect(page.locator(".left-sidebar")).toHaveCSS("width", "310px");
   await expect(page.locator(".right-sidebar")).toHaveCSS("width", "345px");
   await page.locator("#logicTab").click();
@@ -2095,6 +2131,7 @@ test("side-panel layout changes do not mutate saved PLC or electrical project da
   await expect(page.locator(".workspace")).toHaveClass(/panels-right-hidden/);
 
   await expect(await readPersistedState()).toEqual(before);
+  await runAndCheckLamp();
 });
 
 test("workspace starts with an unsupported saved interface language", async ({ page }) => {
