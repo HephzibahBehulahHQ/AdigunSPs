@@ -67,7 +67,7 @@ body[data-theme="light"] {
   .statusbar { min-height: 73px; padding: 0 7px; }
   .statusbar-main { gap: 9px; }
   .statusbar-main > span:nth-child(2), .statusbar-main > span:nth-child(3), .statusbar-main > #taskCycleInfo, #savedOnDeviceLabel { display: none; }
-  .corporate-footer { display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: 23px 40px; align-items: center; gap: 0 8px; overflow-x: auto; }
+  .corporate-footer { display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: 23px 40px; align-items: center; gap: 0 8px; overflow: visible; }
   .corporate-footer button { grid-column: 1; grid-row: 1; justify-self: start; }
   .corporate-footer nav { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(2, max-content); gap: 0 8px; align-content: center; min-width: 0; }
   .corporate-footer a { min-height: 19px; }
@@ -229,6 +229,7 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .menu-command-dock #paletteButton .command-search-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:1399px){.menu-command-dock #paletteButton{width:170px;min-width:150px}}
 .top-actions #paletteButton .command-search-label{display:none}
+#treeProjectName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(min-width:1200px){.toolbar{display:none}}
 @media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}
 @media(min-width:761px) and (max-width:1050px){.topbar{gap:12px;padding-inline:12px}.top-actions{gap:7px}.top-actions>.icon-button{flex:0 0 32px;width:32px;height:32px}.top-actions>#languageButton{flex-basis:40px;width:40px}.save-state{margin-right:4px}}

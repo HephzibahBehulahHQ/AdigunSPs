@@ -2093,6 +2093,9 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
           await expect(page.locator("#mobileProjectPanel")).toBeVisible();
           await page.locator("#mobileProjectPanel").click();
           await expect(page.locator(".workspace")).toHaveClass(/mobile-left-open/);
+          const treeNameFits = await page.locator("#treeProjectName").evaluate((label) =>
+            label.getBoundingClientRect().right <= label.closest(".left-sidebar").getBoundingClientRect().right);
+          expect(treeNameFits, "The long project name stays inside the drawer").toBe(true);
         }
 
         const metrics = await page.evaluate(() => {
