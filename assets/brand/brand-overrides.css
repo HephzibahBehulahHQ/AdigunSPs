@@ -77,6 +77,7 @@ body[data-theme="light"] {
   .topbar > .brand { grid-column: 1; grid-row: 1; width: 96px; }
   .topbar > .product-brand { grid-column: 2; grid-row: 1; min-width: 0; justify-self: end; text-align: right; }
   .topbar > .project-name { grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden; }
+  .topbar > .project-name button { min-width: 0; }
   .topbar > .top-actions { grid-column: 2; grid-row: 2; margin-left: 0; gap: 6px; min-width: 0; }
   .corporate-logo { width: 96px; height: 32px; }
   .product-brand { min-width: 94px; }
@@ -228,8 +229,9 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .menu-command-dock #paletteButton .command-search-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:1399px){.menu-command-dock #paletteButton{width:170px;min-width:150px}}
 .top-actions #paletteButton .command-search-label{display:none}
-@media(min-width:1200px){.toolbar{display:none}}
-@media(max-width:1199px){.header-quick-commands,.menu-command-dock{display:none}}
+#treeProjectName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(min-width:1501px){.toolbar{display:none}}
+@media(max-width:1500px){.header-quick-commands,.menu-command-dock{display:none}}
 @media(min-width:761px) and (max-width:1050px){.topbar{gap:12px;padding-inline:12px}.top-actions{gap:7px}.top-actions>.icon-button{flex:0 0 32px;width:32px;height:32px}.top-actions>#languageButton{flex-basis:40px;width:40px}.save-state{margin-right:4px}}
 @media(min-width:761px){.topbar>.project-name{min-width:0;flex:0 1 auto}.project-name button{min-width:0;max-width:clamp(120px,18vw,280px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 /* Reference-aligned electrical canvas title and compact contextual actions. */
@@ -287,9 +289,18 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
 .statusbar-main{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}.statusbar-main>span{flex:0 0 auto}.statusbar-main>.status-spacer{flex:1 1 auto;min-width:12px}.editor-ready-status{color:#86efac;font-weight:700;letter-spacing:.04em}.editor-ready-status .status-indicator{background:#86efac}
 @media(max-width:700px){.statusbar-main>#gridSizeStatus,.statusbar-main>#educationalStatus{display:none}.statusbar-main>.status-spacer{min-width:2px}}
 
-@media(min-width:1501px){.header-quick-commands button[data-action="run"]{min-width:210px;max-width:210px;text-transform:uppercase}}@media(min-width:1200px) and (max-width:1500px){.header-quick-commands button[data-action="run"]{min-width:0;max-width:160px;text-transform:uppercase}}
+@media(min-width:1501px){.header-quick-commands button[data-action="run"]{min-width:210px;max-width:210px;text-transform:uppercase}}
 
 /* Match the approved 1894px workspace header and panel proportions. */
+@media (min-width: 761px) and (max-width: 1500px) {
+  .top-actions { min-width: 0; }
+  .top-actions > .icon-button { flex-shrink: 0; }
+  .top-actions > .save-state,
+  .top-actions > .guest-session-status { min-width: 0; max-width: 140px; white-space: normal; overflow-wrap: anywhere; }
+}
+@media (min-width: 1200px) and (max-width: 1500px) {
+  .topbar { gap: 8px; padding-inline: 12px; }
+}
 @media (min-width: 1501px) {
   .product-brand { flex: 0 0 354px; min-width: 354px; }
   .product-brand strong { font-size: 20px; }
@@ -311,11 +322,6 @@ button.hmi-widget-title{width:100%;padding:0;border:0;background:transparent;col
     grid-template-columns: var(--workspace-left-width, 270px) minmax(0, 1fr) var(--workspace-right-width, 339px);
   }
   #electricalPane > .electrical-pane { gap: 12px; padding: 0 11px 9px 14px; }
-}
-
-/* Keep the desktop utility row inside the viewport when the compact command dock is active. */
-@media (min-width: 1200px) and (max-width: 1500px) {
-  .top-actions #helpButton { display: none; }
 }
 
 /* Keep translated inspector tabs inside the fixed right dock at scaled text sizes. */

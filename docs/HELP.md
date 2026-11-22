@@ -78,7 +78,7 @@ If a step does not match the example, follow that project's **How to test** and 
 
 ## Creating a project
 
-**What you'll see:** The editor opens with an untitled, empty project. The **File** menu and **New** toolbar button start a fresh project; **Project manager** lists saved projects.
+The editor opens an empty project. **Project manager** lists saved projects. Wide screens place **Undo**, **Redo**, **Save**, and **Run** in the header. Otherwise, use the toolbar.
 
 1. Select **New** on the toolbar or **File → New project**. Confirm replacing the current project if prompted.
 2. The new project opens as **Untitled project** with an empty ladder and default Main task. Project creation does not ask for a name or description.

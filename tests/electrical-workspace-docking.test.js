@@ -31,15 +31,15 @@ assert.match(html,/id="globalQuickCommands" class="header-quick-commands"/);
 assert.match(html,/id="menuCommandDock" class="menu-command-dock"/);
 assert.match(app,/function setupResponsiveGlobalCommandDocks\(\)/);
 assert.match(app,/\[\.\.\.moved\]\.reverse\(\)/);
-assert.match(app,/matchMedia\("\(min-width: 1200px\)"\)/);
-assert.match(css,/@media\(max-width:1199px\)\{\.header-quick-commands,\.menu-command-dock\{display:none\}\}/);
+assert.match(app,/matchMedia\("\(min-width: 1501px\)"\)/);
+assert.match(css,/@media\(max-width:1500px\)\{\.header-quick-commands,\.menu-command-dock\{display:none\}\}/);
 assert.match(html,/id="editorToolboxDock" class="editor-context-toolbox hidden"/);
 assert.match(app,/function setupContextualEditorToolbox\(\)/);
 for (const mode of ["LD","FBD","ST","SFC","HMI"]) assert.match(app,new RegExp(`mode:"${mode}"`));
 assert.match(app,/group\.hidden = group\.dataset\.editorToolboxMode !== toolboxMode/);
 assert.match(app,/document\.querySelectorAll\("#hmiPane \[data-hmi-add\], #editorToolboxDock \[data-hmi-add\]"\)/);
 
-assert.match(css,/@media\(min-width:1200px\)\{\.toolbar\{display:none\}\}/,"the overflowing ribbon must be removed at wide desktop sizes");
+assert.match(css,/@media\(min-width:1501px\)\{\.toolbar\{display:none\}\}/,"wide desktops use the header instead of the toolbar");
 assert.match(menus,/online:\[\[[\s\S]*?\["sound","sound"\]\]/,"simulation sound must remain reachable after the ribbon is hidden");
 for (const action of ["new","examples","save","save-as","import","export","print","undo","redo","io","faults","operations","scenario","run","pause","step","stop","sound","record","replay","trace","events","zoom-in","zoom-out","grid"]) {
   assert.ok(menus.includes(`\"${action}\"`),`${action} remains reachable through an application menu after the wide ribbon is hidden`);

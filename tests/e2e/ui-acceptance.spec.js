@@ -1160,7 +1160,7 @@ test("status strip shows editor and PLC state, local autosave setting, and elect
 
 test("global header places offline readiness before Undo, Redo, Save, and Run", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
-  await expect(page.locator("#offlineLabel")).toHaveText("Offline ready");
+  await expect(page.locator("#globalQuickCommands #offlineLabel")).toHaveText("Offline ready");
   const state=await page.evaluate(()=>({inHeader:document.querySelector("#offlineLabel").closest("#globalQuickCommands")!==null,commandOrder:[...document.querySelectorAll("#globalQuickCommands button")].map(button=>button.dataset.action)}));
   expect(state.inHeader).toBe(true);
   expect(state.commandOrder).toEqual(["undo","redo","save","run"]);
@@ -1168,6 +1168,7 @@ test("global header places offline readiness before Undo, Redo, Save, and Run", 
 
 test("wide workspace header matches the reference proportions and keeps secondary actions in menus", async ({ page }) => {
   await page.setViewportSize({ width: 1894, height: 850 });
+  await expect(page.locator('#globalQuickCommands [data-action="run"]')).toHaveAccessibleName("Run simulation");
   await page.locator("#electricalTab").click();
   await expect(page.locator(".electrical-empty")).toHaveCount(0);
   const layout = await page.evaluate(() => {
@@ -1211,6 +1212,8 @@ test("global Run action matches the reference simulation label without losing it
   await expect(run.locator("span")).toHaveText("Run simulation");
   await expect(run).toHaveCSS("text-transform","uppercase");
   expect((await run.boundingBox()).width).toBe(210);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await expect(page.locator('.toolbar [data-action="run"]')).toHaveAccessibleName("Run");
 });
 
 test("fresh AdigunSPs workspaces use the approved dark interface by default", async ({ page }) => {
@@ -2062,8 +2065,16 @@ test("workspace dialog controls follow the interface language", async ({ page })
 });
 
 test("workspace layout remains bounded across all locales, themes, and scaled text", async ({ page }) => {
+  const name = "Workspace acceptance project — ".padEnd(64, "W");
+  await page.locator("#fileInput").setInputFiles({
+    name: "long-project-name.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ name, editorType: "LD", tags: [], rungs: [] }))
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(name);
   await page.locator("#electricalTab").click();
   await page.evaluate(() => { document.documentElement.style.fontSize = "125%"; });
+  const layoutCases = [...viewportCases, { width: 1200, height: 768, minBoardHeight: 280 }];
 
   for (const locale of ["en", "de", "yo", "pcm"]) {
     for (let attempt = 0; attempt < 4 && (await page.locator("#languageButton").textContent())?.toLowerCase() !== locale; attempt++) {
@@ -2076,15 +2087,19 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
       await page.locator("#prefTheme").selectOption(theme);
       await page.locator("#settingsDone").click();
       await expect(page.locator("body")).toHaveAttribute("data-theme", theme);
-      await page.locator("#projectTitle").evaluate((element) => { element.textContent = "Workspace acceptance project — ".padEnd(64, "W"); });
+      await expect(page.locator("#projectTitle")).toHaveText(name);
+      await expect(page.locator("#treeProjectName")).toHaveText(name);
 
-      for (const viewport of [{ width: 1894, height: 704, minBoardHeight: 300 }, { width: 390, height: 844, minBoardHeight: 200 }]) {
+      for (const viewport of layoutCases) {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         if (viewport.width <= 760) {
           await page.locator("#panelLayoutButton").click();
           await expect(page.locator("#mobileProjectPanel")).toBeVisible();
           await page.locator("#mobileProjectPanel").click();
           await expect(page.locator(".workspace")).toHaveClass(/mobile-left-open/);
+          const treeNameFits = await page.locator("#treeProjectName").evaluate((label) =>
+            label.getBoundingClientRect().right <= label.closest(".left-sidebar").getBoundingClientRect().right);
+          expect(treeNameFits, "The long project name stays inside the drawer").toBe(true);
         }
 
         const metrics = await page.evaluate(() => {
@@ -2106,7 +2121,14 @@ test("workspace layout remains bounded across all locales, themes, and scaled te
             if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlaps.push([a.selector, b.selector]);
           }
           const emptyHintGeometry = { hint:hintRect && {left:hintRect.left,right:hintRect.right,top:hintRect.top,bottom:hintRect.bottom}, viewport:boardRect && {left:boardRect.left,right:boardRect.right,top:boardRect.top,bottom:boardRect.bottom}, className:emptyHint?.className };
-          const overflowNodes = [...document.querySelectorAll("body *")].map((element) => { const rect = element.getBoundingClientRect(); return { tag:element.tagName, id:element.id, className:String(element.className || ""), right:Math.round(rect.right), width:Math.round(rect.width) }; }).filter((element) => element.width > 0 && element.right > innerWidth + 1).slice(0, 12);
+          const overflowNodes = [...document.querySelectorAll("body *")].flatMap((element) => {
+            const rect = element.getBoundingClientRect();
+            if (!rect.width || rect.right <= innerWidth) return [];
+            for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+              if (getComputedStyle(parent).overflowX !== "visible" && parent.getBoundingClientRect().right <= innerWidth) return [];
+            }
+            return [{ tag: element.tagName, id: element.id, className: String(element.className || ""), right: rect.right }];
+          }).slice(0, 12);
           return { scrollWidth:document.documentElement.scrollWidth, boardHeight:boardRect?.height ?? 0, emptyHintWithinViewport, emptyHintGeometry, buttons, overlaps, overflowNodes };
         });
 
