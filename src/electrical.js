@@ -17,7 +17,7 @@ export const electricalComponentCatalog = Object.freeze({
     manufacturer:"Siemens", partNumber:"6ES7212-1HG50-0XB0",
     terminalLayout:relayPinLayout, terminals:relayPinLayout.filter((pin) => pin !== "X80-3"),
     channels:{ inputs:Object.keys(relayInputPins), outputs:Object.keys(relayOutputPins), inputPins:relayInputPins, outputPins:relayOutputPins,
-      powerPositivePin:"X80-1", powerNegativePin:"X80-5", inputCommonPins:["X10-8","X10-10"], relayCommonPins:["X11-1","X11-2"] },
+      powerPositivePin:"X80-1", powerNegativePin:"X80-5", inputCommonPins:["X10-8","X10-10"], inputPolarity:"sink-source", relayCommonPins:["X11-1","X11-2"] },
     controllerSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
     source:{ title:"Siemens S7-1200 G2 System Manual · CPU 1212C wiring diagrams", url:"https://support.industry.siemens.com/cs/attachments/109972011/S71200_G2_system_manual_en-US.pdf" },
     terminalNotes:{
@@ -26,7 +26,7 @@ export const electricalComponentCatalog = Object.freeze({
       ...Object.fromEntries(Object.values(relayInputPins).map((pin, index) => [pin, `Digital input DI a.${index}`])),
       ...Object.fromEntries(Object.values(relayOutputPins).map((pin, index) => [pin, `Relay output DQ a.${index}`]))
     },
-    simulationLimitations:"Ideal relay contacts switch the external 1L common only with a powered DC CPU and a mapped true output. The input model supports the common connected to DC negative. Sensor-supply output, ratings, firmware, and relay dynamics are outside the simulation."
+    simulationLimitations:"Ideal relay contacts switch the external 1L common only with a powered DC CPU and a mapped true output. A digital input requires a complete DC path to the opposite pole from its 1M common. Sensor-supply output, ratings, firmware, and relay dynamics are outside the simulation."
   },
   digitalInputModule4: { name:"digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
   digitalOutputModule4: { name:"digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
@@ -384,6 +384,10 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         const [first, second] = spec.channels.relayCommonPins;
         addEdge(key(component.id, first), key(component.id, second));
       }
+      if (spec.channels?.inputPolarity === "sink-source") {
+        const [first, second] = spec.channels.inputCommonPins;
+        addEdge(key(component.id, first), key(component.id, second));
+      }
       if (spec.kind === "junction") for (let i = 0; i < spec.terminals.length; i++) for (let j = i + 1; j < spec.terminals.length; j++) addEdge(key(component.id, spec.terminals[i]), key(component.id, spec.terminals[j]));
       else if (spec.kind === "power-converter") addEdge(key(component.id,"−A"),key(component.id,"−B"));
       else if (spec.kind === "pass-through") addEdge(key(component.id,spec.terminals[0]),key(component.id,spec.terminals[1]));
@@ -475,7 +479,18 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     const hasReturn = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative?.has(key(controller.id, negativePowerPin)) || poles.N?.has(key(controller.id, negativePowerPin))));
     const hasPositivePower = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, positivePowerPin)));
     const hasInputCommon = !spec.channels.inputCommonPins?.length || spec.channels.inputCommonPins.some((pin) => nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative || poles.N)?.has(key(controller.id, pin))));
-    for (const channel of spec.channels.inputs || []) { const tag = controller.ioMap?.[channel]?.tag, pin = physicalMap[channel] || channel; if (tag) plcInputs[tag] = Boolean(hasReturn && (!spec.channels.powerPositivePin || hasPositivePower) && hasInputCommon && nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, pin)))); }
+    for (const channel of spec.channels.inputs || []) {
+      const tag = controller.ioMap?.[channel]?.tag, pin = physicalMap[channel] || channel;
+      if (!tag) continue;
+      if (spec.channels.inputPolarity === "sink-source") {
+        plcInputs[tag] = coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.controllerSupply)
+          && spec.channels.inputCommonPins.some((common) => coilPowered(nets, controller, pin, common, spec.controllerSupply)
+            || coilPowered(nets, controller, common, pin, spec.controllerSupply));
+      } else {
+        plcInputs[tag] = Boolean(hasReturn && (!spec.channels.powerPositivePin || hasPositivePower) && hasInputCommon
+          && nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, pin))));
+      }
+    }
     for (const channel of spec.channels.analogInputs || []) {
       const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
       if (!tag||!signal) continue;
