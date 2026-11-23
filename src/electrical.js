@@ -1,3 +1,8 @@
+const relayInputPins = { I1:"X10-1", I2:"X10-3", I3:"X10-5", I4:"X10-7", I5:"X10-9", I6:"X10-2", I7:"X10-4", I8:"X10-6" };
+const relayOutputPins = { Q1:"X11-3", Q2:"X11-5", Q3:"X11-7", Q4:"X11-4", Q5:"X11-6", Q6:"X11-8" };
+const connectorPins = (connector, count) => Array.from({ length: count }, (_, index) => `${connector}-${index + 1}`);
+const relayPinLayout = [...connectorPins("X80", 6), ...connectorPins("X10", 10), ...connectorPins("X11", 8)];
+
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
   sitopPSU100C: { name:"Siemens SITOP PSU100C · 24 V / 2.5 A", category:"Power supplies", prefix:"PS", terminals:["L","N","PE","+","−A","−B"], terminalLabels:{"−A":"−","−B":"−"}, kind:"power-converter", manufacturer:"Siemens", partNumber:"6EP1332-5BA00", nominalVoltageV:24, ratedVoltageV:24, ratedCurrentA:2.5, source:{title:"SITOP PSU100C Operating Instructions",url:"https://support.industry.siemens.com/cs/attachments/65647808/PSU100C_Handbuch_englisch_en-US.pdf"}, terminalNotes:{L:"AC line",N:"AC neutral",PE:"Protective earth", "+":"24 V DC positive output","−A":"0 V DC output terminal (first of two)","−B":"0 V DC output terminal (second of two)"}, simulationLimitations:"Educational ideal converter: the 24 V DC output is enabled by wired single-phase line/neutral paths. AC waveform, regulation, overload/current limiting, startup behavior, isolation, protection and device faults are not simulated." },
@@ -7,6 +12,22 @@ export const electricalComponentCatalog = Object.freeze({
   supply3phase: { name:"three-phase supply (educational)", category:"Power supplies", prefix:"G", terminals:["L1","L2","L3","PE"], kind:"three-phase-source", nominalVoltageV:400 },
   genericPlc24v4di4do: { name:"24 V DC PLC · 4 DI / 4 DO", category:"PLC controllers", prefix:"PLC", terminals:["L+","M","PE","I1","I2","I3","I4","Q1","Q2","Q3","Q4"], kind:"plc", channels:{inputs:["I1","I2","I3","I4"],outputs:["Q1","Q2","Q3","Q4"]} },
   siemensS71212CG2: { name:"Siemens SIMATIC S7-1200 G2 CPU 1212C DC/DC/DC · 8 DI / 6 DQ", category:"PLC controllers", prefix:"PLC", terminals:["X80-1","X80-2","X80-4","X80-5","X80-6","X10-1","X10-2","X10-3","X10-4","X10-5","X10-6","X10-7","X10-8","X10-9","X10-10","X11-1","X11-2","X11-3","X11-4","X11-5","X11-6","X11-7","X11-8"],terminalLayout:["X80-1","X80-2","X80-3","X80-4","X80-5","X80-6","X10-1","X10-2","X10-3","X10-4","X10-5","X10-6","X10-7","X10-8","X10-9","X10-10","X11-1","X11-2","X11-3","X11-4","X11-5","X11-6","X11-7","X11-8"], kind:"plc", channels:{inputs:["I1","I2","I3","I4","I5","I6","I7","I8"],outputs:["Q1","Q2","Q3","Q4","Q5","Q6"],inputPins:{I1:"X10-1",I2:"X10-3",I3:"X10-5",I4:"X10-7",I5:"X10-9",I6:"X10-2",I7:"X10-4",I8:"X10-6"},outputPins:{Q1:"X11-3",Q2:"X11-5",Q3:"X11-7",Q4:"X11-4",Q5:"X11-6",Q6:"X11-8"},powerPositivePin:"X80-1",powerNegativePin:"X80-5",inputCommonPins:["X10-8","X10-10"],outputSupplyPin:"X11-2",outputReturnPin:"X11-1"}, manufacturer:"Siemens", partNumber:"6ES7212-1AG50-0XB0", source:{title:"Siemens S7-1200 G2 System Manual · CPU 1212C terminal assignments",url:"https://support.industry.siemens.com/cs/attachments/109972011/S71200_G2_system_manual_en-US.pdf"}, terminalNotes:{"X80-1":"X80 physical pin 1 · DC power L+","X80-2":"X80 physical pin 2 · sensor power GND","X80-3":"X80 physical pin 3 · unassigned in the Siemens terminal table; display only","X80-4":"X80 physical pin 4 · sensor power L+","X80-5":"X80 physical pin 5 · DC power M","X80-6":"X80 physical pin 6 · sensor power M","X10-1":"X10 physical pin 1 · digital input DI a.0","X10-2":"X10 physical pin 2 · digital input DI a.5","X10-3":"X10 physical pin 3 · digital input DI a.1","X10-4":"X10 physical pin 4 · digital input DI a.6","X10-5":"X10 physical pin 5 · digital input DI a.2","X10-6":"X10 physical pin 6 · digital input DI a.7","X10-7":"X10 physical pin 7 · digital input DI a.3","X10-8":"X10 physical pin 8 · digital input common 1M","X10-9":"X10 physical pin 9 · digital input DI a.4","X10-10":"X10 physical pin 10 · digital input common 1M","X11-1":"X11 physical pin 1 · digital output common 2M","X11-2":"X11 physical pin 2 · digital output common 2L+","X11-3":"X11 physical pin 3 · digital output DQ a.0","X11-4":"X11 physical pin 4 · digital output DQ a.3","X11-5":"X11 physical pin 5 · digital output DQ a.1","X11-6":"X11 physical pin 6 · digital output DQ a.4","X11-7":"X11 physical pin 7 · digital output DQ a.2","X11-8":"X11 physical pin 8 · digital output DQ a.5"}, simulationLimitations:"Verified CPU identity, three connector blocks and 24 physical terminal-pin identities from the Siemens system manual. This educational simulation binds the documented digital I/O pins to project tags and follows explicit 24 V DC power/common wiring; CPU program execution, timing, diagnostics and hardware behavior are not simulated." },
+  siemensS71212CG2Relay: {
+    name:"Siemens SIMATIC S7-1200 G2 CPU 1212C DC/DC/RLY · 8 DI / 6 relay DO", category:"PLC controllers", prefix:"PLC", kind:"plc",
+    manufacturer:"Siemens", partNumber:"6ES7212-1HG50-0XB0",
+    terminalLayout:relayPinLayout, terminals:relayPinLayout.filter((pin) => pin !== "X80-3"),
+    channels:{ inputs:Object.keys(relayInputPins), outputs:Object.keys(relayOutputPins), inputPins:relayInputPins, outputPins:relayOutputPins,
+      powerPositivePin:"X80-1", powerNegativePin:"X80-5", inputCommonPins:["X10-8","X10-10"], relayCommonPins:["X11-1","X11-2"] },
+    controllerSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
+    source:{ title:"Siemens S7-1200 G2 System Manual · CPU 1212C wiring diagrams", url:"https://support.industry.siemens.com/cs/attachments/109972011/S71200_G2_system_manual_en-US.pdf" },
+    terminalNotes:{
+      "X80-1":"CPU power L+", "X80-2":"Chassis ground", "X80-3":"Unassigned position", "X80-4":"Sensor supply L+", "X80-5":"CPU power M", "X80-6":"Sensor supply M",
+      "X10-8":"Digital input common 1M", "X10-10":"Digital input common 1M", "X11-1":"Relay common 1L", "X11-2":"Relay common 1L",
+      ...Object.fromEntries(Object.values(relayInputPins).map((pin, index) => [pin, `Digital input DI a.${index}`])),
+      ...Object.fromEntries(Object.values(relayOutputPins).map((pin, index) => [pin, `Relay output DQ a.${index}`]))
+    },
+    simulationLimitations:"Ideal relay contacts switch the external 1L common only with a powered DC CPU and a mapped true output. The input model supports the common connected to DC negative. Sensor-supply output, ratings, firmware, and relay dynamics are outside the simulation."
+  },
   digitalInputModule4: { name:"digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
   digitalOutputModule4: { name:"digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
@@ -359,6 +380,10 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const component of all) {
       const spec = electricalComponentCatalog[component.type]; if (!spec) continue;
       const signal = Boolean(inputStates[component.tag || component.reference]);
+      if (spec.channels?.relayCommonPins) {
+        const [first, second] = spec.channels.relayCommonPins;
+        addEdge(key(component.id, first), key(component.id, second));
+      }
       if (spec.kind === "junction") for (let i = 0; i < spec.terminals.length; i++) for (let j = i + 1; j < spec.terminals.length; j++) addEdge(key(component.id, spec.terminals[i]), key(component.id, spec.terminals[j]));
       else if (spec.kind === "power-converter") addEdge(key(component.id,"−A"),key(component.id,"−B"));
       else if (spec.kind === "pass-through") addEdge(key(component.id,spec.terminals[0]),key(component.id,spec.terminals[1]));
@@ -385,6 +410,13 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const component of all) for (const channel of electricalComponentCatalog[component.type]?.channels?.outputs || []) {
       const spec = electricalComponentCatalog[component.type], tag = component.ioMap?.[channel]?.tag;
       if (!tag || !Boolean(outputStates[tag])) continue;
+      if (spec.channels.relayCommonPins) {
+        const { powerPositivePin, powerNegativePin, outputPins, relayCommonPins } = spec.channels;
+        if (coilPowered(sourceNets(nodes), component, powerPositivePin, powerNegativePin, spec.controllerSupply)) {
+          addEdge(key(component.id, relayCommonPins[0]), key(component.id, outputPins[channel]));
+        }
+        continue;
+      }
       const supplyPin = spec.channels.outputSupplyPin || "L+", outputPin = spec.channels.outputPins?.[channel] || channel;
       const supplied = spec.channels.outputReturnPin
         ? poweredPair(sourceNets(nodes), component, supplyPin, spec.channels.outputReturnPin)
