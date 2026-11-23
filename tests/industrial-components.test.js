@@ -53,6 +53,35 @@ for (const type of types) {
 }
 
 const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
+{
+  const module = createElectricalComponent("siemensSM1221G2DI16", 1);
+  const spec = electricalComponentCatalog[module.type];
+  assert.equal(module.terminals.length, 20);
+  assert.equal(spec.channels.inputs.length, 16);
+  const diagram = { components:[module], wires:[] };
+  for (const [index, { common, inputs }] of spec.channels.inputGroups.entries()) {
+    const supply = createElectricalComponent("supply24vdc", index + 1);
+    diagram.components.push(supply);
+    const tag = `Group${index + 1}`;
+    const channel = spec.channels.inputs[index * 4];
+    assert.equal(spec.channels.inputPins[channel], inputs[0]);
+    module.ioMap[channel] = { tag, address:`I${index}.0` };
+    const poles = index % 2 ? ["−", "+"] : ["+", "−"];
+    const connect = (pole, pin) => {
+      const result = connectElectricalTerminals(diagram, { componentId:supply.id, terminal:pole }, { componentId:module.id, terminal:pin });
+      assert.equal(result.ok, true, result.error);
+      diagram.wires.push(result.wire);
+    };
+    connect(poles[0], inputs[0]);
+    assert.equal(simulateElectricalDiagram(diagram).inputs[tag], false, "other groups cannot supply this input's common");
+    connect(poles[1], common);
+    assert.equal(simulateElectricalDiagram(diagram).inputs[tag], true);
+  }
+  const restored = normalizeImportedProject(JSON.parse(JSON.stringify({
+    name:"SM 1221 field groups", rungs:[], tags:spec.channels.inputGroups.map((_, index) => ({ name:`Group${index + 1}`, type:"BOOL", role:"input" })), electrical:diagram
+  })));
+  assert.deepEqual(simulateElectricalDiagram(restored.electrical).inputs, { Group1:true, Group2:true, Group3:true, Group4:true });
+}
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);

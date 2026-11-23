@@ -649,6 +649,12 @@ const industrialProductCatalog = Object.freeze([
     simulation:{status:"reference-only",model:null,limitations:"The relay's coil, contact terminals, switching ratings, and contact behavior have not been modeled."},
   },
   {
+    manufacturer: "Siemens", identifier: "6ES7221-1BH50-0XB0", family: "SIMATIC S7-1200 G2 SM 1221", category: "Digital I/O modules",
+    attributes: { digitalInputs: 16, ratedVoltageV: 24, isolationGroups: 4, inputType: "Sink/Source" },
+    source: { url: "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_itit_20/technical-specifications/digital-signal-modules-sms/sm-1221-di-16x24vdc", title: "Siemens SM 1221 DI 16x24VDC technical specifications", retrievedOn: "2026-11-23" },
+    simulation: { status: "educational-model", model: "siemensSM1221G2DI16", limitations: "The model uses the four documented field common groups and assumes a powered backplane. Input filtering and bus communication are outside the simulation." }
+  },
+  {
     manufacturer: "Siemens", identifier: "6ES7212-1HG50-0XB0", family: "SIMATIC S7-1200 G2 CPU 1212C", category: "PLC controllers",
     attributes: { variant: "DC/DC/RLY", digitalInputs: 8, relayOutputs: 6, cpuSupplyV: "20.4–28.8 DC", onboardAnalogChannels: 0 },
     source: { url: "https://sieportal.siemens.com/en-ww/products-services/10594019?tree=CatalogTree", title: "Siemens SiePortal CPU 1212C product variants", retrievedOn: "2026-11-23" },

@@ -120,6 +120,9 @@ export function electricalSymbolSvg(component) {
     case "singlePhaseSupply": body=`<circle cx="48" cy="21" r="16" ${common}/>${text(48,19,"1~",9)}${text(48,28,"AC",6)}${line(5,21,32,21)}${line(64,21,91,21)}${text(48,5,"L/N",6)}`;break;
     case "supply3phase": body=`<circle cx="48" cy="21" r="16" ${common}/>${text(48,19,"3~",9)}${text(48,28,"AC",6)}${line(5,21,32,21)}${line(64,21,91,21)}`;break;
     case "genericPlc24v4di4do": body=`<rect x="18" y="5" width="60" height="32" rx="2" ${common}/>${text(48,18,"PLC",9)}${text(48,29,"DI 4 · DO 4",6)}${line(5,12,18,12)}${line(5,21,18,21)}${line(5,30,18,30)}${line(78,12,91,12)}${line(78,21,91,21)}${line(78,30,91,30)}`;break;
+    case "siemensSM1221G2DI16":
+      body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1221 · 16 DI",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · 1M / 2M",6)}${text(48,35,"X11 · 3M / 4M",6)}`;
+      break;
     case "digitalInputModule4":case "digitalOutputModule4":case "analogInputModule2":case "analogOutputModule2": {const title=component.type.startsWith("analog")?component.type.startsWith("analogInput")?"AI":"AO":component.type.startsWith("digitalInput")?"DI":"DO";body=`<rect x="20" y="5" width="56" height="32" rx="2" ${common}/>${text(48,20,title,10)}${text(48,30,component.type.startsWith("analog")?"2 CH":"4 CH",7)}${[0,1,2].map((i)=>line(5,12+i*9,20,12+i*9)).join("")}${[0,1,2].map((i)=>line(76,12+i*9,91,12+i*9)).join("")}`;break;}
     case "analogSignalSource":body=`<circle cx="48" cy="22" r="13" ${common}/><path d="M40 22h5l4-7 5 14 4-7h5" ${common}/>${line(4,22,35,22)}${line(61,22,92,22)}`;break;
     case "analogSignalIndicator":body=`<circle cx="58" cy="22" r="12" ${common}/>${text(58,25,"AI",8)}${line(4,22,46,22)}<path d="M37 16l9 6-9 6" ${common}/>${line(70,22,92,22)}`;break;

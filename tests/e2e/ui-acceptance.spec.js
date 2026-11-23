@@ -1996,6 +1996,12 @@ test("electrical component search filters models and restores the full picker", 
   const relayCpu = page.locator('#electricalBoard [data-component-type="siemensS71212CG2Relay"]');
   await expect(relayCpu.locator("[data-terminal]")).toHaveCount(23);
   await expect(relayCpu.getByRole("button", { name: /X80-3.*unassigned/ })).toBeDisabled();
+  await search.fill("6ES7221-1BH50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const inputModule = page.locator('#electricalBoard [data-component-type="siemensSM1221G2DI16"]');
+  await expect(inputModule.locator("[data-terminal]")).toHaveCount(20);
+  await expect(inputModule.getByRole("button", { name: /X11-2.*common 4M/ })).toBeEnabled();
 });
 
 

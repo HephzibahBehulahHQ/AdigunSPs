@@ -29,10 +29,10 @@ const modelRecords = Object.entries(electricalComponentCatalog).map(([type, mode
       label: terminalLabels?.[terminal] ?? terminal, note: terminalNotes?.[terminal] ?? null
     })),
     channelMapping: channels ?? null,
-    commonGroups: commonGroups ?? (channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins,
+    commonGroups: commonGroups ?? channels?.inputGroups ?? (channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins,
       ...(channels.relayCommonPins && { relayCommonPins: channels.relayCommonPins }) } : null),
-    isolationGroups: null, properties, sourceEvidence: source ?? null,
-    readiness: { placeable: true, terminalMap: source?.terminalMapPages ? "verified-topology" : source ? "source-linked-model" : "educational-model",
+    isolationGroups: channels?.inputGroups ?? null, properties, sourceEvidence: source ?? null,
+    readiness: { placeable: true, terminalMap: source?.terminalMapPages || source?.terminalMapSection ? "verified-topology" : source ? "source-linked-model" : "educational-model",
       simulation: { status: "educational", model: type, limitations: simulationLimitations ?? null } }
   };
 });
