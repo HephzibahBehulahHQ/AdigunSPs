@@ -51,6 +51,32 @@ for (const type of types) {
 }
 
 const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
+{
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const cpuSupply = createElectricalComponent("supply24vdc", 1);
+  const loadSupply = createElectricalComponent("supply24vdc", 2);
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  cpu.ioMap.Q1 = { tag:"Lamp", address:"Q0.0" };
+  const diagram = { components:[cpu, cpuSupply, loadSupply, lamp], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  assert.equal(cpu.terminals.length, 23);
+  assert.ok(!cpu.terminals.includes("X80-3"));
+  wire(loadSupply, "+", cpu, "X11-2");
+  wire(cpu, "X11-3", lamp, "X1");
+  wire(lamp, "X2", loadSupply, "−");
+  const energized = (on) => simulateElectricalDiagram(diagram, {}, { Lamp:on }).energized[lamp.id];
+  assert.equal(energized(true), false, "a true tag cannot actuate an unpowered CPU relay");
+  wire(cpuSupply, "+", cpu, "X80-1");
+  wire(cpuSupply, "−", cpu, "X80-5");
+  assert.equal(energized(false), false, "an idle output keeps the relay contact open");
+  assert.equal(energized(true), true, "a powered PLC switches the independent wired load supply");
+  diagram.wires.shift();
+  assert.equal(energized(true), false, "the CPU power supply does not feed an unwired relay common");
+}
 const toggleOn = circuit("toggleSwitchNO","buzzer",{closed:true});
 assert.equal(Object.values(toggleOff.energized)[0],false,"maintained NO toggle starts open");
 assert.equal(Object.values(toggleOn.energized)[0],true,"maintained NO toggle closes the buzzer circuit");

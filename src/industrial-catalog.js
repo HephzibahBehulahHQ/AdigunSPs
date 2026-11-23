@@ -649,6 +649,12 @@ const industrialProductCatalog = Object.freeze([
     simulation:{status:"reference-only",model:null,limitations:"The relay's coil, contact terminals, switching ratings, and contact behavior have not been modeled."},
   },
   {
+    manufacturer: "Siemens", identifier: "6ES7212-1HG50-0XB0", family: "SIMATIC S7-1200 G2 CPU 1212C", category: "PLC controllers",
+    attributes: { variant: "DC/DC/RLY", digitalInputs: 8, relayOutputs: 6, cpuSupplyV: "20.4–28.8 DC", onboardAnalogChannels: 0 },
+    source: { url: "https://sieportal.siemens.com/en-ww/products-services/10594019?tree=CatalogTree", title: "Siemens SiePortal CPU 1212C product variants", retrievedOn: "2026-11-23" },
+    simulation: { status: "educational-model", model: "siemensS71212CG2Relay", limitations: "Ideal relay contacts require CPU power and an externally wired load supply. No vendor firmware emulation." }
+  },
+  {
     manufacturer: "Phoenix Contact", identifier: "3209549", family: "PT 2,5-TWIN", category: "Terminal systems",
     attributes: { connections: 3, potentials: 1, nominalVoltageV: 800, nominalCurrentA: 24, connectionMethod: "Push-in" },
     source: { url: "https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-twin-3209549?type=pdf", title: "Phoenix Contact PT 2,5-TWIN data sheet", retrievedOn: "2026-11-23", terminalMapPages: [2, 7] },
