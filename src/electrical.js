@@ -39,7 +39,7 @@ export const electricalComponentCatalog = Object.freeze({
   siemensSM1221G2DI16: {
     name:"Siemens S7-1200 G2 SM 1221 · 16 DI · 6ES7221-1BH50-0XB0", category:"PLC I/O modules", prefix:"DI", kind:"digital-input-module",
     manufacturer:"Siemens", partNumber:"6ES7221-1BH50-0XB0", terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
-    channels:{ inputs:Object.keys(sm1221InputPins), inputPins:sm1221InputPins, inputGroups:sm1221InputGroups },
+    channels:{ inputs:Object.keys(sm1221InputPins), inputPins:sm1221InputPins }, inputGroups:sm1221InputGroups,
     inputSignalVoltage:{ minimumVoltageV:15, maximumVoltageV:30 },
     source:{ title:"Siemens S7-1200 G2 SM 1221 DI 16x24VDC specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_itit_20/technical-specifications/digital-signal-modules-sms/sm-1221-di-16x24vdc", terminalMapSection:"Wiring diagram" },
     terminalNotes:Object.fromEntries(sm1221InputGroups.flatMap(({ common, inputs }, group) => [
@@ -501,8 +501,8 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const channel of spec.channels.inputs || []) {
       const tag = controller.ioMap?.[channel]?.tag, pin = physicalMap[channel] || channel;
       if (!tag) continue;
-      if (spec.channels.inputGroups) {
-        const group = spec.channels.inputGroups.find(({ inputs }) => inputs.includes(pin));
+      if (spec.inputGroups) {
+        const group = spec.inputGroups.find(({ inputs }) => inputs.includes(pin));
         plcInputs[tag] = Boolean(group && (coilPowered(nets, controller, pin, group.common, spec.inputSignalVoltage)
           || coilPowered(nets, controller, group.common, pin, spec.inputSignalVoltage)));
       } else if (spec.channels.inputPolarity === "sink-source") {

@@ -59,7 +59,7 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   assert.equal(module.terminals.length, 20);
   assert.equal(spec.channels.inputs.length, 16);
   const diagram = { components:[module], wires:[] };
-  for (const [index, { common, inputs }] of spec.channels.inputGroups.entries()) {
+  for (const [index, { common, inputs }] of spec.inputGroups.entries()) {
     const supply = createElectricalComponent("supply24vdc", index + 1);
     diagram.components.push(supply);
     const tag = `Group${index + 1}`;
@@ -78,7 +78,7 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
     assert.equal(simulateElectricalDiagram(diagram).inputs[tag], true);
   }
   const restored = normalizeImportedProject(JSON.parse(JSON.stringify({
-    name:"SM 1221 field groups", rungs:[], tags:spec.channels.inputGroups.map((_, index) => ({ name:`Group${index + 1}`, type:"BOOL", role:"input" })), electrical:diagram
+    name:"SM 1221 field groups", rungs:[], tags:spec.inputGroups.map((_, index) => ({ name:`Group${index + 1}`, type:"BOOL", role:"input" })), electrical:diagram
   })));
   assert.deepEqual(simulateElectricalDiagram(restored.electrical).inputs, { Group1:true, Group2:true, Group3:true, Group4:true });
 }
