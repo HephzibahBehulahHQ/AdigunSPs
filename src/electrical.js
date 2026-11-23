@@ -143,10 +143,24 @@ export function nextElectricalReference(type, components = []) {
   throw new Error(`No available reference numbers remain for ${spec.prefix}.`);
 }
 
+function electricalChannelAddress(channel, index = Number(channel.match(/\d+$/)?.[0] || 1) - 1) {
+  if (channel.startsWith("AI")) return `IW${index * 2}`;
+  if (channel.startsWith("AQ")) return `QW${index * 2}`;
+  return `${channel.startsWith("I") ? "I" : "Q"}0.${index}`;
+}
+
+export function hasElectricalChannelBinding(component, channel) {
+  const mapping = component.ioMap?.[channel];
+  const address = mapping?.address?.trim().toUpperCase();
+  return Boolean(mapping?.tag || (address && address !== electricalChannelAddress(channel)));
+}
+
 export function createElectricalComponent(type, sequence, x = 120, y = 120) {
   const spec = electricalComponentCatalog[type];
   if (!spec) throw new Error(`Unsupported generic electrical component: ${type}`);
-  const ioMap = Object.fromEntries([...(spec.channels?.inputs || []),...(spec.channels?.outputs || []),...(spec.channels?.analogInputs || []),...(spec.channels?.analogOutputs || [])].map((channel) => {const number=Number(channel.match(/\d+$/)?.[0]||1)-1,address=channel.startsWith("AI")?`IW${number*2}`:channel.startsWith("AQ")?`QW${number*2}`:channel.startsWith("I")?`I0.${number}`:`Q0.${number}`;return [channel,{tag:"",address}];}));
+  const channels = [...(spec.channels?.inputs || []),...(spec.channels?.outputs || []),
+    ...(spec.channels?.analogInputs || []),...(spec.channels?.analogOutputs || [])];
+  const ioMap = Object.fromEntries(channels.map((channel) => [channel, { tag:"", address:electricalChannelAddress(channel) }]));
   return {
     id:crypto.randomUUID(), type, reference:`${spec.prefix}${sequence}`, label:spec.name,
     x:Math.round(x / 20) * 20, y:Math.round(y / 20) * 20, rotation:0,
@@ -230,7 +244,7 @@ export function replaceElectricalComponent(diagram, componentId, newType, { term
   for (const direction of ["inputs", "outputs", "analogInputs", "analogOutputs"]) {
     for (const channel of currentSpec.channels?.[direction] || []) {
       const binding = current.ioMap?.[channel];
-      if (!binding?.tag) continue;
+      if (!hasElectricalChannelBinding(current, channel)) continue;
       const target = Object.hasOwn(channelMap, channel) ? channelMap[channel] : channel;
       if (!spec.channels?.[direction]?.includes(target)) {
         return { ok:false, error:`Map bound channel ${channel} to a compatible channel on the replacement.` };
@@ -247,7 +261,27 @@ export function replaceElectricalComponent(diagram, componentId, newType, { term
       mappedChannels.set(target, { ...binding });
     }
   }
-  for (const [target, binding] of mappedChannels) replacement.ioMap[target] = binding;
+  const carriedAddresses = new Set();
+  for (const [target, binding] of mappedChannels) {
+    const address = binding.address?.trim().toUpperCase();
+    if (address && carriedAddresses.has(address)) return { ok:false, error:`Multiple mapped channels share PLC address ${address}.` };
+    if (address) carriedAddresses.add(address);
+    replacement.ioMap[target] = binding;
+  }
+  const usedAddresses = new Set([...carriedAddresses, ...others.flatMap((component) =>
+    Object.values(component.ioMap || {}).map(({ address }) => address?.trim().toUpperCase()))]);
+  const defaultsToMove = [];
+  for (const [channel, binding] of Object.entries(replacement.ioMap)) {
+    if (mappedChannels.has(channel)) continue;
+    if (usedAddresses.has(binding.address)) defaultsToMove.push(channel);
+    else usedAddresses.add(binding.address);
+  }
+  for (const channel of defaultsToMove) {
+    let index = 0, address = electricalChannelAddress(channel, index);
+    while (usedAddresses.has(address)) address = electricalChannelAddress(channel, ++index);
+    replacement.ioMap[channel].address = address;
+    usedAddresses.add(address);
+  }
   if (current.backplaneCpuId) {
     const cpu = others.find(({ id }) => id === current.backplaneCpuId);
     if (!isCompatibleBackplaneCpu(replacement, cpu)) return { ok:false, error:"Clear or change the Backplane CPU assignment before replacing this module." };

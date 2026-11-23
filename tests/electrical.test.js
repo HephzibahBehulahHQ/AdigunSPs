@@ -566,7 +566,8 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
 {
   const cpu = createElectricalComponent("genericPlc24v4di4do", 1);
   const lamp = createElectricalComponent("pilotLamp", 1, 800, 120);
-  cpu.ioMap.Q1 = { tag:"Lamp", address:"Q3.0" };
+  cpu.ioMap.Q1 = { tag:"Lamp", address:"Q0.0" };
+  cpu.ioMap.I2 = { tag:"", address:"I4.1" };
   const route = [{ x:600, y:260 }];
   const wire = { id:"output-wire", from:{ componentId:cpu.id, terminal:"Q1" }, to:{ componentId:lamp.id, terminal:"X1" }, waypoints:route };
   const diagram = { components:[cpu,lamp], wires:[wire] };
@@ -582,6 +583,10 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   assert.equal(result.ok, true, result.error);
   assert.equal(result.component.id, cpu.id);
   assert.deepEqual(result.component.ioMap.Q2, cpu.ioMap.Q1);
+  assert.deepEqual(result.component.ioMap.I2, cpu.ioMap.I2);
+  assert.notEqual(result.component.ioMap.Q1.address, "Q0.0", "the unmapped default moves out of the way");
+  assert.equal(validateElectricalDiagram({ components:[result.component,lamp], wires:result.wires })
+    .some(({ code }) => code === "electrical-io-address-duplicate"), false);
   assert.deepEqual(result.wires[0], { ...wire, from:{ componentId:cpu.id, terminal:target } });
   assert.equal(wire.from.terminal, "Q1");
 }
