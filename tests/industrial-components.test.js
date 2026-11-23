@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { connectElectricalTerminals, createElectricalComponent, electricalComponentCatalog, simulateElectricalDiagram } from "../src/electrical.js";
 import { electricalSymbolSvg, renderElectricalWorkspace } from "../src/electrical-ui.js";
+import { scan } from "../src/engine.js";
+import { normalizeImportedProject } from "../src/project-import.js";
 
 function circuit(switchType, loadType, options = {}) {
   const { signal, ...overrides } = options;
@@ -51,6 +53,51 @@ for (const type of types) {
 }
 
 const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
+for (const inputCommonPolarity of ["negative", "positive"]) {
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const cpuSupply = createElectricalComponent("supply24vdc", 1);
+  const loadSupply = createElectricalComponent("supply24vdc", 2);
+  const positive = createElectricalComponent("junction", 1);
+  const negative = createElectricalComponent("junction", 2);
+  const field = { ...createElectricalComponent("pushbuttonNO", 1), tag:"FieldSwitch" };
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  const common = inputCommonPolarity === "negative" ? negative : positive;
+  const signal = common === negative ? positive : negative;
+  cpu.ioMap.I1 = { tag:"Start", address:"I0.0" };
+  cpu.ioMap.Q1 = { tag:"Lamp", address:"Q0.0" };
+  const diagram = { components:[cpu,cpuSupply,loadSupply,positive,negative,field,lamp], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+    return result.wire.id;
+  };
+  wire(cpuSupply, "+", positive, "1");
+  wire(cpuSupply, "−", negative, "1");
+  wire(positive, "2", cpu, "X80-1");
+  wire(negative, "2", cpu, "X80-5");
+  const commonWire = wire(common, "3", cpu, "X10-8");
+  wire(signal, "3", field, "13");
+  wire(field, "14", cpu, "X10-1");
+  wire(loadSupply, "+", cpu, "X11-2");
+  wire(cpu, "X11-3", lamp, "X1");
+  wire(lamp, "X2", loadSupply, "−");
+  const project = normalizeImportedProject(JSON.parse(JSON.stringify({
+    name:`Relay CPU with ${inputCommonPolarity} common`,
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"Lamp", type:"BOOL", role:"output" }],
+    io:{ inputs:["Start"], outputs:["Lamp"] },
+    rungs:[{ id:"lamp", branches:[[{ tag:"Start", mode:"NO" }]], coil:"Lamp" }], electrical:diagram
+  })));
+  const run = (pressed) => {
+    const inputs = simulateElectricalDiagram(project.electrical, { FieldSwitch:pressed }).inputs;
+    const { outputs } = scan(project, inputs);
+    return [inputs.Start, outputs.Lamp, simulateElectricalDiagram(project.electrical, { FieldSwitch:pressed }, outputs).energized[lamp.id]];
+  };
+  assert.deepEqual(run(false), [false,false,false]);
+  assert.deepEqual(run(true), [true,true,true]);
+  project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== commonWire);
+  assert.deepEqual(run(true), [false,false,false], "a disconnected common cannot produce a true logic input");
+}
 {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);
