@@ -149,7 +149,11 @@ export function electricalSymbolSvg(component) {
     case "terminal":body=`${line(4,22,31,22)}<rect x="31" y="12" width="34" height="20" ${common}/>${line(38,22,58,22)}${line(65,22,92,22)}${text(48,9,"X",7)}`;break;
     case "dcPowerRail":body=`${line(5,13,91,13)}${[15,35,55,75].map((x)=>`${line(x,13,x,30)}<circle cx="${x}" cy="31" r="2" fill="currentColor"/>`).join("")}${text(48,40,"+24 V DC",7)}`;break;
     case "neutralRail":body=`${line(5,13,91,13)}${[15,35,55,75].map((x)=>`${line(x,13,x,30)}<circle cx="${x}" cy="31" r="2" fill="currentColor"/>`).join("")}${text(48,40,"N",8)}`;break;
-    case "junction":body=`${line(4,22,92,22)}${line(48,5,48,39)}<circle cx="48" cy="22" r="4" fill="currentColor" stroke="none"/>`;break;
+    case "junction":
+      body = component.type === "phoenixPT25Twin"
+        ? `<rect x="6" y="5" width="84" height="34" rx="3" ${common}/>${line(50,22,78,22)}${line(50,12,50,32)}${line(18,12,50,12)}${line(18,32,50,32)}${[[18,12], [18,32], [78,22]].map(([x,y]) => `<circle cx="${x}" cy="${y}" r="3" fill="currentColor"/>`).join("")}`
+        : `${line(4,22,92,22)}${line(48,5,48,39)}<circle cx="48" cy="22" r="4" fill="currentColor" stroke="none"/>`;
+      break;
     case "protectiveEarth":body=`${line(48,4,48,19)}${line(31,19,65,19)}${line(36,25,60,25)}${line(41,31,55,31)}${line(45,37,51,37)}`;break;
     case "groundCommon":body=`${[0,1,2,3].map((i)=>line(7,8+i*9,39,8+i*9)).join("")}<circle cx="52" cy="22" r="12" ${common}/>${text(52,25,"COM",7)}${line(64,22,91,22)}`;break;
     default:body=`<rect x="22" y="7" width="52" height="30" rx="2" ${common}/>${text(48,25,spec.prefix,9)}${line(5,22,22,22)}${line(74,22,91,22)}`;
