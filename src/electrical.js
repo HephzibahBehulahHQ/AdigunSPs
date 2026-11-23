@@ -2,6 +2,13 @@ const relayInputPins = { I1:"X10-1", I2:"X10-3", I3:"X10-5", I4:"X10-7", I5:"X10
 const relayOutputPins = { Q1:"X11-3", Q2:"X11-5", Q3:"X11-7", Q4:"X11-4", Q5:"X11-6", Q6:"X11-8" };
 const connectorPins = (connector, count) => Array.from({ length: count }, (_, index) => `${connector}-${index + 1}`);
 const relayPinLayout = [...connectorPins("X80", 6), ...connectorPins("X10", 10), ...connectorPins("X11", 8)];
+const sm1221InputGroups = [
+  { common:"X10-1", inputs:["X10-3","X10-5","X10-7","X10-9"] },
+  { common:"X10-2", inputs:["X10-4","X10-6","X10-8","X10-10"] },
+  { common:"X11-1", inputs:["X11-3","X11-5","X11-7","X11-9"] },
+  { common:"X11-2", inputs:["X11-4","X11-6","X11-8","X11-10"] }
+];
+const sm1221InputPins = Object.fromEntries(sm1221InputGroups.flatMap(({ inputs }) => inputs).map((pin, index) => [`I${index + 1}`, pin]));
 
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
@@ -29,6 +36,18 @@ export const electricalComponentCatalog = Object.freeze({
     simulationLimitations:"Ideal relay contacts switch the external 1L common only with a powered DC CPU and a mapped true output. A digital input requires a complete DC path to the opposite pole from its 1M common. Sensor-supply output, ratings, firmware, and relay dynamics are outside the simulation."
   },
   digitalInputModule4: { name:"digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
+  siemensSM1221G2DI16: {
+    name:"Siemens S7-1200 G2 SM 1221 · 16 DI · 6ES7221-1BH50-0XB0", category:"PLC I/O modules", prefix:"DI", kind:"digital-input-module",
+    manufacturer:"Siemens", partNumber:"6ES7221-1BH50-0XB0", terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
+    channels:{ inputs:Object.keys(sm1221InputPins), inputPins:sm1221InputPins }, inputGroups:sm1221InputGroups,
+    inputSignalVoltage:{ minimumVoltageV:15, maximumVoltageV:30 },
+    source:{ title:"Siemens S7-1200 G2 SM 1221 DI 16x24VDC specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_itit_20/technical-specifications/digital-signal-modules-sms/sm-1221-di-16x24vdc", terminalMapSection:"Wiring diagram" },
+    terminalNotes:Object.fromEntries(sm1221InputGroups.flatMap(({ common, inputs }, group) => [
+      [common, `Field input common ${group + 1}M`],
+      ...inputs.map((pin, index) => [pin, `Digital input DI ${group < 2 ? "a" : "b"}.${(group % 2) * 4 + index}`])
+    ])),
+    simulationLimitations:"Four isolated field common groups support either DC polarity. The educational model assumes a powered backplane and maps field inputs directly to project tags. Scan filtering, input current, and backplane communication are outside the simulation."
+  },
   digitalOutputModule4: { name:"digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
@@ -482,7 +501,11 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const channel of spec.channels.inputs || []) {
       const tag = controller.ioMap?.[channel]?.tag, pin = physicalMap[channel] || channel;
       if (!tag) continue;
-      if (spec.channels.inputPolarity === "sink-source") {
+      if (spec.inputGroups) {
+        const group = spec.inputGroups.find(({ inputs }) => inputs.includes(pin));
+        plcInputs[tag] = Boolean(group && (coilPowered(nets, controller, pin, group.common, spec.inputSignalVoltage)
+          || coilPowered(nets, controller, group.common, pin, spec.inputSignalVoltage)));
+      } else if (spec.channels.inputPolarity === "sink-source") {
         plcInputs[tag] = coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.controllerSupply)
           && spec.channels.inputCommonPins.some((common) => coilPowered(nets, controller, pin, common, spec.controllerSupply)
             || coilPowered(nets, controller, common, pin, spec.controllerSupply));

@@ -16,7 +16,7 @@ const referenceRecords = industrialProductCatalog.map(({ manufacturer, identifie
 }));
 
 const modelRecords = Object.entries(electricalComponentCatalog).map(([type, model]) => {
-  const { terminals, terminalLayout, terminalLabels, terminalNotes, channels, commonGroups, manufacturer, partNumber,
+  const { terminals, terminalLayout, terminalLabels, terminalNotes, channels, commonGroups, inputGroups, manufacturer, partNumber,
     source, simulationLimitations, ...properties } = model;
   const modelDesignation = partNumber ?? null;
   // Legacy designations can be model names or family references. Keep them as reported.
@@ -29,10 +29,10 @@ const modelRecords = Object.entries(electricalComponentCatalog).map(([type, mode
       label: terminalLabels?.[terminal] ?? terminal, note: terminalNotes?.[terminal] ?? null
     })),
     channelMapping: channels ?? null,
-    commonGroups: commonGroups ?? (channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins,
+    commonGroups: commonGroups ?? inputGroups ?? (channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins,
       ...(channels.relayCommonPins && { relayCommonPins: channels.relayCommonPins }) } : null),
-    isolationGroups: null, properties, sourceEvidence: source ?? null,
-    readiness: { placeable: true, terminalMap: source?.terminalMapPages ? "verified-topology" : source ? "source-linked-model" : "educational-model",
+    isolationGroups: inputGroups ?? null, properties, sourceEvidence: source ?? null,
+    readiness: { placeable: true, terminalMap: source?.terminalMapPages || source?.terminalMapSection ? "verified-topology" : source ? "source-linked-model" : "educational-model",
       simulation: { status: "educational", model: type, limitations: simulationLimitations ?? null } }
   };
 });
