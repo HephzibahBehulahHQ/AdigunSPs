@@ -1,3 +1,5 @@
+import { finderCatalogGroups } from "./finder-catalog-data.js";
+
 const capturedOn = "2026-10-30";
 const siemensCatalog = "https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=S7_1200&lang=en";
 const siemens1500Catalog = "https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=S7_1500&lang=en";
@@ -727,6 +729,20 @@ const omronSensors = omronVariants.map(({suffix,method:categoryName,distance,out
   };
 });
 
+const finderSource = {
+  url: "https://www.findernet.com/en/worldwide/support/general-catalog/",
+  archiveUrl: "https://cdn.findernet.com/app/uploads/FINBMECAT_ENG_20260824_3996421788343213.zip",
+  title: "Finder English BMEcat export", exportDate: "2026-09-02", retrievedOn: "2026-11-24",
+};
+const finderSimulation = {
+  status: "reference-only", model: null,
+  limitations: "Manufacturer order reference. Terminals, electrical ratings, device operation, and safety behavior are outside the simulation.",
+};
+const finderProducts = finderCatalogGroups.flatMap(([category, family, identifiers]) => identifiers.map((identifier) => ({
+  manufacturer: "Finder", identifier, category, family, attributes: { officialDescription: family },
+  source: finderSource, simulation: finderSimulation,
+})));
+
 const industrialProductCatalog = Object.freeze([
   ...siemensCpus,
   ...siemensModules,
@@ -740,6 +756,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alCables,
   ...siemensEt200alPowerCables,
   ...omronSensors,
+  ...finderProducts,
   {
     manufacturer:"Schneider Electric",identifier:"TM221CE24R",family:"Modicon M221",category:"PLC controllers",
     attributes:{digitalInputs:14,relayOutputs:10,analogInputs:2,supply:"100–240 V AC",ports:"Ethernet and serial",protection:"IP20"},
