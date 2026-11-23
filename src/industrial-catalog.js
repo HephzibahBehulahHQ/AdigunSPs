@@ -576,6 +576,11 @@ const siemensLogo8Products = siemensLogo8Rows
     return true;
   });
 
+const siemensEt200alSource = {
+  url: "https://mall.industry.siemens.com/tst/Api/Catalog/ExportInformation?catalogItemId=ET200_AL&lang=en",
+  title: "Siemens SIMATIC ET 200AL product overview", retrievedOn: "2026-11-24", exportDate: "2025-10-10",
+};
+
 const siemensEt200alProducts = [
   ["6ES7157-1AB00-0AB0", "Communications modules", "IM 157-1 interface for PROFINET"],
   ["6ES7157-1AA00-0AB0", "Communications modules", "IM 157-1 interface for PROFIBUS DP"],
@@ -602,11 +607,56 @@ const siemensEt200alProducts = [
   ["6ES7143-5AH00-0BL0", "Digital I/O modules", "IO-Link device with 16 configurable digital channels"],
 ].map(([identifier, category, description]) => ({
   manufacturer: "Siemens", identifier, category, family: "SIMATIC ET 200AL", attributes: { description },
-  source: {
-    url: "https://mall.industry.siemens.com/tst/Api/Catalog/ExportInformation?catalogItemId=ET200_AL&lang=en",
-    title: "Siemens SIMATIC ET 200AL product overview", retrievedOn: "2026-11-24", exportDate: "2025-10-10",
-  },
+  source: siemensEt200alSource,
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Connector wiring, bus communication, device behavior and safety functions are outside the simulation." },
+}));
+
+const siemensEt200alCables = [
+  ["6ES7194-2LH02-0AA0", 0.19, "Straight"],
+  ["6ES7194-2LH03-0AA0", 0.3, "Straight"],
+  ["6ES7194-2LH10-0AA0", 1, "Straight"],
+  ["6ES7194-2LH20-0AA0", 2, "Straight"],
+  ["6ES7194-2LH50-0AA0", 5, "Straight"],
+  ["6ES7194-2LN10-0AA0", 10, "Straight"],
+  ["6ES7194-2LN15-0AA0", 15, "Straight"],
+  ["6ES7194-2MH02-0AA0", 0.19, "Straight"],
+  ["6ES7194-2MH03-0AA0", 0.3, "Straight"],
+  ["6ES7194-2MH10-0AA0", 1, "Straight"],
+  ["6ES7194-2MH20-0AA0", 2, "Straight"],
+  ["6ES7194-2MH50-0AA0", 5, "Straight"],
+  ["6ES7194-2MN10-0AA0", 10, "Straight"],
+  ["6ES7194-2MN15-0AA0", 15, "Straight"],
+  ["6ES7194-2LH03-0AB0", 0.3, "Angled"],
+  ["6ES7194-2LH10-0AB0", 1, "Angled"],
+  ["6ES7194-2LH20-0AB0", 2, "Angled"],
+  ["6ES7194-2LH50-0AB0", 5, "Angled"],
+  ["6ES7194-2LN10-0AB0", 10, "Angled"],
+  ["6ES7194-2LN15-0AB0", 15, "Angled"],
+  ["6ES7194-2MH03-0AB0", 0.3, "Angled"],
+  ["6ES7194-2MH10-0AB0", 1, "Angled"],
+  ["6ES7194-2MH20-0AB0", 2, "Angled"],
+  ["6ES7194-2MH50-0AB0", 5, "Angled"],
+  ["6ES7194-2MN10-0AB0", 10, "Angled"],
+  ["6ES7194-2MN15-0AB0", 15, "Angled"],
+  ["6ES7194-2LH20-0AC0", 2, ""],
+  ["6ES7194-2LH50-0AC0", 5, ""],
+  ["6ES7194-2LN10-0AC0", 10, ""],
+  ["6ES7194-2LN15-0AC0", 15, ""],
+  ["6ES7194-2MH20-0AC0", 2, ""],
+  ["6ES7194-2MH50-0AC0", 5, ""],
+  ["6ES7194-2MN10-0AC0", 10, ""],
+  ["6ES7194-2MN15-0AC0", 15, ""],
+  ["6ES7194-2LH02-0AD0", 0.2, ""],
+  ["6ES7194-2MH02-0AD0", 0.2, ""],
+].map(([identifier, lengthM, termination]) => ({
+  manufacturer: "Siemens", identifier, category: "Accessories", family: "SIMATIC ET 200AL interconnect",
+  attributes: {
+    description: "ET-Connection interconnect cable",
+    lengthM,
+    ...(termination && { termination }),
+  },
+  source: siemensEt200alSource,
+  simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Connector pinout and bus transmission are outside the simulation." },
 }));
 
 const omronVariants = [
@@ -645,6 +695,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200spExpansionProducts,
   ...siemensLogo8Products,
   ...siemensEt200alProducts,
+  ...siemensEt200alCables,
   ...omronSensors,
   {
     manufacturer:"Schneider Electric",identifier:"TM221CE24R",family:"Modicon M221",category:"PLC controllers",
