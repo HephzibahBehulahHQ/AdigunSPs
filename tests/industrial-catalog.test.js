@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 546, "catalog has 546 distinct provenance-backed product references");
+assert.equal(validation.count, 582, "catalog has 582 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 546);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 582);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 87);
@@ -21,6 +21,9 @@ assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const et200al = industrialProductCatalog.filter(({ family }) => family === "SIMATIC ET 200AL");
 assert.equal(et200al.length, 23);
 assert.ok(et200al.every(({ source, simulation }) => source.exportDate === "2025-10-10" && simulation.status === "reference-only"));
+const et200alCables = industrialProductCatalog.filter(({ family }) => family === "SIMATIC ET 200AL interconnect");
+assert.equal(et200alCables.length, 36);
+assert.ok(et200alCables.every(({ attributes, simulation }) => attributes.lengthM > 0 && simulation.status === "reference-only"));
 for (const item of industrialProductCatalog) {
   assert.match(item.source.url, /^https:\/\//);
   assert.equal(item.simulation.status === "supported", false, `${item.identifier} must not imply unsupported vendor simulation`);
