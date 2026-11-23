@@ -16,7 +16,7 @@ const referenceRecords = industrialProductCatalog.map(({ manufacturer, identifie
 }));
 
 const modelRecords = Object.entries(electricalComponentCatalog).map(([type, model]) => {
-  const { terminals, terminalLayout, terminalLabels, terminalNotes, channels, manufacturer, partNumber,
+  const { terminals, terminalLayout, terminalLabels, terminalNotes, channels, commonGroups, manufacturer, partNumber,
     source, simulationLimitations, ...properties } = model;
   const modelDesignation = partNumber ?? null;
   // Legacy designations can be model names or family references. Keep them as reported.
@@ -29,9 +29,9 @@ const modelRecords = Object.entries(electricalComponentCatalog).map(([type, mode
       label: terminalLabels?.[terminal] ?? terminal, note: terminalNotes?.[terminal] ?? null
     })),
     channelMapping: channels ?? null,
-    commonGroups: channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins } : null,
+    commonGroups: commonGroups ?? (channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins } : null),
     isolationGroups: null, properties, sourceEvidence: source ?? null,
-    readiness: { placeable: true, terminalMap: source ? "source-linked-model" : "educational-model",
+    readiness: { placeable: true, terminalMap: source?.terminalMapPages ? "verified-topology" : source ? "source-linked-model" : "educational-model",
       simulation: { status: "educational", model: type, limitations: simulationLimitations ?? null } }
   };
 });
@@ -54,7 +54,7 @@ const totals = {
   sourceLinkedSchematicModels: modelRecords.filter(({ sourceEvidence }) => sourceEvidence).length,
   distinctHardwareOrderCodes: new Set(records.filter(({ layer, orderCode }) => layer !== "vendor-software" && orderCode)
     .map(({ manufacturer, orderCode }) => `${manufacturer.trim().toLowerCase()}|${orderCode.trim().toUpperCase()}`)).size,
-  independentlyVerifiedTerminalMaps: null,
+  verifiedTerminalTopologies: modelRecords.filter(({ readiness }) => readiness.terminalMap === "verified-topology").length,
   mountingAccessoryReferences: referenceRecords.filter(({ function: category }) => category === "Mounting accessories").length
 };
 const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;

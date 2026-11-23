@@ -1984,6 +1984,12 @@ test("electrical component search filters models and restores the full picker", 
   await search.fill("");
   await expect(palette.locator("option")).toHaveCount(allModels);
   await expect(add).toBeEnabled();
+  await search.fill("3209549");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await expect(palette.locator("option")).toContainText("PT 2,5-TWIN");
+  await add.click();
+  const terminal = page.locator('#electricalBoard [data-component-type="phoenixPT25Twin"]');
+  await expect(terminal.locator("[data-terminal]")).toHaveText(["1", "2", "3"]);
 });
 
 

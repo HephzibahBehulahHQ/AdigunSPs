@@ -59,6 +59,14 @@ export const electricalComponentCatalog = Object.freeze({
   dcPowerRail: { name:"24 V DC distribution rail", category:"Terminals and wiring", prefix:"XR", terminals:["1","2","3","4","5","6","7","8"], kind:"junction" },
   neutralRail: { name:"Neutral distribution rail · N", category:"Terminals and wiring", prefix:"XN", terminals:["N1","N2","N3","N4","N5","N6","N7","N8"], kind:"junction" },
   junction: { name:"electrical junction", category:"Terminals and wiring", prefix:"J", terminals:["1","2","3","4"], kind:"junction" },
+  phoenixPT25Twin: {
+    name: "Phoenix Contact PT 2,5-TWIN · 3209549", category: "Terminals and wiring", prefix: "X",
+    terminals: ["1", "2", "3"], kind: "junction", manufacturer: "Phoenix Contact", partNumber: "3209549",
+    ratedVoltageV: 800, ratedCurrentA: 24, commonGroups: [{ terminals: ["1", "2", "3"], relationship: "one potential" }],
+    source: { title: "Phoenix Contact PT 2,5-TWIN data sheet", url: "https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-twin-3209549?type=pdf", terminalMapPages: [2, 7] },
+    terminalNotes: { "1": "Twin-side conductor connection · editor port 1", "2": "Twin-side conductor connection · editor port 2", "3": "Single-side conductor connection · editor port 3" },
+    simulationLimitations: "Three push-in connections form one ideal node. The editor numbers are positional labels. Resistance, heating, conductor fit, mounting, and rating enforcement are outside the model."
+  },
   protectiveEarth: { name:"Protective-earth terminal", category:"Terminals and wiring", prefix:"PE", terminals:["PE"], kind:"earth" },
   groundCommon: { name:"Ground / common node · simulated equipotential", category:"Terminals and wiring", prefix:"COM", terminals:["COM1","COM2","COM3","COM4"], kind:"junction" },
 });

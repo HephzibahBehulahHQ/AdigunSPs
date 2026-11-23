@@ -22,6 +22,34 @@ for (const type of types) {
   assert.match(electricalSymbolSvg(component),/^<svg class="electrical-standard-symbol"[\s\S]*<\/svg>$/u,`${type} has a schematic symbol`);
 }
 
+{
+  const terminal = createElectricalComponent("phoenixPT25Twin", 1);
+  const supply = createElectricalComponent("supply24vdc", 1);
+  const returnRail = createElectricalComponent("neutralRail", 1);
+  const lampA = createElectricalComponent("pilotLamp", 1);
+  const lampB = createElectricalComponent("pilotLamp", 2);
+  const diagram = { components: [terminal, supply, returnRail, lampA, lampB], wires: [] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId: from.id, terminal: fromPin }, { componentId: to.id, terminal: toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  assert.deepEqual(terminal.terminals, ["1", "2", "3"]);
+  assert.match(electricalSymbolSvg(terminal), /PT 2,5-TWIN/);
+  wire(supply, "+", terminal, "1");
+  wire(terminal, "2", lampA, "X1");
+  wire(terminal, "3", lampB, "X1");
+  wire(lampA, "X2", returnRail, "N1");
+  wire(lampB, "X2", returnRail, "N2");
+  assert.equal(simulateElectricalDiagram(diagram).energized[lampA.id], false);
+  wire(supply, "−", returnRail, "N3");
+  const restored = JSON.parse(JSON.stringify(diagram));
+  const { energized } = simulateElectricalDiagram(restored);
+  assert.equal(energized[lampA.id], true);
+  assert.equal(energized[lampB.id], true);
+  assert.deepEqual(restored.wires, diagram.wires);
+}
+
 const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
 const toggleOn = circuit("toggleSwitchNO","buzzer",{closed:true});
 assert.equal(Object.values(toggleOff.energized)[0],false,"maintained NO toggle starts open");

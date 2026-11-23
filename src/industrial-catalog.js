@@ -648,6 +648,12 @@ const industrialProductCatalog = Object.freeze([
     source:{url:"https://www.phoenixcontact.com/en-us/products/relay-module-plc-rsc-24dc-21-21-aex-5603678",title:"PLC-RSC-24DC/21-21/AEX product page",retrievedOn:capturedOn},
     simulation:{status:"reference-only",model:null,limitations:"The relay's coil, contact terminals, switching ratings, and contact behavior have not been modeled."},
   },
+  {
+    manufacturer: "Phoenix Contact", identifier: "3209549", family: "PT 2,5-TWIN", category: "Terminal systems",
+    attributes: { connections: 3, potentials: 1, nominalVoltageV: 800, nominalCurrentA: 24, connectionMethod: "Push-in" },
+    source: { url: "https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-twin-3209549?type=pdf", title: "Phoenix Contact PT 2,5-TWIN data sheet", retrievedOn: "2026-11-23", terminalMapPages: [2, 7] },
+    simulation: { status: "educational-model", model: "phoenixPT25Twin", limitations: "Use the schematic picker to place the ideal three-connection node. No resistance, heating, or rating enforcement is modeled." }
+  }
 ]);
 
 export function validateIndustrialCatalog(entries=industrialProductCatalog) {

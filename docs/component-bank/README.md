@@ -18,3 +18,9 @@ The distinct hardware total excludes the software listing and two model designat
 PLC instructions and process models remain separate from the hardware inventory. FBD currently validates 25 block types. The process simulator provides six model types. LD, ST, and SFC instruction coverage will be tracked by editor and execution support so equivalent instructions are distinguishable from physical hardware.
 
 Use the 10,000 distinct hardware target as an acquisition plan. Before counting a new part, record its exact order code and official evidence. Add a native schematic model only once the terminal topology is documented. Verify wiring, supported behavior, and project recovery before marking a simulation profile usable.
+
+## First verified addition
+
+The Phoenix Contact PT 2,5-TWIN (`3209549`) adds one hardware order code and one editable schematic model. Search for the order code in the component picker. Its three conductor connections share a single ideal node. The three stable editor port IDs identify positions in the model. The manufacturer's diagram shows the topology without numbered terminals. [Manufacturer data sheet, pages 2 and 7](https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-twin-3209549?type=pdf)
+
+Current totals are 533 distinct hardware order codes, 520 manufacturer catalog records, and 62 placeable schematic models. The terminal-topology audit currently covers the PT 2,5-TWIN. Ports from existing source-linked models remain in the export with their stated evidence and limitations.
