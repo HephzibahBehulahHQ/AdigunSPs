@@ -203,22 +203,67 @@ export function duplicateElectricalComponent(component, reference, offset = 40) 
   return { ...structuredClone(component), id:crypto.randomUUID(), reference, x:component.x + offset, y:component.y + offset };
 }
 
-export function replaceElectricalComponent(diagram, componentId, newType) {
+export function replaceElectricalComponent(diagram, componentId, newType, { terminalMap = {}, channelMap = {} } = {}) {
   const current=(diagram.components||[]).find((component)=>component.id===componentId),spec=electricalComponentCatalog[newType];
   if(!current)return {ok:false,error:"Select an existing component to replace."};
   if(!spec)return {ok:false,error:"Choose a supported component model from the toolbox."};
   if(current.type===newType)return {ok:false,error:"Choose a different component model."};
-  const others=diagram.components.filter((component)=>component.id!==current.id),connectedTerminals=[...new Set((diagram.wires||[]).flatMap((wire)=>[wire.from,wire.to].filter((endpoint)=>endpoint?.componentId===current.id).map((endpoint)=>endpoint.terminal)))],unsupported=connectedTerminals.filter((terminal)=>!spec.terminals.includes(terminal));
-  if(unsupported.length)return {ok:false,error:`Disconnect or rewire ${unsupported.join(", ")} before replacing this component; the selected model has no matching terminal.`};
+  const others = diagram.components.filter((component) => component.id !== current.id);
+  const connectedTerminals = new Set((diagram.wires || []).flatMap(({ from, to }) =>
+    [from, to].filter((endpoint) => endpoint?.componentId === current.id).map(({ terminal }) => terminal)));
+  const mappedTerminals = new Map();
+  for (const terminal of connectedTerminals) {
+    const target = Object.hasOwn(terminalMap, terminal) ? terminalMap[terminal] : terminal;
+    if (!spec.terminals.includes(target)) return { ok:false, error:`Map connected terminal ${terminal} to a terminal on the replacement.` };
+    mappedTerminals.set(terminal, target);
+  }
+  if (new Set(mappedTerminals.values()).size !== mappedTerminals.size) {
+    return { ok:false, error:"Assign each connected terminal to a different replacement terminal." };
+  }
   const linkedContacts=others.filter((component)=>component.coilRef===current.reference),replacementKeepsCoil=spec.kind==="contactor"||newType==="relayCoil";
   if(linkedContacts.length&&!replacementKeepsCoil)return {ok:false,error:`Unlink the associated coil contacts from ${current.reference} before replacing it with this model.`};
   if(current.coilRef&&!(["auxiliaryNO","auxiliaryNC"].includes(newType)))return {ok:false,error:`Unlink ${current.reference} from its associated coil before replacing it with this model.`};
   const reference=nextElectricalReference(newType,others),sequence=Number(reference.slice(spec.prefix.length)),replacement=createElectricalComponent(newType,sequence,current.x,current.y);
   replacement.id=current.id;replacement.rotation=current.rotation||0;
+  const currentSpec = electricalComponentCatalog[current.type];
+  const mappedChannels = new Map();
+  for (const direction of ["inputs", "outputs", "analogInputs", "analogOutputs"]) {
+    for (const channel of currentSpec.channels?.[direction] || []) {
+      const binding = current.ioMap?.[channel];
+      if (!binding?.tag) continue;
+      const target = Object.hasOwn(channelMap, channel) ? channelMap[channel] : channel;
+      if (!spec.channels?.[direction]?.includes(target)) {
+        return { ok:false, error:`Map bound channel ${channel} to a compatible channel on the replacement.` };
+      }
+      if (mappedChannels.has(target)) return { ok:false, error:`Replacement channel ${target} already has a mapping.` };
+      const pinMap = direction === "inputs" ? "inputPins" : direction === "outputs" ? "outputPins" : null;
+      if (pinMap) {
+        const oldPin = currentSpec.channels[pinMap]?.[channel] || channel;
+        const newPin = spec.channels[pinMap]?.[target] || target;
+        if (connectedTerminals.has(oldPin) && mappedTerminals.get(oldPin) !== newPin) {
+          return { ok:false, error:`Map terminal ${oldPin} to ${newPin} to keep its wire on channel ${target}.` };
+        }
+      }
+      mappedChannels.set(target, { ...binding });
+    }
+  }
+  for (const [target, binding] of mappedChannels) replacement.ioMap[target] = binding;
+  if (current.backplaneCpuId) {
+    const cpu = others.find(({ id }) => id === current.backplaneCpuId);
+    if (!isCompatibleBackplaneCpu(replacement, cpu)) return { ok:false, error:"Clear or change the Backplane CPU assignment before replacing this module." };
+    replacement.backplaneCpuId = cpu.id;
+  }
+  if (others.some((module) => module.backplaneCpuId === current.id && !isCompatibleBackplaneCpu(module, replacement))) {
+    return { ok:false, error:"Reassign the connected expansion modules before replacing their Backplane CPU." };
+  }
   const clearanceOverlap=(first,second)=>{const a=electricalComponentBounds(first),b=electricalComponentBounds(second),gap=12;return Math.max(0,Math.min(a.right,b.right+gap)-Math.max(a.left,b.left-gap))*Math.max(0,Math.min(a.bottom,b.bottom+gap)-Math.max(a.top,b.top-gap));};
   if(others.some((other)=>clearanceOverlap(replacement,other)>clearanceOverlap(current,other)))return {ok:false,error:"Move nearby components before replacing this component; the replacement would create or worsen an overlap."};
   if(["auxiliaryNO","auxiliaryNC"].includes(newType))replacement.coilRef=current.coilRef||"";
-  return {ok:true,component:replacement,previousReference:current.reference,referenceUpdates:linkedContacts.map((component)=>component.id)};
+  const mapEndpoint = (endpoint) => endpoint?.componentId === current.id
+    ? { ...endpoint, terminal:mappedTerminals.get(endpoint.terminal) }
+    : endpoint;
+  const wires = (diagram.wires || []).map((wire) => ({ ...wire, from:mapEndpoint(wire.from), to:mapEndpoint(wire.to) }));
+  return {ok:true,component:replacement,wires,previousReference:current.reference,referenceUpdates:linkedContacts.map((component)=>component.id)};
 }
 
 export function updateElectricalComponentProperties(component, updates = {}) {

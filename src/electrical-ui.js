@@ -275,13 +275,90 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
     root.querySelector("#industrialCatalogSearch")?.addEventListener("submit",(event)=>{event.preventDefault();catalogQuery=new FormData(event.currentTarget).get("query")||"";render();(toolboxHost || root).querySelector('#industrialCatalogSearch input')?.focus();});
     root.querySelector("#electricalModelSearch")?.addEventListener("input",(event)=>{paletteQuery=event.currentTarget.value;paletteType=(toolboxHost?.querySelector("#electricalPalette")||root.querySelector("#electricalPalette"))?.value||paletteType;render();const input=toolboxHost?.querySelector("#electricalModelSearch")||root.querySelector("#electricalModelSearch");input?.focus();input?.setSelectionRange(paletteQuery.length,paletteQuery.length);});
     root.querySelector("#electricalPalette")?.addEventListener("change",(event)=>{paletteType=event.currentTarget.value;});
+    const showReplacementMapping = (type) => {
+      const target = electricalComponentCatalog[type];
+      if (!target || selected.type === type) {
+        render(t.replaceHint);
+        return;
+      }
+      const labels = ({
+        de: { terminal:"Klemme", channel:"Kanal", choose:"Zuordnen", apply:"Ersetzen", cancel:"Abbrechen" },
+        yo: { terminal:"Tẹ́mínà", channel:"Ikanni", choose:"Yan", apply:"Rọ́pò", cancel:"Fagilé" },
+        pcm: { terminal:"Terminal", channel:"Channel", choose:"Choose", apply:"Replace", cancel:"Cancel" },
+      })[language] || { terminal:"Terminal", channel:"Channel", choose:"Choose a mapping", apply:"Replace", cancel:"Cancel" };
+      const terminals = new Set(diagram.wires.flatMap(({ from, to }) =>
+        [from, to].filter((endpoint) => endpoint?.componentId === selected.id).map(({ terminal }) => terminal)));
+      const fields = [];
+      for (const terminal of terminals) fields.push({ group:"terminal", original:terminal, options:target.terminals });
+      for (const direction of ["inputs", "outputs", "analogInputs", "analogOutputs"]) {
+        for (const channel of selectedSpec.channels?.[direction] || []) {
+          if (selected.ioMap?.[channel]?.tag) fields.push({
+            group:"channel", original:channel, options:target.channels?.[direction] || [],
+          });
+        }
+      }
+      const dialog = document.createElement("dialog");
+      dialog.className = "modal electrical-replacement-dialog";
+      dialog.setAttribute("aria-labelledby", "electricalReplacementTitle");
+      dialog.innerHTML = `<form class="modal-body">
+        <h3 id="electricalReplacementTitle">${escape(t.replace)}</h3>
+        <p>${escape(selected.reference)} → ${escape(target.name)}</p>
+        ${fields.map(({ group, original, options }, index) =>
+          `<label class="electrical-field">${escape(labels[group])} ${escape(original)}
+            <select name="mapping-${index}" required><option value="">${escape(labels.choose)}</option>
+            ${options.map((option) => `<option value="${escape(option)}" ${option === original ? "selected" : ""}>${escape(option)}</option>`).join("")}</select>
+          </label>`).join("")}
+        <p role="alert"></p>
+        <button class="secondary" type="button" data-cancel-replacement>${escape(labels.cancel)}</button>
+        <button class="primary" type="submit">${escape(labels.apply)}</button>
+      </form>`;
+      dialog.querySelector("[data-cancel-replacement]").addEventListener("click", () => dialog.close());
+      dialog.addEventListener("close", () => dialog.remove(), { once:true });
+      const error = dialog.querySelector('[role="alert"]');
+      const missing = fields.find(({ options }) => !options.length);
+      if (missing) {
+        error.textContent = `${labels[missing.group]} ${missing.original}: ${t.noModelMatches}`;
+        dialog.querySelector('[type="submit"]').disabled = true;
+      }
+      dialog.querySelector("form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        const terminalMap = {}, channelMap = {};
+        fields.forEach(({ group, original }, index) => {
+          const mapping = group === "terminal" ? terminalMap : channelMap;
+          mapping[original] = form.get(`mapping-${index}`);
+        });
+        const result = replaceElectricalComponent(diagram, selected.id, type, { terminalMap, channelMap });
+        if (!result.ok) {
+          error.textContent = result.error;
+          return;
+        }
+        const others = diagram.components.filter(({ id }) => id !== selected.id);
+        const replacement = moveElectricalComponent(result.component, selected.x, selected.y, { snap:false });
+        if (!electricalMoveKeepsClearance(replacement, selected, others)) {
+          error.textContent = t.noSpace;
+          return;
+        }
+        onBeforeChange();
+        diagram.components[diagram.components.indexOf(selected)] = replacement;
+        diagram.wires = result.wires;
+        for (const linked of diagram.components) {
+          if (result.referenceUpdates.includes(linked.id)) linked.coilRef = result.component.reference;
+        }
+        dialog.close();
+        onChange();
+        render(`${result.previousReference} → ${result.component.reference} · ${result.component.label}`);
+      });
+      root.append(dialog);
+      dialog.showModal();
+    };
     root.querySelectorAll("[data-electrical-action]").forEach((button) => button.addEventListener("click",() => {
       const action=button.dataset.electricalAction;
       if(action==="select"){wireArmed=false;pendingTerminal=null;pendingWaypoints=[];resumingWireId=null;rewireEndpoint=null;render(t.statusReady);}else if(action==="add"){const type=(toolboxHost?.querySelector("#electricalPalette")||root.querySelector("#electricalPalette"))?.value;if(!type)return;const spec=electricalComponentCatalog[type],reference=nextElectricalReference(type,diagram.components),sequence=Number(reference.slice(spec.prefix.length)),component=createElectricalComponent(type,sequence,120+(diagram.components.length%7)*180,120+Math.floor(diagram.components.length/7)*140),placed=findElectricalPlacement(component,diagram.components,component.x,component.y);if(!placed){render(t.noSpace);return;}Object.assign(component,{x:placed.x,y:placed.y});onBeforeChange();diagram.components.push(component);selectedId=component.id;onChange();render();}
       else if(action==="wire"){rewireEndpoint=null;if(wireArmed&&pendingTerminal){const component=diagram.components.find((item)=>item.id===pendingTerminal.componentId),anchor=component&&terminalPosition(component,pendingTerminal.terminal),last=pendingWaypoints.at(-1),pinIndex=component?electricalComponentCatalog[component.type].terminals.indexOf(pendingTerminal.terminal):-1,leftPin=pinIndex>=0&&pinIndex<Math.ceil((electricalComponentCatalog[component?.type]?.terminals?.length||0)/2),offset=leftPin?(anchor?.[0]>=40?-40:160):(anchor?.[0]<=2040?40:-160),end=last||{x:Math.max(0,Math.min(2200,(anchor?.[0]||0)+offset)),y:anchor?.[1]||0},draft=resumingWireId?diagram.wires.find((item)=>item.id===resumingWireId):null;onBeforeChange();if(draft){draft.waypoints=structuredClone(pendingWaypoints);draft.end=end;}else diagram.wires.push({id:crypto.randomUUID(),from:{...pendingTerminal},to:null,draft:true,waypoints:structuredClone(pendingWaypoints),end});onChange();wireArmed=false;pendingTerminal=null;pendingWaypoints=[];resumingWireId=null;render("Wire paused. Click Connect wire, then its free endpoint, to continue.");}else{wireArmed=!wireArmed;pendingTerminal=null;pendingWaypoints=[];resumingWireId=null;render(wireArmed?t.wireHint:t.statusReady);}}
       else if(action==="rotate"&&selected){const rotated=rotateElectricalComponent(selected);if(!electricalMoveKeepsClearance(rotated,selected,diagram.components.filter((item)=>item.id!==selected.id))){render(t.noSpace);return;}onBeforeChange();Object.assign(selected,rotated);onChange();render();}
       else if(action==="duplicate"&&selected){const copy=duplicateElectricalComponent(selected,nextElectricalReference(selected.type,diagram.components)),placed=findElectricalPlacement(copy,diagram.components,selected.x+80,selected.y+60);if(!placed){render(t.noSpace);return;}Object.assign(copy,{x:placed.x,y:placed.y});onBeforeChange();diagram.components.push(copy);selectedId=copy.id;onChange();render();}
-      else if(action==="replace"&&selected){const type=(toolboxHost?.querySelector("#electricalPalette")||root.querySelector("#electricalPalette"))?.value,result=replaceElectricalComponent(diagram,selected.id,type);if(!result.ok){render(result.error);return;}const others=diagram.components.filter((item)=>item.id!==selected.id),replacement=moveElectricalComponent(result.component,selected.x,selected.y,{snap:false});if(!electricalMoveKeepsClearance(replacement,selected,others)){render(t.noSpace);return;}onBeforeChange();Object.assign(selected,replacement);for(const id of result.referenceUpdates){const linked=diagram.components.find((item)=>item.id===id);if(linked)linked.coilRef=replacement.reference;}onChange();render(`${result.previousReference} replaced with ${replacement.reference} · ${replacement.label}`);}
+      else if(action==="replace"&&selected){showReplacementMapping((toolboxHost || root).querySelector("#electricalPalette")?.value);}
       else if(action==="delete"&&selected){onBeforeChange();diagram.components=diagram.components.filter((item)=>item.id!==selected.id);diagram.wires=diagram.wires.filter((wire)=>wire.from.componentId!==selected.id&&wire.to?.componentId!==selected.id);selectedId=diagram.components[0]?.id||"";onChange();render();}
       else if((action==="rewire-from"||action==="rewire-to")&&selectedWireId){const selectedWire=diagram.wires.find((wire)=>wire.id===selectedWireId);if(!selectedWire||selectedWire.draft||!selectedWire.to){render("Only a completed wire can be reconnected.");return;}rewireEndpoint=action==="rewire-from"?"from":"to";wireArmed=false;pendingTerminal=null;pendingWaypoints=[];render(`Select a replacement ${rewireEndpoint==="from"?"start":"end"} terminal; the routed cable will be preserved.`);}
       else if(action==="delete-wire"&&selectedWireId){rewireEndpoint=null;onBeforeChange();diagram.wires=diagram.wires.filter((wire)=>wire.id!==selectedWireId);selectedWireId="";onChange();render();}
