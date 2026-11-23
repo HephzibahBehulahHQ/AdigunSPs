@@ -2007,6 +2007,19 @@ test("electrical component search filters models and restores the full picker", 
   await backplane.selectOption(cpuId);
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(backplane).toHaveValue(cpuId);
+  await search.fill("6ES7222-5HH50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const relayModule = page.locator('#electricalBoard [data-component-type="siemensSM1222G2Relay16"]');
+  await expect(relayModule.locator(".electrical-port")).toHaveCount(28);
+  await expect(relayModule.locator("[data-terminal]")).toHaveCount(22);
+  await expect(relayModule.locator(".port-left")).toHaveCount(14);
+  await expect(relayModule.locator(".port-right")).toHaveCount(14);
+  await expect(relayModule.getByRole("button", { name: /X11-3.*unassigned/ })).toBeDisabled();
+  await expect(relayModule.getByRole("button", { name: /X11-14.*common 2L/ })).toBeEnabled();
+  await backplane.selectOption(cpuId);
+  await page.locator("#electricalProperties button[type=submit]").click();
+  await expect(backplane).toHaveValue(cpuId);
 });
 
 

@@ -9,6 +9,12 @@ const sm1221InputGroups = [
   { common:"X11-2", inputs:["X11-4","X11-6","X11-8","X11-10"] }
 ];
 const sm1221InputPins = Object.fromEntries(sm1221InputGroups.flatMap(({ inputs }) => inputs).map((pin, index) => [`I${index + 1}`, pin]));
+const sm1222RelayGroups = [
+  { commonPins:["X10-1","X10-2"], outputs:["X10-3","X10-5","X10-7","X10-9","X10-4","X10-6","X10-8","X10-10"] },
+  { commonPins:["X11-13","X11-14"], outputs:["X11-5","X11-7","X11-9","X11-11","X11-6","X11-8","X11-10","X11-12"] }
+];
+const sm1222OutputPins = Object.fromEntries(sm1222RelayGroups.flatMap(({ outputs }) => outputs).map((pin, index) => [`Q${index + 1}`, pin]));
+const sm1222RelayLayout = [...connectorPins("X10", 14), ...connectorPins("X11", 14)];
 
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
@@ -50,6 +56,20 @@ export const electricalComponentCatalog = Object.freeze({
     simulationLimitations:"Four isolated field common groups support either DC polarity. The module reads its mapped inputs only while the assigned compatible CPU has DC power. Slot routing, power budget, scan filtering, and bus timing are outside the simulation."
   },
   digitalOutputModule4: { name:"digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
+  siemensSM1222G2Relay16: {
+    name:"Siemens S7-1200 G2 SM 1222 · 16 relay DO · 6ES7222-5HH50-0XB0", category:"PLC I/O modules", prefix:"DO", kind:"digital-output-module",
+    manufacturer:"Siemens", partNumber:"6ES7222-5HH50-0XB0", terminalLayout:sm1222RelayLayout,
+    terminals:sm1222RelayLayout.filter((pin) => !["X10-11","X10-12","X10-13","X10-14","X11-3","X11-4"].includes(pin)),
+    channels:{ outputs:Object.keys(sm1222OutputPins), outputPins:sm1222OutputPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
+    relayOutputGroups:sm1222RelayGroups, backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
+    source:{ title:"Siemens S7-1200 G2 SM 1222 relay specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm1222-dq-16xrelay", terminalMapSection:"Wiring diagram" },
+    terminalNotes:{ "X11-1":"Relay control supply L+", "X11-2":"Relay control supply M",
+      ...Object.fromEntries(sm1222RelayGroups.flatMap(({ commonPins, outputs }, group) => [
+        ...commonPins.map((pin) => [pin, `Isolated load common ${group + 1}L`]),
+        ...outputs.map((pin, index) => [pin, `Relay output DQ ${group ? "b" : "a"}.${index}`])
+      ])) },
+    simulationLimitations:"Ideal normally open contacts require the assigned powered CPU, a wired nominal 24 V DC relay control supply, and an external load circuit on the correct common. Contact ratings, protection, relay timing, and fieldbus timing are outside the simulation."
+  },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
   siemens3SU1400NCContact: { name:"Siemens SIRIUS ACT 3SU1400-1AA10-1CA0 · 1 NC contact module", category:"Control devices", prefix:"S", terminals:["1","2"], kind:"contact", normallyClosed:true, manufacturer:"Siemens", partNumber:"3SU1400-1AA10-1CA0", source:{title:"Siemens SIRIUS ACT 3SU1 system manual · 1NC contact module and terminal marks",url:"https://support.industry.siemens.com/cs/attachments/107542462/manual_SIRIUS_ACT_3SU1_en-US.pdf"}, terminalNotes:{"1":"Normally-closed contact terminal 1","2":"Normally-closed contact terminal 2"}, simulationLimitations:"The Siemens manual identifies this as a 1 NC contact module and shows terminal marks 1 and 2. The educational model simulates an ideal manually controlled contact path; actuator mechanics, ratings, switching dynamics, and safety performance are not simulated." },
@@ -415,6 +435,9 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         const [first, second] = spec.channels.inputCommonPins;
         addEdge(key(component.id, first), key(component.id, second));
       }
+      for (const { commonPins:[first, second] } of spec.relayOutputGroups || []) {
+        addEdge(key(component.id, first), key(component.id, second));
+      }
       if (spec.kind === "junction") for (let i = 0; i < spec.terminals.length; i++) for (let j = i + 1; j < spec.terminals.length; j++) addEdge(key(component.id, spec.terminals[i]), key(component.id, spec.terminals[j]));
       else if (spec.kind === "power-converter") addEdge(key(component.id,"−A"),key(component.id,"−B"));
       else if (spec.kind === "pass-through") addEdge(key(component.id,spec.terminals[0]),key(component.id,spec.terminals[1]));
@@ -441,6 +464,16 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const component of all) for (const channel of electricalComponentCatalog[component.type]?.channels?.outputs || []) {
       const spec = electricalComponentCatalog[component.type], tag = component.ioMap?.[channel]?.tag;
       if (!tag || !Boolean(outputStates[tag])) continue;
+      if (spec.relayOutputGroups) {
+        const { powerPositivePin, powerNegativePin, outputPins } = spec.channels;
+        const nets = sourceNets(nodes), output = outputPins[channel];
+        const group = spec.relayOutputGroups.find(({ outputs }) => outputs.includes(output));
+        if (group && hasPoweredBackplane(component, nets) && coilPowered(nets, component, powerPositivePin,
+          powerNegativePin, { minimumVoltageV:24, maximumVoltageV:24 })) {
+          addEdge(key(component.id, group.commonPins[0]), key(component.id, output));
+        }
+        continue;
+      }
       if (spec.channels.relayCommonPins) {
         const { powerPositivePin, powerNegativePin, outputPins, relayCommonPins } = spec.channels;
         if (coilPowered(sourceNets(nodes), component, powerPositivePin, powerNegativePin, spec.controllerSupply)) {
@@ -484,6 +517,12 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     });
   };
   // Coil power is derived from terminal voltage paths, never from the output tag alone.
+  const hasPoweredBackplane = (module, nets) => {
+    const cpu = all.find(({ id }) => id === module.backplaneCpuId);
+    if (!isCompatibleBackplaneCpu(module, cpu)) return false;
+    const { powerPositivePin, powerNegativePin } = electricalComponentCatalog[cpu.type].channels;
+    return coilPowered(nets, cpu, powerPositivePin, powerNegativePin, { minimumVoltageV: 20.4, maximumVoltageV: 28.8 });
+  };
   const coilComponents = all.filter((component) => electricalComponentCatalog[component.type]?.kind === "contactor" || component.type === "relayCoil");
   let coilStatesStable = coilComponents.length === 0;
   for (let pass = 0; pass <= coilComponents.length + 1; pass++) {
@@ -506,10 +545,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     const hasReturn = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative?.has(key(controller.id, negativePowerPin)) || poles.N?.has(key(controller.id, negativePowerPin))));
     const hasPositivePower = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, positivePowerPin)));
     const hasInputCommon = !spec.channels.inputCommonPins?.length || spec.channels.inputCommonPins.some((pin) => nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative || poles.N)?.has(key(controller.id, pin))));
-    const backplaneCpu = spec.backplaneCpuTypes ? all.find(({ id }) => id === controller.backplaneCpuId) : null;
-    const backplaneChannels = isCompatibleBackplaneCpu(controller, backplaneCpu) ? electricalComponentCatalog[backplaneCpu.type].channels : null;
-    const backplanePowered = backplaneChannels && coilPowered(nets, backplaneCpu, backplaneChannels.powerPositivePin,
-      backplaneChannels.powerNegativePin, { minimumVoltageV:20.4, maximumVoltageV:28.8 });
+    const backplanePowered = spec.inputGroups && hasPoweredBackplane(controller, nets);
     for (const channel of spec.channels.inputs || []) {
       const tag = controller.ioMap?.[channel]?.tag, pin = physicalMap[channel] || channel;
       if (!tag) continue;

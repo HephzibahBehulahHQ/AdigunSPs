@@ -95,6 +95,45 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   restored.electrical.wires = restored.electrical.wires.filter(({ from }) => from.componentId !== cpuSupply.id);
   assert.deepEqual(simulateElectricalDiagram(restored.electrical).inputs, { Group1:false, Group2:false, Group3:false, Group4:false });
 }
+{
+  const module = createElectricalComponent("siemensSM1222G2Relay16", 1);
+  const spec = electricalComponentCatalog[module.type];
+  assert.equal(spec.terminalLayout.length, 28);
+  assert.equal(module.terminals.length, 22);
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const [cpuSupply, controlSupply, loadA, loadB] = Array.from({ length:4 }, (_, index) => createElectricalComponent("supply24vdc", index + 1));
+  const lampA = createElectricalComponent("pilotLamp", 1);
+  const lampB = createElectricalComponent("pilotLamp", 2);
+  const diagram = { components:[module,cpu,cpuSupply,controlSupply,loadA,loadB,lampA,lampB], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  module.ioMap.Q1 = { tag:"LampA", address:"Q0.0" };
+  module.ioMap.Q9 = { tag:"LampB", address:"Q1.0" };
+  const state = (outputs = { LampA:true, LampB:true }) => {
+    const { energized } = simulateElectricalDiagram(diagram, {}, outputs);
+    return [energized[lampA.id], energized[lampB.id]];
+  };
+  wire(cpuSupply, "+", cpu, "X80-1");
+  wire(cpuSupply, "−", cpu, "X80-5");
+  wire(controlSupply, "+", module, "X11-1");
+  wire(controlSupply, "−", module, "X11-2");
+  wire(loadA, "+", module, "X10-2");
+  wire(module, "X10-3", lampA, "X1");
+  wire(lampA, "X2", loadA, "−");
+  wire(module, "X11-5", lampB, "X1");
+  wire(lampB, "X2", loadB, "−");
+  assert.deepEqual(state(), [false,false]);
+  module.backplaneCpuId = cpu.id;
+  assert.deepEqual(state(), [true,false], "only the externally supplied group can drive a load");
+  wire(loadB, "+", module, "X11-14");
+  assert.deepEqual(state(), [true,true]);
+  assert.deepEqual(state({ LampB:true }), [false,true]);
+  diagram.wires = diagram.wires.filter(({ from }) => from.componentId !== controlSupply.id);
+  assert.deepEqual(state(), [false,false]);
+}
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);

@@ -655,6 +655,12 @@ const industrialProductCatalog = Object.freeze([
     simulation: { status: "educational-model", model: "siemensSM1221G2DI16", limitations: "The four field common groups require a linked, powered compatible CPU. Input filtering and bus communication are outside the simulation." }
   },
   {
+    manufacturer: "Siemens", identifier: "6ES7222-5HH50-0XB0", family: "SIMATIC S7-1200 G2 SM 1222", category: "Digital I/O modules",
+    attributes: { relayOutputs: 16, ratedVoltageV: 24, isolationGroups: 2, outputType: "Normally open relay" },
+    source: { url: "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm1222-dq-16xrelay", title: "Siemens SM 1222 DQ 16xRelay technical specifications", retrievedOn: "2026-11-24" },
+    simulation: { status: "educational-model", model: "siemensSM1222G2Relay16", limitations: "Ideal relay contacts require a powered compatible CPU, nominal 24 V DC control power, and a load supply wired to each used common." }
+  },
+  {
     manufacturer: "Siemens", identifier: "6ES7212-1HG50-0XB0", family: "SIMATIC S7-1200 G2 CPU 1212C", category: "PLC controllers",
     attributes: { variant: "DC/DC/RLY", digitalInputs: 8, relayOutputs: 6, cpuSupplyV: "20.4–28.8 DC", onboardAnalogChannels: 0 },
     source: { url: "https://sieportal.siemens.com/en-ww/products-services/10594019?tree=CatalogTree", title: "Siemens SiePortal CPU 1212C product variants", retrievedOn: "2026-11-23" },
