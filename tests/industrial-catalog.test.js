@@ -4,20 +4,23 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 523, "catalog has 523 distinct provenance-backed product references");
+assert.equal(validation.count, 546, "catalog has 546 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 523);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 546);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 87);
-assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 115);
-assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 79);
-assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 78);
+assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 129);
+assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 82);
+assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
 assert.equal(searchIndustrialCatalog({ category: "Power supplies", manufacturer: "Siemens" }).items[0].identifier, "6EP1332-1SH71");
 assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].identifier, "LC1D09B7");
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
+const et200al = industrialProductCatalog.filter(({ family }) => family === "SIMATIC ET 200AL");
+assert.equal(et200al.length, 23);
+assert.ok(et200al.every(({ source, simulation }) => source.exportDate === "2025-10-10" && simulation.status === "reference-only"));
 for (const item of industrialProductCatalog) {
   assert.match(item.source.url, /^https:\/\//);
   assert.equal(item.simulation.status === "supported", false, `${item.identifier} must not imply unsupported vendor simulation`);

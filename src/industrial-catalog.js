@@ -576,6 +576,39 @@ const siemensLogo8Products = siemensLogo8Rows
     return true;
   });
 
+const siemensEt200alProducts = [
+  ["6ES7157-1AB00-0AB0", "Communications modules", "IM 157-1 interface for PROFINET"],
+  ["6ES7157-1AA00-0AB0", "Communications modules", "IM 157-1 interface for PROFIBUS DP"],
+  ["6ES7157-1MA00-0AB0", "Communications modules", "IM 157-1 MultiFieldbus interface"],
+  ["6ES7141-5AF00-0BA0", "Digital I/O modules", "8 digital inputs across four M12 ports"],
+  ["6ES7141-5AH00-0BA0", "Digital I/O modules", "16 digital inputs across eight M12 ports"],
+  ["6ES7141-5BF00-0BA0", "Digital I/O modules", "8 digital inputs across eight M8 ports"],
+  ["6ES7142-5AF00-0BA0", "Digital I/O modules", "8 digital outputs across eight M12 ports"],
+  ["6ES7143-5AF00-0BA0", "Digital I/O modules", "4 configurable digital channels and 4 outputs across four M12 ports"],
+  ["6ES7143-5BF00-0BA0", "Digital I/O modules", "4 configurable digital channels and 4 outputs across eight M8 ports"],
+  ["6ES7143-5BF50-0BA0", "Digital I/O modules", "8 configurable digital channels across eight M8 ports"],
+  ["6ES7143-5AH00-0BA0", "Digital I/O modules", "16 configurable digital channels across eight M12 ports"],
+  ["6ES7146-5FF00-0BA0", "Digital I/O modules", "4 fail-safe digital inputs and 2 fail-safe digital outputs across four M12 ports"],
+  ["6ES7144-5KD00-0BA0", "Analog I/O modules", "Four analog inputs for voltage, current or resistance temperature sensors"],
+  ["6ES7144-5KD50-0BA0", "Analog I/O modules", "Four analog inputs for resistance temperature sensors or thermocouples"],
+  ["6ES7145-5ND00-0BA0", "Analog I/O modules", "Four analog outputs for voltage or current"],
+  ["6ES7147-5JD00-0BA0", "Communications modules", "IO-Link master with four M12 ports"],
+  ["6ES7147-5JD01-0BA0", "Communications modules", "IO-Link master with four M12 ports"],
+  ["6ES7147-5JJ00-0BA0", "Communications modules", "IO-Link master with eight M12 ports"],
+  ["6ES7141-5BF00-0BL0", "Digital I/O modules", "IO-Link device with 8 digital inputs and M8 ports"],
+  ["6ES7141-5AH00-0BL0", "Digital I/O modules", "IO-Link device with 16 digital inputs and M12 ports"],
+  ["6ES7142-5AF00-0BL0", "Digital I/O modules", "IO-Link device with 8 digital outputs and M12 ports"],
+  ["6ES7143-5BF00-0BL0", "Digital I/O modules", "IO-Link device with 4 configurable digital channels and 4 outputs"],
+  ["6ES7143-5AH00-0BL0", "Digital I/O modules", "IO-Link device with 16 configurable digital channels"],
+].map(([identifier, category, description]) => ({
+  manufacturer: "Siemens", identifier, category, family: "SIMATIC ET 200AL", attributes: { description },
+  source: {
+    url: "https://mall.industry.siemens.com/tst/Api/Catalog/ExportInformation?catalogItemId=ET200_AL&lang=en",
+    title: "Siemens SIMATIC ET 200AL product overview", retrievedOn: "2026-11-24", exportDate: "2025-10-10",
+  },
+  simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Connector wiring, bus communication, device behavior and safety functions are outside the simulation." },
+}));
+
 const omronVariants = [
   ["T61","Through-beam","15 m","NPN","pre-wired"],["T81","Through-beam","15 m","PNP","pre-wired"],
   ["T62","Through-beam","30 m","NPN","pre-wired"],["T82","Through-beam","30 m","PNP","pre-wired"],
@@ -611,6 +644,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200spProducts,
   ...siemensEt200spExpansionProducts,
   ...siemensLogo8Products,
+  ...siemensEt200alProducts,
   ...omronSensors,
   {
     manufacturer:"Schneider Electric",identifier:"TM221CE24R",family:"Modicon M221",category:"PLC controllers",
