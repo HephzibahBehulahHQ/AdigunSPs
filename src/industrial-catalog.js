@@ -1,4 +1,5 @@
 import { finderCatalogGroups } from "./finder-catalog-data.js";
+import { doepkeCatalogGroups } from "./doepke-catalog-data.js";
 
 const capturedOn = "2026-10-30";
 const siemensCatalog = "https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=S7_1200&lang=en";
@@ -743,6 +744,20 @@ const finderProducts = finderCatalogGroups.flatMap(([category, family, identifie
   source: finderSource, simulation: finderSimulation,
 })));
 
+const doepkeSource = {
+  url: "https://www.doepke.de/en/bmecat/",
+  archiveUrl: "https://www.doepke.de/fileadmin//user_upload/BME/Doepke-BMEcat2005-50-ETIM-100_PL2027-01-01_ml_2026-10-28.zip",
+  title: "Doepke ETIM 10.0 BMEcat product export", exportDate: "2026-10-28", retrievedOn: "2026-11-24",
+};
+const doepkeSimulation = {
+  status: "reference-only", model: null,
+  limitations: "Manufacturer order reference. Terminal assignments, device ratings, trip characteristics, and protective behavior are outside the simulation.",
+};
+const doepkeProducts = doepkeCatalogGroups.flatMap(([category, family, etimClass, identifiers]) => identifiers.map((identifier) => ({
+  manufacturer: "Doepke", identifier, category, family, attributes: { etimClass },
+  source: doepkeSource, simulation: doepkeSimulation,
+})));
+
 const industrialProductCatalog = Object.freeze([
   ...siemensCpus,
   ...siemensModules,
@@ -757,6 +772,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alPowerCables,
   ...omronSensors,
   ...finderProducts,
+  ...doepkeProducts,
   {
     manufacturer:"Schneider Electric",identifier:"TM221CE24R",family:"Modicon M221",category:"PLC controllers",
     attributes:{digitalInputs:14,relayOutputs:10,analogInputs:2,supply:"100–240 V AC",ports:"Ethernet and serial",protection:"IP20"},
