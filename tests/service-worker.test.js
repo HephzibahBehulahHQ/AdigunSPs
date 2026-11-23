@@ -42,7 +42,7 @@ handlers.get("activate")({ waitUntil: promise => { activation = promise; } });
 await activation;
 assert.deepEqual(removedCaches, ["adigunsps-shell-v141", "adigunsps-shell-v143", "adigunsps-shell-v144", "adigunsps-shell-v145", "adigunsps-shell-v146", "adigunsps-shell-v147", "adigunsps-shell-v148", "adigunsps-shell-v149", "adigunsps-shell-v150", "adigunsps-shell-v151", "adigunsps-shell-v152", "adigunsps-shell-v153", "adigunsps-shell-v154"]);
 assert.ok(installedRequests.length>0&&installedRequests.every(request=>request.cache==="reload"),"new releases bypass stale HTTP assets during precaching");
-assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v168";/, "development cache version advances for this runtime release");
+assert.match(readFileSync("service-worker.js", "utf8"), /const CACHE = "adigunsps-shell-v169";/, "development cache version advances for this runtime release");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/docs\/user-guide\.md"/, "the full user guide is available offline");
 assert.match(readFileSync("service-worker.js", "utf8"), /\.\/reset-password\/reset-password\.js/, "password recovery route is available offline after install");
 assert.match(readFileSync("service-worker.js", "utf8"), /"\.\/src\/example-search\.js"/, "Bot example search module must be included in the offline app shell");
@@ -82,6 +82,15 @@ console.log("PASS: live reload bypass, response cloning, and event-stream cache 
 context.fetch = async () => { throw new Error("offline"); };
 context.caches.match = async (request) => request === new URL("./index.html", context.self.location.href).href ? new Response("editor shell") : null;
 assert.equal(await (await dispatch("/?offline", "navigate")).text(), "editor shell");
+const redirected = new Response("redirected cached shell");
+Object.defineProperty(redirected, "redirected", { value:true });
+context.caches.match = async (request) => {
+  if (request === "https://adigun.test/") return new Response("canonical editor shell");
+  if (request === "https://adigun.test/reset-password/") return new Response("canonical recovery shell");
+  return redirected;
+};
+assert.equal(await (await dispatch("/?offline", "navigate")).text(), "canonical editor shell");
+assert.equal(await (await dispatch("/reset-password/index.html?offline", "navigate")).text(), "canonical recovery shell");
 context.self.location.href = "https://adigun.test/AdigunSPs/service-worker.js";
 const scopedLookups = [];
 context.caches.match = async (request, options) => {
@@ -90,7 +99,7 @@ context.caches.match = async (request, options) => {
 };
 assert.equal(await (await dispatch("/AdigunSPs/?offline", "navigate")).text(), "editor shell");
 assert.equal((await dispatch("/AdigunSPs/src/missing.js")).type, "error");
-assert.deepEqual(scopedLookups, Array(3).fill("adigunsps-shell-v168"));
+assert.deepEqual(scopedLookups, Array(4).fill("adigunsps-shell-v169"));
 assert.equal((await dispatch("/missing.js")).type, "error");
 context.caches.match = async () => null;
 assert.equal((await dispatch("/?offline", "navigate")).type, "error");
