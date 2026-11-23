@@ -155,7 +155,7 @@ function validateOptionalProjectData(project) {
       const terminals = component.terminals || definition.terminals;
       if (terminals.length !== definition.terminals.length || terminals.some((terminal, terminalIndex) => terminal !== definition.terminals[terminalIndex])) fail(`electrical component ${index + 1} terminals do not match the supported component definition.`);
       componentTerminals.set(component.id, new Set(terminals));
-      for (const field of ["tag", "coilTag", "coilRef"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true });
+      for (const field of ["tag", "coilTag", "coilRef", "backplaneCpuId"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true });
       for (const field of ["closed", "tripped", "normallyClosed"]) if (component[field] !== undefined && typeof component[field] !== "boolean") fail(`electrical component ${index + 1} has an invalid ${field} value.`);
       for (const field of ["ratedVoltageV", "ratedCurrentA", "nominalVoltageV", "signalValue"]) if (component[field] !== undefined && component[field] !== null && !Number.isFinite(component[field])) fail(`electrical component ${index + 1} has an invalid ${field} value.`);
       for (const field of ["manufacturer", "partNumber", "label"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true, max: 256 });

@@ -58,7 +58,14 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   const spec = electricalComponentCatalog[module.type];
   assert.equal(module.terminals.length, 20);
   assert.equal(spec.channels.inputs.length, 16);
-  const diagram = { components:[module], wires:[] };
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const cpuSupply = createElectricalComponent("supply24vdc", 5);
+  const diagram = { components:[module,cpu,cpuSupply], wires:[] };
+  for (const [pole, pin] of [["+", "X80-1"], ["−", "X80-5"]]) {
+    const result = connectElectricalTerminals(diagram, { componentId:cpuSupply.id, terminal:pole }, { componentId:cpu.id, terminal:pin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  }
   for (const [index, { common, inputs }] of spec.inputGroups.entries()) {
     const supply = createElectricalComponent("supply24vdc", index + 1);
     diagram.components.push(supply);
@@ -75,12 +82,18 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
     connect(poles[0], inputs[0]);
     assert.equal(simulateElectricalDiagram(diagram).inputs[tag], false, "other groups cannot supply this input's common");
     connect(poles[1], common);
+    if (index === 0) {
+      assert.equal(simulateElectricalDiagram(diagram).inputs[tag], false, "field voltage cannot substitute for the backplane");
+      module.backplaneCpuId = cpu.id;
+    }
     assert.equal(simulateElectricalDiagram(diagram).inputs[tag], true);
   }
   const restored = normalizeImportedProject(JSON.parse(JSON.stringify({
     name:"SM 1221 field groups", rungs:[], tags:spec.inputGroups.map((_, index) => ({ name:`Group${index + 1}`, type:"BOOL", role:"input" })), electrical:diagram
   })));
   assert.deepEqual(simulateElectricalDiagram(restored.electrical).inputs, { Group1:true, Group2:true, Group3:true, Group4:true });
+  restored.electrical.wires = restored.electrical.wires.filter(({ from }) => from.componentId !== cpuSupply.id);
+  assert.deepEqual(simulateElectricalDiagram(restored.electrical).inputs, { Group1:false, Group2:false, Group3:false, Group4:false });
 }
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);

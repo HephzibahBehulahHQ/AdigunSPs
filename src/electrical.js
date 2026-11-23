@@ -40,13 +40,14 @@ export const electricalComponentCatalog = Object.freeze({
     name:"Siemens S7-1200 G2 SM 1221 · 16 DI · 6ES7221-1BH50-0XB0", category:"PLC I/O modules", prefix:"DI", kind:"digital-input-module",
     manufacturer:"Siemens", partNumber:"6ES7221-1BH50-0XB0", terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
     channels:{ inputs:Object.keys(sm1221InputPins), inputPins:sm1221InputPins }, inputGroups:sm1221InputGroups,
+    backplaneCpuTypes:["siemensS71212CG2", "siemensS71212CG2Relay"],
     inputSignalVoltage:{ minimumVoltageV:15, maximumVoltageV:30 },
     source:{ title:"Siemens S7-1200 G2 SM 1221 DI 16x24VDC specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_itit_20/technical-specifications/digital-signal-modules-sms/sm-1221-di-16x24vdc", terminalMapSection:"Wiring diagram" },
     terminalNotes:Object.fromEntries(sm1221InputGroups.flatMap(({ common, inputs }, group) => [
       [common, `Field input common ${group + 1}M`],
       ...inputs.map((pin, index) => [pin, `Digital input DI ${group < 2 ? "a" : "b"}.${(group % 2) * 4 + index}`])
     ])),
-    simulationLimitations:"Four isolated field common groups support either DC polarity. The educational model assumes a powered backplane and maps field inputs directly to project tags. Scan filtering, input current, and backplane communication are outside the simulation."
+    simulationLimitations:"Four isolated field common groups support either DC polarity. The module reads its mapped inputs only while the assigned compatible CPU has DC power. Slot routing, power budget, scan filtering, and bus timing are outside the simulation."
   },
   digitalOutputModule4: { name:"digital output module · 4 channels", category:"PLC I/O modules", prefix:"DO", terminals:["L+","M","Q1","Q2","Q3","Q4"], kind:"digital-output-module", channels:{outputs:["Q1","Q2","Q3","Q4"]} },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
@@ -206,6 +207,10 @@ export function updateElectricalComponentProperties(component, updates = {}) {
   return next;
 }
 
+export function isCompatibleBackplaneCpu(module, cpu) {
+  return Boolean(cpu && electricalComponentCatalog[module.type]?.backplaneCpuTypes?.includes(cpu.type));
+}
+
 export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}, deviceDefaults = {}) {
   const inputContactType=electricalComponentCatalog[deviceDefaults.inputContactType]?.kind==="contact"?deviceDefaults.inputContactType:"pushbuttonNO";
   const outputIndicatorType=electricalComponentCatalog[deviceDefaults.outputIndicatorType]?.kind==="load"?deviceDefaults.outputIndicatorType:"pilotLamp";
@@ -302,6 +307,9 @@ export function validateElectricalDiagram(diagram, projectTags = []) {
     const spec = electricalComponentCatalog[component.type];
     if (!component.id || ids.has(component.id)) issues.push({level:"error",code:"electrical-component-id",message:"Electrical component IDs must be unique."}); else ids.add(component.id);
     if (!spec) { issues.push({level:"error",code:"electrical-component-type",message:`Unsupported component type ${component.type || "(missing)"}.`}); continue; }
+    if (spec.backplaneCpuTypes && !isCompatibleBackplaneCpu(component, components.find(({ id }) => id === component.backplaneCpuId))) {
+      issues.push({level:"warning",code:"electrical-backplane-cpu",message:`${component.reference} needs a compatible backplane CPU assignment before its field inputs can run.`});
+    }
     const reference = String(component.reference || "").trim().toUpperCase();
     if (!reference || references.has(reference)) issues.push({level:"error",code:"electrical-reference",message:`Component reference ${reference || "(missing)"} must be present and unique.`}); else references.add(reference);
     if (!Number.isFinite(Number(component.x)) || !Number.isFinite(Number(component.y)) || ![0,90,180,270].includes(Number(component.rotation || 0))) issues.push({level:"error",code:"electrical-layout",message:`${reference} needs finite grid coordinates and a right-angle rotation.`});
@@ -498,12 +506,16 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     const hasReturn = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative?.has(key(controller.id, negativePowerPin)) || poles.N?.has(key(controller.id, negativePowerPin))));
     const hasPositivePower = nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, positivePowerPin)));
     const hasInputCommon = !spec.channels.inputCommonPins?.length || spec.channels.inputCommonPins.some((pin) => nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.negative || poles.N)?.has(key(controller.id, pin))));
+    const backplaneCpu = spec.backplaneCpuTypes ? all.find(({ id }) => id === controller.backplaneCpuId) : null;
+    const backplaneChannels = isCompatibleBackplaneCpu(controller, backplaneCpu) ? electricalComponentCatalog[backplaneCpu.type].channels : null;
+    const backplanePowered = backplaneChannels && coilPowered(nets, backplaneCpu, backplaneChannels.powerPositivePin,
+      backplaneChannels.powerNegativePin, { minimumVoltageV:20.4, maximumVoltageV:28.8 });
     for (const channel of spec.channels.inputs || []) {
       const tag = controller.ioMap?.[channel]?.tag, pin = physicalMap[channel] || channel;
       if (!tag) continue;
       if (spec.inputGroups) {
         const group = spec.inputGroups.find(({ inputs }) => inputs.includes(pin));
-        plcInputs[tag] = Boolean(group && (coilPowered(nets, controller, pin, group.common, spec.inputSignalVoltage)
+        plcInputs[tag] = Boolean(backplanePowered && group && (coilPowered(nets, controller, pin, group.common, spec.inputSignalVoltage)
           || coilPowered(nets, controller, group.common, pin, spec.inputSignalVoltage)));
       } else if (spec.channels.inputPolarity === "sink-source") {
         plcInputs[tag] = coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.controllerSupply)

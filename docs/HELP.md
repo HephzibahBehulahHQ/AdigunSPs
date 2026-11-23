@@ -60,7 +60,7 @@ In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `S
 
 ## Components / Schematic
 
-Open **Components / Schematic**, search by name or order code, and choose **Place component**. Select it to inspect manufacturer, part number, pins, and model limits. Drag its header. Undo restores placement. Manual inputs retain focus. Canvas scroll is preserved. Choose **Connect wire**, select a terminal, click to add bends, and select the destination terminal. Use **Select / Move** to leave wire mode and **Validate** to check the drawing. Electrical simulation is a teaching model, not a hardware or safety test.
+Open **Components / Schematic**, search by name or order code, and choose **Place component**. Select it to inspect manufacturer, part number, pins, and model limits. Drag its header. Undo restores placement. Assign expansion modules a Backplane CPU. Canvas scroll is preserved. Choose **Connect wire**, select a terminal, click to add bends, and select the destination terminal. Use **Select / Move** to leave wire mode and **Validate** to check the drawing. Electrical simulation is a teaching model, not a hardware or safety test.
 
 ## HMI
 

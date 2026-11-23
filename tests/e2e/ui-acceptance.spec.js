@@ -2002,6 +2002,11 @@ test("electrical component search filters models and restores the full picker", 
   const inputModule = page.locator('#electricalBoard [data-component-type="siemensSM1221G2DI16"]');
   await expect(inputModule.locator("[data-terminal]")).toHaveCount(20);
   await expect(inputModule.getByRole("button", { name: /X11-2.*common 4M/ })).toBeEnabled();
+  const cpuId = await relayCpu.getAttribute("data-component-id");
+  const backplane = page.getByRole("combobox", { name: "Backplane CPU" });
+  await backplane.selectOption(cpuId);
+  await page.locator("#electricalProperties button[type=submit]").click();
+  await expect(backplane).toHaveValue(cpuId);
 });
 
 
