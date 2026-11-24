@@ -741,7 +741,7 @@ const unifiedComfortPanels = [
 }));
 
 const unifiedPanelOperatingReferences = [
-  ["6AV2123-3DB32-0AW0", "MTP400", "Basic", "Standard", 4],
+  ["6AV2123-3DB32-0AW0", "MTP400", "Basic", "Standard", 4, "siemensMtp400UnifiedBasic"],
   ["6AV2123-3GB32-0AW0", "MTP700", "Basic", "Standard", 7],
   ["6AV2123-3KB32-0AW0", "MTP1000", "Basic", "Standard", 10],
   ["6AV2123-3MB32-0AW0", "MTP1200", "Basic", "Standard", 12],
@@ -757,14 +757,16 @@ const unifiedPanelOperatingReferences = [
   ["6AV2128-3UB36-0AX0", "MTP1900", "Comfort", "Neutral", 19],
   ["6AV2128-3XB06-0AX0", "MTP2200", "Comfort", "Standard", 22],
   ["6AV2128-3XB36-0AX0", "MTP2200", "Comfort", "Neutral", 22],
-].map(([identifier, panel, series, variant, displayInches]) => ({
+].map(([identifier, panel, series, variant, displayInches, model]) => ({
   manufacturer: "Siemens", identifier, category: "HMI devices", family: `SIMATIC Unified ${series}`,
   attributes: { panel, variant, displayInches },
   source: {
     url: `https://docs.tia.siemens.cloud/r/unified_${series.toLowerCase()}_panels_enus_21/preface/scope`,
     title: `Siemens Unified ${series} panel operating instructions scope`, retrievedOn: "2026-11-24",
   },
-  simulation: { status: "reference-only", model: null, limitations: "Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
+  simulation: model
+    ? { status:"educational-model", model, limitations:"Ideal power presence on X80. Display hardware, application runtime, and communication are outside the simulation." }
+    : { status:"reference-only", model:null, limitations:"Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
 const classicComfortPanelReferences = [

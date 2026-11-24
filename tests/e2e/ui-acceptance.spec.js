@@ -2194,6 +2194,12 @@ test("electrical component search filters models and restores the full picker", 
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(inputRanges.nth(1)).toHaveValue("V5");
   await expect(outputRanges.nth(3)).toHaveValue("mA4-20");
+  await search.fill("6AV2123-3DB32-0AW0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const basicPanel = page.locator('#electricalBoard [data-component-type="siemensMtp400UnifiedBasic"]');
+  await expect(basicPanel.getByRole("button", { name:/X80-1.*Panel supply/ })).toBeEnabled();
+  await expect(basicPanel.getByRole("button", { name:/X80-2.*Panel supply ground/ })).toBeEnabled();
 });
 
 
@@ -2221,7 +2227,7 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["09112601", "Doepke", "doepke.de"],
     ["6ES7231-5QD50-0XB0", "Siemens", "docs.tia.siemens.cloud"],
     ["6ES7231-5PB50-0XB0", "Siemens", "docs.tia.siemens.cloud"],
-    ["6AV2123-3DB32-0AW0", "Siemens", "docs.tia.siemens.cloud"],
+    ["6AV2123-3GB32-0AW0", "Siemens", "docs.tia.siemens.cloud"],
     ["6AV2128-3XB36-0AX0", "Siemens", "docs.tia.siemens.cloud"],
     ["6ES7317-7UL10-0AB0", "Siemens", "support.industry.siemens.com"],
     ["6ES7410-5HM08-0AB0", "Siemens", "support.industry.siemens.com"],

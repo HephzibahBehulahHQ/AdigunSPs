@@ -109,6 +109,32 @@ for (const type of types) {
 }
 
 {
+  const panel = createElectricalComponent("siemensMtp400UnifiedBasic", 1);
+  const supply = createElectricalComponent("supply24vdc", 1);
+  const electrical = { components:[panel,supply], wires:[] };
+  const wire = (sourcePin, panelPin) => {
+    const result = connectElectricalTerminals(electrical, { componentId:supply.id, terminal:sourcePin }, { componentId:panel.id, terminal:panelPin });
+    assert.equal(result.ok, true, result.error);
+    electrical.wires.push(result.wire);
+  };
+  const powered = (diagram = electrical) => simulateElectricalDiagram(diagram).energized[panel.id];
+  wire("+", "X80-1");
+  assert.equal(powered(), false);
+  wire("−", "X80-2");
+  const restored = normalizeImportedProject(JSON.parse(JSON.stringify({ name:"MTP400 supply", rungs:[], electrical }))).electrical;
+  assert.equal(powered(restored), true);
+  for (const voltage of [19.2,28.8,19.1,28.9]) {
+    supply.nominalVoltageV = voltage;
+    assert.equal(powered(), voltage >= 19.2 && voltage <= 28.8);
+  }
+  supply.nominalVoltageV = 24;
+  electrical.wires = [];
+  wire("−", "X80-1");
+  wire("+", "X80-2");
+  assert.equal(powered(), false, "reversed supply polarity leaves the panel unpowered");
+}
+
+{
   const terminal = createElectricalComponent("phoenixPT25Twin", 1);
   const supply = createElectricalComponent("supply24vdc", 1);
   const returnRail = createElectricalComponent("neutralRail", 1);
