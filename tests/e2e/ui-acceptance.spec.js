@@ -2100,6 +2100,12 @@ test("electrical component search filters models and restores the full picker", 
   await add.click();
   const transmitter = page.locator('#electricalBoard [data-component-type="analogLoopCurrentSource"]');
   await expect(transmitter.locator("[data-terminal]")).toHaveText(["L+", "IOUT"]);
+  await search.fill("6ES7212-1BG50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const acCpu = page.locator('#electricalBoard [data-component-type="siemensS71212CG2AcRelay"]');
+  await expect(acCpu.getByRole("button", { name:/X80-1.*CPU AC supply L1/ })).toBeEnabled();
+  await expect(acCpu.getByRole("button", { name:/X80-5.*CPU AC supply N/ })).toBeEnabled();
 });
 
 

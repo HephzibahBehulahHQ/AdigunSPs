@@ -741,7 +741,7 @@ const unifiedComfortPanels = [
 }));
 
 const siemensG2CpuReferences = [
-  ["6ES7212-1BG50-0XB0", "1212C", "AC/DC/RLY"],
+  ["6ES7212-1BG50-0XB0", "1212C", "AC/DC/RLY", "siemensS71212CG2AcRelay"],
   ["6ES7214-1BH50-0XB0", "1214C", "AC/DC/RLY"],
   ["6ES7214-1AH50-0XB0", "1214C", "DC/DC/DC"],
   ["6ES7214-1HH50-0XB0", "1214C", "DC/DC/RLY"],
@@ -749,14 +749,16 @@ const siemensG2CpuReferences = [
   ["6ES7212-1HF50-0XB0", "1212FC", "DC/DC/RLY"],
   ["6ES7214-1AF50-0XB0", "1214FC", "DC/DC/DC"],
   ["6ES7214-1HF50-0XB0", "1214FC", "DC/DC/RLY"],
-].map(([identifier, cpu, variant]) => ({
+].map(([identifier, cpu, variant, model]) => ({
   manufacturer:"Siemens", identifier, family:`SIMATIC S7-1200 G2 CPU ${cpu}`, category:"PLC controllers",
   attributes:{ variant, failsafe:cpu.endsWith("FC") },
   source:{
     url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus",
     title:"Siemens SIMATIC S7-1200 G2 CPU ordering information", retrievedOn:"2026-11-24",
   },
-  simulation:{ status:"reference-only", model:null, limitations:"Manufacturer order reference. Terminal layout, controller firmware and fail-safe functions are outside the simulation." },
+  simulation:model
+    ? { status:"educational-model", model, limitations:"Ideal AC-powered CPU with externally supplied DC inputs and relay loads. Vendor firmware and electrical ratings are outside the simulation." }
+    : { status:"reference-only", model:null, limitations:"Manufacturer order reference. Terminal layout, controller firmware and fail-safe functions are outside the simulation." },
 }));
 
 const omronVariants = [
