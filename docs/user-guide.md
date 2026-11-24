@@ -29,7 +29,7 @@ Open `update/` under the application URL, select **Update application**, and wai
 
 ## Electrical components
 
-Place the Siemens MTP400 Unified Basic (`6AV2123-3DB32-0AW0`) to show simulated panel power. Its X80 supply accepts the documented 19.2–28.8 V DC range on X80-1 and X80-2. The schematic shows power presence. Use the HMI workspace separately for tag-bound controls and displays.
+Place a Siemens MTP400, MTP700, MTP1000, or MTP1200 Unified Basic to show simulated panel power. Its X80 supply accepts the documented 19.2–28.8 V DC range on X80-1 and X80-2. The schematic shows power presence. Use the HMI workspace separately for tag-bound controls and displays.
 
 The Phoenix Contact PLC-RSC-24DC/21 (`2966171`) uses polarized DC control on A1 and A2. In simulation, common 11 connects to 12 when the coil is off and to 14 when it is energized. The field circuit needs its own wired feed.
 

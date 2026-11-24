@@ -108,8 +108,8 @@ for (const type of types) {
   assert.deepEqual(run(true), [true,true,false], "an open coil return leaves the PLC command active but drops the load");
 }
 
-{
-  const panel = createElectricalComponent("siemensMtp400UnifiedBasic", 1);
+for (const size of [400, 700, 1000, 1200]) {
+  const panel = createElectricalComponent(`siemensMtp${size}UnifiedBasic`, 1);
   const supply = createElectricalComponent("supply24vdc", 1);
   const electrical = { components:[panel,supply], wires:[] };
   const wire = (sourcePin, panelPin) => {
@@ -121,7 +121,7 @@ for (const type of types) {
   wire("+", "X80-1");
   assert.equal(powered(), false);
   wire("−", "X80-2");
-  const restored = normalizeImportedProject(JSON.parse(JSON.stringify({ name:"MTP400 supply", rungs:[], electrical }))).electrical;
+  const restored = normalizeImportedProject(JSON.parse(JSON.stringify({ name:`MTP${size} supply`, rungs:[], electrical }))).electrical;
   assert.equal(powered(restored), true);
   for (const voltage of [19.2,28.8,19.1,28.9]) {
     supply.nominalVoltageV = voltage;

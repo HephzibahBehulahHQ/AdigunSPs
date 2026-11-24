@@ -742,9 +742,9 @@ const unifiedComfortPanels = [
 
 const unifiedPanelOperatingReferences = [
   ["6AV2123-3DB32-0AW0", "MTP400", "Basic", "Standard", 4, "siemensMtp400UnifiedBasic"],
-  ["6AV2123-3GB32-0AW0", "MTP700", "Basic", "Standard", 7],
-  ["6AV2123-3KB32-0AW0", "MTP1000", "Basic", "Standard", 10],
-  ["6AV2123-3MB32-0AW0", "MTP1200", "Basic", "Standard", 12],
+  ["6AV2123-3GB32-0AW0", "MTP700", "Basic", "Standard", 7, "siemensMtp700UnifiedBasic"],
+  ["6AV2123-3KB32-0AW0", "MTP1000", "Basic", "Standard", 10, "siemensMtp1000UnifiedBasic"],
+  ["6AV2123-3MB32-0AW0", "MTP1200", "Basic", "Standard", 12, "siemensMtp1200UnifiedBasic"],
   ["6AV2128-3GB06-0AX0", "MTP700", "Comfort", "Standard", 7],
   ["6AV2128-3GB36-0AX0", "MTP700", "Comfort", "Neutral", 7],
   ["6AV2128-3KB06-0AX0", "MTP1000", "Comfort", "Standard", 10],
