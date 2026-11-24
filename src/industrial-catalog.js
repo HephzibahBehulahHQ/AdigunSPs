@@ -786,7 +786,7 @@ const beckhoffAnalogInputReferences = [
   source:{
     url:"https://www.beckhoff.com/en-us/products/i-o/ethercat-terminals/el-ed3xxx-analog-input/tabular-product-overview/",
     title:"Beckhoff EL/ED3xxx EtherCAT analog input terminal product overview",
-    retrievedOn:capturedOn,
+    retrievedOn:"2026-11-24",
   },
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Terminal wiring, signal scaling, measurements and EtherCAT operation are outside this catalog entry." },
 })));
@@ -845,7 +845,7 @@ const phoenixTerminalBlockReferences = [
   source:{
     url:productUrl ?? "https://assets.phoenixcontact.com/file/85eab754-99c0-4560-ba25-7907a3899b46/media/original?CCC_QuickReferenceGuide_A4_2020_LR.pdf=",
     title:productUrl ? "Phoenix Contact UTTB 2,5-PE product data" : "Phoenix Contact Quick Reference Guide · Modular Terminal Blocks",
-    retrievedOn:capturedOn,
+    retrievedOn:"2026-11-24",
   },
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Conductor paths, ratings, disconnection and fuse behavior are outside this catalog entry." },
 }));
@@ -880,7 +880,7 @@ const rockwellCompactLogixReferences = [
   source:{
     url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/5069-td002_-en-p.pdf",
     title:"Rockwell Automation publication 5069-TD002 · Controller catalog numbers",
-    retrievedOn:capturedOn,
+    retrievedOn:"2026-11-24",
   },
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Controller runtime, physical I/O, safety functions and safety validation are outside this catalog entry." },
 })));
@@ -933,7 +933,7 @@ const rockwellMicro800References = [
   source:{
     url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/2080-td001_-en-p.pdf",
     title:"Rockwell Automation Micro800 Programmable Controllers technical data",
-    retrievedOn:capturedOn,
+    retrievedOn:"2026-11-24",
   },
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Micro800 physical I/O, terminal wiring and controller runtime are outside this catalog entry." },
 })));
@@ -982,7 +982,7 @@ const rockwellPanelViewReferences = [
 ].flatMap(({ family, url, title, identifiers }) => identifiers.map((identifier) => ({
   manufacturer:"Rockwell Automation", identifier, family, category:"HMI devices",
   attributes:{ description:`Allen-Bradley ${family} operator terminal` },
-  source:{ url, title, retrievedOn:capturedOn },
+  source:{ url, title, retrievedOn:"2026-11-24" },
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. PanelView terminal wiring, physical interfaces and runtime are outside this catalog entry." },
 })));
 
@@ -1354,13 +1354,13 @@ const industrialProductCatalog = Object.freeze([
   {
     manufacturer:"Phoenix Contact", identifier:"3211861", family:"PT 4-HESI (5X20)", category:"Terminal systems",
     attributes:{ connections:2, fuseSize:"5 × 20 mm", nominalVoltageV:500, maximumLoadCurrentA:6.3 },
-    source:{ url:"https://www.phoenixcontact.com/en-us/products/fuse-terminal-block-pt-4-hesi-5x20-3211861?type=pdf", title:"Phoenix Contact PT 4-HESI (5X20) data sheet", retrievedOn:capturedOn, terminalMapSection:"Product properties and connection data · two connections and 5 × 20 mm fuse" },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/fuse-terminal-block-pt-4-hesi-5x20-3211861?type=pdf", title:"Phoenix Contact PT 4-HESI (5X20) data sheet", retrievedOn:"2026-11-24", terminalMapSection:"Product properties and connection data · two connections and 5 × 20 mm fuse" },
     simulation:{ status:"educational-model", model:"phoenixPT4HesiFuse", limitations:"Ideal continuity through an intact fuse with manual trip and replacement." },
   },
   {
     manufacturer:"Phoenix Contact", identifier:"3209578", family:"PT 2,5-QUATTRO", category:"Terminal systems",
     attributes:{ connections:4, potentials:1, nominalVoltageV:800, nominalCurrentA:24, connectionMethod:"Push-in" },
-    source:{ url:"https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-quattro-3209578?type=pdf", title:"Phoenix Contact PT 2,5-QUATTRO data sheet", retrievedOn:capturedOn, terminalMapSection:"Product properties · 4 connections, 1 potential" },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-quattro-3209578?type=pdf", title:"Phoenix Contact PT 2,5-QUATTRO data sheet", retrievedOn:"2026-11-24", terminalMapSection:"Product properties · 4 connections, 1 potential" },
     simulation:{ status:"educational-model", model:"phoenixPT25Quattro", limitations:"Use the schematic picker to place the ideal four-connection node." },
   },
   {

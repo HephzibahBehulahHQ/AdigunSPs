@@ -47,6 +47,10 @@ assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 267, exac
 assert.deepEqual(categoryCoverage["PLC controllers"], { references: 338, exactEditableModels: 6, verifiedTerminalMaps: 6 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 146, exactEditableModels: 4, verifiedTerminalMaps: 4 });
 assert.equal(searchIndustrialCatalog({ query: "6AV2123-3DB32-0AW0" }).items[0].simulation.model, "siemensMtp400UnifiedBasic");
+for (const query of ["EL3062", "3044665", "3209578", "3211861", "5069-L320ERP", "2080-LC10-12AWA", "2711R-T4T"]) {
+  const reference = searchIndustrialCatalog({ query }).items.find(({ identifier }) => identifier === query);
+  assert.equal(reference.source.retrievedOn, "2026-11-24", query);
+}
 assert.equal(categoryCoverage["Programming software"], undefined);
 assert.equal(inventory.totals.fbdBlockTypes, 25);
 assert.deepEqual(inventory.softwareAndProcess.ladderInstructions, {
