@@ -314,7 +314,14 @@ export const electricalComponentCatalog = Object.freeze({
   auxiliaryNC: { name:"normally-closed auxiliary contact", category:"Contactors and relays", prefix:"K", terminals:["21","22"], kind:"contact", normallyClosed:true },
   overloadNC: { name:"overload relay · NC trip contact simulation", category:"Protection", prefix:"F", terminals:["95","96"], kind:"overload-contact", normallyClosed:true },
   circuitBreaker: { name:"manually-reset circuit breaker", category:"Protection", prefix:"QF", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true },
-  fuse: { name:"fuse · replace-after-open simulation", category:"Protection", prefix:"FU", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true },
+  fuse: { name:"fuse · replace-after-open simulation", category:"Protection", prefix:"FU", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true, replaceAfterTrip:true },
+  phoenixPT4HesiFuse: {
+    name:"Phoenix Contact PT 4-HESI (5X20) fuse terminal · 3211861", category:"Terminals and wiring", prefix:"FU",
+    terminals:["1","2"], kind:"manual-switch", initialClosed:true, replaceAfterTrip:true,
+    manufacturer:"Phoenix Contact", partNumber:"3211861", ratedVoltageV:500, ratedCurrentA:6.3,
+    source:{ title:"Phoenix Contact PT 4-HESI (5X20) data sheet", url:"https://www.phoenixcontact.com/en-us/products/fuse-terminal-block-pt-4-hesi-5x20-3211861?type=pdf", terminalMapSection:"Product properties and connection data · two connections and 5 × 20 mm fuse" },
+    simulationLimitations:"The two editor ports conduct through an ideal intact fuse. Manually blowing the fuse opens the circuit until replacement. The actual current rating depends on the installed fuse. Current-based tripping, breaking capacity, heating, and rating enforcement are outside the model.",
+  },
   siemens3SU1152AmberIndicator: { name:"Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 amber indicator · 24 V AC/DC", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load", manufacturer:"Siemens", partNumber:"3SU1152-6AA00-1AA0", ratedVoltageV:24, source:{title:"Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 data sheet",url:"https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=3SU11526AA001AA0"}, terminalNotes:{X1:"Indicator lamp terminal X1",X2:"Indicator lamp terminal X2"}, simulationLimitations:"The complete amber LED indicator is specified for 24 V AC/DC and its data sheet identifies terminals X1 and X2. The educational circuit simulator models only ideal on/off connectivity in its DC topology; it does not model AC operation, LED polarity, current, brightness, photometry or protection." },
   siemensMtp400UnifiedBasic: unifiedBasicPanel("MTP400", "6AV2123-3DB32-0AW0"),
   siemensMtp700UnifiedBasic: unifiedBasicPanel("MTP700", "6AV2123-3GB32-0AW0"),
@@ -537,7 +544,7 @@ export function replaceElectricalComponent(diagram, componentId, newType, { term
 
 export function updateElectricalComponentProperties(component, updates = {}) {
   const next = { ...component, ...updates };
-  if (component.type === "fuse" && component.tripped) next.tripped = true;
+  if (electricalComponentCatalog[component.type]?.replaceAfterTrip && component.tripped) next.tripped = true;
   return next;
 }
 
