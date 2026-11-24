@@ -14,6 +14,10 @@ jobs:
   verify:
     name: Tests and static build
     runs-on: ubuntu-latest
+    container:
+      # Match @playwright/test in package-lock.json when upgrading this image.
+      image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:9beb546099e11f52d62e505537914870e01a67e0e6b00ae41da4775324e73dbe
+      options: --user pwuser
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -35,12 +39,8 @@ jobs:
           test -s "$bundle"
       - name: Run automated suite
         run: npm test
-      - name: Install Chromium for browser acceptance checks
-        run: npx playwright install --with-deps chromium
       - name: Run browser acceptance checks
         run: npm run test:e2e
-      - name: Install Firefox and WebKit for workspace checks
-        run: npx playwright install --with-deps firefox webkit
       - name: Verify workspace behavior in Firefox and WebKit
         shell: bash
         run: |
