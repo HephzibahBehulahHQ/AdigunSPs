@@ -2238,6 +2238,9 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["6AV2124-0QC02-0AX2", "Siemens", "support.industry.siemens.com"],
     ["6AV2143-6DB00-0AA0", "Siemens", "support.industry.siemens.com"],
     ["6AV2125-2JB23-0AX0", "Siemens", "support.industry.siemens.com"],
+    ["2711R-T4T", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["2711P-T4W21D8S-B", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["2711P-T19C22D9PK", "Rockwell Automation", "literature.rockwellautomation.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
