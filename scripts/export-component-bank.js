@@ -148,6 +148,21 @@ const modelRecords = Object.entries(electricalComponentCatalog).map(([type, mode
 });
 
 const records = [...referenceRecords, ...modelRecords];
+const modelsById = new Map(modelRecords.map((record) => [record.id, record]));
+const catalogCategories = new Map();
+for (const record of referenceRecords) {
+  if (record.layer !== "hardware-reference") continue;
+  const category = record.function;
+  const counts = catalogCategories.get(category) ?? { references: 0, exactEditableModels: 0, verifiedTerminalMaps: 0 };
+  counts.references++;
+  const model = modelsById.get(`model:${record.readiness.simulation.model}`);
+  if (model?.manufacturer === record.manufacturer && model.orderCode === record.orderCode) {
+    counts.exactEditableModels++;
+    if (model.readiness.terminalMap === "verified-topology") counts.verifiedTerminalMaps++;
+  }
+  catalogCategories.set(category, counts);
+}
+const hardwareByCatalogCategory = Object.fromEntries([...catalogCategories].sort(([left], [right]) => left.localeCompare(right, "en")));
 const fields = ["id", "layer", "manufacturer", "orderCode", "modelDesignation", "family", "function", "terminalSchedule",
   "channelMapping", "commonGroups", "isolationGroups", "properties", "sourceEvidence", "readiness"];
 const cell = (value) => {
@@ -179,7 +194,7 @@ const softwareAndProcess = {
   sfcExample,
   processModelTypes: supportedProcessTypes,
 };
-const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "softwareAndProcess": ${JSON.stringify(softwareAndProcess)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
+const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "hardwareByCatalogCategory": ${JSON.stringify(hardwareByCatalogCategory)},\n  "softwareAndProcess": ${JSON.stringify(softwareAndProcess)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
 const csv = `${fields.join(",")}\n${records.map((record) => fields.map((field) => cell(record[field])).join(",")).join("\n")}\n`;
 const check = process.argv.includes("--check");
 if (!check) await mkdir(output, { recursive: true });
