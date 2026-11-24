@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { connectElectricalTerminals, createElectricalComponent, electricalComponentCatalog, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, electricalComponentCatalog, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "../src/electrical.js";
 import { electricalSymbolSvg, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { scan } from "../src/engine.js";
 import { createAlarm, evaluateAlarms } from "../src/hmi.js";
@@ -676,6 +676,11 @@ for (const [model, inputCommonPolarity, input, output, inputCommon, inputPin, ou
   diagram.wires.shift();
   assert.equal(energized(true), false, "the CPU power supply does not feed an unwired relay common");
 }
+const fusedTerminal = createElectricalComponent("phoenixPT4HesiFuse", 1);
+assert.equal(Object.values(circuit(fusedTerminal.type,"pilotLamp").energized)[0],true);
+const blownTerminal = updateElectricalComponentProperties(fusedTerminal, {tripped:true});
+assert.equal(updateElectricalComponentProperties(blownTerminal, {tripped:false}).tripped,true);
+assert.equal(Object.values(circuit(fusedTerminal.type,"pilotLamp",{tripped:true}).energized)[0],false);
 const toggleOn = circuit("toggleSwitchNO","buzzer",{closed:true});
 assert.equal(Object.values(circuit("phoenixPT25KnifeDisconnect","pilotLamp").energized)[0],true,"the closed knife conducts through both terminals");
 assert.equal(Object.values(circuit("phoenixPT25KnifeDisconnect","pilotLamp",{closed:false}).energized)[0],false,"opening the knife breaks continuity");

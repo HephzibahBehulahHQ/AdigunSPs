@@ -2194,6 +2194,10 @@ test("electrical component search filters models and restores the full picker", 
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(inputRanges.nth(1)).toHaveValue("V5");
   await expect(outputRanges.nth(3)).toHaveValue("mA4-20");
+  await search.fill("3211861");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  await expect(page.getByText("Blow fuse (manual test)", { exact:true })).toBeVisible();
   await search.fill("3209578");
   await expect(palette.locator("option")).toHaveCount(1);
   await add.click();

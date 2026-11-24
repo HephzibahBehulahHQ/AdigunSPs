@@ -747,7 +747,6 @@ const phoenixTerminalBlockReferences = [
   ["3208197","PT 1,5/S-QUATTRO"],
   ["3211757","PT 4"],
   ["3211766","PT 4-PE"],
-  ["3211861","PT 4-HESI"],
   ["3211903","PT 4-HESILED 24"],
   ["3211771","PT 4-TWIN"],
   ["3211797","PT 4-QUATTRO"],
@@ -1299,6 +1298,12 @@ const industrialProductCatalog = Object.freeze([
     attributes: { variant: "DC/DC/RLY", digitalInputs: 8, relayOutputs: 6, cpuSupplyV: "20.4–28.8 DC", onboardAnalogChannels: 0 },
     source: { url: "https://sieportal.siemens.com/en-ww/products-services/10594019?tree=CatalogTree", title: "Siemens SiePortal CPU 1212C product variants", retrievedOn: "2026-11-23" },
     simulation: { status: "educational-model", model: "siemensS71212CG2Relay", limitations: "Ideal relay contacts require CPU power and an externally wired load supply. No vendor firmware emulation." }
+  },
+  {
+    manufacturer:"Phoenix Contact", identifier:"3211861", family:"PT 4-HESI (5X20)", category:"Terminal systems",
+    attributes:{ connections:2, fuseSize:"5 × 20 mm", nominalVoltageV:500, maximumLoadCurrentA:6.3 },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/fuse-terminal-block-pt-4-hesi-5x20-3211861?type=pdf", title:"Phoenix Contact PT 4-HESI (5X20) data sheet", retrievedOn:capturedOn, terminalMapSection:"Product properties and connection data · two connections and 5 × 20 mm fuse" },
+    simulation:{ status:"educational-model", model:"phoenixPT4HesiFuse", limitations:"Ideal continuity through an intact fuse with manual trip and replacement." },
   },
   {
     manufacturer:"Phoenix Contact", identifier:"3209578", family:"PT 2,5-QUATTRO", category:"Terminal systems",
