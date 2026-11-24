@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10376, "catalog has 10376 distinct provenance-backed product references");
+assert.equal(validation.count, 10394, "catalog has 10394 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10376);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10394);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 247);
@@ -28,7 +28,7 @@ assert.equal(expansion.find(({ identifier }) => identifier === "6ES7233-4HF50-0X
 assert.equal(expansion.filter(({ simulation }) => simulation.status === "reference-only" && simulation.model === null).length, 11);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
-assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 41);
+assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 59);
 const panel = searchIndustrialCatalog({ query: "6AV2128-3XB70-0AX0" }).items[0];
 assert.equal(panel.attributes.variant, "Hygienic Neutral");
 assert.equal(panel.simulation.status, "reference-only");
@@ -45,7 +45,7 @@ assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.m
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
 assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 90, exactEditableModels: 3, verifiedTerminalMaps: 3 });
 assert.deepEqual(categoryCoverage["PLC controllers"], { references: 247, exactEditableModels: 6, verifiedTerminalMaps: 6 });
-assert.deepEqual(categoryCoverage["HMI devices"], { references: 41, exactEditableModels: 0, verifiedTerminalMaps: 0 });
+assert.deepEqual(categoryCoverage["HMI devices"], { references: 59, exactEditableModels: 0, verifiedTerminalMaps: 0 });
 assert.equal(categoryCoverage["Programming software"], undefined);
 assert.equal(inventory.totals.fbdBlockTypes, 25);
 assert.deepEqual(inventory.softwareAndProcess.ladderInstructions, {
