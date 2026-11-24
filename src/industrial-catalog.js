@@ -740,6 +740,54 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const rockwellPanelViewReferences = [
+  {
+    family:"PanelView 800",
+    url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/ca/ec-ca100_-en-p.pdf",
+    title:"Rockwell Automation Connected Components selection guide · PanelView 800",
+    identifiers:[
+    "2711R-T4T", "2711R-T7T", "2711R-T10T",
+    ],
+  },
+  {
+    family:"PanelView Plus 7 Standard",
+    url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/2711p-td008_-en-p.pdf",
+    title:"Rockwell Automation PanelView Plus 7 Standard Terminals technical data",
+    identifiers:[
+    "2711P-T4W21D8S", "2711P-T4W22D8S", "2711P-T4W21D8S-B", "2711P-T4W22D8S-B",
+    "2711P-T6C21D8S", "2711P-T6C22D8S", "2711P-T6C21D8S-B", "2711P-T6C22D8S-B",
+    "2711P-T7C21D8S", "2711P-T7C22D8S", "2711P-T7C21D8S-B", "2711P-T7C22D8S-B",
+    "2711P-T9W21D8S", "2711P-T9W22D8S", "2711P-T9W21D8S-B", "2711P-T9W22D8S-B",
+    "2711P-T10C21D8S", "2711P-T10C22D8S", "2711P-T10C21D8S-B", "2711P-T10C22D8S-B",
+    "2711P-T12W21D8S", "2711P-T12W22D8S", "2711P-T12W21D8S-B", "2711P-T12W22D8S-B",
+    "2711P-T15C21D8S", "2711P-T15C22D8S", "2711P-T15C21D8S-B", "2711P-T15C22D8S-B",
+    ],
+  },
+  {
+    family:"PanelView Plus 7 Performance",
+    url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/2711p-td009_-en-p.pdf",
+    title:"Rockwell Automation PanelView Plus 7 Performance Terminals technical data",
+    identifiers:[
+    "2711P-T12W22D9P", "2711P-T7C22D9P", "2711P-B7C22D9P", "2711P-T9W22D9P",
+    "2711P-T10C22D9P", "2711P-B10C22D9P", "2711P-T15C22D9P", "2711P-B15C22D9P",
+    "2711P-T19C22D9P", "2711P-T7C22D9PK", "2711P-T9W22D9PK", "2711P-T10C22D9PK",
+    "2711P-T12W22D9PK", "2711P-T15C22D9PK", "2711P-T19C22D9PK", "2711P-B15C22D9PK",
+    "2711P-T7C22D9P-B", "2711P-B7C22D9P-B", "2711P-T9W22D9P-B", "2711P-T10C22D9P-B",
+    "2711P-B10C22D9P-B", "2711P-T12W22D9P-B", "2711P-T15C22D9P-B", "2711P-B15C22D9P-B",
+    "2711P-T19C22D9P-B", "2711P-T7C22A9P", "2711P-B7C22A9P", "2711P-T9W22A9P",
+    "2711P-T10C22A9P", "2711P-B10C22A9P", "2711P-T12W22A9P", "2711P-T15C22A9P",
+    "2711P-B15C22A9P", "2711P-T19C22A9P", "2711P-T7C22A9P-B", "2711P-B7C22A9P-B",
+    "2711P-T9W22A9P-B", "2711P-T10C22A9P-B", "2711P-B10C22A9P-B", "2711P-T12W22A9P-B",
+    "2711P-T15C22A9P-B", "2711P-B15C22A9P-B", "2711P-T19C22A9P-B",
+    ],
+  },
+].flatMap(({ family, url, title, identifiers }) => identifiers.map((identifier) => ({
+  manufacturer:"Rockwell Automation", identifier, family, category:"HMI devices",
+  attributes:{ description:`Allen-Bradley ${family} operator terminal` },
+  source:{ url, title, retrievedOn:capturedOn },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. PanelView terminal wiring, physical interfaces and runtime are outside this catalog entry." },
+})));
+
 const unifiedPanelOperatingReferences = [
   ["6AV2123-3DB32-0AW0", "MTP400", "Basic", "Standard", 4, "siemensMtp400UnifiedBasic"],
   ["6AV2123-3GB32-0AW0", "MTP700", "Basic", "Standard", 7, "siemensMtp700UnifiedBasic"],
@@ -1022,6 +1070,7 @@ const industrialProductCatalog = Object.freeze([
   ...unifiedPanelOperatingReferences,
   ...classicComfortPanelReferences,
   ...basicMobilePanelReferences,
+  ...rockwellPanelViewReferences,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,
