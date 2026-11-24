@@ -2192,14 +2192,14 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     await expect(result.locator(`a[href*="${host}"]`)).toHaveCount(1);
     await expect(result.getByRole("button", { name:"Find schematic model" })).toHaveCount(0);
   }
-  await form.locator("input").fill("6ES7212-1HG50-0XB0");
+  await form.locator("input").fill("6ES7212-1AG50-0XB0");
   await form.getByRole("button", { name:"Search", exact:true }).click();
   await catalog.getByRole("button", { name:"Find schematic model" }).click();
   const palette = page.locator("#electricalToolboxDock #electricalPalette");
-  await expect(palette).toHaveValue("siemensS71212CG2Relay");
+  await expect(palette).toHaveValue("siemensS71212CG2");
   await expect(palette).toBeFocused();
   await page.locator('#electricalToolboxDock [data-electrical-action="add"]').click();
-  await expect(page.locator('#electricalBoard [data-component-type="siemensS71212CG2Relay"]')).toHaveCount(1);
+  await expect(page.locator('#electricalBoard [data-component-type="siemensS71212CG2"]')).toHaveCount(1);
 });
 
 test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electrical actions", async ({ page }) => {
