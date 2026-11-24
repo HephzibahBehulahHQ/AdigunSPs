@@ -2,6 +2,8 @@
 
 The [JSON](inventory.json) and [CSV](inventory.csv) exports capture the starting inventory from the reference catalog and the editable schematic library. Run `node scripts/export-component-bank.js` after changing either library. CI checks that the exports match the definitions.
 
+Production smoke compares both deployed files with the release checkout on GitHub Pages and the public AdigunSPs domain.
+
 | Inventory | Starting count |
 | --- | ---: |
 | Manufacturer references | 519 |
