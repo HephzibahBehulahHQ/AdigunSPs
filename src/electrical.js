@@ -158,12 +158,31 @@ export function hasElectricalChannelBinding(component, channel) {
   return Boolean(mapping?.tag || (address && address !== electricalChannelAddress(channel) && address !== legacyDefault));
 }
 
-export function createElectricalComponent(type, sequence, x = 120, y = 120) {
+function allocateElectricalChannelDefaults(ioMap, existingComponents, mappedChannels = new Map()) {
+  const used = new Set(existingComponents.flatMap((component) =>
+    Object.values(component.ioMap || {}).map(({ address }) => address?.trim().toUpperCase())));
+  for (const binding of mappedChannels.values()) used.add(binding.address?.trim().toUpperCase());
+  const defaultsToMove = [];
+  for (const [channel, binding] of Object.entries(ioMap)) {
+    if (mappedChannels.has(channel)) continue;
+    if (!mappedChannels.size || used.has(binding.address)) defaultsToMove.push(channel);
+    else used.add(binding.address);
+  }
+  for (const channel of defaultsToMove) {
+    let index = 0, address = electricalChannelAddress(channel, index);
+    while (used.has(address)) address = electricalChannelAddress(channel, ++index);
+    ioMap[channel].address = address;
+    used.add(address);
+  }
+}
+
+export function createElectricalComponent(type, sequence, x = 120, y = 120, existingComponents = []) {
   const spec = electricalComponentCatalog[type];
   if (!spec) throw new Error(`Unsupported generic electrical component: ${type}`);
   const channels = [...(spec.channels?.inputs || []),...(spec.channels?.outputs || []),
     ...(spec.channels?.analogInputs || []),...(spec.channels?.analogOutputs || [])];
   const ioMap = Object.fromEntries(channels.map((channel) => [channel, { tag:"", address:electricalChannelAddress(channel) }]));
+  if (channels.length && existingComponents.length) allocateElectricalChannelDefaults(ioMap, existingComponents);
   return {
     id:crypto.randomUUID(), type, reference:`${spec.prefix}${sequence}`, label:spec.name,
     x:Math.round(x / 20) * 20, y:Math.round(y / 20) * 20, rotation:0,
@@ -271,20 +290,7 @@ export function replaceElectricalComponent(diagram, componentId, newType, { term
     if (address) carriedAddresses.add(address);
     replacement.ioMap[target] = binding;
   }
-  const usedAddresses = new Set([...carriedAddresses, ...others.flatMap((component) =>
-    Object.values(component.ioMap || {}).map(({ address }) => address?.trim().toUpperCase()))]);
-  const defaultsToMove = [];
-  for (const [channel, binding] of Object.entries(replacement.ioMap)) {
-    if (mappedChannels.has(channel)) continue;
-    if (usedAddresses.has(binding.address)) defaultsToMove.push(channel);
-    else usedAddresses.add(binding.address);
-  }
-  for (const channel of defaultsToMove) {
-    let index = 0, address = electricalChannelAddress(channel, index);
-    while (usedAddresses.has(address)) address = electricalChannelAddress(channel, ++index);
-    replacement.ioMap[channel].address = address;
-    usedAddresses.add(address);
-  }
+  allocateElectricalChannelDefaults(replacement.ioMap, others, mappedChannels);
   if (current.backplaneCpuId) {
     const cpu = others.find(({ id }) => id === current.backplaneCpuId);
     if (!isCompatibleBackplaneCpu(replacement, cpu)) return { ok:false, error:"Clear or change the Backplane CPU assignment before replacing this module." };

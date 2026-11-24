@@ -71,7 +71,7 @@ function executeOne(project, call, context, effects) {
       const x = Number(input.position?.x ?? 120), y = Number(input.position?.y ?? 120);
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("Component position must use finite coordinates.");
       const reference = nextElectricalReference(type, project.electrical.components), sequence = Number(reference.slice(spec.prefix.length));
-      const component = createElectricalComponent(type, sequence, x, y);
+      const component = createElectricalComponent(type, sequence, x, y, project.electrical.components);
       project.electrical.components.push(component);
       for (const [key,value] of Object.entries(input.properties || {})) executeOne(project,{name:"set_property",arguments:{componentId:component.id,key,value}},context,effects);
       return { componentId:component.id, reference:component.reference };
