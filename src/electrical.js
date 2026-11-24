@@ -4,7 +4,10 @@ const relayInputPins = { I1:"X10-1", I2:"X10-3", I3:"X10-5", I4:"X10-7", I5:"X10
 const relayOutputPins = { Q1:"X11-3", Q2:"X11-5", Q3:"X11-7", Q4:"X11-4", Q5:"X11-6", Q6:"X11-8" };
 const connectorPins = (connector, count) => Array.from({ length: count }, (_, index) => `${connector}-${index + 1}`);
 const relayPinLayout = [...connectorPins("X80", 6), ...connectorPins("X10", 10), ...connectorPins("X11", 8)];
-const g2CompatibleCpuTypes = ["siemensS71212CG2", "siemensS71212CG2Relay", "siemensS71212CG2AcRelay"];
+const relay1214InputPins = Object.fromEntries([1,3,5,7,9,11,13,15,2,4,6,8,10,12].map((pin, index) => [`I${index + 1}`, `X10-${pin}`]));
+const relay1214OutputPins = Object.fromEntries([3,5,7,9,11,4,6,8,10,12].map((pin, index) => [`Q${index + 1}`, `X11-${pin}`]));
+const relay1214Layout = [...connectorPins("X80", 6), ...connectorPins("X10", 16), ...connectorPins("X11", 12)];
+const g2CompatibleCpuTypes = ["siemensS71212CG2", "siemensS71212CG2Relay", "siemensS71212CG2AcRelay", "siemensS71214CG2Relay"];
 const g2DcSupply = { minimumVoltageV:20.4, maximumVoltageV:28.8 };
 const sm1221InputGroups = [
   { common:"X10-1", inputs:["X10-3","X10-5","X10-7","X10-9"] },
@@ -88,6 +91,22 @@ export const electricalComponentCatalog = Object.freeze({
       ...Object.fromEntries(Object.values(relayOutputPins).map((pin, index) => [pin, `Relay output DQ a.${index}`])),
     },
     simulationLimitations:"Ideal simulation with a single-phase AC CPU supply on L1/N, separate DC field input power, and an external relay load supply. Sensor-supply output, frequency, ratings and vendor firmware are outside the simulation.",
+  },
+  siemensS71214CG2Relay: {
+    name:"Siemens SIMATIC S7-1200 G2 CPU 1214C DC/DC/RLY · 14 DI / 10 relay DO", category:"PLC controllers", prefix:"PLC", kind:"plc",
+    manufacturer:"Siemens", partNumber:"6ES7214-1HH50-0XB0",
+    terminalLayout:relay1214Layout, terminals:relay1214Layout.filter((pin) => pin !== "X80-3"),
+    channels:{ inputs:Object.keys(relay1214InputPins), outputs:Object.keys(relay1214OutputPins), inputPins:relay1214InputPins, outputPins:relay1214OutputPins,
+      powerPositivePin:"X80-1", powerNegativePin:"X80-5", inputCommonPins:["X10-14","X10-16"], inputPolarity:"sink-source", relayCommonPins:["X11-1","X11-2"] },
+    controllerSupply:g2DcSupply,
+    source:{ title:"Siemens S7-1200 G2 System Manual · CPU 1214C wiring diagrams", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/cpu-1214c/wiring-diagrams", terminalMapSection:"CPU 1214C DC/DC/Relay" },
+    terminalNotes:{
+      "X80-1":"CPU power L+", "X80-2":"Chassis ground", "X80-3":"Unassigned position", "X80-4":"Sensor supply L+", "X80-5":"CPU power M", "X80-6":"Sensor supply M",
+      "X10-14":"Digital input common 1M", "X10-16":"Digital input common 1M", "X11-1":"Relay common 1L", "X11-2":"Relay common 1L",
+      ...Object.fromEntries(Object.values(relay1214InputPins).map((pin, index) => [pin, `Digital input DI ${index < 8 ? `a.${index}` : `b.${index - 8}`}`])),
+      ...Object.fromEntries(Object.values(relay1214OutputPins).map((pin, index) => [pin, `Relay output DQ ${index < 8 ? `a.${index}` : `b.${index - 8}`}`])),
+    },
+    simulationLimitations:"Ideal DC-powered controller with sink/source digital inputs and relay contacts fed by an external load supply. Sensor-supply output, ratings, timing, and vendor firmware are outside the simulation.",
   },
   digitalInputModule4: { name:"digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
   siemensSM1221G2DI16: {
