@@ -60,7 +60,7 @@ In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `S
 
 ## Components / Schematic
 
-Search, then **Place component**. Drag its header. Link **Backplane CPU** and supply power. 1214C loads use relay common 1L or transistor supply 2L+/2M. On SM 1233, set **Signal range** per input pair and per output. Readings use V/mA. With **Connect wire**, select a terminal, add bends, then select its destination. Exit via **Select / Move**. **Replace** reviews mappings. **Validate** checks wiring. **Closed** controls the knife. PLC-RSC switches 11–12 to 11–14. QUATTRO joins four terminals. PT 4-HESI models fuses. MTP400–MTP1200 show X80 power.
+Search, then **Place component**. Drag its header. Link a powered **Backplane CPU**. 1214C loads use relay common 1L or transistor supply 2L+/2M. On SM 1233, set **Signal range** per input pair and per output. Readings use V/mA. Use **Connect wire** to select endpoints and bends. Exit via **Select / Move**. **Replace** reviews mappings. **Validate** checks wiring. **Closed** controls the knife. PLC-RSC switches 11–12 to 11–14. QUATTRO joins ports. PT 4-HESI models fuse trips. SM 1223 uses X10/X11. MTP400–MTP1200 show X80 power.
 
 ## HMI
 

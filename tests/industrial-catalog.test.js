@@ -24,8 +24,9 @@ assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total,
 assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 307);
 const expansion = industrialProductCatalog.filter(({ source }) => /ordering-information\/signal-(boards-sbs|modules-sms)$/.test(source.url));
 assert.equal(expansion.length, 12);
+assert.equal(expansion.find(({ identifier }) => identifier === "6ES7223-5BH50-0XB0").simulation.model, "siemensSM1223G2DI8DQ8");
 assert.equal(expansion.find(({ identifier }) => identifier === "6ES7233-4HF50-0XB0").simulation.model, "siemensSM1233G2AI4AQ4");
-assert.equal(expansion.filter(({ simulation }) => simulation.status === "reference-only" && simulation.model === null).length, 11);
+assert.equal(expansion.filter(({ simulation }) => simulation.status === "reference-only" && simulation.model === null).length, 10);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
 assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 146);
@@ -43,6 +44,7 @@ assert.deepEqual(categoryCoverage["Terminal systems"], { references: 53, exactEd
 assert.equal(searchIndustrialCatalog({ query: "3209510" }).items[0].simulation.model, "phoenixPT25FeedThrough");
 assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.model, "phoenixPT25PE");
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
+assert.deepEqual(categoryCoverage["Digital I/O modules"], { references: 300, exactEditableModels: 4, verifiedTerminalMaps: 4 });
 assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 307, exactEditableModels: 3, verifiedTerminalMaps: 3 });
 assert.deepEqual(categoryCoverage["PLC controllers"], { references: 338, exactEditableModels: 6, verifiedTerminalMaps: 6 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 146, exactEditableModels: 4, verifiedTerminalMaps: 4 });

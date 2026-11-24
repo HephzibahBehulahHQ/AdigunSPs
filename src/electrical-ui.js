@@ -138,6 +138,9 @@ export function electricalSymbolSvg(component) {
     case "siemensSM1222G2Transistor16":
       body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1222 · 16 DQ",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · 1L+ / 1M",6)}${text(48,35,"X11 · 2L+ / 2M",6)}`;
       break;
+    case "siemensSM1223G2DI8DQ8":
+      body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,13,"SM 1223",8)}${text(48,24,"X10 · 8 DI",7)}${text(48,35,"X11 · 8 DQ",7)}`;
+      break;
     case "siemensSM1231G2AI8":
       body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1231 · 8 AI",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · AI 0–3",6)}${text(48,35,"X11 · AI 4–7",6)}`;
       break;

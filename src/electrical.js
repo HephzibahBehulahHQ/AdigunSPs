@@ -29,6 +29,11 @@ const sm1222TransistorGroups = ["X10", "X11"].map((connector) => ({
 }));
 const sm1222TransistorPins = Object.fromEntries(sm1222TransistorGroups.flatMap(({ outputs }) => outputs)
   .map((pin, index) => [`Q${index + 1}`, pin]));
+const sm1223InputGroups = sm1221InputGroups.slice(0, 2);
+const sm1223InputPins = Object.fromEntries(sm1223InputGroups.flatMap(({ inputs }) => inputs)
+  .map((pin, index) => [`I${index + 1}`, pin]));
+const sm1223OutputGroup = sm1222TransistorGroups[1];
+const sm1223OutputPins = Object.fromEntries(sm1223OutputGroup.outputs.map((pin, index) => [`Q${index + 1}`, pin]));
 const sm1231AnalogPins = Object.fromEntries(Array.from({ length:8 }, (_, index) => {
   const connector = index < 4 ? "X10" : "X11";
   const pin = index < 4 ? index * 2 + 1 : (index - 4) * 2 + 3;
@@ -190,6 +195,27 @@ export const electricalComponentCatalog = Object.freeze({
       ...outputs.map((pin, channel) => [pin, `Sourcing output DQ ${index ? "b" : "a"}.${channel}`]),
     ])),
     simulationLimitations:"Ideal sourcing outputs require a powered assigned CPU and the matching wired DC field supply and return. Current limits, overloads, leakage and switching delay are outside the simulation.",
+  },
+  siemensSM1223G2DI8DQ8: {
+    name:"Siemens S7-1200 G2 SM 1223 · 8 DI / 8 sourcing DQ · 6ES7223-5BH50-0XB0",
+    category:"PLC I/O modules", prefix:"DIO", kind:"digital-io-module",
+    manufacturer:"Siemens", partNumber:"6ES7223-5BH50-0XB0",
+    terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
+    channels:{
+      inputs:Object.keys(sm1223InputPins), inputPins:sm1223InputPins,
+      outputs:Object.keys(sm1223OutputPins), outputPins:sm1223OutputPins,
+    },
+    inputGroups:sm1223InputGroups, inputSignalVoltage:{ minimumVoltageV:15, maximumVoltageV:30 },
+    sourcingOutputGroups:[sm1223OutputGroup], fieldSupply:g2DcSupply, backplaneCpuTypes:g2CompatibleCpuTypes,
+    ratedVoltageV:24, ratedCurrentA:0.5,
+    source:{ title:"Siemens S7-1200 G2 SM 1223 DI 8x24VDC / DQ 8x24VDC wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm-1223-di-8x24vdc/dq-8x24vdc", terminalMapSection:"Wiring diagram · X10 and X11" },
+    terminalNotes:{
+      "X10-1":"Field input common 1M", "X10-2":"Field input common 2M",
+      "X11-1":"Output supply L+", "X11-2":"Output return M",
+      ...Object.fromEntries(Object.values(sm1223InputPins).map((pin, index) => [pin, `Digital input DI a.${index}`])),
+      ...Object.fromEntries(Object.values(sm1223OutputPins).map((pin, index) => [pin, `Sourcing output DQ b.${index}`])),
+    },
+    simulationLimitations:"Both input common groups accept either DC polarity while the assigned CPU has power. The sourcing outputs also require an in-range supply across X11 L+ and M. The model represents ideal switching and omits current draw, current limits, protection, delays and bus timing.",
   },
   siemensSM1231G2AI8: {
     name:"Siemens S7-1200 G2 SM 1231 · 8 AI · 6ES7231-4HF50-0XB0", category:"PLC I/O modules", prefix:"AI", kind:"analog-input-module",
