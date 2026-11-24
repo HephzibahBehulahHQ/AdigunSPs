@@ -425,8 +425,13 @@ for (const model of ["siemensSM1232G2AQ8", "siemensSM1233G2AI4AQ4"]) {
   moduleSupply.nominalVoltageV = 12;
   assert.deepEqual(simulate().analogOutputs, {}, "module undervoltage disables both outputs");
 }
-for (const inputCommonPolarity of ["negative", "positive"]) {
-  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+for (const [model, inputCommonPolarity, input, output, inputCommon, inputPin, outputPin] of [
+  ["siemensS71212CG2Relay", "negative", "I1", "Q1", "X10-8", "X10-1", "X11-3"],
+  ["siemensS71212CG2Relay", "positive", "I1", "Q1", "X10-8", "X10-1", "X11-3"],
+  ["siemensS71214CG2Relay", "negative", "I14", "Q10", "X10-16", "X10-12", "X11-12"],
+  ["siemensS71214CG2Relay", "positive", "I14", "Q10", "X10-16", "X10-12", "X11-12"],
+]) {
+  const cpu = createElectricalComponent(model, 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);
   const loadSupply = createElectricalComponent("supply24vdc", 2);
   const positive = createElectricalComponent("junction", 1);
@@ -435,8 +440,8 @@ for (const inputCommonPolarity of ["negative", "positive"]) {
   const lamp = createElectricalComponent("pilotLamp", 1);
   const common = inputCommonPolarity === "negative" ? negative : positive;
   const signal = common === negative ? positive : negative;
-  cpu.ioMap.I1 = { tag:"Start", address:"I0.0" };
-  cpu.ioMap.Q1 = { tag:"Lamp", address:"Q0.0" };
+  cpu.ioMap[input] = { tag:"Start", address:input === "I14" ? "I1.5" : "I0.0" };
+  cpu.ioMap[output] = { tag:"Lamp", address:output === "Q10" ? "Q1.1" : "Q0.0" };
   const diagram = { components:[cpu,cpuSupply,loadSupply,positive,negative,field,lamp], wires:[] };
   const wire = (from, fromPin, to, toPin) => {
     const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
@@ -448,11 +453,11 @@ for (const inputCommonPolarity of ["negative", "positive"]) {
   wire(cpuSupply, "−", negative, "1");
   wire(positive, "2", cpu, "X80-1");
   wire(negative, "2", cpu, "X80-5");
-  const commonWire = wire(common, "3", cpu, "X10-8");
+  const commonWire = wire(common, "3", cpu, inputCommon);
   wire(signal, "3", field, "13");
-  wire(field, "14", cpu, "X10-1");
-  wire(loadSupply, "+", cpu, "X11-2");
-  wire(cpu, "X11-3", lamp, "X1");
+  wire(field, "14", cpu, inputPin);
+  const loadWire = wire(loadSupply, "+", cpu, "X11-2");
+  wire(cpu, outputPin, lamp, "X1");
   wire(lamp, "X2", loadSupply, "−");
   const project = normalizeImportedProject(JSON.parse(JSON.stringify({
     name:`Relay CPU with ${inputCommonPolarity} common`,
@@ -467,6 +472,10 @@ for (const inputCommonPolarity of ["negative", "positive"]) {
   };
   assert.deepEqual(run(false), [false,false,false]);
   assert.deepEqual(run(true), [true,true,true]);
+  const savedWires = project.electrical.wires;
+  project.electrical.wires = savedWires.filter(({ id }) => id !== loadWire);
+  assert.deepEqual(run(true), [true,true,false], "a disconnected relay feed leaves the PLC command active");
+  project.electrical.wires = savedWires;
   project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== commonWire);
   assert.deepEqual(run(true), [false,false,false], "a disconnected common cannot produce a true logic input");
 }

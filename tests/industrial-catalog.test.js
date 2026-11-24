@@ -14,7 +14,8 @@ const g2Ordering = industrialProductCatalog.filter(({ source }) =>
   source.url === "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus");
 assert.equal(g2Ordering.length, 9);
 assert.equal(g2Ordering.filter(({ attributes }) => attributes.failsafe).length, 4);
-assert.equal(g2Ordering.filter(({ simulation }) => simulation.status === "reference-only").length, 7);
+assert.equal(g2Ordering.filter(({ simulation }) => simulation.status === "reference-only").length, 6);
+assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7214-1HH50-0XB0").simulation.model, "siemensS71214CG2Relay");
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1BG50-0XB0").simulation.model, "siemensS71212CG2AcRelay");
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1AG50-0XB0").simulation.model, "siemensS71212CG2");
 assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 140);
@@ -37,7 +38,7 @@ const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", 
 const categoryCoverage = inventory.hardwareByCatalogCategory;
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
 assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 90, exactEditableModels: 3, verifiedTerminalMaps: 3 });
-assert.deepEqual(categoryCoverage["PLC controllers"], { references: 96, exactEditableModels: 3, verifiedTerminalMaps: 3 });
+assert.deepEqual(categoryCoverage["PLC controllers"], { references: 96, exactEditableModels: 4, verifiedTerminalMaps: 4 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 41, exactEditableModels: 0, verifiedTerminalMaps: 0 });
 assert.equal(categoryCoverage["Programming software"], undefined);
 assert.equal(inventory.totals.fbdBlockTypes, 25);

@@ -772,7 +772,7 @@ const siemensG2CpuReferences = [
   ["6ES7212-1AG50-0XB0", "1212C", "DC/DC/DC", "siemensS71212CG2"],
   ["6ES7214-1BH50-0XB0", "1214C", "AC/DC/RLY"],
   ["6ES7214-1AH50-0XB0", "1214C", "DC/DC/DC"],
-  ["6ES7214-1HH50-0XB0", "1214C", "DC/DC/RLY"],
+  ["6ES7214-1HH50-0XB0", "1214C", "DC/DC/RLY", "siemensS71214CG2Relay"],
   ["6ES7212-1AF50-0XB0", "1212FC", "DC/DC/DC"],
   ["6ES7212-1HF50-0XB0", "1212FC", "DC/DC/RLY"],
   ["6ES7214-1AF50-0XB0", "1214FC", "DC/DC/DC"],
@@ -787,7 +787,7 @@ const siemensG2CpuReferences = [
   simulation:model
     ? { status:"educational-model", model, limitations:variant === "DC/DC/DC"
       ? "Ideal DC-powered CPU with externally supplied DC inputs and sourcing output power. Vendor firmware and electrical ratings are outside the simulation."
-      : "Ideal AC-powered CPU with externally supplied DC inputs and relay loads. Vendor firmware and electrical ratings are outside the simulation." }
+      : `Ideal ${variant.startsWith("AC") ? "AC" : "DC"}-powered CPU with externally supplied DC inputs and relay loads. Vendor firmware and electrical ratings are outside the simulation.` }
     : { status:"reference-only", model:null, limitations:"Manufacturer order reference. Terminal layout, controller firmware and fail-safe functions are outside the simulation." },
 }));
 
