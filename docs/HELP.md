@@ -60,7 +60,7 @@ In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `S
 
 ## Components / Schematic
 
-Open **Components / Schematic**, search by name or order code, and choose **Place component**. Inspect its manufacturer, part number, pins, and model limits. Drag its header. Manufacturer references lists order codes. Assign a Backplane CPU. Sixteen channels use two bytes. Choose **Connect wire**, select a terminal, click to add bends, and select the destination terminal. Leave wire mode with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Electrical simulation is a teaching model, not a hardware or safety test.
+Open **Components / Schematic**, search by name or order code, and choose **Place component**. Inspect manufacturer, order code, pins, and model limits. Drag its header. Filter and page through Manufacturer references. Assign a Backplane CPU. Sixteen channels use two bytes. Choose **Connect wire**, select a terminal, click to add bends, and select the destination terminal. Leave wire mode with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Electrical simulation is a teaching model, not a hardware or safety test.
 
 ## HMI
 
