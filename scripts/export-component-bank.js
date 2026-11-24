@@ -4,10 +4,30 @@ import { industrialProductCatalog, validateIndustrialCatalog } from "../src/indu
 import { supportedFbdTypes } from "../src/fbd-validation.js";
 import { supportedProcessTypes } from "../src/process.js";
 import { supportedLadderInstructions } from "../src/validation.js";
+import { compileStructuredText, executeStructuredText } from "../src/structured-text.js";
 
 const output = new URL("../docs/component-bank/", import.meta.url);
 const validation = validateIndustrialCatalog();
 if (!validation.ok) throw new Error(validation.errors.join("\n"));
+
+const structuredTextExamples = {
+  assignment: { source: "Result := Input;", cases: [[3, 3]] },
+  conditional: {
+    source: "IF Input > 0 THEN Result := 1; ELSIF Input = 0 THEN Result := 0; ELSE Result := -1; END_IF;",
+    cases: [[7, 1], [0, 0], [-5, -1]],
+  },
+  arithmetic: { source: "Result := (Input + 2 - 1) * 3 / 2 MOD 4;", cases: [[3, 2]] },
+  boolean: { source: "Result := NOT (Input >= 0 AND Input <= 10) OR (Input <> 8 XOR Input < 2);", cases: [[-1, true], [1, false]] },
+};
+for (const [name, { source, cases }] of Object.entries(structuredTextExamples)) {
+  const compiled = compileStructuredText(source, ["Input", "Result"]);
+  if (!compiled.ok) throw new Error(`Structured Text inventory example ${name}: ${compiled.errors.join("\n")}`);
+  for (const [input, expected] of cases) {
+    const types = { Input: "REAL", Result: typeof expected === "boolean" ? "BOOL" : "REAL" };
+    const { outputs } = executeStructuredText(compiled, { Input: input }, {}, ["Result"], types);
+    if (outputs.Result !== expected) throw new Error(`Structured Text inventory example ${name}: Input ${input} expected Result ${expected}, got ${outputs.Result}`);
+  }
+}
 
 const referenceRecords = industrialProductCatalog.map(({ manufacturer, identifier, family, category, attributes, source, simulation }) => ({
   id: `reference:${manufacturer}:${identifier}`,
@@ -68,6 +88,7 @@ const totals = {
 const softwareAndProcess = {
   ladderInstructions: supportedLadderInstructions,
   fbdBlockTypes: supportedFbdTypes,
+  structuredTextExamples,
   processModelTypes: supportedProcessTypes,
 };
 const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "softwareAndProcess": ${JSON.stringify(softwareAndProcess)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
