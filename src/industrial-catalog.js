@@ -740,6 +740,25 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const siemensG2CpuReferences = [
+  ["6ES7212-1BG50-0XB0", "1212C", "AC/DC/RLY"],
+  ["6ES7214-1BH50-0XB0", "1214C", "AC/DC/RLY"],
+  ["6ES7214-1AH50-0XB0", "1214C", "DC/DC/DC"],
+  ["6ES7214-1HH50-0XB0", "1214C", "DC/DC/RLY"],
+  ["6ES7212-1AF50-0XB0", "1212FC", "DC/DC/DC"],
+  ["6ES7212-1HF50-0XB0", "1212FC", "DC/DC/RLY"],
+  ["6ES7214-1AF50-0XB0", "1214FC", "DC/DC/DC"],
+  ["6ES7214-1HF50-0XB0", "1214FC", "DC/DC/RLY"],
+].map(([identifier, cpu, variant]) => ({
+  manufacturer:"Siemens", identifier, family:`SIMATIC S7-1200 G2 CPU ${cpu}`, category:"PLC controllers",
+  attributes:{ variant, failsafe:cpu.endsWith("FC") },
+  source:{
+    url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus",
+    title:"Siemens SIMATIC S7-1200 G2 CPU ordering information", retrievedOn:"2026-11-24",
+  },
+  simulation:{ status:"reference-only", model:null, limitations:"Manufacturer order reference. Terminal layout, controller firmware and fail-safe functions are outside the simulation." },
+}));
+
 const omronVariants = [
   ["T61","Through-beam","15 m","NPN","pre-wired"],["T81","Through-beam","15 m","PNP","pre-wired"],
   ["T62","Through-beam","30 m","NPN","pre-wired"],["T82","Through-beam","30 m","PNP","pre-wired"],
@@ -807,6 +826,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alCables,
   ...siemensEt200alPowerCables,
   ...unifiedComfortPanels,
+  ...siemensG2CpuReferences,
   ...omronSensors,
   ...finderProducts,
   ...doepkeProducts,
