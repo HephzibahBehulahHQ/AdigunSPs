@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10193, "catalog has 10193 distinct provenance-backed product references");
+assert.equal(validation.count, 10203, "catalog has 10203 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10193);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10203);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 95);
@@ -16,8 +16,11 @@ assert.equal(g2Ordering.length, 8);
 assert.equal(g2Ordering.filter(({ attributes }) => attributes.failsafe).length, 4);
 assert.equal(g2Ordering.filter(({ simulation }) => simulation.status === "reference-only").length, 7);
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1BG50-0XB0").simulation.model, "siemensS71212CG2AcRelay");
-assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 134);
-assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 84);
+assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 140);
+assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 88);
+const expansion = industrialProductCatalog.filter(({ source }) => /ordering-information\/signal-(boards-sbs|modules-sms)$/.test(source.url));
+assert.equal(expansion.length, 10);
+assert.ok(expansion.every(({ simulation }) => simulation.status === "reference-only" && simulation.model === null));
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
 assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 25);

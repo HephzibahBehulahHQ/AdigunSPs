@@ -761,6 +761,30 @@ const siemensG2CpuReferences = [
     : { status:"reference-only", model:null, limitations:"Manufacturer order reference. Terminal layout, controller firmware and fail-safe functions are outside the simulation." },
 }));
 
+const siemensG2ExpansionReferences = [
+  ["6ES7223-5BH50-0XB0", "SM 1223", "Digital", { digitalInputs: 8, digitalOutputs: 8, outputType: "24 V DC sourcing" }],
+  ["6ES7223-5PH50-0XB0", "SM 1223", "Digital", { digitalInputs: 8, relayOutputs: 8 }],
+  ["6ES7233-4HF50-0XB0", "SM 1233", "Analog", { analogInputs: 4, analogOutputs: 4 }],
+  ["6ES7221-3BF50-0XB0", "SB 1221", "Digital", { digitalInputs: 8, inputVoltageV: 24, frequencyKHz: 100 }],
+  ["6ES7222-5BF50-0XB0", "SB 1222", "Digital", { digitalOutputs: 8, outputVoltageV: 24, frequencyKHz: 100, outputType: "Push-pull" }],
+  ["6ES7223-7BF50-0XB0", "SB 1223", "Digital", { digitalInputs: 4, digitalOutputs: 4, ratedVoltageV: 24, frequencyKHz: 100 }],
+  ["6ES7223-7AF50-0XB0", "SB 1223", "Digital", { digitalInputs: 4, digitalOutputs: 4, ratedVoltageV: 5, frequencyKHz: 200 }],
+  ["6ES7231-4HD50-0XB0", "SB 1231", "Analog", { analogInputs: 4 }],
+  ["6ES7232-4HD50-0XB0", "SB 1232", "Analog", { analogOutputs: 4 }],
+  ["6ES7233-4HD50-0XB0", "SB 1233", "Analog", { analogInputs: 2, analogOutputs: 2 }],
+].map(([identifier, family, domain, attributes]) => {
+  const sourceSection = family.startsWith("SB") ? "signal-boards-sbs" : "signal-modules-sms";
+  return {
+    manufacturer: "Siemens", identifier, family: `SIMATIC S7-1200 G2 ${family}`, category: `${domain} I/O modules`,
+    attributes,
+    source: {
+      url: `https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/${sourceSection}`,
+      title: `Siemens SIMATIC S7-1200 G2 ${family} ordering information`, retrievedOn: "2026-11-24",
+    },
+    simulation: { status: "reference-only", model: null, limitations: "Terminal mapping, channel bindings, and electrical behavior are outside the simulation." },
+  };
+});
+
 const omronVariants = [
   ["T61","Through-beam","15 m","NPN","pre-wired"],["T81","Through-beam","15 m","PNP","pre-wired"],
   ["T62","Through-beam","30 m","NPN","pre-wired"],["T82","Through-beam","30 m","PNP","pre-wired"],
@@ -829,6 +853,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alPowerCables,
   ...unifiedComfortPanels,
   ...siemensG2CpuReferences,
+  ...siemensG2ExpansionReferences,
   ...omronSensors,
   ...finderProducts,
   ...doepkeProducts,
