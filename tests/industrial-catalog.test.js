@@ -30,6 +30,13 @@ assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).item
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
 assert.equal(inventory.totals.fbdBlockTypes, 25);
+assert.deepEqual(inventory.softwareAndProcess.ladderInstructions, {
+  contactModes: ["NO", "NC", "R_TRIG", "F_TRIG"],
+  coilModes: ["normal", "set", "reset"],
+  timerTypes: ["TON", "TOF", "TP", "RTO"],
+  counterTypes: ["CTU", "CTD"],
+  mcrModes: ["start", "end"],
+});
 assert.ok(inventory.softwareAndProcess.fbdBlockTypes.includes("TON"));
 assert.deepEqual(inventory.softwareAndProcess.processModelTypes, ["tank", "conveyor", "motor", "thermal", "pump", "pid"]);
 assert.equal(inventory.totals.processModelTypes, 6);

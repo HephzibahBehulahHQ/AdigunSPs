@@ -3,6 +3,7 @@ import { electricalComponentCatalog } from "../src/electrical.js";
 import { industrialProductCatalog, validateIndustrialCatalog } from "../src/industrial-catalog.js";
 import { supportedFbdTypes } from "../src/fbd-validation.js";
 import { supportedProcessTypes } from "../src/process.js";
+import { supportedLadderInstructions } from "../src/validation.js";
 
 const output = new URL("../docs/component-bank/", import.meta.url);
 const validation = validateIndustrialCatalog();
@@ -64,7 +65,11 @@ const totals = {
   fbdBlockTypes: supportedFbdTypes.length,
   processModelTypes: supportedProcessTypes.length,
 };
-const softwareAndProcess = { fbdBlockTypes:supportedFbdTypes, processModelTypes:supportedProcessTypes };
+const softwareAndProcess = {
+  ladderInstructions: supportedLadderInstructions,
+  fbdBlockTypes: supportedFbdTypes,
+  processModelTypes: supportedProcessTypes,
+};
 const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "softwareAndProcess": ${JSON.stringify(softwareAndProcess)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
 const csv = `${fields.join(",")}\n${records.map((record) => fields.map((field) => cell(record[field])).join(",")).join("\n")}\n`;
 const check = process.argv.includes("--check");
