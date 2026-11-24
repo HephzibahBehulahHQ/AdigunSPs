@@ -30,7 +30,9 @@ const modelRecords = Object.entries(electricalComponentCatalog).map(([type, mode
     })),
     channelMapping: channels ?? null,
     commonGroups: commonGroups ?? inputGroups ?? relayOutputGroups ?? (channels?.inputCommonPins ? { inputCommonPins: channels.inputCommonPins,
-      ...(channels.relayCommonPins && { relayCommonPins: channels.relayCommonPins }) } : null),
+      ...(channels.relayCommonPins && { relayCommonPins: channels.relayCommonPins }),
+      ...(channels.outputReturnPin && { outputSupply: { positive: channels.outputSupplyPin, return: channels.outputReturnPin } }),
+    } : null),
     isolationGroups: inputGroups ?? relayOutputGroups ?? null, properties, sourceEvidence: source ?? null,
     readiness: { placeable: true, terminalMap: source?.terminalMapPages || source?.terminalMapSection ? "verified-topology" : source ? "source-linked-model" : "educational-model",
       simulation: { status: "educational", model: type, limitations: simulationLimitations ?? null } }
