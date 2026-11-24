@@ -300,8 +300,11 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   wire(transmitterSupply, "−", transmitter, "M");
   wire(transmitter, "SIG+", module, "X11-9");
   wire(transmitter, "SIG−", module, "X11-10");
+  const unwired = { ...createElectricalComponent("analogCurrentSource", 2), tag:"PressureRaw" };
+  diagram.components.unshift(unwired);
   assert.equal(simulate(4).inputs.PressureRaw, 0);
-  assert.equal(simulate(12).inputs.PressureRaw, 13824);
+  assert.equal(simulate(12).inputs.PressureRaw, 13824, "an unwired source with the same tag cannot mask the connected transmitter");
+  assert.equal(simulate(12).componentStates[unwired.id]?.signalValue, undefined);
   assert.equal(simulate(20).inputs.PressureRaw, 27648);
   assert.equal(simulate(12).faults.length, 0);
   assert.ok(simulate(1).faults.some(({ code, channel }) => code === "analog-wire-break" && channel === "AI8"));
@@ -313,6 +316,23 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   const broken = simulate(12);
   assert.equal(broken.inputs.PressureRaw, 0);
   assert.ok(broken.faults.some(({ code }) => code === "analog-wire-break"));
+
+  const decoySupply = createElectricalComponent("supply24vdc", 4);
+  const signalPositive = createElectricalComponent("junction", 1);
+  const signalNegative = createElectricalComponent("junction", 2);
+  diagram.components.push(decoySupply, signalPositive, signalNegative);
+  diagram.wires.pop();
+  wire(decoySupply, "+", unwired, "L+");
+  wire(decoySupply, "−", unwired, "M");
+  wire(transmitter, "SIG+", signalPositive, "1");
+  wire(unwired, "SIG+", signalPositive, "2");
+  wire(signalPositive, "3", module, "X11-9");
+  wire(transmitter, "SIG−", signalNegative, "1");
+  wire(unwired, "SIG−", signalNegative, "2");
+  wire(signalNegative, "3", module, "X11-10");
+  const conflict = simulate(12);
+  assert.equal(conflict.inputs.PressureRaw, 0);
+  assert.ok(conflict.faults.some(({ code }) => code === "analog-source-conflict"));
 }
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
