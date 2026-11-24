@@ -248,7 +248,21 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       limit:catalogPageSize, offset:catalogOffset,
     });
     const catalogDetails=language==="de"?"Verifizierte Daten und Quelle":language==="yo"?"Àlàyé tí a fìdí múlẹ̀ àti orísun":language==="pcm"?"Verified specs and source":"Verified specifications and source";
-    const catalogRows = catalog.items.map((item) => `<li><strong>${escape(item.manufacturer)} ${escape(item.identifier)}</strong> · ${escape(item.family)} · ${escape(item.simulation.status)}<details><summary>${escape(catalogDetails)}</summary><dl>${Object.entries(item.attributes).map(([key,value])=>`<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join("")}</dl><a href="${escape(item.source.url)}" target="_blank" rel="noopener">${escape(item.source.title)}</a><p>${escape(item.simulation.limitations)}</p></details></li>`).join("");
+    const findSchematicModel = ({
+      de:"Schaltplanmodell finden", yo:"Wá awoṣe àwòrán", pcm:"Find schematic model",
+    })[language] || "Find schematic model";
+    const catalogRows = catalog.items.map((item) => {
+      const matchingModels = Object.entries(electricalComponentCatalog).filter(([, model]) =>
+        model.source && model.manufacturer === item.manufacturer && model.partNumber === item.identifier);
+      const exactMatch = matchingModels.length === 1 ? matchingModels[0][0] : null;
+      return `<li><strong>${escape(item.manufacturer)} ${escape(item.identifier)}</strong> · ${escape(item.family)} · ${escape(item.simulation.status)}
+        ${exactMatch ? `<button class="secondary" type="button" data-catalog-model="${escape(exactMatch)}">${escape(findSchematicModel)}</button>` : ""}
+        <details><summary>${escape(catalogDetails)}</summary>
+          <dl>${Object.entries(item.attributes).map(([key,value])=>`<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join("")}</dl>
+          <a href="${escape(item.source.url)}" target="_blank" rel="noopener">${escape(item.source.title)}</a>
+          <p>${escape(item.simulation.limitations)}</p>
+        </details></li>`;
+    }).join("");
     const catalogHeading = language==="de"?"Herstellerreferenzen":language==="yo"?"Àwọn ìtọ́kasí àwọn olùṣe":"Manufacturer references";
     const catalogSearch = language==="de"?"Modell, Hersteller oder Spezifikation suchen":language==="yo"?"Wá model, olùṣe tàbí àlàyé":language==="pcm"?"Search model, maker or spec":"Search model, manufacturer or specification";
     const catalogNote = language==="de"?"Herstellerangaben zur Referenz; nicht automatisch platzierbar. Nur als unterstützt bezeichnete generische Modelle beeinflussen die Simulation.":language==="yo"?"Àlàyé olùṣe fún ìtọ́kasí; kò sí fún fífi sí àwòrán. Generic model tó ní àmì supported nìkan ló ń ní ipa lórí ìṣàfarawé.":language==="pcm"?"Manufacturer reference data only; no direct placement. Only generic models marked supported affect simulation.":"Manufacturer reference data only; entries cannot be placed as supported devices. Only generic models marked supported affect simulation.";
@@ -306,6 +320,12 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       const catalogHost = toolboxHost || root;
       (catalogHost.querySelector(`[data-catalog-page="${button.dataset.catalogPage}"]:enabled`) ||
         catalogHost.querySelector(".industrial-catalog-pagination button:enabled"))?.focus();
+    }));
+    root.querySelectorAll("[data-catalog-model]").forEach((button) => button.addEventListener("click", () => {
+      paletteType = button.dataset.catalogModel;
+      paletteQuery = electricalComponentCatalog[paletteType].partNumber;
+      render();
+      (toolboxHost || root).querySelector("#electricalPalette")?.focus();
     }));
     root.querySelector("#electricalModelSearch")?.addEventListener("input",(event)=>{paletteQuery=event.currentTarget.value;paletteType=(toolboxHost?.querySelector("#electricalPalette")||root.querySelector("#electricalPalette"))?.value||paletteType;render();const input=toolboxHost?.querySelector("#electricalModelSearch")||root.querySelector("#electricalModelSearch");input?.focus();input?.setSelectionRange(paletteQuery.length,paletteQuery.length);});
     root.querySelector("#electricalPalette")?.addEventListener("change",(event)=>{paletteType=event.currentTarget.value;});
