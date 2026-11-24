@@ -301,7 +301,9 @@ function showContextMenu(event, entries, menuLabel = (contextCopy[language] || c
     }
   };
   requestAnimationFrame(() => {
-    if (contextMenuTrigger === trigger && !menu.hidden) menu.querySelector("[role=menuitem]")?.focus();
+    if (contextMenuTrigger === trigger && !menu.hidden && !menu.contains(document.activeElement)) {
+      menu.querySelector("[role=menuitem]")?.focus();
+    }
   });
 }
 function hideContextMenu() { if (contextMenuTrigger?.matches("[data-app-menu]")) contextMenuTrigger.setAttribute("aria-expanded", "false"); contextMenuTrigger = null; contextMenuDismiss?.(); contextMenuDismiss = null; const menu = $("#contextMenu"); menu.hidden = true; menu.onkeydown = null; menu.innerHTML = ""; menu.classList.remove("help-guide-menu"); menu.style.width = ""; menu.style.maxHeight = ""; }
