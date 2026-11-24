@@ -740,6 +740,41 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const rockwellCompactLogixReferences = [
+  ["CompactLogix 5380", [
+    "5069-L306ER", "5069-L306ERM", "5069-L310ER", "5069-L310ERM",
+    "5069-L310ER-NSE", "5069-L320ER", "5069-L320ERM", "5069-L320ERP",
+    "5069-L330ER", "5069-L330ERM", "5069-L340ER", "5069-L340ERM",
+    "5069-L340ERP", "5069-L350ERM", "5069-L380ERM", "5069-L3100ERM",
+    "5069-L310ERMK", "5069-L320ERMK", "5069-L330ERMK", "5069-L350ERMK",
+  ]],
+  ["Compact GuardLogix 5380 SIL 2", [
+    "5069-L306ERS2", "5069-L306ERMS2", "5069-L310ERS2", "5069-L310ERMS2",
+    "5069-L320ERS2", "5069-L320ERMS2", "5069-L330ERS2", "5069-L330ERMS2",
+    "5069-L340ERS2", "5069-L340ERMS2", "5069-L350ERS2", "5069-L350ERMS2",
+    "5069-L380ERS2", "5069-L380ERMS2", "5069-L3100ERS2", "5069-L3100ERMS2",
+    "5069-L310ERS2K", "5069-L310ERMS2K", "5069-L320ERS2K", "5069-L320ERMS2K",
+    "5069-L330ERS2K", "5069-L330ERMS2K", "5069-L350ERS2K", "5069-L350ERMS2K",
+  ]],
+  ["Compact GuardLogix 5380 SIL 3", [
+    "5069-L306ERMS3", "5069-L310ERMS3", "5069-L320ERMS3", "5069-L330ERMS3",
+    "5069-L340ERMS3", "5069-L350ERMS3", "5069-L380ERMS3", "5069-L3100ERMS3",
+    "5069-L310ERMS3K", "5069-L320ERMS3K", "5069-L330ERMS3K", "5069-L350ERMS3K",
+  ]],
+  ["CompactLogix 5480", [
+    "5069-L430ERMW", "5069-L450ERMW", "5069-4100ERMW", "5069-L4200ERMW",
+  ]],
+].flatMap(([family, identifiers]) => identifiers.map((identifier) => ({
+  manufacturer:"Rockwell Automation", identifier, family, category:"PLC controllers",
+  attributes:{ description:`Allen-Bradley ${family} controller` },
+  source:{
+    url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/5069-td002_-en-p.pdf",
+    title:"Rockwell Automation publication 5069-TD002 · Controller catalog numbers",
+    retrievedOn:capturedOn,
+  },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Controller runtime, physical I/O, safety functions and safety validation are outside this catalog entry." },
+})));
+
 const rockwellMicro800References = [
   ["Micro810", [
     "2080-LC10-12AWA",
@@ -1125,6 +1160,7 @@ const industrialProductCatalog = Object.freeze([
   ...basicMobilePanelReferences,
   ...rockwellPanelViewReferences,
   ...rockwellMicro800References,
+  ...rockwellCompactLogixReferences,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,
