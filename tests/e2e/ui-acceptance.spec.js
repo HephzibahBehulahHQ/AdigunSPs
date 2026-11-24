@@ -2194,6 +2194,11 @@ test("electrical component search filters models and restores the full picker", 
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(inputRanges.nth(1)).toHaveValue("V5");
   await expect(outputRanges.nth(3)).toHaveValue("mA4-20");
+  await search.fill("3209578");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const quattro = page.locator('#electricalBoard [data-component-type="phoenixPT25Quattro"]');
+  await expect(quattro.getByRole("button", { name:/terminal 4/ })).toBeEnabled();
   for (const [size, code] of [[400,"6AV2123-3DB32-0AW0"], [1200,"6AV2123-3MB32-0AW0"]]) {
     await search.fill(code);
     await expect(palette.locator("option")).toHaveCount(1);
@@ -2246,7 +2251,6 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["5069-L310ER-NSE", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["5069-L310ERMS3K", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["5069-4100ERMW", "Rockwell Automation", "literature.rockwellautomation.com"],
-    ["3209578", "Phoenix Contact", "assets.phoenixcontact.com"],
     ["3044665", "Phoenix Contact", "www.phoenixcontact.com"],
   ]) {
     await form.locator("input").fill(orderCode);

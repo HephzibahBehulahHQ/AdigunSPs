@@ -745,7 +745,6 @@ const phoenixTerminalBlockReferences = [
   ["3208139","PT 1,5/S PE"],
   ["3208155","PT 1,5/S-TWIN"],
   ["3208197","PT 1,5/S-QUATTRO"],
-  ["3209578","PT 2,5-QUATTRO"],
   ["3211757","PT 4"],
   ["3211766","PT 4-PE"],
   ["3211861","PT 4-HESI"],
@@ -1300,6 +1299,12 @@ const industrialProductCatalog = Object.freeze([
     attributes: { variant: "DC/DC/RLY", digitalInputs: 8, relayOutputs: 6, cpuSupplyV: "20.4–28.8 DC", onboardAnalogChannels: 0 },
     source: { url: "https://sieportal.siemens.com/en-ww/products-services/10594019?tree=CatalogTree", title: "Siemens SiePortal CPU 1212C product variants", retrievedOn: "2026-11-23" },
     simulation: { status: "educational-model", model: "siemensS71212CG2Relay", limitations: "Ideal relay contacts require CPU power and an externally wired load supply. No vendor firmware emulation." }
+  },
+  {
+    manufacturer:"Phoenix Contact", identifier:"3209578", family:"PT 2,5-QUATTRO", category:"Terminal systems",
+    attributes:{ connections:4, potentials:1, nominalVoltageV:800, nominalCurrentA:24, connectionMethod:"Push-in" },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-quattro-3209578?type=pdf", title:"Phoenix Contact PT 2,5-QUATTRO data sheet", retrievedOn:capturedOn, terminalMapSection:"Product properties · 4 connections, 1 potential" },
+    simulation:{ status:"educational-model", model:"phoenixPT25Quattro", limitations:"Use the schematic picker to place the ideal four-connection node." },
   },
   {
     manufacturer: "Phoenix Contact", identifier: "3209549", family: "PT 2,5-TWIN", category: "Terminal systems",
