@@ -769,6 +769,28 @@ const unifiedPanelOperatingReferences = [
     : { status:"reference-only", model:null, limitations:"Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const basicKeylessDocument = "https://support.industry.siemens.com/cs/attachments/109780221/hmi_tp400_tp700_tp900_basic_keyless_product_information_en-US.pdf";
+const mobilePanelDocument = "https://support.industry.siemens.com/cs/attachments/109477873/hmi_mobile_panels_2nd_generation_product_information_de-DE.pdf";
+const basicMobilePanelReferences = [
+  ["Basic", basicKeylessDocument, "Siemens Basic Keyless OEM product information", [
+    ["6AV2123-2DB03-0AX0", "KTP400 Basic"], ["6AV2123-2GB03-0AX0", "KTP700 Basic"], ["6AV2123-2JB03-0AX0", "KTP900 Basic"],
+  ]],
+  ["Basic", "https://cache.industry.siemens.com/dl/files/146/109744146/att_1029327/v1/KG_ST80-STPC_Deutsch-2020.pdf", "Siemens ST 80 HMI catalog", [
+    ["6AV2123-2MB03-0AX0", "KTP1200 Basic"], ["6AV2123-2MA03-0AX0", "KTP1200 Basic DP"],
+  ]],
+  ["Basic Keyless OEM", basicKeylessDocument, "Siemens Basic Keyless OEM product information", [
+    ["6AV2143-6DB00-0AA0", "TP400 Basic OEM"], ["6AV2143-6GB00-0AA0", "TP700 Basic Keyless"], ["6AV2143-6JB00-0AA0", "TP900 Basic Keyless"],
+  ]],
+  ["Mobile 2nd Generation", mobilePanelDocument, "Siemens Mobile Panels 2nd Generation product information", [
+    ["6AV2125-2DB23-0AX0", "KTP400F Mobile"], ["6AV2125-2GB03-0AX0", "KTP700 Mobile"], ["6AV2125-2GB23-0AX0", "KTP700F Mobile"],
+    ["6AV2125-2JB03-0AX0", "KTP900 Mobile"], ["6AV2125-2JB23-0AX0", "KTP900F Mobile"],
+  ]],
+].flatMap(([series, url, title, panels]) => panels.map(([identifier, panel]) => ({
+  manufacturer:"Siemens", identifier, family:`SIMATIC ${panel}`, category:"HMI devices",
+  attributes:{ panel, series }, source:{ url, title, retrievedOn:"2026-11-24" },
+  simulation:{ status:"reference-only", model:null, limitations:"Panel wiring, display hardware, vendor HMI runtime, and safety interface behavior are outside the simulation." },
+})));
+
 const classicComfortPanelReferences = [
   ["KP400", "Keys", 4, ["6AV2124-1DC01-0AX0"]],
   ["KTP400", "Touch and keys", 4, ["6AV2124-2DC01-0AX0"]],
@@ -999,6 +1021,7 @@ const industrialProductCatalog = Object.freeze([
   ...unifiedComfortPanels,
   ...unifiedPanelOperatingReferences,
   ...classicComfortPanelReferences,
+  ...basicMobilePanelReferences,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,
