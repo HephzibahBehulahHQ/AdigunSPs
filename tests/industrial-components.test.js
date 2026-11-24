@@ -539,6 +539,8 @@ for (const [model, inputCommonPolarity, input, output, inputCommon, inputPin, ou
   assert.equal(energized(true), false, "the CPU power supply does not feed an unwired relay common");
 }
 const toggleOn = circuit("toggleSwitchNO","buzzer",{closed:true});
+assert.equal(Object.values(circuit("phoenixPT25KnifeDisconnect","pilotLamp").energized)[0],true,"the closed knife conducts through both terminals");
+assert.equal(Object.values(circuit("phoenixPT25KnifeDisconnect","pilotLamp",{closed:false}).energized)[0],false,"opening the knife breaks continuity");
 assert.equal(Object.values(toggleOff.energized)[0],false,"maintained NO toggle starts open");
 assert.equal(Object.values(toggleOn.energized)[0],true,"maintained NO toggle closes the buzzer circuit");
 assert.equal(Object.values(circuit("toggleSwitchNC","heaterElement",{closed:true}).energized)[0],true,"maintained NC toggle starts closed");

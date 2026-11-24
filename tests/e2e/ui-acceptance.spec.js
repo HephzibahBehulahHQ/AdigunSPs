@@ -2071,6 +2071,16 @@ test("electrical component search filters models and restores the full picker", 
   await add.click();
   const terminal = page.locator('#electricalBoard [data-component-type="phoenixPT25Twin"]');
   await expect(terminal.locator("[data-terminal]")).toHaveText(["1", "2", "3"]);
+  await search.fill("3212316");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const disconnect = page.locator('#electricalBoard [data-component-type="phoenixPT25KnifeDisconnect"]');
+  await expect(disconnect.locator("[data-terminal]")).toHaveText(["1", "2"]);
+  const knifeClosed = page.locator('#electricalProperties input[name="closed"]');
+  await expect(knifeClosed).toBeChecked();
+  await knifeClosed.uncheck();
+  await page.locator("#electricalProperties button[type=submit]").click();
+  await expect(knifeClosed).not.toBeChecked();
   await search.fill("6ES7212-1HG50-0XB0");
   await expect(palette.locator("option")).toHaveCount(1);
   await add.click();
