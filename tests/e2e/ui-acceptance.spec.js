@@ -2241,6 +2241,8 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["2711R-T4T", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["2711P-T4W21D8S-B", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["2711P-T19C22D9PK", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["2080-LC10-12AWA", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["2080-L70E-24QWBK", "Rockwell Automation", "literature.rockwellautomation.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
