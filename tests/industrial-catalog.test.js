@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10572, "catalog has 10572 distinct provenance-backed product references");
+assert.equal(validation.count, 10621, "catalog has 10621 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10572);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10621);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 338);
@@ -39,7 +39,7 @@ assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
 const categoryCoverage = inventory.hardwareByCatalogCategory;
 assert.equal(searchIndustrialCatalog({ query: "2966171" }).items[0].simulation.model, "phoenixPlcRsc24Dc21");
-assert.deepEqual(categoryCoverage["Terminal systems"], { references: 4, exactEditableModels: 4, verifiedTerminalMaps: 1 });
+assert.deepEqual(categoryCoverage["Terminal systems"], { references: 53, exactEditableModels: 4, verifiedTerminalMaps: 1 });
 assert.equal(searchIndustrialCatalog({ query: "3209510" }).items[0].simulation.model, "phoenixPT25FeedThrough");
 assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.model, "phoenixPT25PE");
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
