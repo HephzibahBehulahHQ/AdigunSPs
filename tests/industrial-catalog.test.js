@@ -4,12 +4,12 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10320, "catalog has 10320 distinct provenance-backed product references");
+assert.equal(validation.count, 10376, "catalog has 10376 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10320);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10376);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
-assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 191);
+assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 247);
 const g2Ordering = industrialProductCatalog.filter(({ source }) =>
   source.url === "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus");
 assert.equal(g2Ordering.length, 9);
@@ -44,7 +44,7 @@ assert.equal(searchIndustrialCatalog({ query: "3209510" }).items[0].simulation.m
 assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.model, "phoenixPT25PE");
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
 assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 90, exactEditableModels: 3, verifiedTerminalMaps: 3 });
-assert.deepEqual(categoryCoverage["PLC controllers"], { references: 191, exactEditableModels: 6, verifiedTerminalMaps: 6 });
+assert.deepEqual(categoryCoverage["PLC controllers"], { references: 247, exactEditableModels: 6, verifiedTerminalMaps: 6 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 41, exactEditableModels: 0, verifiedTerminalMaps: 0 });
 assert.equal(categoryCoverage["Programming software"], undefined);
 assert.equal(inventory.totals.fbdBlockTypes, 25);
