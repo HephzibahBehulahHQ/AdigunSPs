@@ -135,6 +135,35 @@ for (const size of [400, 700, 1000, 1200]) {
 }
 
 {
+  const terminal = createElectricalComponent("phoenixPT25Quattro", 1);
+  const supply = createElectricalComponent("supply24vdc", 1);
+  const returnRail = createElectricalComponent("neutralRail", 1);
+  const lamps = [1,2,3].map(index => createElectricalComponent("pilotLamp", index));
+  const diagram = { components:[terminal,supply,returnRail,...lamps], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  assert.deepEqual(terminal.terminals, ["1","2","3","4"]);
+  assert.match(electricalSymbolSvg(terminal), /PT 2,5-QUATTRO/);
+  wire(supply, "+", terminal, "1");
+  wire(supply, "−", returnRail, "N1");
+  for (const [index, lamp] of lamps.entries()) {
+    wire(terminal, String(index + 2), lamp, "X1");
+    wire(returnRail, `N${index + 2}`, lamp, "X2");
+  }
+  const restored = normalizeImportedProject(JSON.parse(JSON.stringify({ name:"QUATTRO distribution", rungs:[], electrical:diagram }))).electrical;
+  const lampStates = () => {
+    const { energized } = simulateElectricalDiagram(restored);
+    return lamps.map(({ id }) => energized[id]);
+  };
+  assert.deepEqual(lampStates(), [true,true,true]);
+  restored.wires.shift();
+  assert.deepEqual(lampStates(), [false,false,false]);
+}
+
+{
   const terminal = createElectricalComponent("phoenixPT25Twin", 1);
   const supply = createElectricalComponent("supply24vdc", 1);
   const returnRail = createElectricalComponent("neutralRail", 1);

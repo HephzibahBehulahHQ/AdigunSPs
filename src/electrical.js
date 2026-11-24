@@ -341,6 +341,13 @@ export const electricalComponentCatalog = Object.freeze({
     terminalNotes: { "1": "Twin-side conductor connection · editor port 1", "2": "Twin-side conductor connection · editor port 2", "3": "Single-side conductor connection · editor port 3" },
     simulationLimitations: "Three push-in connections form one ideal node. The editor numbers are positional labels. Resistance, heating, conductor fit, mounting, and rating enforcement are outside the model."
   },
+  phoenixPT25Quattro: {
+    name:"Phoenix Contact PT 2,5-QUATTRO · 3209578", category:"Terminals and wiring", prefix:"X",
+    terminals:["1","2","3","4"], kind:"junction", manufacturer:"Phoenix Contact", partNumber:"3209578",
+    ratedVoltageV:800, ratedCurrentA:24, commonGroups:[{ terminals:["1","2","3","4"], relationship:"one potential" }],
+    source:{ title:"Phoenix Contact PT 2,5-QUATTRO data sheet", url:"https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-quattro-3209578?type=pdf", terminalMapSection:"Product properties · 4 connections, 1 potential" },
+    simulationLimitations:"Four push-in connections share one ideal node. Numbers 1–4 are editor labels. The model omits resistance, heating, wire fit and rating enforcement.",
+  },
   phoenixPT25KnifeDisconnect: {
     name:"Phoenix Contact PT 2,5-MT OG knife-disconnect terminal · 3212316", category:"Terminals and wiring", prefix:"X",
     terminals:["1","2"], kind:"manual-switch", initialClosed:true, manufacturer:"Phoenix Contact", partNumber:"3212316",

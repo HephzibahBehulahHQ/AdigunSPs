@@ -184,6 +184,9 @@ export function electricalSymbolSvg(component) {
     case "terminal":body=`${line(4,22,31,22)}<rect x="31" y="12" width="34" height="20" ${common}/>${line(38,22,58,22)}${line(65,22,92,22)}${text(48,9,"X",7)}`;break;
     case "dcPowerRail":body=`${line(5,13,91,13)}${[15,35,55,75].map((x)=>`${line(x,13,x,30)}<circle cx="${x}" cy="31" r="2" fill="currentColor"/>`).join("")}${text(48,40,"+24 V DC",7)}`;break;
     case "neutralRail":body=`${line(5,13,91,13)}${[15,35,55,75].map((x)=>`${line(x,13,x,30)}<circle cx="${x}" cy="31" r="2" fill="currentColor"/>`).join("")}${text(48,40,"N",8)}`;break;
+    case "phoenixPT25Quattro":
+      body = `<rect x="8" y="5" width="80" height="34" rx="3" ${common}/>${text(48,15,"PT 2,5-QUATTRO",7)}${line(21,23,75,23)}${[21,39,57,75].map(x => `${line(x,23,x,32)}<circle cx="${x}" cy="32" r="2" fill="currentColor"/>`).join("")}`;
+      break;
     case "junction":
       body = component.type === "phoenixPT25Twin"
         ? `<rect x="6" y="5" width="84" height="34" rx="3" ${common}/>${line(50,22,78,22)}${line(50,12,50,32)}${line(18,12,50,12)}${line(18,32,50,32)}${[[18,12], [18,32], [78,22]].map(([x,y]) => `<circle cx="${x}" cy="${y}" r="3" fill="currentColor"/>`).join("")}`
