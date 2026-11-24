@@ -21,6 +21,8 @@ The JSON export lists ladder contact, coil, timer, counter, and MCR options alon
 
 Use the 10,000 distinct hardware target as an acquisition plan. Before counting a new part, record its exact order code and official evidence. Add a native schematic model only once the terminal topology is documented. Verify wiring, supported behavior, and project recovery before marking a simulation profile usable.
 
+The JSON field `hardwareByCatalogCategory` counts hardware references, references linked to an editable model for the exact manufacturer and order code, and those links with a verified terminal map. These are the catalog's categories. They include combined categories such as analog I/O, with acquisition targets for inputs and outputs tracked individually.
+
 ## First verified addition
 
 The Phoenix Contact PT 2,5-TWIN (`3209549`) adds one hardware order code and one editable schematic model. Search for the order code in the component picker. Its three conductor connections share a single ideal node. The three stable editor port IDs identify positions in the model. The manufacturer's diagram shows the topology without numbered terminals. [Manufacturer data sheet, pages 2 and 7](https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-twin-3209549?type=pdf)

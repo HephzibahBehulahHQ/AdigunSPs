@@ -33,6 +33,11 @@ assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].id
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
+const categoryCoverage = inventory.hardwareByCatalogCategory;
+assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
+assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 88, exactEditableModels: 3, verifiedTerminalMaps: 3 });
+assert.deepEqual(categoryCoverage["HMI devices"], { references: 25, exactEditableModels: 0, verifiedTerminalMaps: 0 });
+assert.equal(categoryCoverage["Programming software"], undefined);
 assert.equal(inventory.totals.fbdBlockTypes, 25);
 assert.deepEqual(inventory.softwareAndProcess.ladderInstructions, {
   contactModes: ["NO", "NC", "R_TRIG", "F_TRIG"],
