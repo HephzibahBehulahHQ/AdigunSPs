@@ -2028,6 +2028,20 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
   const form = page.locator("#industrialCatalogSearch");
   const catalog = page.locator("details").filter({ has: form });
   await catalog.locator(":scope > summary").click();
+  await form.getByLabel("Manufacturer", { exact:true }).selectOption("Doepke");
+  await form.getByLabel("Category", { exact:true }).selectOption("Protection");
+  await form.getByRole("button", { name:"Search", exact:true }).click();
+  await expect(catalog.getByRole("status")).toContainText("Results 1–8");
+  const firstPage = await catalog.locator(":scope > ul > li > strong").allTextContents();
+  await catalog.getByRole("button", { name:"Next", exact:true }).click();
+  await expect(catalog.getByRole("status")).toContainText("Results 9–16");
+  const secondPage = await catalog.locator(":scope > ul > li > strong").allTextContents();
+  expect(secondPage).toHaveLength(8);
+  expect(secondPage.every((label) => label.startsWith("Doepke ") && !firstPage.includes(label))).toBe(true);
+  await catalog.getByRole("button", { name:"Previous", exact:true }).click();
+  await expect(catalog.getByRole("status")).toContainText("Results 1–8");
+  await form.getByLabel("Manufacturer", { exact:true }).selectOption("");
+  await form.getByLabel("Category", { exact:true }).selectOption("");
   for (const [orderCode, manufacturer, host] of [
     ["936100247", "Finder", "findernet.com"],
     ["09112601", "Doepke", "doepke.de"],
