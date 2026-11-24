@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { connectElectricalTerminals, createElectricalComponent, electricalComponentCatalog, simulateElectricalDiagram } from "../src/electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, electricalComponentCatalog, simulateElectricalDiagram, validateElectricalDiagram } from "../src/electrical.js";
 import { electricalSymbolSvg, renderElectricalWorkspace } from "../src/electrical-ui.js";
 import { scan } from "../src/engine.js";
+import { createAlarm, evaluateAlarms } from "../src/hmi.js";
 import { normalizeImportedProject } from "../src/project-import.js";
 
 function circuit(switchType, loadType, options = {}) {
@@ -135,6 +136,71 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   assert.deepEqual(state({ LampB:true }), [false,true]);
   diagram.wires = diagram.wires.filter(({ from }) => from.componentId !== controlSupply.id);
   assert.deepEqual(state(), [false,false]);
+}
+{
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const inputs = createElectricalComponent("siemensSM1221G2DI16", 1, 420, 120);
+  const outputs = createElectricalComponent("siemensSM1222G2Relay16", 1, 720, 120);
+  const switchDevice = { ...createElectricalComponent("pushbuttonNO", 1), tag:"FieldSwitch" };
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  const [cpuSupply, inputSupply, relaySupply, loadSupply] = Array.from({ length:4 }, (_, index) => createElectricalComponent("supply24vdc", index + 1));
+  inputs.backplaneCpuId = cpu.id;
+  outputs.backplaneCpuId = cpu.id;
+  for (const binding of Object.values(cpu.ioMap)) binding.address = binding.address.replace("0.", "2.");
+  inputs.ioMap.I9.tag = "Start";
+  outputs.ioMap.Q9.tag = "LampCommand";
+  const electrical = { components:[cpu,inputs,outputs,switchDevice,lamp,cpuSupply,inputSupply,relaySupply,loadSupply], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(electrical,
+      { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    electrical.wires.push(result.wire);
+    return result.wire;
+  };
+  wire(cpuSupply, "+", cpu, "X80-1");
+  wire(cpuSupply, "−", cpu, "X80-5");
+  wire(inputSupply, "+", switchDevice, "13");
+  const fieldWire = wire(switchDevice, "14", inputs, "X11-3");
+  wire(inputSupply, "−", inputs, "X11-1");
+  wire(relaySupply, "+", outputs, "X11-1");
+  wire(relaySupply, "−", outputs, "X11-2");
+  const loadFeed = wire(loadSupply, "+", outputs, "X11-14");
+  const outputWire = wire(outputs, "X11-5", lamp, "X1");
+  wire(lamp, "X2", loadSupply, "−");
+  const project = normalizeImportedProject(JSON.parse(JSON.stringify({
+    name:"Siemens expansion modules to timed field load",
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"LampCommand", type:"BOOL", role:"output" }],
+    io:{ inputs:["Start"], outputs:["LampCommand"] },
+    rungs:[{ id:"timed-lamp", branches:[[{ tag:"Start", mode:"NO" }]],
+      timer:{ tag:"Delay", type:"TON", preset:200, output:"DN" }, coil:"LampCommand" }],
+    hmi:createAlarm({}, { tag:"LampCommand", message:"Lamp commanded" }, 1000),
+    electrical,
+  })));
+  for (const original of [fieldWire, outputWire]) {
+    const restored = project.electrical.wires.find(({ id }) => id === original.id);
+    assert.deepEqual([restored.from, restored.to], [original.from, original.to]);
+  }
+  const restoredInput = project.electrical.components.find(({ id }) => id === inputs.id);
+  const restoredOutput = project.electrical.components.find(({ id }) => id === outputs.id);
+  assert.deepEqual([restoredInput.backplaneCpuId, restoredOutput.backplaneCpuId], [cpu.id, cpu.id]);
+  assert.equal(restoredInput.ioMap.I9.address, "I1.0");
+  assert.equal(restoredOutput.ioMap.Q9.address, "Q1.0");
+  assert.deepEqual(validateElectricalDiagram(project.electrical, project.tags).filter(({ level, code }) =>
+    level === "error" || code === "electrical-io-address-duplicate"), []);
+  let state = {}, hmi = project.hmi;
+  const step = (FieldSwitch) => {
+    const { inputs:fieldValues } = simulateElectricalDiagram(project.electrical, { FieldSwitch });
+    state = scan(project, fieldValues, state, 100);
+    const field = simulateElectricalDiagram(project.electrical, { FieldSwitch }, state.outputs);
+    hmi = evaluateAlarms(hmi, state.outputs, 1200);
+    return [fieldValues.Start, state.outputs.LampCommand, field.energized[lamp.id], hmi.alarms[0].active];
+  };
+  assert.deepEqual(step(false), [false,false,false,false]);
+  assert.deepEqual(step(true), [true,false,false,false], "one scan has not satisfied the TON");
+  assert.deepEqual(step(true), [true,true,true,true]);
+  project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== loadFeed.id);
+  assert.deepEqual(step(true), [true,true,false,true], "a commanded output cannot replace an open load feed");
+  assert.deepEqual(step(false), [false,false,false,false], "releasing the input clears the timer and command alarm");
 }
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
