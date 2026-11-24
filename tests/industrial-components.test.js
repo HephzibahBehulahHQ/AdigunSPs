@@ -26,6 +26,43 @@ for (const type of types) {
 }
 
 {
+  const relay = createElectricalComponent("phoenixPlcRsc24Dc21", 1);
+  const control = createElectricalComponent("supply24vdc", 1);
+  const field = createElectricalComponent("supply24vdc", 2);
+  const returnJunction = createElectricalComponent("junction", 1);
+  const nc = createElectricalComponent("pilotLamp", 1);
+  const no = createElectricalComponent("pilotLamp", 2);
+  const diagram = { components:[relay,control,field,returnJunction,nc,no], wires:[] };
+  const connect = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  connect(field, "+", relay, "11");
+  connect(relay, "12", nc, "X1");
+  connect(relay, "14", no, "X1");
+  connect(nc, "X2", returnJunction, "1");
+  connect(no, "X2", returnJunction, "2");
+  connect(field, "−", returnJunction, "3");
+  const state = (electrical = diagram) => {
+    const { energized } = simulateElectricalDiagram(electrical);
+    return [energized[nc.id], energized[no.id]];
+  };
+  assert.deepEqual(state(), [true,false]);
+  connect(control, "+", relay, "A1");
+  connect(control, "−", relay, "A2");
+  const restored = normalizeImportedProject(JSON.parse(JSON.stringify({ name:"Relay changeover", rungs:[], electrical:diagram }))).electrical;
+  assert.deepEqual(state(restored), [false,true]);
+  control.nominalVoltageV = 18;
+  assert.deepEqual(state(), [true,false]);
+  control.nominalVoltageV = 24;
+  diagram.wires.splice(-2);
+  connect(control, "−", relay, "A1");
+  connect(control, "+", relay, "A2");
+  assert.deepEqual(state(), [true,false], "reverse polarity leaves the coil de-energized");
+}
+
+{
   const terminal = createElectricalComponent("phoenixPT25Twin", 1);
   const supply = createElectricalComponent("supply24vdc", 1);
   const returnRail = createElectricalComponent("neutralRail", 1);

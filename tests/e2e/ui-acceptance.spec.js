@@ -2081,6 +2081,12 @@ test("electrical component search filters models and restores the full picker", 
   await knifeClosed.uncheck();
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(knifeClosed).not.toBeChecked();
+  await search.fill("2966171");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const interfaceRelay = page.locator('#electricalBoard [data-component-type="phoenixPlcRsc24Dc21"]');
+  await expect(interfaceRelay.getByRole("button", { name:/A2.*Negative control input/ })).toBeEnabled();
+  await expect(interfaceRelay.getByRole("button", { name:/14.*Normally open contact/ })).toBeEnabled();
   await search.fill("6ES7212-1HG50-0XB0");
   await expect(palette.locator("option")).toHaveCount(1);
   await add.click();
