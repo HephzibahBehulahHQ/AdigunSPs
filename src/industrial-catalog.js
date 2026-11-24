@@ -974,6 +974,18 @@ const industrialProductCatalog = Object.freeze([
     simulation: { status: "educational-model", model: "phoenixPT25Twin", limitations: "Use the schematic picker to place the ideal three-connection node. No resistance, heating, or rating enforcement is modeled." }
   },
   {
+    manufacturer:"Phoenix Contact", identifier:"3209510", family:"PT 2,5", category:"Terminal systems",
+    attributes:{ connections:2, potentials:1, nominalVoltageV:800, nominalCurrentA:24, connectionMethod:"Push-in" },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/feed-through-terminal-block-pt-25-3209510", title:"Phoenix Contact PT 2,5 product data", retrievedOn:"2026-11-24" },
+    simulation:{ status:"educational-model", model:"phoenixPT25FeedThrough", limitations:"Ideal two-port continuity. Resistance, heating, and rating enforcement are outside the simulation." }
+  },
+  {
+    manufacturer:"Phoenix Contact", identifier:"3209536", family:"PT 2,5-PE", category:"Terminal systems",
+    attributes:{ connections:2, connectionMethod:"Push-in", function:"Protective conductor" },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/ground-terminal-block-pt-25-pe-3209536", title:"Phoenix Contact PT 2,5-PE product data", retrievedOn:"2026-11-24" },
+    simulation:{ status:"educational-model", model:"phoenixPT25PE", limitations:"Ideal continuity between the two conductor connections. DIN-rail bonding, fault protection, and grounding impedance are outside the simulation." }
+  },
+  {
     manufacturer:"Phoenix Contact", identifier:"3212316", family:"PT 2,5-MT OG", category:"Terminal systems",
     attributes:{ connections:2, potentials:1, nominalVoltageV:400, nominalCurrentA:20, connectionMethod:"Push-in", mechanism:"Knife disconnect" },
     source:{ url:"https://www.phoenixcontact.com/en-us/products/disconnect-terminal-block-pt-25-mt-og-3212316", title:"Phoenix Contact PT 2,5-MT OG product data", retrievedOn:"2026-11-24" },
