@@ -63,6 +63,52 @@ for (const type of types) {
 }
 
 {
+  const cpu = createElectricalComponent("siemensS71214CG2Transistor", 1);
+  const relay = createElectricalComponent("phoenixPlcRsc24Dc21", 1);
+  const logicSupply = createElectricalComponent("supply24vdc", 1);
+  const outputSupply = createElectricalComponent("supply24vdc", 2);
+  const fieldSupply = createElectricalComponent("supply24vdc", 3);
+  const positive = createElectricalComponent("junction", 1);
+  const negative = createElectricalComponent("junction", 2);
+  const outputReturn = createElectricalComponent("junction", 3);
+  const button = { ...createElectricalComponent("pushbuttonNO", 1), tag:"Button" };
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  cpu.ioMap.I14.tag = "Start";
+  cpu.ioMap.Q10.tag = "RelayCommand";
+  const electrical = { components:[cpu,relay,logicSupply,outputSupply,fieldSupply,positive,negative,outputReturn,button,lamp], wires:[] };
+  for (const [from, fromPin, to, toPin] of [
+    [logicSupply,"+",positive,"1"], [logicSupply,"−",negative,"1"],
+    [positive,"2",cpu,"X80-1"], [negative,"2",cpu,"X80-5"],
+    [positive,"3",button,"13"], [button,"14",cpu,"X10-12"], [negative,"3",cpu,"X10-16"],
+    [outputSupply,"+",cpu,"X11-2"], [outputSupply,"−",outputReturn,"1"], [outputReturn,"2",cpu,"X11-1"],
+    [cpu,"X11-12",relay,"A1"], [outputReturn,"3",relay,"A2"],
+    [fieldSupply,"+",relay,"11"], [relay,"14",lamp,"X1"], [lamp,"X2",fieldSupply,"−"],
+  ]) {
+    const result = connectElectricalTerminals(electrical, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    electrical.wires.push(result.wire);
+  }
+  const project = normalizeImportedProject(JSON.parse(JSON.stringify({
+    name:"PLC-controlled interface relay",
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"RelayCommand", type:"BOOL", role:"output" }],
+    io:{ inputs:["Start"], outputs:["RelayCommand"] },
+    rungs:[{ id:"relay", branches:[[{ tag:"Start", mode:"NO" }]], coil:"RelayCommand" }], electrical,
+  })));
+  const recoveredCpu = project.electrical.components.find(({ id }) => id === cpu.id);
+  assert.equal(recoveredCpu.ioMap.I14.address, "I1.5");
+  assert.equal(recoveredCpu.ioMap.Q10.address, "Q1.1");
+  const run = (pressed) => {
+    const { inputs } = simulateElectricalDiagram(project.electrical, { Button:pressed });
+    const { outputs } = scan(project, inputs);
+    const { energized } = simulateElectricalDiagram(project.electrical, { Button:pressed }, outputs);
+    return [inputs.Start, outputs.RelayCommand, energized[lamp.id]];
+  };
+  for (const pressed of [false,true,false]) assert.deepEqual(run(pressed), [pressed,pressed,pressed]);
+  project.electrical.wires = project.electrical.wires.filter(({ to }) => to.componentId !== relay.id || to.terminal !== "A2");
+  assert.deepEqual(run(true), [true,true,false], "an open coil return leaves the PLC command active but drops the load");
+}
+
+{
   const terminal = createElectricalComponent("phoenixPT25Twin", 1);
   const supply = createElectricalComponent("supply24vdc", 1);
   const returnRail = createElectricalComponent("neutralRail", 1);
