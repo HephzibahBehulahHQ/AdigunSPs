@@ -5,7 +5,7 @@ import { supportedFbdTypes } from "../src/fbd-validation.js";
 import { supportedProcessTypes } from "../src/process.js";
 import { supportedLadderInstructions } from "../src/validation.js";
 import { compileStructuredText, executeStructuredText } from "../src/structured-text.js";
-import { scanSFC } from "../src/engine.js";
+import { scan, scanSFC } from "../src/engine.js";
 
 const output = new URL("../docs/component-bank/", import.meta.url);
 const validation = validateIndustrialCatalog();
@@ -27,6 +27,31 @@ for (const [name, { source, cases }] of Object.entries(structuredTextExamples)) 
     const types = { Input: "REAL", Result: typeof expected === "boolean" ? "BOOL" : "REAL" };
     const { outputs } = executeStructuredText(compiled, { Input: input }, {}, ["Result"], types);
     if (outputs.Result !== expected) throw new Error(`Structured Text inventory example ${name}: Input ${input} expected Result ${expected}, got ${outputs.Result}`);
+  }
+}
+
+const ladderExample = {
+  project: {
+    rungs: [
+      { id: "count", contacts: [{ tag: "Pulse", mode: "NO" }], coil: "Counted", counter: { tag: "Parts", type: "CTU", preset: 1 } },
+      { id: "reset", contacts: [{ tag: "Reset", mode: "NO" }], coil: "ResetActive", res: { counterTag: "Parts" } },
+      {
+        id: "scale", contacts: [{ tag: "Enable", mode: "NO" }], coil: "ScaleActive",
+        scale: { inputTag: "Raw", outputTag: "Pressure", rawMin: 0, rawMax: 27648, scaledMin: 0, scaledMax: 100 },
+      },
+    ],
+  },
+  scans: [
+    { inputs: { Pulse: true, Reset: false, Enable: true, Raw: 13824 }, count: 1, pressure: 50 },
+    { inputs: { Pulse: false, Reset: false, Enable: true, Raw: 30000 }, count: 1, pressure: 100 },
+    { inputs: { Pulse: false, Reset: true, Enable: false, Raw: 13824 }, count: 0, pressure: 0 },
+  ],
+};
+let ladderState = {};
+for (const [index, { inputs, count, pressure }] of ladderExample.scans.entries()) {
+  ladderState = scan(ladderExample.project, inputs, ladderState);
+  if (ladderState.counters.Parts?.count !== count || ladderState.outputs.Pressure !== pressure) {
+    throw new Error(`Ladder inventory example scan ${index + 1}: expected count ${count} and pressure ${pressure}`);
   }
 }
 
@@ -113,6 +138,7 @@ const totals = {
 };
 const softwareAndProcess = {
   ladderInstructions: supportedLadderInstructions,
+  ladderExample,
   fbdBlockTypes: supportedFbdTypes,
   structuredTextExamples,
   sfcExample,
