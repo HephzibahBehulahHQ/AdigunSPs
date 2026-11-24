@@ -333,6 +333,22 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   const conflict = simulate(12);
   assert.equal(conflict.inputs.PressureRaw, 0);
   assert.ok(conflict.faults.some(({ code }) => code === "analog-source-conflict"));
+
+  const loopSupply = createElectricalComponent("supply24vdc", 5);
+  const loopTransmitter = { ...createElectricalComponent("analogLoopCurrentSource", 3), tag:"PressureRaw" };
+  const replacedIds = new Set([transmitter.id, unwired.id, signalPositive.id, signalNegative.id]);
+  diagram.components = [...diagram.components.filter(({ id }) => !replacedIds.has(id)), loopSupply, loopTransmitter];
+  diagram.wires = diagram.wires.filter(({ from, to }) => !replacedIds.has(from.componentId) && !replacedIds.has(to.componentId));
+  wire(loopSupply, "+", loopTransmitter, "L+");
+  wire(loopTransmitter, "IOUT", module, "X11-9");
+  assert.ok(simulate(12).faults.some(({ code }) => code === "analog-wire-break"));
+  wire(loopSupply, "−", module, "X11-10");
+  const liveLoop = simulate(12);
+  assert.equal(liveLoop.inputs.PressureRaw, 13824);
+  assert.equal(liveLoop.componentStates[loopTransmitter.id].signalValue, 12);
+  assert.equal(liveLoop.faults.length, 0);
+  loopSupply.nominalVoltageV = 12;
+  assert.ok(simulate(12).faults.some(({ code }) => code === "analog-wire-break"));
 }
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);

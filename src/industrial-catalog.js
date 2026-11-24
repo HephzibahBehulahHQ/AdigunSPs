@@ -856,7 +856,7 @@ const industrialProductCatalog = Object.freeze([
     manufacturer: "Siemens", identifier: "6ES7231-4HF50-0XB0", family: "SIMATIC S7-1200 G2 SM 1231", category: "Analog I/O modules",
     attributes: { analogInputs:8, resolution:"14-bit", inputMode:"Differential voltage or current", ratedSupplyV:24 },
     source: { url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit", title:"Siemens SM 1231 AI 8x14bit technical specifications", retrievedOn:"2026-11-24" },
-    simulation: { status:"educational-model", model:"siemensSM1231G2AI8", limitations:"Ideal selectable voltage and current ranges, with nominal raw counts and 4–20 mA open-loop detection for a powered four-wire source." }
+    simulation: { status:"educational-model", model:"siemensSM1231G2AI8", limitations:"Ideal selectable voltage and current ranges, nominal raw counts, and 4–20 mA open-loop detection for two-wire and four-wire transmitters." }
   },
   {
     manufacturer: "Siemens", identifier: "6ES7222-5BH50-0XB0", family: "SIMATIC S7-1200 G2 SM 1222", category: "Digital I/O modules",
