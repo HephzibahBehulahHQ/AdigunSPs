@@ -428,6 +428,36 @@ for (const model of ["siemensSM1232G2AQ8", "siemensSM1233G2AI4AQ4"]) {
   moduleSupply.nominalVoltageV = 12;
   assert.deepEqual(simulate().analogOutputs, {}, "module undervoltage disables both outputs");
 }
+{
+  const cpu = createElectricalComponent("siemensS71214CG2Transistor", 1);
+  const logic = createElectricalComponent("supply24vdc", 1);
+  const field = createElectricalComponent("supply24vdc", 2);
+  const returnJunction = createElectricalComponent("junction", 1);
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  cpu.ioMap.Q10.tag = "Lamp";
+  const diagram = { components:[cpu,logic,field,returnJunction,lamp], wires:[] };
+  const connect = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  const energized = (electrical) => simulateElectricalDiagram(electrical, {}, { Lamp:true }).energized[lamp.id];
+  connect(field, "+", cpu, "X11-2");
+  connect(field, "−", returnJunction, "1");
+  connect(lamp, "X2", returnJunction, "2");
+  connect(returnJunction, "3", cpu, "X11-1");
+  connect(cpu, "X11-12", lamp, "X1");
+  assert.equal(energized(diagram), false, "output supply alone cannot power the CPU");
+  connect(logic, "+", cpu, "X80-1");
+  connect(logic, "−", cpu, "X80-5");
+  const project = normalizeImportedProject(JSON.parse(JSON.stringify({ name:"1214C sourcing output", rungs:[], electrical:diagram })));
+  assert.equal(project.electrical.components[0].ioMap.Q10.address, "Q1.1");
+  assert.equal(energized(project.electrical), true);
+  project.electrical.wires = project.electrical.wires.filter(({ to }) => to.terminal !== "X11-1");
+  assert.equal(energized(project.electrical), false, "an open output return blocks the output");
+  field.nominalVoltageV = 12;
+  assert.equal(energized(diagram), false, "output undervoltage blocks the output");
+}
 for (const [model, inputCommonPolarity, input, output, inputCommon, inputPin, outputPin] of [
   ["siemensS71212CG2Relay", "negative", "I1", "Q1", "X10-8", "X10-1", "X11-3"],
   ["siemensS71212CG2Relay", "positive", "I1", "Q1", "X10-8", "X10-1", "X11-3"],

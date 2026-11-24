@@ -119,11 +119,12 @@ export function electricalSymbolSvg(component) {
   switch(component.type){
     case "sitopPSU100C":body=`<rect x="10" y="3" width="76" height="38" rx="1" ${common}/>${text(48,13,"SITOP PSU100C",7)}${text(48,23,"24 V DC · 2.5 A",7)}${text(48,33,"AC / DC",6)}`;break;
     case "ifmPN2070":body=`<rect x="18" y="3" width="60" height="38" rx="1" ${common}/>${text(48,14,"PN2070",9)}${text(48,24,"0–400 bar",6)}${text(48,34,"OUT1 · OUT2",5)}`;break;
+    case "siemensS71214CG2Transistor":
     case "siemensS71214CG2AcRelay":
     case "siemensS71214CG2Relay":
     case "siemensS71212CG2AcRelay":
     case "siemensS71212CG2Relay":
-    case "siemensS71212CG2":body=`<rect x="15" y="3" width="66" height="38" rx="2" ${common}/>${text(48,12,component.type.startsWith("siemensS71214C") ? "CPU 1214C" : "CPU 1212C",7)}<rect x="20" y="16" width="16" height="19" rx="1" ${common}/><rect x="40" y="16" width="16" height="19" rx="1" ${common}/><rect x="60" y="16" width="16" height="19" rx="1" ${common}/>${text(28,28,"X80",6)}${text(48,28,"X10",6)}${text(68,28,"X11",6)}${text(28,40,component.type.endsWith("AcRelay") ? "AC" : "24V",5)}${text(48,40,"DI",5)}${text(68,40,component.type === "siemensS71212CG2" ? "DQ" : "RLY",5)}`;break;
+    case "siemensS71212CG2":body=`<rect x="15" y="3" width="66" height="38" rx="2" ${common}/>${text(48,12,component.type.startsWith("siemensS71214C") ? "CPU 1214C" : "CPU 1212C",7)}<rect x="20" y="16" width="16" height="19" rx="1" ${common}/><rect x="40" y="16" width="16" height="19" rx="1" ${common}/><rect x="60" y="16" width="16" height="19" rx="1" ${common}/>${text(28,28,"X80",6)}${text(48,28,"X10",6)}${text(68,28,"X11",6)}${text(28,40,component.type.endsWith("AcRelay") ? "AC" : "24V",5)}${text(48,40,"DI",5)}${text(68,40,component.type.endsWith("Relay") ? "RLY" : "DQ",5)}`;break;
     case "supply24vdc": body=`<circle cx="48" cy="21" r="16" ${common}/>${text(48,24,"DC",9)}${line(5,21,32,21)}${line(64,21,91,21)}${text(48,7,"+",7)}${text(48,39,"−",7)}`;break;
     case "singlePhaseSupply": body=`<circle cx="48" cy="21" r="16" ${common}/>${text(48,19,"1~",9)}${text(48,28,"AC",6)}${line(5,21,32,21)}${line(64,21,91,21)}${text(48,5,"L/N",6)}`;break;
     case "supply3phase": body=`<circle cx="48" cy="21" r="16" ${common}/>${text(48,19,"3~",9)}${text(48,28,"AC",6)}${line(5,21,32,21)}${line(64,21,91,21)}`;break;

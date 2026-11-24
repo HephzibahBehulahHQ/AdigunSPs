@@ -2147,6 +2147,12 @@ test("electrical component search filters models and restores the full picker", 
   const acRelay1214 = page.locator('#electricalBoard [data-component-type="siemensS71214CG2AcRelay"]');
   await expect(acRelay1214.getByRole("button", { name:/X80-1.*CPU AC supply L1/ })).toBeEnabled();
   await expect(acRelay1214.getByRole("button", { name:/X80-5.*CPU AC supply N/ })).toBeEnabled();
+  await search.fill("6ES7214-1AH50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const transistor1214 = page.locator('#electricalBoard [data-component-type="siemensS71214CG2Transistor"]');
+  await expect(transistor1214.getByRole("button", { name:/X11-1.*DC output return 2M/ })).toBeEnabled();
+  await expect(transistor1214.getByRole("button", { name:/X11-2.*DC output supply 2L/ })).toBeEnabled();
   await search.fill("6ES7232-4HF50-0XB0");
   await expect(palette.locator("option")).toHaveCount(1);
   await add.click();
