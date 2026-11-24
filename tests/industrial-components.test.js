@@ -55,6 +55,17 @@ for (const type of types) {
 
 const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
 {
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const inputModule = createElectricalComponent("siemensSM1221G2DI16", 1, 420, 120, [cpu]);
+  const outputModule = createElectricalComponent("siemensSM1222G2Relay16", 1, 720, 120, [cpu,inputModule]);
+  assert.deepEqual([cpu.ioMap.I1.address, inputModule.ioMap.I1.address, inputModule.ioMap.I9.address],
+    ["I0.0", "I1.0", "I2.0"]);
+  assert.deepEqual([cpu.ioMap.Q6.address, outputModule.ioMap.Q1.address, outputModule.ioMap.Q3.address],
+    ["Q0.5", "Q0.6", "Q1.0"]);
+  assert.equal(validateElectricalDiagram({ components:[cpu,inputModule,outputModule], wires:[] })
+    .some(({ code }) => code === "electrical-io-address-duplicate"), false);
+}
+{
   const module = createElectricalComponent("siemensSM1221G2DI16", 1);
   const spec = electricalComponentCatalog[module.type];
   assert.equal(module.terminals.length, 20);

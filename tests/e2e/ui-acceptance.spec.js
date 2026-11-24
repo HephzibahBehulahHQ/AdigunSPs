@@ -2002,6 +2002,7 @@ test("electrical component search filters models and restores the full picker", 
   const inputModule = page.locator('#electricalBoard [data-component-type="siemensSM1221G2DI16"]');
   await expect(inputModule.locator("[data-terminal]")).toHaveCount(20);
   await expect(inputModule.getByRole("button", { name: /X11-2.*common 4M/ })).toBeEnabled();
+  await expect(page.locator('#electricalProperties input[name="mapAddress:I1"]')).toHaveValue("I1.0");
   const cpuId = await relayCpu.getAttribute("data-component-id");
   const backplane = page.getByRole("combobox", { name: "Backplane CPU" });
   await backplane.selectOption(cpuId);
@@ -2016,6 +2017,7 @@ test("electrical component search filters models and restores the full picker", 
   await expect(relayModule.locator(".port-left")).toHaveCount(14);
   await expect(relayModule.locator(".port-right")).toHaveCount(14);
   await expect(relayModule.getByRole("button", { name: /X11-3.*unassigned/ })).toBeDisabled();
+  await expect(page.locator('#electricalProperties input[name="mapAddress:Q1"]')).toHaveValue("Q0.6");
   await expect(relayModule.getByRole("button", { name: /X11-14.*common 2L/ })).toBeEnabled();
   await backplane.selectOption(cpuId);
   await page.locator("#electricalProperties button[type=submit]").click();

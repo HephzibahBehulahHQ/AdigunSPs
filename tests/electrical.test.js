@@ -496,7 +496,7 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   for(const [index,pin]of cpu.terminals.entries()){const result=connectElectricalTerminals(diagram,{componentId:cpu.id,terminal:pin},{componentId:peers[index].id,terminal:"+"});assert.equal(result.ok,true,`${pin} is an independently connectable terminal`);diagram.wires.push(result.wire);}
   const root={dataset:{selectedComponent:cpu.id},innerHTML:"",querySelector:()=>null,querySelectorAll:()=>[]};renderElectricalWorkspace(root,{tags:[],electrical:diagram});
   for(const pin of cpu.terminals)assert.ok(root.innerHTML.includes(`data-terminal="${pin}"`),`${pin} is rendered individually`);
-  assert.ok(root.innerHTML.includes("X10 physical pin 1 · digital input DI a.0"),"pin tooltip exposes manufacturer connector and signal mapping");assert.match(electricalSymbolSvg(cpu),/CPU 1212C/u);assert.match(electricalSymbolSvg(cpu),/X80/u);assert.ok(root.innerHTML.includes("Siemens S7-1200 G2 System Manual · CPU 1212C terminal assignments"));
+  assert.ok(root.innerHTML.includes("X10 physical pin 1 · digital input DI a.0"),"pin tooltip exposes manufacturer connector and signal mapping");assert.match(electricalSymbolSvg(cpu),/CPU 1212C/u);assert.match(electricalSymbolSvg(cpu),/X80/u);assert.ok(root.innerHTML.includes("Siemens S7-1200 G2 System Manual · CPU 1212C wiring diagrams"));
   assert.ok(validateElectricalDiagram(diagram).every((issue)=>issue.level!=="error"),"the source-backed terminals connect without invalid endpoint errors");
 }
 {
