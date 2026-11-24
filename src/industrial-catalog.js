@@ -740,6 +740,33 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const unifiedPanelOperatingReferences = [
+  ["6AV2123-3DB32-0AW0", "MTP400", "Basic", "Standard", 4],
+  ["6AV2123-3GB32-0AW0", "MTP700", "Basic", "Standard", 7],
+  ["6AV2123-3KB32-0AW0", "MTP1000", "Basic", "Standard", 10],
+  ["6AV2123-3MB32-0AW0", "MTP1200", "Basic", "Standard", 12],
+  ["6AV2128-3GB06-0AX0", "MTP700", "Comfort", "Standard", 7],
+  ["6AV2128-3GB36-0AX0", "MTP700", "Comfort", "Neutral", 7],
+  ["6AV2128-3KB06-0AX0", "MTP1000", "Comfort", "Standard", 10],
+  ["6AV2128-3KB36-0AX0", "MTP1000", "Comfort", "Neutral", 10],
+  ["6AV2128-3MB06-0AX0", "MTP1200", "Comfort", "Standard", 12],
+  ["6AV2128-3MB36-0AX0", "MTP1200", "Comfort", "Neutral", 12],
+  ["6AV2128-3QB06-0AX0", "MTP1500", "Comfort", "Standard", 15],
+  ["6AV2128-3QB36-0AX0", "MTP1500", "Comfort", "Neutral", 15],
+  ["6AV2128-3UB06-0AX0", "MTP1900", "Comfort", "Standard", 19],
+  ["6AV2128-3UB36-0AX0", "MTP1900", "Comfort", "Neutral", 19],
+  ["6AV2128-3XB06-0AX0", "MTP2200", "Comfort", "Standard", 22],
+  ["6AV2128-3XB36-0AX0", "MTP2200", "Comfort", "Neutral", 22],
+].map(([identifier, panel, series, variant, displayInches]) => ({
+  manufacturer: "Siemens", identifier, category: "HMI devices", family: `SIMATIC Unified ${series}`,
+  attributes: { panel, variant, displayInches },
+  source: {
+    url: `https://docs.tia.siemens.cloud/r/unified_${series.toLowerCase()}_panels_enus_21/preface/scope`,
+    title: `Siemens Unified ${series} panel operating instructions scope`, retrievedOn: "2026-11-24",
+  },
+  simulation: { status: "reference-only", model: null, limitations: "Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
+}));
+
 const siemensG2CpuReferences = [
   ["6ES7212-1BG50-0XB0", "1212C", "AC/DC/RLY", "siemensS71212CG2AcRelay"],
   ["6ES7212-1AG50-0XB0", "1212C", "DC/DC/DC", "siemensS71212CG2"],
@@ -862,6 +889,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alCables,
   ...siemensEt200alPowerCables,
   ...unifiedComfortPanels,
+  ...unifiedPanelOperatingReferences,
   ...siemensG2CpuReferences,
   ...siemensG2ExpansionReferences,
   ...omronSensors,
