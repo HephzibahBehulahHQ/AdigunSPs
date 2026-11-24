@@ -2145,6 +2145,20 @@ test("electrical component search filters models and restores the full picker", 
   await outputRanges.nth(7).selectOption("mA4-20");
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(outputRanges.nth(7)).toHaveValue("mA4-20");
+  await search.fill("6ES7233-4HF50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const mixed = page.locator('#electricalBoard [data-component-type="siemensSM1233G2AI4AQ4"]');
+  await expect(mixed.locator("[data-terminal]")).toHaveCount(18);
+  await expect(mixed.getByRole("button", { name:/X10-8.*AI 3/ })).toBeEnabled();
+  await expect(mixed.getByRole("button", { name:/X11-10.*Output return 3M/ })).toBeEnabled();
+  await expect(inputRanges).toHaveCount(2);
+  await expect(outputRanges).toHaveCount(4);
+  await inputRanges.nth(1).selectOption("V5");
+  await outputRanges.nth(3).selectOption("mA4-20");
+  await page.locator("#electricalProperties button[type=submit]").click();
+  await expect(inputRanges.nth(1)).toHaveValue("V5");
+  await expect(outputRanges.nth(3)).toHaveValue("mA4-20");
 });
 
 

@@ -22,7 +22,7 @@ Historical application release - 2026-11-12: `aba8095137003f460e8744f775916be483
 
 The public release `6c6804a70d4a5da91bea2583cce16a291b91e3d1` serves **10,197 distinct hardware order codes, 69 editable educational models, and seven verified terminal maps**. Production smoke matched the CSV and JSON to the release checkout. The JSON separately reports 25 FBD block types and six process model types. The overall 10,000-order-code threshold is met. Individual acquisition targets remain open, including PLC controllers and HMI devices. [Released inventory](https://adigunsps.hephzibahbehulah.com/docs/component-bank/inventory.json) · [Production evidence](https://github.com/HephzibahBehulahHQ/AdigunSPs/actions/runs/45305193513)
 
-This checkout contains 10,216 distinct hardware order codes, 74 editable educational models, and nine verified terminal maps. The component-bank guide records source evidence and simulation readiness, including reference-only catalog entries. [Component-bank guide](component-bank/README.md)
+This checkout contains 10,216 distinct hardware order codes, 75 editable educational models, and ten verified terminal maps. The component-bank guide records source evidence and simulation readiness, including reference-only catalog entries. [Component-bank guide](component-bank/README.md)
 
 | Requirement area | Status | Evidence and remaining scope |
 |---|---|---|

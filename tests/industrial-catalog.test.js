@@ -20,7 +20,8 @@ assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total,
 assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 88);
 const expansion = industrialProductCatalog.filter(({ source }) => /ordering-information\/signal-(boards-sbs|modules-sms)$/.test(source.url));
 assert.equal(expansion.length, 10);
-assert.ok(expansion.every(({ simulation }) => simulation.status === "reference-only" && simulation.model === null));
+assert.equal(expansion.find(({ identifier }) => identifier === "6ES7233-4HF50-0XB0").simulation.model, "siemensSM1233G2AI4AQ4");
+assert.equal(expansion.filter(({ simulation }) => simulation.status === "reference-only" && simulation.model === null).length, 9);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
 assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 25);

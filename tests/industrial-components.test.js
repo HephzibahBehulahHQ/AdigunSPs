@@ -380,9 +380,10 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   ac.nominalVoltageV = 80;
   assert.deepEqual(state(), [false,false]);
 }
-{
+for (const model of ["siemensSM1232G2AQ8", "siemensSM1233G2AI4AQ4"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
-  const module = createElectricalComponent("siemensSM1232G2AQ8", 1);
+  const module = createElectricalComponent(model, 1);
+  const mixed = model === "siemensSM1233G2AI4AQ4";
   const cpuSupply = createElectricalComponent("supply24vdc", 1);
   const moduleSupply = createElectricalComponent("supply24vdc", 2);
   const voltage = { ...createElectricalComponent("analogVoltageIndicator", 1), tag:"VoltageRaw" };
@@ -394,22 +395,31 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
     diagram.wires.push(result.wire);
   };
   module.ioMap.AQ1.tag = "VoltageRaw";
-  module.ioMap.AQ8.tag = "CurrentRaw";
-  module.analogOutputRanges = ["V10","V10","V10","V10","V10","V10","V10","mA4-20"];
+  module.ioMap[mixed ? "AQ4" : "AQ8"].tag = "CurrentRaw";
+  module.analogOutputRanges = [...Array(mixed ? 3 : 7).fill("V10"), "mA4-20"];
   wire(cpuSupply, "+", cpu, "X80-1");
   wire(cpuSupply, "−", cpu, "X80-5");
   wire(moduleSupply, "+", module, "X11-1");
   wire(moduleSupply, "−", module, "X11-2");
-  wire(module, "X10-1", voltage, "SIG+");
-  wire(module, "X10-2", voltage, "SIG−");
+  wire(module, mixed ? "X11-3" : "X10-1", voltage, "SIG+");
+  wire(module, mixed ? "X11-4" : "X10-2", voltage, "SIG−");
+  if (mixed) {
+    const sensor = { ...createElectricalComponent("analogVoltageSource", 1), tag:"SensorRaw" };
+    diagram.components.push(sensor);
+    module.ioMap.AI4.tag = "SensorRaw";
+    module.analogInputRanges = ["V10", "V5"];
+    wire(sensor, "SIG+", module, "X10-7");
+    wire(sensor, "SIG−", module, "X10-8");
+  }
   wire(module, "X11-9", current, "SIG+");
   wire(module, "X11-10", current, "SIG−");
-  const simulate = (electrical = diagram) => simulateElectricalDiagram(electrical, {}, { VoltageRaw:-13824, CurrentRaw:13824 });
+  const simulate = (electrical = diagram) => simulateElectricalDiagram(electrical, { SensorRaw:2.5 }, { VoltageRaw:-13824, CurrentRaw:13824 });
   assert.deepEqual(simulate().analogOutputs, {}, "powered field wiring still needs an assigned CPU");
   module.backplaneCpuId = cpu.id;
   const project = normalizeImportedProject(JSON.parse(JSON.stringify({ name:"SM 1232 output scaling", rungs:[], electrical:diagram })));
   assert.deepEqual(simulate(project.electrical).analogOutputs, { VoltageRaw:-5, CurrentRaw:12 });
   assert.equal(simulate(project.electrical).componentStates[current.id].signalValue, 12);
+  if (mixed) assert.equal(simulate(project.electrical).inputs.SensorRaw, 13824);
   project.electrical.wires.pop();
   assert.deepEqual(simulate(project.electrical).analogOutputs, { VoltageRaw:-5 }, "an open return cannot drive the current indicator");
   moduleSupply.nominalVoltageV = 12;
