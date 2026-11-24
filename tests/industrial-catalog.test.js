@@ -45,7 +45,8 @@ assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.m
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
 assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 90, exactEditableModels: 3, verifiedTerminalMaps: 3 });
 assert.deepEqual(categoryCoverage["PLC controllers"], { references: 247, exactEditableModels: 6, verifiedTerminalMaps: 6 });
-assert.deepEqual(categoryCoverage["HMI devices"], { references: 59, exactEditableModels: 0, verifiedTerminalMaps: 0 });
+assert.deepEqual(categoryCoverage["HMI devices"], { references: 59, exactEditableModels: 1, verifiedTerminalMaps: 1 });
+assert.equal(searchIndustrialCatalog({ query: "6AV2123-3DB32-0AW0" }).items[0].simulation.model, "siemensMtp400UnifiedBasic");
 assert.equal(categoryCoverage["Programming software"], undefined);
 assert.equal(inventory.totals.fbdBlockTypes, 25);
 assert.deepEqual(inventory.softwareAndProcess.ladderInstructions, {

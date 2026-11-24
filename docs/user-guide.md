@@ -29,6 +29,8 @@ Open `update/` under the application URL, select **Update application**, and wai
 
 ## Electrical components
 
+Place the Siemens MTP400 Unified Basic (`6AV2123-3DB32-0AW0`) to show simulated panel power. Its X80 supply accepts the documented 19.2–28.8 V DC range on X80-1 and X80-2. The schematic shows power presence. Use the HMI workspace separately for tag-bound controls and displays.
+
 The Phoenix Contact PLC-RSC-24DC/21 (`2966171`) uses polarized DC control on A1 and A2. In simulation, common 11 connects to 12 when the coil is off and to 14 when it is energized. The field circuit needs its own wired feed.
 
 For the Siemens G2 1214C DC/DC/relay (`6ES7214-1HH50-0XB0`), connect simulated CPU power on X80. For the AC/DC/relay model (`6ES7214-1BH50-0XB0`), use a simulated single-phase supply on L1 and N and a separate DC field input circuit. Bind the 14 inputs on X10 and 10 relay outputs on X11 to project tags. An input needs a complete circuit through its 1M common. The relay contacts switch the external load feed on 1L. On the DC/DC/DC variant (`6ES7214-1AH50-0XB0`), the output bank requires its own 2L+ and 2M connections as well as CPU power.
