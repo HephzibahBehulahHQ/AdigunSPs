@@ -732,31 +732,40 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       }
     }
     for (const [channelIndex, channel] of (spec.channels.analogInputs || []).entries()) {
-      const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
+      const tag = controller.ioMap?.[channel]?.tag;
       if (!tag) continue;
       const { positive:positivePin, negative:negativePin } = spec.channels.analogInputPins?.[channel] ||
         { positive:`${channel}+`, negative:`${channel}−` };
-      const signalSpec=electricalComponentCatalog[signal?.type],signalPositive=signalSpec?.signalPins?.positive||"SIG+",signalNegative=signalSpec?.signalPins?.negative||"SIG−",powerPins=signalSpec?.signalPowerPins;
-      const powered=!powerPins||nets.some(({component:source,nets:poles})=>{const sourceSpec=electricalComponentCatalog[source.type],kind=sourceSpec?.kind,voltage=Number(source.nominalVoltageV??sourceSpec?.nominalVoltageV),dcSource=kind==="source"||kind==="power-converter";return dcSource&&(!Number.isFinite(powerPins.minimumVoltageV)||voltage>=powerPins.minimumVoltageV)&&(!Number.isFinite(powerPins.maximumVoltageV)||voltage<=powerPins.maximumVoltageV)&&!sourceHasShort(poles)&&(poles.positive||poles.L)?.has(key(signal.id,powerPins.positive))&&(poles.negative||poles.N)?.has(key(signal.id,powerPins.negative));});
-      const value=Number(inputStates[tag]);
-      const connected = signal && powered && pairedConnected(signal,signalPositive,signalNegative,controller,positivePin,negativePin);
-      if (spec.analogInputRanges) {
-        if (!hasPoweredBackplane(controller, nets) ||
-            !coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.fieldSupply)) continue;
-        const group = Math.floor(channelIndex / spec.analogRangeGroupSize);
-        const range = spec.analogInputRanges[electricalAnalogRangeId(controller, group)];
-        const matchingSignal = connected && signalSpec.analogSignalUnit === range.unit;
-        if (range.wireBreakBelow && (!matchingSignal || (Number.isFinite(value) && value < range.wireBreakBelow))) {
-          analogFaults.push({ code:"analog-wire-break", componentId:controller.id, channel,
-            message:`${controller.reference} ${channel}: 4–20 mA signal loop is open or below the wire-break threshold.` });
-          continue;
-        }
-        if (!matchingSignal || !Number.isFinite(value)) continue;
+      const range = spec.analogInputRanges ? spec.analogInputRanges[electricalAnalogRangeId(controller,
+        Math.floor(channelIndex / spec.analogRangeGroupSize))] : null;
+      if (range && (!hasPoweredBackplane(controller, nets) ||
+          !coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.fieldSupply))) continue;
+      const signals = all.filter((candidate) => {
+        const source = electricalComponentCatalog[candidate.type];
+        if (candidate.tag !== tag || source?.kind !== "analog-signal-source") return false;
+        const { positive = "SIG+", negative = "SIG−" } = source.signalPins || {};
+        const power = source.signalPowerPins;
+        return pairedConnected(candidate, positive, negative, controller, positivePin, negativePin) &&
+          (!power || coilPowered(nets, candidate, power.positive, power.negative, power));
+      });
+      if (signals.length > 1) {
+        analogFaults.push({ code:"analog-source-conflict", componentId:controller.id, channel,
+          message:`${controller.reference} ${channel}: multiple powered signal sources drive this input pair.` });
+        continue;
+      }
+      const signal = signals.find((candidate) => electricalComponentCatalog[candidate.type].analogSignalUnit === range?.unit);
+      const value = Number(inputStates[tag]);
+      if (range?.wireBreakBelow && (!signal || (Number.isFinite(value) && value < range.wireBreakBelow))) {
+        analogFaults.push({ code:"analog-wire-break", componentId:controller.id, channel,
+          message:`${controller.reference} ${channel}: 4–20 mA signal loop is open or below the wire-break threshold.` });
+        continue;
+      }
+      if (!signal || !Number.isFinite(value)) continue;
+      if (range) {
         const limited = Math.max(range.minimum, Math.min(range.maximum, value));
         const fraction = range.unit === "V" ? limited / range.maximum : (limited - range.minimum) / (range.maximum - range.minimum);
         analogInputs[tag] = Math.round(fraction * spec.analogRawFullScale);
       } else {
-        if (!connected || !Number.isFinite(value) || signalSpec.analogSignalUnit) continue;
         analogInputs[tag] = value;
       }
       componentStates[signal.id] = { signalValue:value, signalModel:signal.signalModel };
