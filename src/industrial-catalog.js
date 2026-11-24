@@ -764,7 +764,7 @@ const siemensG2CpuReferences = [
 const siemensG2ExpansionReferences = [
   ["6ES7223-5BH50-0XB0", "SM 1223", "Digital", { digitalInputs: 8, digitalOutputs: 8, outputType: "24 V DC sourcing" }],
   ["6ES7223-5PH50-0XB0", "SM 1223", "Digital", { digitalInputs: 8, relayOutputs: 8 }],
-  ["6ES7233-4HF50-0XB0", "SM 1233", "Analog", { analogInputs: 4, analogOutputs: 4 }],
+  ["6ES7233-4HF50-0XB0", "SM 1233", "Analog", { analogInputs: 4, analogOutputs: 4 }, "siemensSM1233G2AI4AQ4"],
   ["6ES7221-3BF50-0XB0", "SB 1221", "Digital", { digitalInputs: 8, inputVoltageV: 24, frequencyKHz: 100 }],
   ["6ES7222-5BF50-0XB0", "SB 1222", "Digital", { digitalOutputs: 8, outputVoltageV: 24, frequencyKHz: 100, outputType: "Push-pull" }],
   ["6ES7223-7BF50-0XB0", "SB 1223", "Digital", { digitalInputs: 4, digitalOutputs: 4, ratedVoltageV: 24, frequencyKHz: 100 }],
@@ -772,7 +772,7 @@ const siemensG2ExpansionReferences = [
   ["6ES7231-4HD50-0XB0", "SB 1231", "Analog", { analogInputs: 4 }],
   ["6ES7232-4HD50-0XB0", "SB 1232", "Analog", { analogOutputs: 4 }],
   ["6ES7233-4HD50-0XB0", "SB 1233", "Analog", { analogInputs: 2, analogOutputs: 2 }],
-].map(([identifier, family, domain, attributes]) => {
+].map(([identifier, family, domain, attributes, model]) => {
   const sourceSection = family.startsWith("SB") ? "signal-boards-sbs" : "signal-modules-sms";
   return {
     manufacturer: "Siemens", identifier, family: `SIMATIC S7-1200 G2 ${family}`, category: `${domain} I/O modules`,
@@ -781,7 +781,9 @@ const siemensG2ExpansionReferences = [
       url: `https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/${sourceSection}`,
       title: `Siemens SIMATIC S7-1200 G2 ${family} ordering information`, retrievedOn: "2026-11-24",
     },
-    simulation: { status: "reference-only", model: null, limitations: "Terminal mapping, channel bindings, and electrical behavior are outside the simulation." },
+    simulation: model
+      ? { status: "educational-model", model, limitations: "Ideal differential input and voltage/current output behavior on a powered linked CPU and module." }
+      : { status: "reference-only", model: null, limitations: "Terminal mapping, channel bindings, and electrical behavior are outside the simulation." },
   };
 });
 

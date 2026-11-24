@@ -33,6 +33,20 @@ const sm1231AnalogPins = Object.fromEntries(Array.from({ length:8 }, (_, index) 
 }));
 const sm1231Layout = [...connectorPins("X10", 10), ...connectorPins("X11", 10)];
 const sm1232AnalogPins = Object.fromEntries(Object.values(sm1231AnalogPins).map((pair, index) => [`AQ${index + 1}`, pair]));
+const sm1233InputPins = Object.fromEntries(Object.entries(sm1231AnalogPins).slice(0, 4));
+const sm1233OutputPins = Object.fromEntries(Object.values(sm1231AnalogPins).slice(4).map((pair, index) => [`AQ${index + 1}`, pair]));
+const g2AnalogOutputRanges = {
+  V10:{ label:"±10 V", unit:"V", minimum:-10, maximum:10 },
+  "mA0-20":{ label:"0–20 mA", unit:"mA", minimum:0, maximum:20 },
+  "mA4-20":{ label:"4–20 mA", unit:"mA", minimum:4, maximum:20 },
+};
+const g2AnalogInputRanges = {
+  V10:g2AnalogOutputRanges.V10,
+  V5:{ label:"±5 V", unit:"V", minimum:-5, maximum:5 },
+  "V2.5":{ label:"±2.5 V", unit:"V", minimum:-2.5, maximum:2.5 },
+  "mA0-20":g2AnalogOutputRanges["mA0-20"],
+  "mA4-20":{ ...g2AnalogOutputRanges["mA4-20"], wireBreakBelow:1.185 },
+};
 
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
@@ -130,13 +144,7 @@ export const electricalComponentCatalog = Object.freeze({
     backplaneCpuTypes:g2CompatibleCpuTypes,
     fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
     analogVoltageRangesV:[10,5,2.5], analogRangeGroupSize:2, analogRawFullScale:27648,
-    analogInputRanges:{
-      "V10":{ label:"±10 V", unit:"V", minimum:-10, maximum:10 },
-      "V5":{ label:"±5 V", unit:"V", minimum:-5, maximum:5 },
-      "V2.5":{ label:"±2.5 V", unit:"V", minimum:-2.5, maximum:2.5 },
-      "mA0-20":{ label:"0–20 mA", unit:"mA", minimum:0, maximum:20 },
-      "mA4-20":{ label:"4–20 mA", unit:"mA", minimum:4, maximum:20, wireBreakBelow:1.185 },
-    },
+    analogInputRanges:g2AnalogInputRanges,
     source:{
       title:"Siemens S7-1200 G2 SM 1231 AI 8x14bit specifications",
       url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit",
@@ -156,11 +164,7 @@ export const electricalComponentCatalog = Object.freeze({
     terminalLayout:sm1231Layout, terminals:sm1231Layout.filter((pin) => !["X10-9","X10-10"].includes(pin)),
     channels:{ analogOutputs:Object.keys(sm1232AnalogPins), analogOutputPins:sm1232AnalogPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
     backplaneCpuTypes:g2CompatibleCpuTypes, fieldSupply:g2DcSupply, analogRawFullScale:27648,
-    analogOutputRanges:{
-      V10:{ label:"±10 V", unit:"V", minimum:-10, maximum:10 },
-      "mA0-20":{ label:"0–20 mA", unit:"mA", minimum:0, maximum:20 },
-      "mA4-20":{ label:"4–20 mA", unit:"mA", minimum:4, maximum:20 },
-    },
+    analogOutputRanges:g2AnalogOutputRanges,
     source:{
       title:"Siemens S7-1200 G2 SM 1232 AQ 8x14bit specifications and wiring",
       url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/analog-signal-modules-sms/sm-1232-aq-8x14bit",
@@ -173,6 +177,29 @@ export const electricalComponentCatalog = Object.freeze({
       ])),
     },
     simulationLimitations:"Powered ideal analog output converts nominal PLC raw counts into volts or milliamps at a matched, wired indicator. It requires an assigned powered CPU and local DC power. Load impedance, settling time, STOP behavior and hardware diagnostics are outside the simulation.",
+  },
+  siemensSM1233G2AI4AQ4: {
+    name:"Siemens S7-1200 G2 SM 1233 · 4 AI / 4 AQ · 6ES7233-4HF50-0XB0", category:"PLC I/O modules", prefix:"AIO", kind:"analog-io-module",
+    manufacturer:"Siemens", partNumber:"6ES7233-4HF50-0XB0",
+    terminalLayout:sm1231Layout, terminals:sm1231Layout.filter((pin) => !["X10-9","X10-10"].includes(pin)),
+    channels:{ analogInputs:Object.keys(sm1233InputPins), analogInputPins:sm1233InputPins, analogOutputs:Object.keys(sm1233OutputPins), analogOutputPins:sm1233OutputPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
+    backplaneCpuTypes:g2CompatibleCpuTypes, fieldSupply:g2DcSupply, analogRawFullScale:27648,
+    analogRangeGroupSize:2, analogInputRanges:g2AnalogInputRanges, analogOutputRanges:g2AnalogOutputRanges,
+    source:{
+      title:"Siemens S7-1200 G2 SM 1233 AI 4x14bit / AQ 4x14bit specifications",
+      url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/analog-signal-modules-sms/sm-1233-ai-4x14bit/aq-4x14bit",
+      terminalMapSection:"Wiring diagram",
+    },
+    terminalNotes:{
+      "X11-1":"Module supply L+", "X11-2":"Module supply M",
+      ...Object.fromEntries(Object.values(sm1233InputPins).flatMap(({ positive, negative }, index) => [
+        [positive,`Differential analog input AI ${index}+`], [negative,`Differential analog input AI ${index}−`],
+      ])),
+      ...Object.fromEntries(Object.values(sm1233OutputPins).flatMap(({ positive, negative }, index) => [
+        [positive,`Analog output AQ ${index}`], [negative,`Output return ${index}M`],
+      ])),
+    },
+    simulationLimitations:"Ideal differential inputs and voltage/current outputs require local DC power and a linked powered CPU. Converter timing, impedance, and vendor diagnostics beyond modeled input wire-break detection are outside the simulation.",
   },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },

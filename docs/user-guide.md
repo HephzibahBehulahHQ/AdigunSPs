@@ -29,6 +29,8 @@ Open `update/` under the application URL, select **Update application**, and wai
 
 ## Electrical components
 
+For the Siemens SM 1233 (`6ES7233-4HF50-0XB0`), bind inputs and outputs in the same component inspector. Select a compatible **Backplane CPU** and set the **Signal range** separately for each input pair and each output channel. Connect the module supply at X11-1 and X11-2. Differential input pairs are on X10 and output pairs are on X11.
+
 Focus a component header and use the arrow keys to move it one grid step. Hold Shift for five steps. Connected wires follow its terminals.
 
 Canvas actions use compact icons on one row. Hover or keyboard-focus an icon to read its name; Select, Connect terminals, Validate, Simulate, Grid, Fit view, zoom, Snap, and Expand remain available.
