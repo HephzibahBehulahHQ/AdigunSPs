@@ -29,7 +29,7 @@ Open `update/` under the application URL, select **Update application**, and wai
 
 ## Electrical components
 
-For the Siemens G2 1214C DC/DC/relay (`6ES7214-1HH50-0XB0`), connect simulated CPU power on X80. For the AC/DC/relay model (`6ES7214-1BH50-0XB0`), use a simulated single-phase supply on L1 and N and a separate DC field input circuit. Bind the 14 inputs on X10 and 10 relay outputs on X11 to project tags. An input needs a complete circuit through its 1M common. The relay contacts switch the external load feed on 1L.
+For the Siemens G2 1214C DC/DC/relay (`6ES7214-1HH50-0XB0`), connect simulated CPU power on X80. For the AC/DC/relay model (`6ES7214-1BH50-0XB0`), use a simulated single-phase supply on L1 and N and a separate DC field input circuit. Bind the 14 inputs on X10 and 10 relay outputs on X11 to project tags. An input needs a complete circuit through its 1M common. The relay contacts switch the external load feed on 1L. On the DC/DC/DC variant (`6ES7214-1AH50-0XB0`), the output bank requires its own 2L+ and 2M connections as well as CPU power.
 
 For the Siemens SM 1233 (`6ES7233-4HF50-0XB0`), bind inputs and outputs in the same component inspector. Select a compatible **Backplane CPU** and set the **Signal range** separately for each input pair and each output channel. Connect the module supply at X11-1 and X11-2. Differential input pairs are on X10 and output pairs are on X11.
 
