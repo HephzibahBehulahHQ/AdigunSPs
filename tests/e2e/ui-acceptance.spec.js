@@ -2022,6 +2022,12 @@ test("electrical component search filters models and restores the full picker", 
   await backplane.selectOption(cpuId);
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(backplane).toHaveValue(cpuId);
+  await search.fill("6ES7222-5BH50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const transistorModule = page.locator('#electricalBoard [data-component-type="siemensSM1222G2Transistor16"]');
+  await expect(transistorModule.locator("[data-terminal]")).toHaveCount(20);
+  await expect(transistorModule.getByRole("button", { name:/X11-2.*Output group 2M/ })).toBeEnabled();
 });
 
 

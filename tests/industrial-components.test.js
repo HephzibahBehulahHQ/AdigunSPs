@@ -213,6 +213,44 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   assert.deepEqual(step(true), [true,true,false,true], "a commanded output cannot replace an open load feed");
   assert.deepEqual(step(false), [false,false,false,false], "releasing the input clears the timer and command alarm");
 }
+{
+  const module = createElectricalComponent("siemensSM1222G2Transistor16", 1);
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const [cpuSupply, supplyA, supplyB] = Array.from({ length:3 }, (_, index) => createElectricalComponent("supply24vdc", index + 1));
+  const [returnA, returnB] = [createElectricalComponent("junction", 1), createElectricalComponent("junction", 2)];
+  const [lampA, lampB] = [createElectricalComponent("pilotLamp", 1), createElectricalComponent("pilotLamp", 2)];
+  const diagram = { components:[module,cpu,cpuSupply,supplyA,supplyB,returnA,returnB,lampA,lampB], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  assert.equal(module.terminals.length, 20);
+  module.ioMap.Q1.tag = "LampA";
+  module.ioMap.Q9.tag = "LampB";
+  wire(cpuSupply, "+", cpu, "X80-1");
+  wire(cpuSupply, "−", cpu, "X80-5");
+  wire(supplyA, "+", module, "X10-1");
+  wire(supplyA, "−", returnA, "1");
+  wire(returnA, "2", lampA, "X2");
+  wire(module, "X10-3", lampA, "X1");
+  wire(supplyB, "+", module, "X11-1");
+  wire(supplyB, "−", returnB, "1");
+  wire(returnB, "2", lampB, "X2");
+  wire(returnB, "3", module, "X11-2");
+  wire(module, "X11-3", lampB, "X1");
+  const state = () => {
+    const { energized } = simulateElectricalDiagram(diagram, {}, { LampA:true, LampB:true });
+    return [energized[lampA.id], energized[lampB.id]];
+  };
+  assert.deepEqual(state(), [false,false], "field supplies do not substitute for the backplane");
+  module.backplaneCpuId = cpu.id;
+  assert.deepEqual(state(), [false,true], "an open group return blocks only the affected sourcing outputs");
+  wire(returnA, "3", module, "X10-2");
+  assert.deepEqual(state(), [true,true]);
+  supplyB.nominalVoltageV = 12;
+  assert.deepEqual(state(), [true,false], "an undervoltage group cannot borrow the other supply");
+}
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);
