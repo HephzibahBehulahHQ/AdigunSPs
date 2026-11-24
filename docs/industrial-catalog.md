@@ -8,7 +8,7 @@ The S7-1500 references cover CPU, digital I/O, analog I/O, communications, techn
 
 ## Simulation boundary
 
-The catalog is separate from the 68 editable educational electrical simulation definitions. Catalog rows marked `reference-only` do not claim terminal-level compatibility or runtime behavior. `LRD12` is `contact-only`: its normally closed contact can be represented with the generic overload symbol, but thermal memory, motor-current measurement, and trip curves are not simulated. The electrical component tests cover supported generic models and PLC-to-load integration.
+The catalog is separate from the 69 editable educational electrical simulation definitions. Catalog rows marked `reference-only` do not claim terminal-level compatibility or runtime behavior. `LRD12` is `contact-only`: its normally closed contact can be represented with the generic overload symbol, but thermal memory, motor-current measurement, and trip curves are not simulated. The electrical component tests cover supported generic models and PLC-to-load integration.
 
 ## Requirement gap
 

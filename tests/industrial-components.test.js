@@ -290,6 +290,29 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   moduleSupply.nominalVoltageV = 24;
   diagram.wires.pop();
   assert.equal(simulate(5).inputs.PressureRaw, 0, "a broken differential pair prevents conversion");
+
+  const transmitterSupply = createElectricalComponent("supply24vdc", 3);
+  const transmitter = { ...createElectricalComponent("analogCurrentSource", 1), tag:"PressureRaw" };
+  diagram.components = [...diagram.components.filter(({ id }) => id !== voltage.id), transmitter, transmitterSupply];
+  diagram.wires = diagram.wires.filter(({ from, to }) => from.componentId !== voltage.id && to.componentId !== voltage.id);
+  module.analogInputRanges = ["V10", "V5", "V10", "mA4-20"];
+  wire(transmitterSupply, "+", transmitter, "L+");
+  wire(transmitterSupply, "−", transmitter, "M");
+  wire(transmitter, "SIG+", module, "X11-9");
+  wire(transmitter, "SIG−", module, "X11-10");
+  assert.equal(simulate(4).inputs.PressureRaw, 0);
+  assert.equal(simulate(12).inputs.PressureRaw, 13824);
+  assert.equal(simulate(20).inputs.PressureRaw, 27648);
+  assert.equal(simulate(12).faults.length, 0);
+  assert.ok(simulate(1).faults.some(({ code, channel }) => code === "analog-wire-break" && channel === "AI8"));
+  module.analogInputRanges[3] = "mA0-20";
+  assert.equal(simulate(10).inputs.PressureRaw, 13824);
+  assert.equal(simulate(0).faults.length, 0);
+  module.analogInputRanges[3] = "mA4-20";
+  diagram.wires.pop();
+  const broken = simulate(12);
+  assert.equal(broken.inputs.PressureRaw, 0);
+  assert.ok(broken.faults.some(({ code }) => code === "analog-wire-break"));
 }
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);

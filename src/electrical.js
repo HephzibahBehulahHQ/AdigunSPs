@@ -111,6 +111,13 @@ export const electricalComponentCatalog = Object.freeze({
     backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
     fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
     analogVoltageRangesV:[10,5,2.5], analogRangeGroupSize:2, analogRawFullScale:27648,
+    analogInputRanges:{
+      "V10":{ label:"±10 V", unit:"V", minimum:-10, maximum:10 },
+      "V5":{ label:"±5 V", unit:"V", minimum:-5, maximum:5 },
+      "V2.5":{ label:"±2.5 V", unit:"V", minimum:-2.5, maximum:2.5 },
+      "mA0-20":{ label:"0–20 mA", unit:"mA", minimum:0, maximum:20 },
+      "mA4-20":{ label:"4–20 mA", unit:"mA", minimum:4, maximum:20, wireBreakBelow:1.185 },
+    },
     source:{
       title:"Siemens S7-1200 G2 SM 1231 AI 8x14bit specifications",
       url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit",
@@ -122,7 +129,7 @@ export const electricalComponentCatalog = Object.freeze({
         [positive,`Differential analog input AI ${index}+`], [negative,`Differential analog input AI ${index}−`],
       ])),
     },
-    simulationLimitations:"The educational model converts configured differential voltage ranges to nominal PLC raw counts. It requires a powered compatible CPU, local DC supply and both differential signal wires. Current ranges, hardware diagnostics, input filtering and converter timing are outside the simulation.",
+    simulationLimitations:"The model converts differential voltage or current to nominal PLC raw counts. It supports an ideal externally powered four-wire current source and 4–20 mA wire-break detection. It requires a powered CPU, local DC supply and both signal wires. Two-wire transmitters, input filtering and converter timing are outside the simulation.",
   },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
@@ -151,6 +158,11 @@ export const electricalComponentCatalog = Object.freeze({
   floatSwitchNO: { name:"Float switch · NO simulation", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
   analogSignalSource: { name:"analog signal source · scalar simulation", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"tag-scaled scalar; no voltage physics" },
   analogVoltageSource: { name:"Differential voltage source · volts", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"Ideal differential voltage (V)", analogSignalUnit:"V" },
+  analogCurrentSource: {
+    name:"Four-wire current source · milliamps", category:"Sensors", prefix:"B", kind:"analog-signal-source",
+    terminals:["L+","M","SIG+","SIG−"], signalModel:"Ideal externally powered current signal (mA)", analogSignalUnit:"mA",
+    signalPowerPins:{ positive:"L+", negative:"M", minimumVoltageV:20.4, maximumVoltageV:28.8 },
+  },
   analogSignalIndicator: { name:"analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
   contactor3P: { name:"three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
   siemensSirius3RT20171WB41: { name:"Siemens SIRIUS 3RT2017-1WB41 power contactor · 3-pole + 1 NO", category:"Contactors and relays", prefix:"K", terminals:["1/L1","3/L2","5/L3","13","A1+","2/T1","4/T2","6/T3","14","A2−"], kind:"contactor", mainPairs:[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]], coil:["A1+","A2−"], auxNOPair:["13","14"], coilSupply:{kind:"dc",minimumVoltageV:20.4,maximumVoltageV:44.4}, manufacturer:"Siemens", partNumber:"3RT2017-1WB41", source:{title:"Siemens SIRIUS 3RT2017-1WB41 data sheet",url:"https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=3RT2017-1WB41"}, terminalNotes:{"1/L1":"Main power contact pole 1 input","2/T1":"Main power contact pole 1 output","3/L2":"Main power contact pole 2 input","4/T2":"Main power contact pole 2 output","5/L3":"Main power contact pole 3 input","6/T3":"Main power contact pole 3 output","13":"Normally-open auxiliary contact input","14":"Normally-open auxiliary contact output","A1+":"Contactor coil positive","A2−":"Contactor coil negative"}, simulationLimitations:"The documented 24 V DC coil energizes only from a wired modeled DC source within the published 0.85–1.85 × Uc operating range (20.4–44.4 V). Main and auxiliary contacts switch immediately in the educational connectivity model; coil power, response time, contact ratings, arc behavior, motor protection, and device performance are not simulated." },
@@ -370,6 +382,12 @@ export function updateElectricalComponentProperties(component, updates = {}) {
 
 export function isCompatibleBackplaneCpu(module, cpu) {
   return Boolean(cpu && electricalComponentCatalog[module.type]?.backplaneCpuTypes?.includes(cpu.type));
+}
+
+export function electricalAnalogRangeId(component, group) {
+  const ranges = electricalComponentCatalog[component.type].analogInputRanges;
+  const selected = component.analogInputRanges?.[group] ?? `V${component.analogVoltageRangesV?.[group] ?? 10}`;
+  return Object.hasOwn(ranges, selected) ? selected : "V10";
 }
 
 export function createExampleElectricalDiagram(tags, io, initialState = {}, outputLoadTypes = {}, deviceDefaults = {}) {
@@ -688,6 +706,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   }
   if (!coilStatesStable) coilEnergized.clear();
   const nodes = makeGraph(), nets = sourceNets(nodes), plcInputs = {}, analogInputs = {}, analogOutputs = {}, componentStates = {};
+  const analogFaults = [];
   const pairedConnected=(a,aPositive,aNegative,b,bPositive,bNegative)=>{const positive=reachable(nodes,key(a.id,aPositive)),negative=reachable(nodes,key(a.id,aNegative));return positive.has(key(b.id,bPositive))&&negative.has(key(b.id,bNegative))&&![...positive].some((node)=>negative.has(node));};
   for (const controller of all) {
     const spec = electricalComponentCatalog[controller.type]; if (!spec || !(spec.channels?.inputs?.length || spec.channels?.analogInputs?.length || spec.channels?.analogOutputs?.length)) continue;
@@ -714,23 +733,30 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     }
     for (const [channelIndex, channel] of (spec.channels.analogInputs || []).entries()) {
       const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
-      if (!tag||!signal) continue;
+      if (!tag) continue;
       const { positive:positivePin, negative:negativePin } = spec.channels.analogInputPins?.[channel] ||
         { positive:`${channel}+`, negative:`${channel}−` };
-      const signalSpec=electricalComponentCatalog[signal.type],signalPositive=signalSpec.signalPins?.positive||"SIG+",signalNegative=signalSpec.signalPins?.negative||"SIG−",powerPins=signalSpec.signalPowerPins;
+      const signalSpec=electricalComponentCatalog[signal?.type],signalPositive=signalSpec?.signalPins?.positive||"SIG+",signalNegative=signalSpec?.signalPins?.negative||"SIG−",powerPins=signalSpec?.signalPowerPins;
       const powered=!powerPins||nets.some(({component:source,nets:poles})=>{const sourceSpec=electricalComponentCatalog[source.type],kind=sourceSpec?.kind,voltage=Number(source.nominalVoltageV??sourceSpec?.nominalVoltageV),dcSource=kind==="source"||kind==="power-converter";return dcSource&&(!Number.isFinite(powerPins.minimumVoltageV)||voltage>=powerPins.minimumVoltageV)&&(!Number.isFinite(powerPins.maximumVoltageV)||voltage<=powerPins.maximumVoltageV)&&!sourceHasShort(poles)&&(poles.positive||poles.L)?.has(key(signal.id,powerPins.positive))&&(poles.negative||poles.N)?.has(key(signal.id,powerPins.negative));});
       const value=Number(inputStates[tag]);
-      if (!powered || !Number.isFinite(value) || !pairedConnected(signal,signalPositive,signalNegative,controller,positivePin,negativePin)) continue;
-      if (spec.analogVoltageRangesV) {
-        if (signalSpec.analogSignalUnit !== "V" || !hasPoweredBackplane(controller, nets) ||
+      const connected = signal && powered && pairedConnected(signal,signalPositive,signalNegative,controller,positivePin,negativePin);
+      if (spec.analogInputRanges) {
+        if (!hasPoweredBackplane(controller, nets) ||
             !coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.fieldSupply)) continue;
         const group = Math.floor(channelIndex / spec.analogRangeGroupSize);
-        const configured = controller.analogVoltageRangesV?.[group];
-        const range = spec.analogVoltageRangesV.includes(configured) ? configured : spec.analogVoltageRangesV[0];
-        const limited = Math.max(-range, Math.min(range, value));
-        analogInputs[tag] = Math.round(limited / range * spec.analogRawFullScale);
+        const range = spec.analogInputRanges[electricalAnalogRangeId(controller, group)];
+        const matchingSignal = connected && signalSpec.analogSignalUnit === range.unit;
+        if (range.wireBreakBelow && (!matchingSignal || (Number.isFinite(value) && value < range.wireBreakBelow))) {
+          analogFaults.push({ code:"analog-wire-break", componentId:controller.id, channel,
+            message:`${controller.reference} ${channel}: 4–20 mA signal loop is open or below the wire-break threshold.` });
+          continue;
+        }
+        if (!matchingSignal || !Number.isFinite(value)) continue;
+        const limited = Math.max(range.minimum, Math.min(range.maximum, value));
+        const fraction = range.unit === "V" ? limited / range.maximum : (limited - range.minimum) / (range.maximum - range.minimum);
+        analogInputs[tag] = Math.round(fraction * spec.analogRawFullScale);
       } else {
-        if (signalSpec.analogSignalUnit) continue;
+        if (!connected || !Number.isFinite(value) || signalSpec.analogSignalUnit) continue;
         analogInputs[tag] = value;
       }
       componentStates[signal.id] = { signalValue:value, signalModel:signal.signalModel };
@@ -790,7 +816,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
   const liveNodes = new Set(nets.flatMap(({nets:poles}) => Object.values(poles).flatMap((nodes) => [...nodes])));
   const energizedWires = (diagram.wires || []).filter((wire) => wire?.from && wire?.to && (liveNodes.has(key(wire.from.componentId, wire.from.terminal)) || liveNodes.has(key(wire.to.componentId, wire.to.terminal)))).map((wire) => wire.id).filter(Boolean);
   const coilStateFault = coilStatesStable ? [] : [{level:"error",code:"electrical-coil-state-unstable",message:"Contactor/relay coil state did not settle; all coils were de-energized in this simulation."}];
-  return { energized, energizedWires, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, faults:[...sourceShorts,...coilStateFault], warnings:validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
+  return { energized, energizedWires, componentStates, inputs: resolvedInputs, analogOutputs, sourceCount: supplies.length, simulationOnly: true, faults:[...sourceShorts,...coilStateFault,...analogFaults], warnings:validateElectricalDiagram(diagram).filter((issue) => issue.level === "warning") };
 }
 
 

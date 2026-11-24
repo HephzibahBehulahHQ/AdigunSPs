@@ -60,7 +60,7 @@ In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `S
 
 ## Components / Schematic
 
-Open **Components / Schematic**, search by name or order code, and choose **Place component**. Inspect order code, pins, and limits. Drag its header. Manufacturer references can find exact schematic models. Assign the Backplane CPU and power output banks. SM 1231 ranges scale voltage counts. Choose **Connect wire**, select a terminal, add bends, then select the destination. Leave wire mode with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Electrical simulation is a teaching model, not a hardware or safety test.
+Open **Components / Schematic**, search by name or order code, and choose **Place component**. Inspect order code, pins, and limits. Drag its header. Manufacturer references can find exact schematic models. Assign the Backplane CPU and power output banks. SM 1231 supports voltage and current. Choose **Connect wire**, select a terminal, add bends, then select the destination. Leave wire mode with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Electrical simulation is a teaching model, not a hardware or safety test.
 
 ## HMI
 
