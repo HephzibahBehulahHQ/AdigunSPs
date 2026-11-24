@@ -2042,6 +2042,11 @@ test("electrical component search filters models and restores the full picker", 
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(inputRanges.nth(3)).toHaveValue("mA4-20");
   await expect(inputRanges.nth(0)).toHaveValue("V10");
+  await search.fill("Two-wire loop-powered transmitter");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const transmitter = page.locator('#electricalBoard [data-component-type="analogLoopCurrentSource"]');
+  await expect(transmitter.locator("[data-terminal]")).toHaveText(["L+", "IOUT"]);
 });
 
 

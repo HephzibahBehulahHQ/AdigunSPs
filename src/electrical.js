@@ -129,7 +129,7 @@ export const electricalComponentCatalog = Object.freeze({
         [positive,`Differential analog input AI ${index}+`], [negative,`Differential analog input AI ${index}−`],
       ])),
     },
-    simulationLimitations:"The model converts differential voltage or current to nominal PLC raw counts. It supports an ideal externally powered four-wire current source and 4–20 mA wire-break detection. It requires a powered CPU, local DC supply and both signal wires. Two-wire transmitters, input filtering and converter timing are outside the simulation.",
+    simulationLimitations:"The model converts differential voltage or current to nominal PLC raw counts, with ideal two-wire and four-wire current sources and 4–20 mA wire-break detection. It requires a powered CPU, local DC supply and a complete signal circuit. Input filtering, transmitter compliance voltage and converter timing are outside the simulation.",
   },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
@@ -162,6 +162,12 @@ export const electricalComponentCatalog = Object.freeze({
     name:"Four-wire current source · milliamps", category:"Sensors", prefix:"B", kind:"analog-signal-source",
     terminals:["L+","M","SIG+","SIG−"], signalModel:"Ideal externally powered current signal (mA)", analogSignalUnit:"mA",
     signalPowerPins:{ positive:"L+", negative:"M", minimumVoltageV:20.4, maximumVoltageV:28.8 },
+  },
+  analogLoopCurrentSource: {
+    name:"Two-wire loop-powered transmitter · milliamps", category:"Sensors", prefix:"B", kind:"analog-signal-source",
+    terminals:["L+","IOUT"], signalModel:"Ideal loop-powered current signal (mA)", analogSignalUnit:"mA",
+    signalLoop:{ supplyPin:"L+", outputPin:"IOUT", minimumVoltageV:20.4, maximumVoltageV:28.8 },
+    terminalNotes:{ "L+":"Positive loop supply", IOUT:"Current output to receiver input" },
   },
   analogSignalIndicator: { name:"analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
   contactor3P: { name:"three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
@@ -743,6 +749,19 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       const signals = all.filter((candidate) => {
         const source = electricalComponentCatalog[candidate.type];
         if (candidate.tag !== tag || source?.kind !== "analog-signal-source") return false;
+        if (source.signalLoop) {
+          const { supplyPin, outputPin, minimumVoltageV, maximumVoltageV } = source.signalLoop;
+          const transmitterOutput = key(candidate.id, outputPin);
+          if (!reachable(nodes, transmitterOutput).has(key(controller.id, positivePin))) return false;
+          return nets.some(({ component, nets:poles }) => {
+            const supply = electricalComponentCatalog[component.type];
+            const voltage = Number(component.nominalVoltageV ?? supply.nominalVoltageV);
+            return (supply.kind === "source" || supply.kind === "power-converter") &&
+              voltage >= minimumVoltageV && voltage <= maximumVoltageV && !sourceHasShort(poles) &&
+              poles.positive?.has(key(candidate.id, supplyPin)) && poles.negative?.has(key(controller.id, negativePin)) &&
+              !poles.positive.has(transmitterOutput) && !poles.negative.has(transmitterOutput);
+          });
+        }
         const { positive = "SIG+", negative = "SIG−" } = source.signalPins || {};
         const power = source.signalPowerPins;
         return pairedConnected(candidate, positive, negative, controller, positivePin, negativePin) &&
