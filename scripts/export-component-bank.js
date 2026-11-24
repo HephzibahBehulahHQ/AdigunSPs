@@ -1,6 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { electricalComponentCatalog } from "../src/electrical.js";
 import { industrialProductCatalog, validateIndustrialCatalog } from "../src/industrial-catalog.js";
+import { supportedFbdTypes } from "../src/fbd-validation.js";
+import { supportedProcessTypes } from "../src/process.js";
 
 const output = new URL("../docs/component-bank/", import.meta.url);
 const validation = validateIndustrialCatalog();
@@ -58,9 +60,12 @@ const totals = {
   distinctHardwareOrderCodes: new Set(records.filter(({ layer, orderCode }) => layer !== "vendor-software" && orderCode)
     .map(({ manufacturer, orderCode }) => `${manufacturer.trim().toLowerCase()}|${orderCode.trim().toUpperCase()}`)).size,
   verifiedTerminalTopologies: modelRecords.filter(({ readiness }) => readiness.terminalMap === "verified-topology").length,
-  mountingAccessoryReferences: referenceRecords.filter(({ function: category }) => category === "Mounting accessories").length
+  mountingAccessoryReferences: referenceRecords.filter(({ function: category }) => category === "Mounting accessories").length,
+  fbdBlockTypes: supportedFbdTypes.length,
+  processModelTypes: supportedProcessTypes.length,
 };
-const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
+const softwareAndProcess = { fbdBlockTypes:supportedFbdTypes, processModelTypes:supportedProcessTypes };
+const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "softwareAndProcess": ${JSON.stringify(softwareAndProcess)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
 const csv = `${fields.join(",")}\n${records.map((record) => fields.map((field) => cell(record[field])).join(",")).join("\n")}\n`;
 const check = process.argv.includes("--check");
 if (!check) await mkdir(output, { recursive: true });

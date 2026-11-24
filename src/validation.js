@@ -2,6 +2,7 @@ import { compileStructuredText } from "./structured-text.js";
 import { validateCyclicTasks } from "./cyclic-tasks.js";
 import { validateFbdBlocks } from "./fbd-validation.js";
 import { validateElectricalDiagram } from "./electrical.js";
+import { supportedProcessTypes } from "./process.js";
 
 const taskProgramCache = new WeakMap();
 const mixedValidationCache = new WeakMap();
@@ -136,9 +137,8 @@ export function validateProject(project) {
     }
   }
   const processInputs = new Set([...(project.io?.inputs || []), ...(project.tags || []).filter((tag) => tag.role === "input").map((tag) => tag.name)]);
-  const processTypes = ["tank", "conveyor", "motor", "thermal", "pump", "pid"];
   for (const model of project.processes || []) {
-    if (!processTypes.includes(model.type)) issues.push({ level: "error", code: "process-type", message: `Process ${model.name || model.id} has an unsupported model type.` });
+    if (!supportedProcessTypes.includes(model.type)) issues.push({ level: "error", code: "process-type", message: `Process ${model.name || model.id} has an unsupported model type.` });
     if (!model.outputTag || !tags.has(model.outputTag)) issues.push({ level: "warning", code: "process-output-undefined", message: `Process ${model.name || model.id} has an undeclared output tag.` });
     else if (tags.get(model.outputTag).type === "BOOL") issues.push({ level: "error", code: "process-output-type", message: `Process output ${model.outputTag} must be numeric.` });
     if (model.type !== "pid" && (!model.controlTag || !processInputs.has(model.controlTag))) issues.push({ level: "error", code: "process-control-tag", message: `Process ${model.name || model.id} needs a declared digital run input.` });

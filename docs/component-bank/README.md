@@ -17,7 +17,7 @@ Production smoke compares both deployed files with the release checkout on GitHu
 
 The distinct hardware total excludes the software listing and two model designations that need order-code verification. Generic schematic models also stay outside this total. `source-linked-model` means that the definition includes a manufacturer source. A terminal map marked `not-captured` has no connector schedule in the reference catalog. Blank CSV cells and JSON `null` values indicate missing or inapplicable data.
 
-PLC instructions and process models remain separate from the hardware inventory. FBD currently validates 25 block types. The process simulator provides six model types. LD, ST, and SFC instruction coverage will be tracked by editor and execution support so equivalent instructions are distinguishable from physical hardware.
+The JSON export lists the 25 validated FBD block types and six process model types under `softwareAndProcess`. The exporter reads these lists from the project validators. The hardware CSV continues to contain manufacturer references and schematic models. LD, ST, and SFC instruction coverage remains pending.
 
 Use the 10,000 distinct hardware target as an acquisition plan. Before counting a new part, record its exact order code and official evidence. Add a native schematic model only once the terminal topology is documented. Verify wiring, supported behavior, and project recovery before marking a simulation profile usable.
 

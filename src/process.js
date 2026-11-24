@@ -1,3 +1,5 @@
+export const supportedProcessTypes = Object.freeze(["tank", "conveyor", "motor", "thermal", "pump", "pid"]);
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const active = (signals, tag) => Boolean(tag && signals[tag]);
 

@@ -23,6 +23,11 @@ assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].id
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
+assert.equal(inventory.totals.fbdBlockTypes, 25);
+assert.ok(inventory.softwareAndProcess.fbdBlockTypes.includes("TON"));
+assert.deepEqual(inventory.softwareAndProcess.processModelTypes, ["tank", "conveyor", "motor", "thermal", "pump", "pid"]);
+assert.equal(inventory.totals.processModelTypes, 6);
+assert.ok(inventory.records.every(({ layer }) => ["hardware-reference", "vendor-software", "schematic-model"].includes(layer)));
 const cpuTerminalIds = [6, 10, 8].flatMap((count, index) =>
   Array.from({ length:count }, (_, pin) => `X${[80, 10, 11][index]}-${pin + 1}`));
 const transistorCpu = inventory.records.find(({ id }) => id === "model:siemensS71212CG2");
