@@ -350,24 +350,27 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   loopSupply.nominalVoltageV = 12;
   assert.ok(simulate(12).faults.some(({ code }) => code === "analog-wire-break"));
 }
-{
-  const cpu = createElectricalComponent("siemensS71212CG2AcRelay", 1);
+for (const [model, input, output, signalPin, commonPin, relayPin] of [
+  ["siemensS71212CG2AcRelay", "I1", "Q1", "X10-1", "X10-8", "X11-3"],
+  ["siemensS71214CG2AcRelay", "I14", "Q10", "X10-12", "X10-16", "X11-12"],
+]) {
+  const cpu = createElectricalComponent(model, 1);
   const ac = createElectricalComponent("singlePhaseSupply", 1);
   const field = createElectricalComponent("supply24vdc", 1);
   const load = createElectricalComponent("supply24vdc", 2);
   const lamp = createElectricalComponent("pilotLamp", 1);
-  cpu.ioMap.I1.tag = "Start";
-  cpu.ioMap.Q1.tag = "Lamp";
+  cpu.ioMap[input].tag = "Start";
+  cpu.ioMap[output].tag = "Lamp";
   const diagram = { components:[cpu,ac,field,load,lamp], wires:[] };
   const connect = (from, fromPin, to, toPin) => {
     const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
     assert.equal(result.ok, true, result.error);
     diagram.wires.push(result.wire);
   };
-  connect(field, "+", cpu, "X10-1");
-  connect(field, "−", cpu, "X10-8");
+  connect(field, "+", cpu, signalPin);
+  connect(field, "−", cpu, commonPin);
   connect(load, "+", cpu, "X11-2");
-  connect(cpu, "X11-3", lamp, "X1");
+  connect(cpu, relayPin, lamp, "X1");
   connect(lamp, "X2", load, "−");
   const state = () => {
     const result = simulateElectricalDiagram(diagram, {}, { Lamp:true });

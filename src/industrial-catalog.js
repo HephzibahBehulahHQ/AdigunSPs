@@ -770,7 +770,7 @@ const unifiedPanelOperatingReferences = [
 const siemensG2CpuReferences = [
   ["6ES7212-1BG50-0XB0", "1212C", "AC/DC/RLY", "siemensS71212CG2AcRelay"],
   ["6ES7212-1AG50-0XB0", "1212C", "DC/DC/DC", "siemensS71212CG2"],
-  ["6ES7214-1BH50-0XB0", "1214C", "AC/DC/RLY"],
+  ["6ES7214-1BH50-0XB0", "1214C", "AC/DC/RLY", "siemensS71214CG2AcRelay"],
   ["6ES7214-1AH50-0XB0", "1214C", "DC/DC/DC"],
   ["6ES7214-1HH50-0XB0", "1214C", "DC/DC/RLY", "siemensS71214CG2Relay"],
   ["6ES7212-1AF50-0XB0", "1212FC", "DC/DC/DC"],
