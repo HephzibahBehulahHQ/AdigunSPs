@@ -2184,6 +2184,8 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
   for (const [orderCode, manufacturer, host] of [
     ["936100247", "Finder", "findernet.com"],
     ["09112601", "Doepke", "doepke.de"],
+    ["6ES7231-5QD50-0XB0", "Siemens", "docs.tia.siemens.cloud"],
+    ["6ES7231-5PB50-0XB0", "Siemens", "docs.tia.siemens.cloud"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();

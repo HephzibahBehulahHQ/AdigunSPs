@@ -775,13 +775,18 @@ const siemensG2ExpansionReferences = [
   ["6ES7231-4HD50-0XB0", "SB 1231", "Analog", { analogInputs: 4 }],
   ["6ES7232-4HD50-0XB0", "SB 1232", "Analog", { analogOutputs: 4 }],
   ["6ES7233-4HD50-0XB0", "SB 1233", "Analog", { analogInputs: 2, analogOutputs: 2 }],
+  ["6ES7231-5QD50-0XB0", "SB 1231", "Analog", { analogInputs: 4, inputType: "Thermocouple" }],
+  ["6ES7231-5PB50-0XB0", "SB 1231", "Analog", { analogInputs: 2, inputType: "RTD" }],
 ].map(([identifier, family, domain, attributes, model]) => {
   const sourceSection = family.startsWith("SB") ? "signal-boards-sbs" : "signal-modules-sms";
+  const sourceUrl = ["RTD", "Thermocouple"].includes(attributes.inputType)
+    ? "https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_20/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/ordering-information/signal-boards-sbs"
+    : `https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/${sourceSection}`;
   return {
     manufacturer: "Siemens", identifier, family: `SIMATIC S7-1200 G2 ${family}`, category: `${domain} I/O modules`,
     attributes,
     source: {
-      url: `https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/${sourceSection}`,
+      url: sourceUrl,
       title: `Siemens SIMATIC S7-1200 G2 ${family} ordering information`, retrievedOn: "2026-11-24",
     },
     simulation: model

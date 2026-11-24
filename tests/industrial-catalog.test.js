@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10204, "catalog has 10204 distinct provenance-backed product references");
+assert.equal(validation.count, 10206, "catalog has 10206 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10204);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10206);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 96);
@@ -18,11 +18,11 @@ assert.equal(g2Ordering.filter(({ simulation }) => simulation.status === "refere
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1BG50-0XB0").simulation.model, "siemensS71212CG2AcRelay");
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1AG50-0XB0").simulation.model, "siemensS71212CG2");
 assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 140);
-assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 88);
+assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 90);
 const expansion = industrialProductCatalog.filter(({ source }) => /ordering-information\/signal-(boards-sbs|modules-sms)$/.test(source.url));
-assert.equal(expansion.length, 10);
+assert.equal(expansion.length, 12);
 assert.equal(expansion.find(({ identifier }) => identifier === "6ES7233-4HF50-0XB0").simulation.model, "siemensSM1233G2AI4AQ4");
-assert.equal(expansion.filter(({ simulation }) => simulation.status === "reference-only" && simulation.model === null).length, 9);
+assert.equal(expansion.filter(({ simulation }) => simulation.status === "reference-only" && simulation.model === null).length, 11);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
 assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 25);
@@ -36,7 +36,7 @@ assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
 const categoryCoverage = inventory.hardwareByCatalogCategory;
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
-assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 88, exactEditableModels: 3, verifiedTerminalMaps: 3 });
+assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 90, exactEditableModels: 3, verifiedTerminalMaps: 3 });
 assert.deepEqual(categoryCoverage["PLC controllers"], { references: 96, exactEditableModels: 3, verifiedTerminalMaps: 3 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 25, exactEditableModels: 0, verifiedTerminalMaps: 0 });
 assert.equal(categoryCoverage["Programming software"], undefined);
