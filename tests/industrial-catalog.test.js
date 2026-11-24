@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 5518, "catalog has 5518 distinct provenance-backed product references");
+assert.equal(validation.count, 10158, "catalog has 10158 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 5518);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10158);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 87);
@@ -23,6 +23,11 @@ const finderReference = searchIndustrialCatalog({ manufacturer: "Finder", query:
 assert.equal(finderReference.identifier, "936100247");
 assert.equal(finderReference.simulation.status, "reference-only");
 assert.equal(finderReference.source.exportDate, "2026-09-02");
+assert.equal(searchIndustrialCatalog({ manufacturer: "Doepke" }).total, 4640);
+const doepkeReference = searchIndustrialCatalog({ manufacturer: "Doepke", query: "09112601" }).items[0];
+assert.equal(doepkeReference.identifier, "09112601", "the manufacturer's leading zero is preserved");
+assert.equal(doepkeReference.attributes.etimClass, "EC000003");
+assert.equal(doepkeReference.simulation.status, "reference-only");
 const et200al = industrialProductCatalog.filter(({ family }) => family === "SIMATIC ET 200AL");
 assert.equal(et200al.length, 23);
 assert.ok(et200al.every(({ source, simulation }) => source.exportDate === "2025-10-10" && simulation.status === "reference-only"));
@@ -64,6 +69,7 @@ assert.ok(ui.includes("item.source.url") && ui.includes("item.simulation.limitat
 assert.ok(!ui.includes('data-electrical-action="add-catalog"'), "reference-only catalog products cannot be placed as simulated devices");
 assert.ok(worker.includes('"./src/industrial-catalog.js"'), "offline shell caches the catalog module");
 assert.ok(worker.includes('"./src/finder-catalog-data.js"'), "offline shell caches Finder order data");
+assert.ok(worker.includes('"./src/doepke-catalog-data.js"'), "offline shell caches Doepke order data");
 const unsupported = industrialProductCatalog.find((item) => item.identifier === "LC1D09B7");
 assert.equal(unsupported.simulation.status, "reference-only");
 assert.match(unsupported.simulation.limitations, /24 V DC/);
