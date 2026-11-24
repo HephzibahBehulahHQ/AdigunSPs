@@ -2106,6 +2106,17 @@ test("electrical component search filters models and restores the full picker", 
   const acCpu = page.locator('#electricalBoard [data-component-type="siemensS71212CG2AcRelay"]');
   await expect(acCpu.getByRole("button", { name:/X80-1.*CPU AC supply L1/ })).toBeEnabled();
   await expect(acCpu.getByRole("button", { name:/X80-5.*CPU AC supply N/ })).toBeEnabled();
+  await search.fill("6ES7232-4HF50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const analogOutput = page.locator('#electricalBoard [data-component-type="siemensSM1232G2AQ8"]');
+  await expect(analogOutput.locator("[data-terminal]")).toHaveCount(18);
+  await expect(analogOutput.getByRole("button", { name:/X11-10.*Output return 7M/ })).toBeEnabled();
+  const outputRanges = page.locator('#electricalProperties select[name="analogOutputRanges"]');
+  await expect(outputRanges).toHaveCount(8);
+  await outputRanges.nth(7).selectOption("mA4-20");
+  await page.locator("#electricalProperties button[type=submit]").click();
+  await expect(outputRanges.nth(7)).toHaveValue("mA4-20");
 });
 
 

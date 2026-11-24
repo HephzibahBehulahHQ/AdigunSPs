@@ -875,6 +875,12 @@ const industrialProductCatalog = Object.freeze([
     simulation: { status: "educational-model", model: "siemensSM1221G2DI16", limitations: "The four field common groups require a linked, powered compatible CPU. Input filtering and bus communication are outside the simulation." }
   },
   {
+    manufacturer: "Siemens", identifier: "6ES7232-4HF50-0XB0", family: "SIMATIC S7-1200 G2 SM 1232", category: "Analog I/O modules",
+    attributes: { analogOutputs:8, outputMode:"Voltage or current", voltageResolution:"14-bit", currentResolution:"13-bit", ratedSupplyV:24 },
+    source: { url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/analog-signal-modules-sms/sm-1232-aq-8x14bit", title:"Siemens SM 1232 AQ 8x14bit specifications", retrievedOn:"2026-11-24" },
+    simulation: { status:"educational-model", model:"siemensSM1232G2AQ8", limitations:"Nominal raw counts drive an ideal wired voltage or current indicator when the CPU and module have power." }
+  },
+  {
     manufacturer: "Siemens", identifier: "6ES7231-4HF50-0XB0", family: "SIMATIC S7-1200 G2 SM 1231", category: "Analog I/O modules",
     attributes: { analogInputs:8, resolution:"14-bit", inputMode:"Differential voltage or current", ratedSupplyV:24 },
     source: { url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit", title:"Siemens SM 1231 AI 8x14bit technical specifications", retrievedOn:"2026-11-24" },

@@ -133,9 +133,13 @@ export function electricalSymbolSvg(component) {
     case "siemensSM1231G2AI8":
       body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1231 · 8 AI",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · AI 0–3",6)}${text(48,35,"X11 · AI 4–7",6)}`;
       break;
+    case "siemensSM1232G2AQ8":
+      body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1232 · 8 AQ",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · AQ 0–3",6)}${text(48,35,"X11 · AQ 4–7",6)}`;
+      break;
     case "digitalInputModule4":case "digitalOutputModule4":case "analogInputModule2":case "analogOutputModule2": {const title=component.type.startsWith("analog")?component.type.startsWith("analogInput")?"AI":"AO":component.type.startsWith("digitalInput")?"DI":"DO";body=`<rect x="20" y="5" width="56" height="32" rx="2" ${common}/>${text(48,20,title,10)}${text(48,30,component.type.startsWith("analog")?"2 CH":"4 CH",7)}${[0,1,2].map((i)=>line(5,12+i*9,20,12+i*9)).join("")}${[0,1,2].map((i)=>line(76,12+i*9,91,12+i*9)).join("")}`;break;}
     case "analogSignalSource":case "analogVoltageSource":case "analogCurrentSource":case "analogLoopCurrentSource":body=`<circle cx="48" cy="22" r="13" ${common}/><path d="M40 22h5l4-7 5 14 4-7h5" ${common}/>${line(4,22,35,22)}${line(61,22,92,22)}`;break;
-    case "analogSignalIndicator":body=`<circle cx="58" cy="22" r="12" ${common}/>${text(58,25,"AI",8)}${line(4,22,46,22)}<path d="M37 16l9 6-9 6" ${common}/>${line(70,22,92,22)}`;break;
+    case "analogVoltageIndicator":case "analogCurrentIndicator":
+    case "analogSignalIndicator":body=`<circle cx="58" cy="22" r="12" ${common}/>${text(58,25,electricalComponentCatalog[component.type].analogSignalUnit || "AI",8)}${line(4,22,46,22)}<path d="M37 16l9 6-9 6" ${common}/>${line(70,22,92,22)}`;break;
     case "contactor3P":body=`<rect x="36" y="8" width="24" height="26" ${common}/>${text(48,24,"KM",8)}${line(4,21,36,21)}${line(60,21,92,21)}${text(48,6,"A1",6)}${text(48,40,"A2",6)}`;break;
     case "relayCoil":body=`<rect x="35" y="8" width="26" height="26" ${common}/>${text(48,24,"K",10)}${line(4,21,35,21)}${line(61,21,92,21)}${text(48,6,"A1",6)}${text(48,40,"A2",6)}`;break;
     case "siemensSirius3RT20171WB41":{const closed=Boolean(component.mainContactsClosed);body=`${text(48,6,"3RT20 · 3 NO",6)}${[0,1,2].map((index)=>{const y=13+index*9;return `${line(5,y,31,y)}${line(31,y-3,31,y+3)}${line(65,y-3,65,y+3)}${line(31,y,closed?65:58,closed?y:y-5)}${line(65,y,91,y)}`;}).join("")}${text(48,43,`A1+ / A2− · 13/14 ${closed?"CLOSED":"NO"}`,5)}`;break;}
@@ -251,15 +255,19 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
         .filter((cpu) => isCompatibleBackplaneCpu(selected, cpu))
         .map((cpu) => `<option value="${escape(cpu.id)}" ${selected.backplaneCpuId === cpu.id ? "selected" : ""}>${escape(cpu.reference)} · ${escape(cpu.label)}</option>`).join("")}</select></label>` : "";
     const rangeLabel = ({ de:"Messbereich", yo:"Ìwọ̀n ìfihàn", pcm:"Signal range" })[language] || "Signal range";
-    const analogRanges = selectedSpec?.analogInputRanges;
+    const outputRanges = selectedSpec?.analogOutputRanges;
+    const rangeProperty = outputRanges ? "analogOutputRanges" : "analogInputRanges";
+    const analogRanges = selectedSpec?.[rangeProperty];
+    const rangeChannels = selectedSpec?.channels?.[outputRanges ? "analogOutputs" : "analogInputs"];
+    const rangeGroupSize = selectedSpec?.analogRangeGroupSize || 1;
     const analogRangeFields = analogRanges ? Array.from({
-      length:Math.ceil(selectedSpec.channels.analogInputs.length / selectedSpec.analogRangeGroupSize),
+      length:Math.ceil(rangeChannels.length / rangeGroupSize),
     }, (_, group) => {
-      const first = group * selectedSpec.analogRangeGroupSize;
-      const last = first + selectedSpec.analogRangeGroupSize - 1;
-      const range = electricalAnalogRangeId(selected, group);
-      return `<label class="electrical-field">${escape(rangeLabel)} AI${first + 1}–AI${last + 1}
-        <select name="analogInputRanges">${Object.entries(analogRanges).map(([id, { label }]) =>
+      const first = group * rangeGroupSize;
+      const label = rangeChannels.slice(first, first + rangeGroupSize).join("–");
+      const range = electricalAnalogRangeId(selected, group, rangeProperty);
+      return `<label class="electrical-field">${escape(rangeLabel)} ${escape(label)}
+        <select name="${rangeProperty}">${Object.entries(analogRanges).map(([id, { label }]) =>
           `<option value="${escape(id)}" ${id === range ? "selected" : ""}>${escape(label)}</option>`).join("")}</select>
       </label>`;
     }).join("") : "";
@@ -462,7 +470,7 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       onChange();
       if (retainFocus) (inspectorHost || root).querySelector(`[data-electrical-input="${CSS.escape(tag)}"]`)?.focus({ preventScroll: true });
     }));
-    root.querySelector("#electricalProperties")?.addEventListener("submit",(event)=>{event.preventDefault();const active=event.currentTarget.contains(document.activeElement)?document.activeElement:null;const form=new FormData(event.currentTarget),updates=Object.fromEntries(form.entries()),nextMap=structuredClone(selected.ioMap||{});if(analogRanges)updates.analogInputRanges=form.getAll("analogInputRanges");for(const field of ["ratedVoltageV","ratedCurrentA"])updates[field]=updates[field]===""?null:Number(updates[field]);if(event.currentTarget.elements.normallyClosed)updates.normallyClosed=updates.normallyClosed==="true";updates.closed=event.currentTarget.elements.closed?.checked??selected.closed;updates.tripped=event.currentTarget.elements.tripped?.checked??selected.tripped;if(event.currentTarget.elements.breakerOpen)updates.breakerOpen=event.currentTarget.elements.breakerOpen.checked;for(const [name,value] of form.entries()){if(name.startsWith("mapTag:"))nextMap[name.slice(7)].tag=value;if(name.startsWith("mapAddress:"))nextMap[name.slice(11)].address=value.trim();}delete updates.ioMap;for(const name of Object.keys(updates))if(name.startsWith("mapTag:")||name.startsWith("mapAddress:"))delete updates[name];const duplicate=diagram.components.some((item)=>item.id!==selected.id&&item.reference.toUpperCase()===updates.reference?.trim().toUpperCase());if(!updates.reference.trim()||duplicate||["ratedVoltageV","ratedCurrentA"].some((field)=>updates[field]!==null&&(!Number.isFinite(updates[field])||updates[field]<=0))){renderPropertyResult(t.invalid,active);return;}onBeforeChange();const previousReference=selected.reference;Object.assign(selected,updateElectricalComponentProperties(selected,updates));if(previousReference!==selected.reference)for(const component of diagram.components)if(String(component.coilRef||"").toUpperCase()===previousReference.toUpperCase())component.coilRef=selected.reference;selected.ioMap=nextMap;const result=simulateElectricalDiagram(diagram,{...inputValues,...diagram.inputStates},outputValues);diagram.simulation=result;simulatedOutputs=result.energized;onChange();renderPropertyResult(t.valid,active);});
+    root.querySelector("#electricalProperties")?.addEventListener("submit",(event)=>{event.preventDefault();const active=event.currentTarget.contains(document.activeElement)?document.activeElement:null;const form=new FormData(event.currentTarget),updates=Object.fromEntries(form.entries()),nextMap=structuredClone(selected.ioMap||{});if(analogRanges)updates[rangeProperty]=form.getAll(rangeProperty);for(const field of ["ratedVoltageV","ratedCurrentA"])updates[field]=updates[field]===""?null:Number(updates[field]);if(event.currentTarget.elements.normallyClosed)updates.normallyClosed=updates.normallyClosed==="true";updates.closed=event.currentTarget.elements.closed?.checked??selected.closed;updates.tripped=event.currentTarget.elements.tripped?.checked??selected.tripped;if(event.currentTarget.elements.breakerOpen)updates.breakerOpen=event.currentTarget.elements.breakerOpen.checked;for(const [name,value] of form.entries()){if(name.startsWith("mapTag:"))nextMap[name.slice(7)].tag=value;if(name.startsWith("mapAddress:"))nextMap[name.slice(11)].address=value.trim();}delete updates.ioMap;for(const name of Object.keys(updates))if(name.startsWith("mapTag:")||name.startsWith("mapAddress:"))delete updates[name];const duplicate=diagram.components.some((item)=>item.id!==selected.id&&item.reference.toUpperCase()===updates.reference?.trim().toUpperCase());if(!updates.reference.trim()||duplicate||["ratedVoltageV","ratedCurrentA"].some((field)=>updates[field]!==null&&(!Number.isFinite(updates[field])||updates[field]<=0))){renderPropertyResult(t.invalid,active);return;}onBeforeChange();const previousReference=selected.reference;Object.assign(selected,updateElectricalComponentProperties(selected,updates));if(previousReference!==selected.reference)for(const component of diagram.components)if(String(component.coilRef||"").toUpperCase()===previousReference.toUpperCase())component.coilRef=selected.reference;selected.ioMap=nextMap;const result=simulateElectricalDiagram(diagram,{...inputValues,...diagram.inputStates},outputValues);diagram.simulation=result;simulatedOutputs=result.energized;onChange();renderPropertyResult(t.valid,active);});
     const board=root.querySelector("#electricalBoard"); let drag=null;
     board?.addEventListener("click",(event)=>root._electricalCanvasRouteHandler?.(event,board),true);
     root.querySelectorAll("[data-drag-component]").forEach((head)=>head.addEventListener("click",(event)=>{
