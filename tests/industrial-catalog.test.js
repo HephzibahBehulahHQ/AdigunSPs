@@ -14,7 +14,8 @@ const g2Ordering = industrialProductCatalog.filter(({ source }) =>
   source.url === "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus");
 assert.equal(g2Ordering.length, 8);
 assert.equal(g2Ordering.filter(({ attributes }) => attributes.failsafe).length, 4);
-assert.ok(g2Ordering.every(({ simulation }) => simulation.status === "reference-only"));
+assert.equal(g2Ordering.filter(({ simulation }) => simulation.status === "reference-only").length, 7);
+assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1BG50-0XB0").simulation.model, "siemensS71212CG2AcRelay");
 assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 134);
 assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 83);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);

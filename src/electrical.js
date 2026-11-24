@@ -4,6 +4,8 @@ const relayInputPins = { I1:"X10-1", I2:"X10-3", I3:"X10-5", I4:"X10-7", I5:"X10
 const relayOutputPins = { Q1:"X11-3", Q2:"X11-5", Q3:"X11-7", Q4:"X11-4", Q5:"X11-6", Q6:"X11-8" };
 const connectorPins = (connector, count) => Array.from({ length: count }, (_, index) => `${connector}-${index + 1}`);
 const relayPinLayout = [...connectorPins("X80", 6), ...connectorPins("X10", 10), ...connectorPins("X11", 8)];
+const g2CompatibleCpuTypes = ["siemensS71212CG2", "siemensS71212CG2Relay", "siemensS71212CG2AcRelay"];
+const g2DcSupply = { minimumVoltageV:20.4, maximumVoltageV:28.8 };
 const sm1221InputGroups = [
   { common:"X10-1", inputs:["X10-3","X10-5","X10-7","X10-9"] },
   { common:"X10-2", inputs:["X10-4","X10-6","X10-8","X10-10"] },
@@ -56,12 +58,28 @@ export const electricalComponentCatalog = Object.freeze({
     },
     simulationLimitations:"Ideal relay contacts switch the external 1L common only with a powered DC CPU and a mapped true output. A digital input requires a complete DC path to the opposite pole from its 1M common. Sensor-supply output, ratings, firmware, and relay dynamics are outside the simulation."
   },
+  siemensS71212CG2AcRelay: {
+    name:"Siemens SIMATIC S7-1200 G2 CPU 1212C AC/DC/RLY · 8 DI / 6 relay DO", category:"PLC controllers", prefix:"PLC", kind:"plc",
+    manufacturer:"Siemens", partNumber:"6ES7212-1BG50-0XB0",
+    terminalLayout:relayPinLayout, terminals:relayPinLayout.filter((pin) => pin !== "X80-3"),
+    channels:{ inputs:Object.keys(relayInputPins), outputs:Object.keys(relayOutputPins), inputPins:relayInputPins, outputPins:relayOutputPins,
+      powerPositivePin:"X80-1", powerNegativePin:"X80-5", inputCommonPins:["X10-8","X10-10"], inputPolarity:"sink-source", relayCommonPins:["X11-1","X11-2"] },
+    controllerSupply:{ kind:"single-phase-source", minimumVoltageV:85, maximumVoltageV:264 },
+    source:{ title:"Siemens S7-1200 G2 System Manual · 1212C AC/DC/RLY wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_itit_20/technical-specifications/cpu-1212c/wiring-diagrams?contentId=JKtYbF20ULXLF_Hv6EcPNQ", terminalMapSection:"CPU 1212C AC/DC/Relay" },
+    terminalNotes:{
+      "X80-1":"CPU AC supply L1", "X80-2":"Chassis ground", "X80-3":"Unassigned position", "X80-4":"Sensor supply L+", "X80-5":"CPU AC supply N", "X80-6":"Sensor supply M",
+      "X10-8":"Digital input common 1M", "X10-10":"Digital input common 1M", "X11-1":"Relay common 1L", "X11-2":"Relay common 1L",
+      ...Object.fromEntries(Object.values(relayInputPins).map((pin, index) => [pin, `Digital input DI a.${index}`])),
+      ...Object.fromEntries(Object.values(relayOutputPins).map((pin, index) => [pin, `Relay output DQ a.${index}`])),
+    },
+    simulationLimitations:"Ideal simulation with a single-phase AC CPU supply on L1/N, separate DC field input power, and an external relay load supply. Sensor-supply output, frequency, ratings and vendor firmware are outside the simulation.",
+  },
   digitalInputModule4: { name:"digital input module · 4 channels", category:"PLC I/O modules", prefix:"DI", terminals:["M","I1","I2","I3","I4"], kind:"digital-input-module", channels:{inputs:["I1","I2","I3","I4"]} },
   siemensSM1221G2DI16: {
     name:"Siemens S7-1200 G2 SM 1221 · 16 DI · 6ES7221-1BH50-0XB0", category:"PLC I/O modules", prefix:"DI", kind:"digital-input-module",
     manufacturer:"Siemens", partNumber:"6ES7221-1BH50-0XB0", terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
     channels:{ inputs:Object.keys(sm1221InputPins), inputPins:sm1221InputPins }, inputGroups:sm1221InputGroups,
-    backplaneCpuTypes:["siemensS71212CG2", "siemensS71212CG2Relay"],
+    backplaneCpuTypes:g2CompatibleCpuTypes,
     inputSignalVoltage:{ minimumVoltageV:15, maximumVoltageV:30 },
     source:{ title:"Siemens S7-1200 G2 SM 1221 DI 16x24VDC specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_itit_20/technical-specifications/digital-signal-modules-sms/sm-1221-di-16x24vdc", terminalMapSection:"Wiring diagram" },
     terminalNotes:Object.fromEntries(sm1221InputGroups.flatMap(({ common, inputs }, group) => [
@@ -76,7 +94,7 @@ export const electricalComponentCatalog = Object.freeze({
     manufacturer:"Siemens", partNumber:"6ES7222-5HH50-0XB0", terminalLayout:sm1222RelayLayout,
     terminals:sm1222RelayLayout.filter((pin) => !["X10-11","X10-12","X10-13","X10-14","X11-3","X11-4"].includes(pin)),
     channels:{ outputs:Object.keys(sm1222OutputPins), outputPins:sm1222OutputPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
-    relayOutputGroups:sm1222RelayGroups, backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
+    relayOutputGroups:sm1222RelayGroups, backplaneCpuTypes:g2CompatibleCpuTypes,
     source:{ title:"Siemens S7-1200 G2 SM 1222 relay specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm1222-dq-16xrelay", terminalMapSection:"Wiring diagram" },
     terminalNotes:{ "X11-1":"Relay control supply L+", "X11-2":"Relay control supply M",
       ...Object.fromEntries(sm1222RelayGroups.flatMap(({ commonPins, outputs }, group) => [
@@ -92,7 +110,7 @@ export const electricalComponentCatalog = Object.freeze({
     terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
     channels:{ outputs:Object.keys(sm1222TransistorPins), outputPins:sm1222TransistorPins },
     sourcingOutputGroups:sm1222TransistorGroups,
-    backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
+    backplaneCpuTypes:g2CompatibleCpuTypes,
     fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
     ratedVoltageV:24, ratedCurrentA:0.5,
     source:{ title:"Siemens S7-1200 G2 SM 1222 DC output specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm-1222-dq-16x24vdc", terminalMapSection:"Wiring diagram" },
@@ -108,7 +126,7 @@ export const electricalComponentCatalog = Object.freeze({
     manufacturer:"Siemens", partNumber:"6ES7231-4HF50-0XB0",
     terminalLayout:sm1231Layout, terminals:sm1231Layout.filter((pin) => !["X10-9","X10-10"].includes(pin)),
     channels:{ analogInputs:Object.keys(sm1231AnalogPins), analogInputPins:sm1231AnalogPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
-    backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
+    backplaneCpuTypes:g2CompatibleCpuTypes,
     fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
     analogVoltageRangesV:[10,5,2.5], analogRangeGroupSize:2, analogRawFullScale:27648,
     analogInputRanges:{
@@ -640,8 +658,8 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         continue;
       }
       if (spec.channels.relayCommonPins) {
-        const { powerPositivePin, powerNegativePin, outputPins, relayCommonPins } = spec.channels;
-        if (coilPowered(sourceNets(nodes), component, powerPositivePin, powerNegativePin, spec.controllerSupply)) {
+        const { outputPins, relayCommonPins } = spec.channels;
+        if (controllerPowered(component, sourceNets(nodes))) {
           addEdge(key(component.id, relayCommonPins[0]), key(component.id, outputPins[channel]));
         }
         continue;
@@ -691,11 +709,24 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     });
   };
   // Coil power is derived from terminal voltage paths, never from the output tag alone.
+  const controllerPowered = (cpu, nets) => {
+    const { channels, controllerSupply = g2DcSupply } = electricalComponentCatalog[cpu.type];
+    const { powerPositivePin, powerNegativePin } = channels;
+    if (controllerSupply.kind !== "single-phase-source") {
+      return coilPowered(nets, cpu, powerPositivePin, powerNegativePin, controllerSupply);
+    }
+    return nets.some((entry) => {
+      const source = electricalComponentCatalog[entry.component.type];
+      const voltage = Number(entry.component.nominalVoltageV ?? source.nominalVoltageV);
+      return source.kind === controllerSupply.kind && voltage >= controllerSupply.minimumVoltageV &&
+        voltage <= controllerSupply.maximumVoltageV && (poweredPair([entry], cpu, powerPositivePin, powerNegativePin) ||
+          poweredPair([entry], cpu, powerNegativePin, powerPositivePin));
+    });
+  };
   const hasPoweredBackplane = (module, nets) => {
     const cpu = all.find(({ id }) => id === module.backplaneCpuId);
     if (!isCompatibleBackplaneCpu(module, cpu)) return false;
-    const { powerPositivePin, powerNegativePin } = electricalComponentCatalog[cpu.type].channels;
-    return coilPowered(nets, cpu, powerPositivePin, powerNegativePin, { minimumVoltageV: 20.4, maximumVoltageV: 28.8 });
+    return controllerPowered(cpu, nets);
   };
   const coilComponents = all.filter((component) => electricalComponentCatalog[component.type]?.kind === "contactor" || component.type === "relayCoil");
   let coilStatesStable = coilComponents.length === 0;
@@ -729,9 +760,9 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         plcInputs[tag] = Boolean(backplanePowered && group && (coilPowered(nets, controller, pin, group.common, spec.inputSignalVoltage)
           || coilPowered(nets, controller, group.common, pin, spec.inputSignalVoltage)));
       } else if (spec.channels.inputPolarity === "sink-source") {
-        plcInputs[tag] = coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.controllerSupply)
-          && spec.channels.inputCommonPins.some((common) => coilPowered(nets, controller, pin, common, spec.controllerSupply)
-            || coilPowered(nets, controller, common, pin, spec.controllerSupply));
+        plcInputs[tag] = controllerPowered(controller, nets)
+          && spec.channels.inputCommonPins.some((common) => coilPowered(nets, controller, pin, common, g2DcSupply)
+            || coilPowered(nets, controller, common, pin, g2DcSupply));
       } else {
         plcInputs[tag] = Boolean(hasReturn && (!spec.channels.powerPositivePin || hasPositivePower) && hasInputCommon
           && nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, pin))));

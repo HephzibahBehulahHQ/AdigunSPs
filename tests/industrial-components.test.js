@@ -350,6 +350,36 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   loopSupply.nominalVoltageV = 12;
   assert.ok(simulate(12).faults.some(({ code }) => code === "analog-wire-break"));
 }
+{
+  const cpu = createElectricalComponent("siemensS71212CG2AcRelay", 1);
+  const ac = createElectricalComponent("singlePhaseSupply", 1);
+  const field = createElectricalComponent("supply24vdc", 1);
+  const load = createElectricalComponent("supply24vdc", 2);
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  cpu.ioMap.I1.tag = "Start";
+  cpu.ioMap.Q1.tag = "Lamp";
+  const diagram = { components:[cpu,ac,field,load,lamp], wires:[] };
+  const connect = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  connect(field, "+", cpu, "X10-1");
+  connect(field, "−", cpu, "X10-8");
+  connect(load, "+", cpu, "X11-2");
+  connect(cpu, "X11-3", lamp, "X1");
+  connect(lamp, "X2", load, "−");
+  const state = () => {
+    const result = simulateElectricalDiagram(diagram, {}, { Lamp:true });
+    return [result.inputs.Start, result.energized[lamp.id]];
+  };
+  assert.deepEqual(state(), [false,false], "the two DC field supplies do not power the AC CPU");
+  connect(ac, "L", cpu, "X80-1");
+  connect(ac, "N", cpu, "X80-5");
+  assert.deepEqual(state(), [true,true]);
+  ac.nominalVoltageV = 80;
+  assert.deepEqual(state(), [false,false]);
+}
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);
