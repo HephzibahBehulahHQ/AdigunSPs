@@ -319,6 +319,14 @@ export const electricalComponentCatalog = Object.freeze({
     terminalNotes: { "1": "Twin-side conductor connection · editor port 1", "2": "Twin-side conductor connection · editor port 2", "3": "Single-side conductor connection · editor port 3" },
     simulationLimitations: "Three push-in connections form one ideal node. The editor numbers are positional labels. Resistance, heating, conductor fit, mounting, and rating enforcement are outside the model."
   },
+  phoenixPT25KnifeDisconnect: {
+    name:"Phoenix Contact PT 2,5-MT OG knife-disconnect terminal · 3212316", category:"Terminals and wiring", prefix:"X",
+    terminals:["1","2"], kind:"manual-switch", initialClosed:true, manufacturer:"Phoenix Contact", partNumber:"3212316",
+    ratedVoltageV:400, ratedCurrentA:20,
+    source:{ title:"Phoenix Contact PT 2,5-MT OG product data", url:"https://www.phoenixcontact.com/en-us/products/disconnect-terminal-block-pt-25-mt-og-3212316" },
+    terminalNotes:{ "1":"Push-in conductor connection · editor port 1", "2":"Push-in conductor connection · editor port 2" },
+    simulationLimitations:"The knife opens or closes ideal continuity between the two documented conductor connections. The editor port labels identify connection positions. Resistance, load-breaking capability, ratings enforcement, and DIN-rail fit are outside the model.",
+  },
   protectiveEarth: { name:"Protective-earth terminal", category:"Terminals and wiring", prefix:"PE", terminals:["PE"], kind:"earth" },
   groundCommon: { name:"Ground / common node · simulated equipotential", category:"Terminals and wiring", prefix:"COM", terminals:["COM1","COM2","COM3","COM4"], kind:"junction" },
 });

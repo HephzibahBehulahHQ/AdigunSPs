@@ -972,6 +972,12 @@ const industrialProductCatalog = Object.freeze([
     attributes: { connections: 3, potentials: 1, nominalVoltageV: 800, nominalCurrentA: 24, connectionMethod: "Push-in" },
     source: { url: "https://www.phoenixcontact.com/en-us/products/multi-conductor-terminal-block-pt-25-twin-3209549?type=pdf", title: "Phoenix Contact PT 2,5-TWIN data sheet", retrievedOn: "2026-11-23", terminalMapPages: [2, 7] },
     simulation: { status: "educational-model", model: "phoenixPT25Twin", limitations: "Use the schematic picker to place the ideal three-connection node. No resistance, heating, or rating enforcement is modeled." }
+  },
+  {
+    manufacturer:"Phoenix Contact", identifier:"3212316", family:"PT 2,5-MT OG", category:"Terminal systems",
+    attributes:{ connections:2, potentials:1, nominalVoltageV:400, nominalCurrentA:20, connectionMethod:"Push-in", mechanism:"Knife disconnect" },
+    source:{ url:"https://www.phoenixcontact.com/en-us/products/disconnect-terminal-block-pt-25-mt-og-3212316", title:"Phoenix Contact PT 2,5-MT OG product data", retrievedOn:"2026-11-24" },
+    simulation:{ status:"educational-model", model:"phoenixPT25KnifeDisconnect", limitations:"Ideal switchable continuity. Physical load-breaking behavior and rating enforcement are outside the simulation." }
   }
 ]);
 

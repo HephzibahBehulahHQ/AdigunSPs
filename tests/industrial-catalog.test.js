@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10222, "catalog has 10222 distinct provenance-backed product references");
+assert.equal(validation.count, 10223, "catalog has 10223 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10222);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10223);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 96);

@@ -60,7 +60,7 @@ In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `S
 
 ## Components / Schematic
 
-Search by name or order code, then **Place component**. Inspect pins and supply. Drag the header to move. Link **Backplane CPU** and supply power. 1214C loads use relay common 1L or transistor supply 2L+/2M. On SM 1233, set **Signal range** per input pair and per output. Analog readings show V or mA. With **Connect wire**, select a terminal, add bends, then select the destination. Exit with **Select / Move**. **Replace** requires mapping review. **Validate** checks simulated wiring.
+Search, then **Place component**. Drag its header to move. Link **Backplane CPU** and supply power. 1214C loads use relay common 1L or transistor supply 2L+/2M. On SM 1233, set **Signal range** per input pair and per output. Analog readings show V or mA. With **Connect wire**, select a terminal, add bends, then select the destination. Exit with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Clear **Closed** to open the knife disconnect.
 
 ## HMI
 
