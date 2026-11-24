@@ -2035,13 +2035,13 @@ test("electrical component search filters models and restores the full picker", 
   await expect(analogModule.locator("[data-terminal]")).toHaveCount(18);
   await expect(analogModule.getByRole("button", { name:/X10-9.*unassigned/ })).toBeDisabled();
   await expect(analogModule.getByRole("button", { name:/X11-9.*Differential analog input AI 7/ })).toBeEnabled();
-  const voltageRanges = page.locator('#electricalProperties select[name="analogVoltageRangesV"]');
-  await expect(voltageRanges).toHaveCount(4);
-  await expect(voltageRanges.nth(3)).toHaveValue("10");
-  await voltageRanges.nth(3).selectOption("2.5");
+  const inputRanges = page.locator('#electricalProperties select[name="analogInputRanges"]');
+  await expect(inputRanges).toHaveCount(4);
+  await expect(inputRanges.nth(3)).toHaveValue("V10");
+  await inputRanges.nth(3).selectOption("mA4-20");
   await page.locator("#electricalProperties button[type=submit]").click();
-  await expect(voltageRanges.nth(3)).toHaveValue("2.5");
-  await expect(voltageRanges.nth(0)).toHaveValue("10");
+  await expect(inputRanges.nth(3)).toHaveValue("mA4-20");
+  await expect(inputRanges.nth(0)).toHaveValue("V10");
 });
 
 

@@ -167,6 +167,14 @@ function validateOptionalProjectData(project) {
           fail(`Electrical component ${index + 1} has invalid analog voltage ranges.`);
         }
       }
+      if (component.analogInputRanges !== undefined) {
+        const ranges = component.analogInputRanges, supported = definition.analogInputRanges;
+        const groupCount = Math.ceil((definition.channels?.analogInputs?.length || 0) / definition.analogRangeGroupSize);
+        if (!supported || !Array.isArray(ranges) || ranges.length !== groupCount ||
+            ranges.some((range) => typeof range !== "string" || !Object.hasOwn(supported, range))) {
+          fail(`Electrical component ${index + 1} has invalid analog signal ranges.`);
+        }
+      }
       if (component.ioMap) for (const [channel, mapping] of Object.entries(component.ioMap)) {
         if (!isRecord(mapping)) fail(`electrical component ${index + 1} has an invalid I/O mapping for ${channel}.`);
         requireString(mapping.tag, `electrical component ${index + 1} has an invalid I/O tag.`, { optional: true });
