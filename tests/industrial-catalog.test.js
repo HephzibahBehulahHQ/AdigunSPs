@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10158, "catalog has 10158 distinct provenance-backed product references");
+assert.equal(validation.count, 10182, "catalog has 10182 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10158);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10182);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 87);
@@ -14,6 +14,10 @@ assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total,
 assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 82);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
+assert.equal(searchIndustrialCatalog({ category: "HMI devices" }).total, 25);
+const panel = searchIndustrialCatalog({ query: "6AV2128-3XB70-0AX0" }).items[0];
+assert.equal(panel.attributes.variant, "Hygienic Neutral");
+assert.equal(panel.simulation.status, "reference-only");
 assert.equal(searchIndustrialCatalog({ category: "Power supplies", manufacturer: "Siemens" }).items[0].identifier, "6EP1332-1SH71");
 assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].identifier, "LC1D09B7");
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);

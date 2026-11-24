@@ -704,6 +704,42 @@ const siemensEt200alPowerCables = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Pinout, cable impedance, and current ratings are outside the simulation." },
 }));
 
+const unifiedComfortSource = {
+  url: "https://mall.industry.siemens.com/tstcloud/Api/Catalog/ExportInformation?catalogItemId=UnifiedComfortPanel&lang=en",
+  title: "Siemens SIMATIC HMI Unified Comfort Panels product overview",
+  exportDate: "2025-10-01", retrievedOn: "2026-11-24",
+};
+const unifiedComfortPanels = [
+  ["6AV2128-3GB06-0AX1", "MTP700", "Standard"],
+  ["6AV2128-3GB36-0AX1", "MTP700", "Neutral"],
+  ["6AV2128-3GB40-0AX0", "MTP700", "Hygienic"],
+  ["6AV2128-3GB70-0AX0", "MTP700", "Hygienic Neutral"],
+  ["6AV2128-3KB06-0AX1", "MTP1000", "Standard"],
+  ["6AV2128-3KB36-0AX1", "MTP1000", "Neutral"],
+  ["6AV2128-3KB40-0AX0", "MTP1000", "Hygienic"],
+  ["6AV2128-3KB70-0AX0", "MTP1000", "Hygienic Neutral"],
+  ["6AV2128-3MB06-0AX1", "MTP1200", "Standard"],
+  ["6AV2128-3MB36-0AX1", "MTP1200", "Neutral"],
+  ["6AV2128-3MB40-0AX0", "MTP1200", "Hygienic"],
+  ["6AV2128-3MB70-0AX0", "MTP1200", "Hygienic Neutral"],
+  ["6AV2128-3QB06-0AX1", "MTP1500", "Standard"],
+  ["6AV2128-3QB36-0AX1", "MTP1500", "Neutral"],
+  ["6AV2128-3QB40-0AX0", "MTP1500", "Hygienic"],
+  ["6AV2128-3QB70-0AX0", "MTP1500", "Hygienic Neutral"],
+  ["6AV2128-3UB06-0AX1", "MTP1900", "Standard"],
+  ["6AV2128-3UB36-0AX1", "MTP1900", "Neutral"],
+  ["6AV2128-3UB40-0AX0", "MTP1900", "Hygienic"],
+  ["6AV2128-3UB70-0AX0", "MTP1900", "Hygienic Neutral"],
+  ["6AV2128-3XB06-0AX1", "MTP2200", "Standard"],
+  ["6AV2128-3XB36-0AX1", "MTP2200", "Neutral"],
+  ["6AV2128-3XB40-0AX0", "MTP2200", "Hygienic"],
+  ["6AV2128-3XB70-0AX0", "MTP2200", "Hygienic Neutral"],
+].map(([identifier, panel, variant]) => ({
+  manufacturer: "Siemens", identifier, category: "HMI devices", family: "SIMATIC Unified Comfort",
+  attributes: { panel, variant }, source: unifiedComfortSource,
+  simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
+}));
+
 const omronVariants = [
   ["T61","Through-beam","15 m","NPN","pre-wired"],["T81","Through-beam","15 m","PNP","pre-wired"],
   ["T62","Through-beam","30 m","NPN","pre-wired"],["T82","Through-beam","30 m","PNP","pre-wired"],
@@ -770,6 +806,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alProducts,
   ...siemensEt200alCables,
   ...siemensEt200alPowerCables,
+  ...unifiedComfortPanels,
   ...omronSensors,
   ...finderProducts,
   ...doepkeProducts,
