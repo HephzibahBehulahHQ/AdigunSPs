@@ -1,4 +1,4 @@
-import { connectElectricalTerminals, createElectricalComponent, duplicateElectricalComponent, electricalComponentCatalog, electricalComponentBounds, moveElectricalComponent, nextElectricalReference, isCompatibleBackplaneCpu, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "./electrical.js";
+import { connectElectricalTerminals, createElectricalComponent, duplicateElectricalComponent, electricalComponentCatalog, electricalComponentBounds, moveElectricalComponent, nextElectricalReference, hasElectricalChannelBinding, isCompatibleBackplaneCpu, replaceElectricalComponent, rewireElectricalTerminal, rotateElectricalComponent, simulateElectricalDiagram, updateElectricalComponentProperties, validateElectricalDiagram } from "./electrical.js";
 import { industrialProductCatalog, searchIndustrialCatalog } from "./industrial-catalog.js";
 
 const text = {
@@ -292,7 +292,7 @@ export function renderElectricalWorkspace(root, project, {language="en",toolboxH
       for (const terminal of terminals) fields.push({ group:"terminal", original:terminal, options:target.terminals });
       for (const direction of ["inputs", "outputs", "analogInputs", "analogOutputs"]) {
         for (const channel of selectedSpec.channels?.[direction] || []) {
-          if (selected.ioMap?.[channel]?.tag) fields.push({
+          if (hasElectricalChannelBinding(selected, channel)) fields.push({
             group:"channel", original:channel, options:target.channels?.[direction] || [],
           });
         }
