@@ -2227,6 +2227,8 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["6ES7410-5HM08-0AB0", "Siemens", "support.industry.siemens.com"],
     ["6ES7417-5HT06-0AB0", "Siemens", "support.industry.siemens.com"],
     ["6ES7626-DG03-0AE3", "Siemens", "support.industry.siemens.com"],
+    ["6AV2124-1DC01-0AX0", "Siemens", "support.industry.siemens.com"],
+    ["6AV2124-0QC02-0AX2", "Siemens", "support.industry.siemens.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();

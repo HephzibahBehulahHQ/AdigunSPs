@@ -767,6 +767,34 @@ const unifiedPanelOperatingReferences = [
   simulation: { status: "reference-only", model: null, limitations: "Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const classicComfortPanelReferences = [
+  ["KP400", "Keys", 4, ["6AV2124-1DC01-0AX0"]],
+  ["KTP400", "Touch and keys", 4, ["6AV2124-2DC01-0AX0"]],
+  ["KP700", "Keys", 7, ["6AV2124-1GC01-0AX0"]],
+  ["TP700", "Touch", 7, ["6AV2124-0GC01-0AX0"]],
+  ["KP900", "Keys", 9, ["6AV2124-1JC01-0AX0"]],
+  ["TP900", "Touch", 9, ["6AV2124-0JC01-0AX0"]],
+  ["KP1200", "Keys", 12, ["6AV2124-1MC01-0AX0"]],
+  ["TP1200", "Touch", 12, ["6AV2124-0MC01-0AX0"]],
+  ["KP1500", "Keys", 15, ["6AV2124-1QC02-0AX0", "6AV2124-1QC02-0AX1", "6AV2124-1QC02-0AX2"]],
+  ["TP1500", "Touch", 15, ["6AV2124-0QC02-0AX0", "6AV2124-0QC02-0AX1", "6AV2124-0QC02-0AX2"]],
+  ["TP1900", "Touch", 19, ["6AV2124-0UC02-0AX0", "6AV2124-0UC02-0AX1"]],
+  ["TP2200", "Touch", 22, ["6AV2124-0XC02-0AX0", "6AV2124-0XC02-0AX1"]],
+].flatMap(([panel, input, displayInches, identifiers]) => identifiers.map((identifier) => {
+  const isV21 = identifier.endsWith("-0AX2");
+  return {
+    manufacturer:"Siemens", identifier, family:`SIMATIC ${panel} Comfort`, category:"HMI devices",
+    attributes:{ panel, input, displayInches, ...(isV21 && { variant:"Comfort V2.1" }) },
+    source:{
+      url:isV21
+        ? "https://support.industry.siemens.com/cs/attachments/download/109822224/hmi_comfort_panels_v2.1_product_information_en-US.pdf"
+        : "https://support.industry.siemens.com/cs/attachments/download/49313233/HWComfortPanelsenUS_en-US.pdf",
+      title:isV21 ? "Siemens Comfort Panels V2.1 product information" : "Siemens Comfort Panels operating instructions", retrievedOn:"2026-11-24",
+    },
+    simulation:{ status:"reference-only", model:null, limitations:"Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
+  };
+}));
+
 const legacySiemensCpuReferences = [
   ["S7-400 H", "CPU 412-3H", ["6ES7412-3HJ14-0AB0"]],
   ["S7-400 H", "CPU 414-4H", ["6ES7414-4HJ00-0AB0", "6ES7414-4HJ04-0AB0", "6ES7414-4HM14-0AB0"]],
@@ -968,6 +996,7 @@ const industrialProductCatalog = Object.freeze([
   ...siemensEt200alPowerCables,
   ...unifiedComfortPanels,
   ...unifiedPanelOperatingReferences,
+  ...classicComfortPanelReferences,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,
