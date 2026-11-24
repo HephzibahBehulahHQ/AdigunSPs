@@ -17,6 +17,7 @@ jobs:
     container:
       # Match @playwright/test in package-lock.json when upgrading this image.
       image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:9beb546099e11f52d62e505537914870e01a67e0e6b00ae41da4775324e73dbe
+      options: --user pwuser
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
