@@ -71,6 +71,15 @@ const siemensS71214CG2Relay = {
   simulationLimitations:"Ideal DC-powered controller with sink/source digital inputs and relay contacts fed by an external load supply. Sensor-supply output, ratings, timing, and vendor firmware are outside the simulation.",
 };
 
+const unifiedBasicPanel = (panelModel, partNumber) => ({
+  name:`Siemens SIMATIC ${panelModel} Unified Basic · ${partNumber}`, panelModel, category:"HMI devices", prefix:"HMI",
+  terminals:["X80-1","X80-2"], kind:"load", manufacturer:"Siemens", partNumber,
+  ratedVoltageV:24, loadSupply:{ kind:"dc", minimumVoltageV:19.2, maximumVoltageV:28.8 },
+  source:{ title:"Siemens Unified Basic Panels operating instructions · X80", url:"https://docs.tia.siemens.cloud/r/unified_basic_panels_enus_20/technical-information/description-of-the-interfaces/dc24v-x80", terminalMapSection:"DC24V X80" },
+  terminalNotes:{ "X80-1":"Panel supply +24 V DC", "X80-2":"Panel supply ground" },
+  simulationLimitations:"The panel displays ideal power presence from its documented X80 supply. The schematic model does not emulate WinCC runtime, touch input, network communication, USB, current draw, or buffering.",
+});
+
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
   sitopPSU100C: { name:"Siemens SITOP PSU100C · 24 V / 2.5 A", category:"Power supplies", prefix:"PS", terminals:["L","N","PE","+","−A","−B"], terminalLabels:{"−A":"−","−B":"−"}, kind:"power-converter", manufacturer:"Siemens", partNumber:"6EP1332-5BA00", nominalVoltageV:24, ratedVoltageV:24, ratedCurrentA:2.5, source:{title:"SITOP PSU100C Operating Instructions",url:"https://support.industry.siemens.com/cs/attachments/65647808/PSU100C_Handbuch_englisch_en-US.pdf"}, terminalNotes:{L:"AC line",N:"AC neutral",PE:"Protective earth", "+":"24 V DC positive output","−A":"0 V DC output terminal (first of two)","−B":"0 V DC output terminal (second of two)"}, simulationLimitations:"Educational ideal converter: the 24 V DC output is enabled by wired single-phase line/neutral paths. AC waveform, regulation, overload/current limiting, startup behavior, isolation, protection and device faults are not simulated." },
@@ -307,14 +316,10 @@ export const electricalComponentCatalog = Object.freeze({
   circuitBreaker: { name:"manually-reset circuit breaker", category:"Protection", prefix:"QF", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true },
   fuse: { name:"fuse · replace-after-open simulation", category:"Protection", prefix:"FU", terminals:["1","2"], kind:"manual-switch", normallyClosed:false, initialClosed:true },
   siemens3SU1152AmberIndicator: { name:"Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 amber indicator · 24 V AC/DC", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load", manufacturer:"Siemens", partNumber:"3SU1152-6AA00-1AA0", ratedVoltageV:24, source:{title:"Siemens SIRIUS ACT 3SU1152-6AA00-1AA0 data sheet",url:"https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=3SU11526AA001AA0"}, terminalNotes:{X1:"Indicator lamp terminal X1",X2:"Indicator lamp terminal X2"}, simulationLimitations:"The complete amber LED indicator is specified for 24 V AC/DC and its data sheet identifies terminals X1 and X2. The educational circuit simulator models only ideal on/off connectivity in its DC topology; it does not model AC operation, LED polarity, current, brightness, photometry or protection." },
-  siemensMtp400UnifiedBasic: {
-    name:"Siemens SIMATIC MTP400 Unified Basic · 6AV2123-3DB32-0AW0", category:"HMI devices", prefix:"HMI",
-    terminals:["X80-1","X80-2"], kind:"load", manufacturer:"Siemens", partNumber:"6AV2123-3DB32-0AW0",
-    ratedVoltageV:24, loadSupply:{ kind:"dc", minimumVoltageV:19.2, maximumVoltageV:28.8 },
-    source:{ title:"Siemens Unified Basic Panels operating instructions · X80", url:"https://docs.tia.siemens.cloud/r/unified_basic_panels_enus_20/technical-information/description-of-the-interfaces/dc24v-x80", terminalMapSection:"DC24V X80" },
-    terminalNotes:{ "X80-1":"Panel supply +24 V DC", "X80-2":"Panel supply ground" },
-    simulationLimitations:"The panel displays ideal power presence from its documented X80 supply. The schematic model does not emulate WinCC runtime, touch input, network communication, USB, current draw, or buffering.",
-  },
+  siemensMtp400UnifiedBasic: unifiedBasicPanel("MTP400", "6AV2123-3DB32-0AW0"),
+  siemensMtp700UnifiedBasic: unifiedBasicPanel("MTP700", "6AV2123-3GB32-0AW0"),
+  siemensMtp1000UnifiedBasic: unifiedBasicPanel("MTP1000", "6AV2123-3KB32-0AW0"),
+  siemensMtp1200UnifiedBasic: unifiedBasicPanel("MTP1200", "6AV2123-3MB32-0AW0"),
   pilotLamp: { name:"pilot lamp", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load" },
   solenoidValve: { name:"solenoid valve coil · 24 V DC simulation", category:"Actuators and indicators", prefix:"Y", terminals:["A1","A2"], kind:"load" },
   buzzer: { name:"Audible buzzer · on/off simulation", category:"Actuators and indicators", prefix:"H", terminals:["X1","X2"], kind:"load" },

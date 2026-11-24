@@ -170,7 +170,10 @@ export function electricalSymbolSvg(component) {
     case "fuse":body=component.tripped?`${line(4,22,31,22)}<rect x="31" y="14" width="34" height="16" ${common}/>${line(35,26,43,21)}${line(53,17,61,13)}${line(65,22,92,22)}${text(48,10,"FU · OPEN",6)}`:`${line(4,22,31,22)}<rect x="31" y="14" width="34" height="16" ${common}/>${line(35,26,61,18)}${line(65,22,92,22)}${text(48,10,"FU",7)}`;break;
     case "siemens3SU1152AmberIndicator":body=`${line(4,22,31,22)}<circle cx="48" cy="22" r="15" fill="#f59e0b" fill-opacity=".24" stroke="currentColor" stroke-width="2"/><path d="M42 27V17l6-4 6 4v10z" ${common}/><path d="M57 12l4-4m-2 10 6-1m-12-7-1-5" ${common}/>${line(65,22,92,22)}${text(48,42,"24 V AC/DC",5)}`;break;
     case "pilotLamp":body=`${line(4,22,31,22)}<circle cx="48" cy="22" r="16" ${common}/>${line(39,13,57,31)}${line(57,13,39,31)}${line(64,22,92,22)}`;break;
-    case "siemensMtp400UnifiedBasic":body=`<rect x="18" y="5" width="60" height="33" rx="3" ${common}/><rect x="24" y="10" width="48" height="22" rx="1" ${common}/>${text(48,24,"MTP400",8)}`;break;
+    case "siemensMtp700UnifiedBasic":
+    case "siemensMtp1000UnifiedBasic":
+    case "siemensMtp1200UnifiedBasic":
+    case "siemensMtp400UnifiedBasic":body=`<rect x="18" y="5" width="60" height="33" rx="3" ${common}/><rect x="24" y="10" width="48" height="22" rx="1" ${common}/>${text(48,24,spec.panelModel,8)}`;break;
     case "buzzer":body=`${line(4,22,30,22)}<path d="M30 17h8l11-9v28l-11-9h-8z" ${common}/><path d="M56 15q12 7 0 14m5-19q17 12 0 24" ${common}/>${line(74,22,92,22)}`;break;
     case "heaterElement":body=`${line(4,22,24,22)}<rect x="24" y="9" width="48" height="26" ${common}/><path d="M29 27q5-16 10 0t10 0t10 0t10 0" ${common}/>${line(72,22,92,22)}`;break;
     case "solenoidValve":body=`${line(4,22,31,22)}<rect x="31" y="11" width="34" height="22" ${common}/>${text(48,25,"Y",11)}${line(65,22,92,22)}${text(48,7,"A1",6)}${text(48,40,"A2",6)}`;break;
