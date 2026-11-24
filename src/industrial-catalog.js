@@ -740,6 +740,56 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const proFacePanelReferences = [
+  {
+    family:"GP6000",
+    url:"https://www.pro-face.com/otasuke/ql/GP6000_test/GP6000%20Series%20Standard%20Model%20User%20Guide/English/BM_GP6000%20Series%20Standard%20User%20Guide_DD00627115_files/ModelNumbersPartNumbers-97C29D1D.html",
+    identifiers:[
+      "PFXGP6300TAD", "PFXGP6400TAD", "PFXGP6500TAD", "PFXGP6500TADC",
+      "PFXGP6500TAA", "PFXGP6500TMD", "PFXGP6500TMA", "PFXGP6600TAD",
+      "PFXGP6600TADC", "PFXGP6600TADFZ26", "PFXGP6600TAA", "PFXGP6600TMD",
+      "PFXGP6600TMA",
+    ],
+  },
+  {
+    family:"STM6000",
+    url:"https://www.pro-face.com/otasuke/ql/STM6000/STM6000%20Series%20Hardware%20Manual/English/STM6000%20Series%20Hardware%20Manual_0000520148_files/ModelNumbersPartNumbersSTEP2_0000520157.html",
+    identifiers:[
+      "PFXSTM6200WAD", "PFXSTM6200WADE", "PFXSTM6400WAD", "PFXSTM6400WADE",
+    ],
+  },
+  {
+    family:"ET6000",
+    url:"https://www.pro-face.com/otasuke/files/manual/ql/_ET6000/ET6000%20Series/English/ET6000%20Series%20Hardware%20Manual_0000486555_files/ModelNumbersPartNumbersREF_0000486420.html",
+    identifiers:[
+      "PFXET6400WAD", "PFXET6500WAD", "PFXET6600WAD", "PFXET6700WAD",
+    ],
+  },
+  {
+    family:"SP5000",
+    url:"https://www.pro-face.com/otasuke/files/manual/gpproex/new/refer/mergedProjects/welcome/setup_mm_sp5000.htm",
+    identifiers:[
+      "PFXSP5500TPD", "PFXSP5600TPD", "PFXSP5660TPD", "PFXSP5700TPD",
+      "PFXSP5700WCD", "PFXSP5800WCD", "PFXSP5400WAD", "PFXSP5500WAD",
+      "PFXSP5600WAD", "PFXSP5600TAD", "PFXSP5490WAD", "PFXSP5690WAD",
+      "PFXSP5790WAD",
+    ],
+  },
+  {
+    family:"ST6000",
+    url:"https://www.pro-face.com/otasuke/files/manual/gpproex/test/WebhelpENG_build_20210118/mergedProjects/welcome/setup_mm_st6000.htm",
+    identifiers:[
+      "PFXST6200WADE", "PFXST6400WADE", "PFXST6500WADE", "PFXST6600WADE",
+      "PFXST6700WADE",
+    ],
+  },
+].flatMap(({ family, url, identifiers }) => identifiers.map((identifier) => ({
+  manufacturer:"Pro-face", identifier, family, category:"HMI devices",
+  attributes:{ description:family === "SP5000" ? "HMI display module" : "HMI operator panel" },
+  source:{ url, title:`Pro-face ${family} model numbers`, retrievedOn:"2026-11-24" },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Panel wiring, physical interfaces, and operator-panel runtime are outside this catalog entry." },
+})));
+
 const beckhoffSignalTerminalReferences = [
   {
     category:"Digital I/O modules", signal:"digital input",
@@ -1329,6 +1379,7 @@ const industrialProductCatalog = Object.freeze([
   ...classicComfortPanelReferences,
   ...basicMobilePanelReferences,
   ...rockwellPanelViewReferences,
+  ...proFacePanelReferences,
   ...rockwellMicro800References,
   ...rockwellCompactLogixReferences,
   ...phoenixTerminalBlockReferences,
