@@ -515,7 +515,11 @@ function scrollFbdBlockIntoView(index, focus = false) {
   const position = fbdBlockPosition(block, index), scale = zoom / 100, height = fbdBlockHeights.get(block.id) || (block.type === "SCALE" || ["CTU", "CTD"].includes(block.type) ? 300 : 240);
   pane.scrollTo({ left:Math.max(0, (position.x + 165) * scale - pane.clientWidth / 2), top:Math.max(0, (position.y + height / 2 + 9) * scale - pane.clientHeight / 2), behavior:"auto" });
   renderFbd();
-  if (focus) root.querySelector(`[data-fbd-node="${index}"] [data-fbd-drag-handle]`)?.focus();
+  if (focus) {
+    const handle = root.querySelector(`[data-fbd-node="${index}"] [data-fbd-drag-handle]`);
+    handle?.scrollIntoView({ block:"nearest", inline:"nearest", behavior:"instant" });
+    handle?.focus({ preventScroll:true });
+  }
 }
 function ladderInstructionSelector(target) {
   if (target.kind === "coil") return `article[data-rung="${target.rung}"] .coil`;

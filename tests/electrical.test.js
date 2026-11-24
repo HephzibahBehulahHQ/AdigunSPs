@@ -686,7 +686,7 @@ for(const [type,spec] of Object.entries(electricalComponentCatalog)) {
   assert.deepEqual(component.terminals,spec.terminals,`${type} instance persists the catalog terminal layout`);
   assert.match(component.reference,new RegExp(`^${spec.prefix}\\d+$`),`${type} receives a reference designation`);
   for (const channels of Object.values(spec.channels || {}).filter(Array.isArray)) for (const channel of channels) {
-    const pair = spec.channels.analogInputPins?.[channel];
+    const pair = spec.channels.analogInputPins?.[channel] || spec.channels.analogOutputPins?.[channel];
     if (pair) {
       assert.ok(spec.terminals.includes(pair.positive) && spec.terminals.includes(pair.negative),
         `${type} channel ${channel} maps to both declared differential terminals`);

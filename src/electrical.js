@@ -32,6 +32,7 @@ const sm1231AnalogPins = Object.fromEntries(Array.from({ length:8 }, (_, index) 
   return [`AI${index + 1}`, { positive:`${connector}-${pin}`, negative:`${connector}-${pin + 1}` }];
 }));
 const sm1231Layout = [...connectorPins("X10", 10), ...connectorPins("X11", 10)];
+const sm1232AnalogPins = Object.fromEntries(Object.values(sm1231AnalogPins).map((pair, index) => [`AQ${index + 1}`, pair]));
 
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
@@ -149,6 +150,30 @@ export const electricalComponentCatalog = Object.freeze({
     },
     simulationLimitations:"The model converts differential voltage or current to nominal PLC raw counts, with ideal two-wire and four-wire current sources and 4–20 mA wire-break detection. It requires a powered CPU, local DC supply and a complete signal circuit. Input filtering, transmitter compliance voltage and converter timing are outside the simulation.",
   },
+  siemensSM1232G2AQ8: {
+    name:"Siemens S7-1200 G2 SM 1232 · 8 AQ · 6ES7232-4HF50-0XB0", category:"PLC I/O modules", prefix:"AO", kind:"analog-output-module",
+    manufacturer:"Siemens", partNumber:"6ES7232-4HF50-0XB0",
+    terminalLayout:sm1231Layout, terminals:sm1231Layout.filter((pin) => !["X10-9","X10-10"].includes(pin)),
+    channels:{ analogOutputs:Object.keys(sm1232AnalogPins), analogOutputPins:sm1232AnalogPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
+    backplaneCpuTypes:g2CompatibleCpuTypes, fieldSupply:g2DcSupply, analogRawFullScale:27648,
+    analogOutputRanges:{
+      V10:{ label:"±10 V", unit:"V", minimum:-10, maximum:10 },
+      "mA0-20":{ label:"0–20 mA", unit:"mA", minimum:0, maximum:20 },
+      "mA4-20":{ label:"4–20 mA", unit:"mA", minimum:4, maximum:20 },
+    },
+    source:{
+      title:"Siemens S7-1200 G2 SM 1232 AQ 8x14bit specifications and wiring",
+      url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/analog-signal-modules-sms/sm-1232-aq-8x14bit",
+      terminalMapSection:"Wiring diagram",
+    },
+    terminalNotes:{
+      "X11-1":"Module supply L+", "X11-2":"Module supply M",
+      ...Object.fromEntries(Object.values(sm1232AnalogPins).flatMap(({ positive, negative }, index) => [
+        [positive,`Analog output AQ ${index}`], [negative,`Output return ${index}M`],
+      ])),
+    },
+    simulationLimitations:"Powered ideal analog output converts nominal PLC raw counts into volts or milliamps at a matched, wired indicator. It requires an assigned powered CPU and local DC power. Load impedance, settling time, STOP behavior and hardware diagnostics are outside the simulation.",
+  },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
   siemens3SU1400NCContact: { name:"Siemens SIRIUS ACT 3SU1400-1AA10-1CA0 · 1 NC contact module", category:"Control devices", prefix:"S", terminals:["1","2"], kind:"contact", normallyClosed:true, manufacturer:"Siemens", partNumber:"3SU1400-1AA10-1CA0", source:{title:"Siemens SIRIUS ACT 3SU1 system manual · 1NC contact module and terminal marks",url:"https://support.industry.siemens.com/cs/attachments/107542462/manual_SIRIUS_ACT_3SU1_en-US.pdf"}, terminalNotes:{"1":"Normally-closed contact terminal 1","2":"Normally-closed contact terminal 2"}, simulationLimitations:"The Siemens manual identifies this as a 1 NC contact module and shows terminal marks 1 and 2. The educational model simulates an ideal manually controlled contact path; actuator mechanics, ratings, switching dynamics, and safety performance are not simulated." },
@@ -188,6 +213,8 @@ export const electricalComponentCatalog = Object.freeze({
     terminalNotes:{ "L+":"Positive loop supply", IOUT:"Current output to receiver input" },
   },
   analogSignalIndicator: { name:"analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
+  analogVoltageIndicator: { name:"Differential voltage indicator · volts", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"Ideal differential voltage reading (V)", analogSignalUnit:"V" },
+  analogCurrentIndicator: { name:"Current indicator · milliamps", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"Ideal current reading (mA)", analogSignalUnit:"mA" },
   contactor3P: { name:"three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
   siemensSirius3RT20171WB41: { name:"Siemens SIRIUS 3RT2017-1WB41 power contactor · 3-pole + 1 NO", category:"Contactors and relays", prefix:"K", terminals:["1/L1","3/L2","5/L3","13","A1+","2/T1","4/T2","6/T3","14","A2−"], kind:"contactor", mainPairs:[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]], coil:["A1+","A2−"], auxNOPair:["13","14"], coilSupply:{kind:"dc",minimumVoltageV:20.4,maximumVoltageV:44.4}, manufacturer:"Siemens", partNumber:"3RT2017-1WB41", source:{title:"Siemens SIRIUS 3RT2017-1WB41 data sheet",url:"https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=3RT2017-1WB41"}, terminalNotes:{"1/L1":"Main power contact pole 1 input","2/T1":"Main power contact pole 1 output","3/L2":"Main power contact pole 2 input","4/T2":"Main power contact pole 2 output","5/L3":"Main power contact pole 3 input","6/T3":"Main power contact pole 3 output","13":"Normally-open auxiliary contact input","14":"Normally-open auxiliary contact output","A1+":"Contactor coil positive","A2−":"Contactor coil negative"}, simulationLimitations:"The documented 24 V DC coil energizes only from a wired modeled DC source within the published 0.85–1.85 × Uc operating range (20.4–44.4 V). Main and auxiliary contacts switch immediately in the educational connectivity model; coil power, response time, contact ratings, arc behavior, motor protection, and device performance are not simulated." },
   siemensSirius3RV20111JA10: { name:"Siemens SIRIUS 3RV2011-1JA10 motor-protection circuit breaker · 3-pole", category:"Protection", prefix:"QF", terminals:["1/L1","3/L2","5/L3","2/T1","4/T2","6/T3"], kind:"multi-pole-breaker", mainPairs:[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]], manufacturer:"Siemens", partNumber:"3RV2011-1JA10", source:{title:"Siemens SIRIUS 3RV2011-1JA10 data sheet",url:"https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=3RV2011-1JA10"}, terminalNotes:{"1/L1":"Line input · phase L1","2/T1":"Load output · phase T1","3/L2":"Line input · phase L2","4/T2":"Load output · phase T2","5/L3":"Line input · phase L3","6/T3":"Load output · phase T3"}, simulationLimitations:"Three main-pole terminal pairs are manually opened and closed together. This is ideal continuity only; thermal/magnetic trip behavior, current adjustment, arc behavior and protective performance are not simulated." },
@@ -408,9 +435,10 @@ export function isCompatibleBackplaneCpu(module, cpu) {
   return Boolean(cpu && electricalComponentCatalog[module.type]?.backplaneCpuTypes?.includes(cpu.type));
 }
 
-export function electricalAnalogRangeId(component, group) {
-  const ranges = electricalComponentCatalog[component.type].analogInputRanges;
-  const selected = component.analogInputRanges?.[group] ?? `V${component.analogVoltageRangesV?.[group] ?? 10}`;
+export function electricalAnalogRangeId(component, index, property = "analogInputRanges") {
+  const ranges = electricalComponentCatalog[component.type][property];
+  const selected = component[property]?.[index] ??
+    (property === "analogInputRanges" ? `V${component.analogVoltageRangesV?.[index] ?? 10}` : "V10");
   return Object.hasOwn(ranges, selected) ? selected : "V10";
 }
 
@@ -820,12 +848,28 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       }
       componentStates[signal.id] = { signalValue:value, signalModel:signal.signalModel };
     }
-    for (const channel of spec.channels.analogOutputs || []) {
-      const tag=controller.ioMap?.[channel]?.tag, indicator=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-indicator");
-      if (!tag||!indicator) continue;
-      const positivePin=`${channel}+`,negativePin=`${channel}−`;
-      const value=Number(outputStates[tag]);
-      if (pairedConnected(controller,positivePin,negativePin,indicator,"SIG+","SIG−")&&Number.isFinite(value)) { analogOutputs[tag]=value; componentStates[indicator.id]={signalValue:value,signalModel:indicator.signalModel}; }
+    for (const [channelIndex, channel] of (spec.channels.analogOutputs || []).entries()) {
+      const tag = controller.ioMap?.[channel]?.tag;
+      const raw = Number(outputStates[tag]);
+      if (!tag || !Number.isFinite(raw)) continue;
+      const range = spec.analogOutputRanges
+        ? spec.analogOutputRanges[electricalAnalogRangeId(controller, channelIndex, "analogOutputRanges")]
+        : null;
+      if (range && (!hasPoweredBackplane(controller, nets) ||
+          !coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.fieldSupply))) continue;
+      const { positive, negative } = spec.channels.analogOutputPins?.[channel] ||
+        { positive:`${channel}+`, negative:`${channel}−` };
+      const indicator = all.find((candidate) => {
+        const target = electricalComponentCatalog[candidate.type];
+        return candidate.tag === tag && target?.kind === "analog-signal-indicator" &&
+          target.analogSignalUnit === range?.unit && pairedConnected(controller, positive, negative, candidate, "SIG+", "SIG−");
+      });
+      if (!indicator) continue;
+      const fraction = range ? Math.max(range.unit === "V" ? -1 : 0, Math.min(1, raw / spec.analogRawFullScale)) : 0;
+      const value = range ? (range.unit === "V" ? fraction * range.maximum :
+        range.minimum + fraction * (range.maximum - range.minimum)) : raw;
+      analogOutputs[tag] = value;
+      componentStates[indicator.id] = { signalValue:value, signalModel:indicator.signalModel };
     }
   }
   const loads = all.filter((component) => ["load", "motor"].includes(electricalComponentCatalog[component.type]?.kind));
