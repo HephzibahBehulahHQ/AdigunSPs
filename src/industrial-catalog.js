@@ -740,6 +740,57 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const beckhoffAnalogInputReferences = [
+  ["EL3xxx", [
+    "EL3061", "EL3062", "EL3064", "EL3068", "EL3161", "EL3162",
+    "EL3164", "EL3001", "EL3002", "EL3004", "EL3008", "EL3101",
+    "EL3102", "EL3104", "EL3602", "EL3702", "EL3602-0010", "EL3702-0015",
+    "EL3602-0002", "EL3062-0030", "EL3041", "EL3042", "EL3044", "EL3048",
+    "EL3141", "EL3142", "EL3144", "EL3142-0010", "EL3184", "EL3011",
+    "EL3012", "EL3014", "EL3111", "EL3112", "EL3114", "EL3612",
+    "EL3742", "EL3182", "EL3051", "EL3052", "EL3054", "EL3058",
+    "EL3151", "EL3152", "EL3154", "EL3021", "EL3022", "EL3024",
+    "EL3121", "EL3122", "EL3124", "EL3621-0020", "EL3124-0090", "EL3112-0011",
+    "EL3072", "EL3074", "EL3078", "EL3172", "EL3174", "EL3172-0020",
+    "EL3174-0002", "EL3174-0090", "EL3174-0032", "EL3008-0003", "EL3008-0005", "EL3174-0042",
+    "EL3751", "EL3751-0004", "EL3751-0024", "EL3201", "EL3202", "EL3204",
+    "EL3208", "EL3201-0010", "EL3202-0010", "EL3204-0162", "EL3208-0010", "EL3204-0200",
+    "EL3214", "EL3218", "EL3214-0090", "EL3311", "EL3312", "EL3314",
+    "EL3318", "EL3314-0002", "EL3314-0010", "EL3314-0090", "EL3314-0092", "EL3351",
+    "EL3356", "EL3356-0010", "EL3356-0090", "EL3681", "EL3692", "EL3255",
+    "EL3632", "EL3403", "EL3423", "EL3443", "EL3446", "EL3443-0010",
+    "EL3446-0011", "EL3443-0011", "EL3443-0013", "EL3475", "EL3443-0020", "EL3444",
+    "EL3475-0200", "EL3453", "EL3453-0020", "EL3453-0100", "EL3483", "EL3483-0060",
+    "EL3773", "EL3783", "EL3783-0100",
+  ]],
+  ["ELM3xxx", [
+    "ELM3002-0000", "ELM3004-0000", "ELM3002-0205", "ELM3002-0305", "ELM3002-0405", "ELM3102-0000",
+    "ELM3104-0000", "ELM3104-0020", "ELM3146-0000", "ELM3142-0000", "ELM3144-0000", "ELM3148-0000",
+    "ELM3102-0100", "ELM3702-0000", "ELM3704-0000", "ELM3702-0101", "ELM3704-0001", "ELM3704-0020",
+    "ELM3244-0000", "ELM3246-0000", "ELM3344-0000", "ELM3348-0000", "ELM3344-0003", "ELM3348-0003",
+    "ELM3704-1001", "ELM3502-0000", "ELM3504-0000", "ELM3542-0000", "ELM3544-0000", "ELM3602-0000",
+    "ELM3604-0000", "ELM3602-0002", "ELM3604-0002",
+  ]],
+  ["ELX3xxx", [
+    "ELX3181", "ELX3152", "ELX3184", "ELX3158", "ELX3152-0090", "ELX3202",
+    "ELX3204", "ELX3202-0090", "ELX3204-0090", "ELX3312", "ELX3314", "ELX3312-0090",
+    "ELX3314-0090", "ELX3351", "ELX3252", "ELX3351-0090", "ELX3632",
+  ]],
+  ["ED3xxx", [
+    "ED3072", "ED3074", "ED3078", "ED3172", "ED3174", "ED3274",
+    "ED3361", "ED3362", "ED3361-0100", "ED3362-0100",
+  ]],
+].flatMap(([family, identifiers]) => identifiers.map((identifier) => ({
+  manufacturer:"Beckhoff", identifier, family, category:"Analog I/O modules",
+  attributes:{ description:"EtherCAT analog input terminal", direction:"input" },
+  source:{
+    url:"https://www.beckhoff.com/en-us/products/i-o/ethercat-terminals/el-ed3xxx-analog-input/tabular-product-overview/",
+    title:"Beckhoff EL/ED3xxx EtherCAT analog input terminal product overview",
+    retrievedOn:capturedOn,
+  },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Terminal wiring, signal scaling, measurements and EtherCAT operation are outside this catalog entry." },
+})));
+
 const phoenixTerminalBlockReferences = [
   ["3208100","PT 1,5/S"],
   ["3208139","PT 1,5/S PE"],
@@ -1221,6 +1272,7 @@ const industrialProductCatalog = Object.freeze([
   ...rockwellMicro800References,
   ...rockwellCompactLogixReferences,
   ...phoenixTerminalBlockReferences,
+  ...beckhoffAnalogInputReferences,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,
