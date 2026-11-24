@@ -740,6 +740,59 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const rockwellMicro800References = [
+  ["Micro810", [
+    "2080-LC10-12AWA",
+    "2080-LC10-12DWD",
+    "2080-LC10-12QBB",
+    "2080-LC10-12QWB",
+  ]],
+  ["Micro820", [
+    "2080-LC20-20AWB",
+    "2080-LC20-20AWBR",
+    "2080-LC20-20QBB",
+    "2080-LC20-20QBBK",
+    "2080-LC20-20QBBR",
+    "2080-LC20-20QWB",
+    "2080-LC20-20QWBR",
+  ]],
+  ["Micro820", [
+    "2080-L20E-20AWB",
+    "2080-L20E-20AWBR",
+    "2080-L20E-20QBB",
+    "2080-L20E-20QBBK",
+    "2080-L20E-20QBBR",
+    "2080-L20E-20QWB",
+    "2080-L20E-20QWBR",
+  ]],
+  ["Micro850", [
+    "2080-L50E-24AWB",
+    "2080-L50E-24QBB",
+    "2080-L50E-24QVB",
+    "2080-L50E-24QWB",
+    "2080-L50E-48AWB",
+    "2080-L50E-48QBB",
+    "2080-L50E-48QVB",
+    "2080-L50E-48QWB",
+    "2080-L50E-48QWBK",
+  ]],
+  ["Micro870", [
+    "2080-L70E-24AWB",
+    "2080-L70E-24QWB",
+    "2080-L70E-24QWBK",
+    "2080-L70E-24QWBN",
+  ]],
+].flatMap(([family, identifiers]) => identifiers.map((identifier) => ({
+  manufacturer:"Rockwell Automation", identifier, family, category:"PLC controllers",
+  attributes:{ description:`Allen-Bradley ${family} programmable controller` },
+  source:{
+    url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/2080-td001_-en-p.pdf",
+    title:"Rockwell Automation Micro800 Programmable Controllers technical data",
+    retrievedOn:capturedOn,
+  },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Micro800 physical I/O, terminal wiring and controller runtime are outside this catalog entry." },
+})));
+
 const rockwellPanelViewReferences = [
   {
     family:"PanelView 800",
@@ -1071,6 +1124,7 @@ const industrialProductCatalog = Object.freeze([
   ...classicComfortPanelReferences,
   ...basicMobilePanelReferences,
   ...rockwellPanelViewReferences,
+  ...rockwellMicro800References,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,
