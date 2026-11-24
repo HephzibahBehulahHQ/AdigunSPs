@@ -5,6 +5,7 @@ import { supportedFbdTypes } from "../src/fbd-validation.js";
 import { supportedProcessTypes } from "../src/process.js";
 import { supportedLadderInstructions } from "../src/validation.js";
 import { compileStructuredText, executeStructuredText } from "../src/structured-text.js";
+import { scanSFC } from "../src/engine.js";
 
 const output = new URL("../docs/component-bank/", import.meta.url);
 const validation = validateIndustrialCatalog();
@@ -26,6 +27,31 @@ for (const [name, { source, cases }] of Object.entries(structuredTextExamples)) 
     const types = { Input: "REAL", Result: typeof expected === "boolean" ? "BOOL" : "REAL" };
     const { outputs } = executeStructuredText(compiled, { Input: input }, {}, ["Result"], types);
     if (outputs.Result !== expected) throw new Error(`Structured Text inventory example ${name}: Input ${input} expected Result ${expected}, got ${outputs.Result}`);
+  }
+}
+
+const sfcExample = {
+  model: {
+    initialStep: "idle",
+    outputs: ["Motor"],
+    steps: [{ id: "run", actions: ["Motor"] }, { id: "idle", actions: [] }],
+    transitions: [
+      { from: "idle", to: "run", condition: "Start", mode: "NO" },
+      { from: "run", to: "idle", condition: "Permit", mode: "NC" },
+    ],
+  },
+  scans: [
+    { inputs: { Start: false, Permit: true }, activeStep: "idle", outputs: { Motor: false } },
+    { inputs: { Start: true, Permit: true }, activeStep: "run", outputs: { Motor: true } },
+    { inputs: { Start: false, Permit: true }, activeStep: "run", outputs: { Motor: true } },
+    { inputs: { Start: false, Permit: false }, activeStep: "idle", outputs: { Motor: false } },
+  ],
+};
+let sfcState = {};
+for (const [index, { inputs, activeStep, outputs }] of sfcExample.scans.entries()) {
+  sfcState = scanSFC(sfcExample.model, inputs, sfcState);
+  if (sfcState.activeStep !== activeStep || sfcState.outputs.Motor !== outputs.Motor) {
+    throw new Error(`SFC inventory example scan ${index + 1}: expected ${activeStep}, Motor=${outputs.Motor}; got ${sfcState.activeStep}, Motor=${sfcState.outputs.Motor}`);
   }
 }
 
@@ -89,6 +115,7 @@ const softwareAndProcess = {
   ladderInstructions: supportedLadderInstructions,
   fbdBlockTypes: supportedFbdTypes,
   structuredTextExamples,
+  sfcExample,
   processModelTypes: supportedProcessTypes,
 };
 const json = `{\n  "schema": "adigunsps-component-bank-v1",\n  "totals": ${JSON.stringify(totals)},\n  "softwareAndProcess": ${JSON.stringify(softwareAndProcess)},\n  "records": [\n${records.map((record) => `    ${JSON.stringify(record)}`).join(",\n")}\n  ]\n}\n`;
