@@ -2194,6 +2194,12 @@ test("electrical component search filters models and restores the full picker", 
   await page.locator("#electricalProperties button[type=submit]").click();
   await expect(inputRanges.nth(1)).toHaveValue("V5");
   await expect(outputRanges.nth(3)).toHaveValue("mA4-20");
+  await search.fill("6ES7223-5BH50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const digitalModule = page.locator('#electricalBoard [data-component-type="siemensSM1223G2DI8DQ8"]');
+  await expect(digitalModule.getByRole("button", { name:/X10-2.*Field input common 2M/ })).toBeEnabled();
+  await expect(digitalModule.getByRole("button", { name:/X11-10.*Sourcing output DQ b\.7/ })).toBeEnabled();
   await search.fill("3211861");
   await expect(palette.locator("option")).toHaveCount(1);
   await add.click();

@@ -135,6 +135,57 @@ for (const size of [400, 700, 1000, 1200]) {
 }
 
 {
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const module = createElectricalComponent("siemensSM1223G2DI8DQ8", 1, 420, 120, [cpu]);
+  const button = { ...createElectricalComponent("pushbuttonNO", 1), tag:"FieldSwitch" };
+  const lamp = createElectricalComponent("pilotLamp", 1);
+  const returnRail = createElectricalComponent("neutralRail", 1);
+  const [cpuSupply, inputSupply, outputSupply] = [1,2,3].map(index => createElectricalComponent("supply24vdc", index));
+  module.backplaneCpuId = cpu.id;
+  module.ioMap.I8.tag = "Start";
+  module.ioMap.Q8.tag = "LampCommand";
+  const electrical = { components:[cpu,module,button,lamp,returnRail,cpuSupply,inputSupply,outputSupply], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(electrical, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    electrical.wires.push(result.wire);
+    return result.wire.id;
+  };
+  const cpuPower = wire(cpuSupply, "+", cpu, "X80-1");
+  wire(cpuSupply, "−", cpu, "X80-5");
+  wire(inputSupply, "+", button, "13");
+  wire(button, "14", module, "X10-10");
+  wire(inputSupply, "−", module, "X10-2");
+  wire(outputSupply, "+", module, "X11-1");
+  wire(outputSupply, "−", returnRail, "N1");
+  const outputReturn = wire(returnRail, "N2", module, "X11-2");
+  wire(module, "X11-10", lamp, "X1");
+  wire(returnRail, "N3", lamp, "X2");
+  const project = normalizeImportedProject(JSON.parse(JSON.stringify({
+    name:"SM 1223 mixed digital I/O", electrical,
+    tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"LampCommand", type:"BOOL", role:"output" }],
+    io:{ inputs:["Start"], outputs:["LampCommand"] },
+    rungs:[{ id:"field-lamp", branches:[[{ tag:"Start", mode:"NO" }]], coil:"LampCommand" }],
+  })));
+  const recovered = project.electrical.components.find(({ id }) => id === module.id);
+  assert.equal(recovered.backplaneCpuId, cpu.id);
+  assert.equal(recovered.ioMap.I8.address, "I1.7");
+  assert.equal(recovered.ioMap.Q8.address, "Q1.5");
+  const check = (FieldSwitch) => {
+    const { inputs } = simulateElectricalDiagram(project.electrical, { FieldSwitch });
+    const { outputs } = scan(project, inputs);
+    const { energized } = simulateElectricalDiagram(project.electrical, { FieldSwitch }, outputs);
+    return [inputs.Start, outputs.LampCommand, energized[lamp.id]];
+  };
+  assert.deepEqual(check(false), [false,false,false]);
+  assert.deepEqual(check(true), [true,true,true]);
+  project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== outputReturn);
+  assert.deepEqual(check(true), [true,true,false]);
+  project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== cpuPower);
+  assert.deepEqual(check(true), [false,false,false]);
+}
+
+{
   const terminal = createElectricalComponent("phoenixPT25Quattro", 1);
   const supply = createElectricalComponent("supply24vdc", 1);
   const returnRail = createElectricalComponent("neutralRail", 1);
