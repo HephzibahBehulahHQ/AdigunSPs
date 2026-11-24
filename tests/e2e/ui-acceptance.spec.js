@@ -2246,6 +2246,8 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["5069-L310ER-NSE", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["5069-L310ERMS3K", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["5069-4100ERMW", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["3209578", "Phoenix Contact", "assets.phoenixcontact.com"],
+    ["3044665", "Phoenix Contact", "www.phoenixcontact.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
