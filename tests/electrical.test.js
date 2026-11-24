@@ -545,7 +545,7 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   assert.deepEqual(diagram.wires[0].from,{componentId:source.id,terminal:"+"});assert.deepEqual(diagram.wires[0].to,{componentId:lamp.id,terminal:"X1"});assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:180}],"compatible endpoint IDs and the hand-routed cable remain intact");
   const unsupported=replaceElectricalComponent(diagram,lamp.id,"siemensS71212CG2");assert.equal(unsupported.ok,false,"replacement refuses to orphan an unsupported pin");assert.match(unsupported.error,/X1/u);assert.equal(diagram.components[1].type,"pilotLamp","a rejected replacement leaves the component and wire untouched");
   const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1,360,120);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
-  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
+  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram, selected\.id, type, \{ terminalMap, channelMap \}\)/u,"the replacement button uses the selected toolbox model");
 }
 {
   const source=createElectricalComponent("supply24vdc",1),lamp=createElectricalComponent("pilotLamp",1,360,240),diagram={components:[source,lamp],wires:[]};
@@ -554,7 +554,7 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   assert.deepEqual(diagram.wires[0].from,{componentId:source.id,terminal:"+"});assert.deepEqual(diagram.wires[0].to,{componentId:lamp.id,terminal:"X1"});assert.deepEqual(diagram.wires[0].waypoints,[{x:240,y:180}],"compatible endpoint IDs and the hand-routed cable remain intact");
   const unsupported=replaceElectricalComponent(diagram,lamp.id,"siemensS71212CG2");assert.equal(unsupported.ok,false,"replacement refuses to orphan an unsupported pin");assert.match(unsupported.error,/X1/u);assert.equal(diagram.components[1].type,"pilotLamp","a rejected replacement leaves the component and wire untouched");
   const coil=createElectricalComponent("relayCoil",1),contact=createElectricalComponent("auxiliaryNO",1,360,120);contact.coilRef=coil.reference;const linked={components:[coil,contact],wires:[]},coilReplacement=replaceElectricalComponent(linked,coil.id,"contactor3P");assert.equal(coilReplacement.ok,true);assert.deepEqual(coilReplacement.referenceUpdates,[contact.id],"linked auxiliary contacts can follow the replacement coil reference");
-  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram,selected\.id,type\)/u,"the replacement button uses the selected toolbox model");
+  assert.match(electricalUiSource,/replaceButton\.dataset\.electricalAction="replace"/u,"the component inspector exposes an explicit replace action");assert.match(electricalUiSource,/replaceElectricalComponent\(diagram, selected\.id, type, \{ terminalMap, channelMap \}\)/u,"the replacement button uses the selected toolbox model");
 }
 {
   const compact=createElectricalComponent("pilotLamp",1,360,120),neighbor=createElectricalComponent("pilotLamp",2,360,220),diagram={components:[compact,neighbor],wires:[]};
@@ -562,6 +562,28 @@ assert.ok(exampleRepairIndex>openExampleSource.indexOf("makeProjectFromExample(e
   assert.equal(blocked.ok,false,"a taller replacement cannot overlap a nearby component");assert.match(blocked.error,/Move nearby components/u);assert.equal(diagram.components[0].type,"pilotLamp","rejected replacement leaves the existing device unchanged");
   const clearNeighbor=createElectricalComponent("pilotLamp",3,700,220),clearDiagram={components:[compact,clearNeighbor],wires:[]},allowed=replaceElectricalComponent(clearDiagram,compact.id,"siemensS71212CG2");
   assert.equal(allowed.ok,true,"a larger multi-pin replacement remains available when it fits");assert.equal(allowed.component.id,compact.id);
+}
+{
+  const cpu = createElectricalComponent("genericPlc24v4di4do", 1);
+  const lamp = createElectricalComponent("pilotLamp", 1, 800, 120);
+  cpu.ioMap.Q1 = { tag:"Lamp", address:"Q3.0" };
+  const route = [{ x:600, y:260 }];
+  const wire = { id:"output-wire", from:{ componentId:cpu.id, terminal:"Q1" }, to:{ componentId:lamp.id, terminal:"X1" }, waypoints:route };
+  const diagram = { components:[cpu,lamp], wires:[wire] };
+  const type = "siemensS71212CG2Relay";
+  const target = electricalComponentCatalog[type].channels.outputPins.Q2;
+  const wrongPin = electricalComponentCatalog[type].channels.outputPins.Q1;
+  assert.match(replaceElectricalComponent(diagram, cpu.id, type, {
+    terminalMap:{ Q1:wrongPin }, channelMap:{ Q1:"Q2" },
+  }).error, /keep its wire on channel Q2/);
+  const result = replaceElectricalComponent(diagram, cpu.id, type, {
+    terminalMap:{ Q1:target }, channelMap:{ Q1:"Q2" },
+  });
+  assert.equal(result.ok, true, result.error);
+  assert.equal(result.component.id, cpu.id);
+  assert.deepEqual(result.component.ioMap.Q2, cpu.ioMap.Q1);
+  assert.deepEqual(result.wires[0], { ...wire, from:{ componentId:cpu.id, terminal:target } });
+  assert.equal(wire.from.terminal, "Q1");
 }
 for(const type of Object.keys(electricalComponentCatalog))for(const rotation of [0,90,180,270])for(const edge of [-10000,10000]){
   const component=moveElectricalComponent({...createElectricalComponent(type,1),rotation},edge,edge);
