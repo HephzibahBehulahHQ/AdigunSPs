@@ -1,6 +1,7 @@
 import { fbdWrittenTags, orderFbdBlocks } from "./engine.js";
 
-const types = new Set(["AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR", "TON", "TOF", "TP", "RTO", "CTU", "CTD", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"]);
+export const supportedFbdTypes = Object.freeze(["AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR", "TON", "TOF", "TP", "RTO", "CTU", "CTD", "R_TRIG", "F_TRIG", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE", "TRUE", "FALSE"]);
+const types = new Set(supportedFbdTypes);
 const numericInputs = new Set(["ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ", "SCALE"]);
 const numericOutputs = new Set(["ADD", "SUB", "MUL", "DIV", "SCALE"]);
 const binaryInputs = new Set(["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "ADD", "SUB", "MUL", "DIV", "GT", "LT", "EQ"]);
