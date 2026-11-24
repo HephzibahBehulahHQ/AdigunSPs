@@ -110,7 +110,7 @@ export const electricalComponentCatalog = Object.freeze({
     channels:{ analogInputs:Object.keys(sm1231AnalogPins), analogInputPins:sm1231AnalogPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
     backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
     fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
-    analogVoltageRangeV:10, analogRawFullScale:27648,
+    analogVoltageRangesV:[10,5,2.5], analogRangeGroupSize:2, analogRawFullScale:27648,
     source:{
       title:"Siemens S7-1200 G2 SM 1231 AI 8x14bit specifications",
       url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit",
@@ -122,7 +122,7 @@ export const electricalComponentCatalog = Object.freeze({
         [positive,`Differential analog input AI ${index}+`], [negative,`Differential analog input AI ${index}−`],
       ])),
     },
-    simulationLimitations:"The educational model converts ±10 V to nominal PLC raw counts. It requires a powered compatible CPU, local DC supply and both differential signal wires. Current ranges, hardware diagnostics, input filtering and converter timing are outside the simulation.",
+    simulationLimitations:"The educational model converts configured differential voltage ranges to nominal PLC raw counts. It requires a powered compatible CPU, local DC supply and both differential signal wires. Current ranges, hardware diagnostics, input filtering and converter timing are outside the simulation.",
   },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
@@ -712,7 +712,7 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
           && nets.some(({ nets: poles }) => !sourceHasShort(poles) && (poles.positive || poles.L)?.has(key(controller.id, pin))));
       }
     }
-    for (const channel of spec.channels.analogInputs || []) {
+    for (const [channelIndex, channel] of (spec.channels.analogInputs || []).entries()) {
       const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
       if (!tag||!signal) continue;
       const { positive:positivePin, negative:negativePin } = spec.channels.analogInputPins?.[channel] ||
@@ -721,11 +721,14 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
       const powered=!powerPins||nets.some(({component:source,nets:poles})=>{const sourceSpec=electricalComponentCatalog[source.type],kind=sourceSpec?.kind,voltage=Number(source.nominalVoltageV??sourceSpec?.nominalVoltageV),dcSource=kind==="source"||kind==="power-converter";return dcSource&&(!Number.isFinite(powerPins.minimumVoltageV)||voltage>=powerPins.minimumVoltageV)&&(!Number.isFinite(powerPins.maximumVoltageV)||voltage<=powerPins.maximumVoltageV)&&!sourceHasShort(poles)&&(poles.positive||poles.L)?.has(key(signal.id,powerPins.positive))&&(poles.negative||poles.N)?.has(key(signal.id,powerPins.negative));});
       const value=Number(inputStates[tag]);
       if (!powered || !Number.isFinite(value) || !pairedConnected(signal,signalPositive,signalNegative,controller,positivePin,negativePin)) continue;
-      if (spec.analogVoltageRangeV) {
+      if (spec.analogVoltageRangesV) {
         if (signalSpec.analogSignalUnit !== "V" || !hasPoweredBackplane(controller, nets) ||
             !coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.fieldSupply)) continue;
-        const limited = Math.max(-spec.analogVoltageRangeV, Math.min(spec.analogVoltageRangeV, value));
-        analogInputs[tag] = Math.round(limited / spec.analogVoltageRangeV * spec.analogRawFullScale);
+        const group = Math.floor(channelIndex / spec.analogRangeGroupSize);
+        const configured = controller.analogVoltageRangesV?.[group];
+        const range = spec.analogVoltageRangesV.includes(configured) ? configured : spec.analogVoltageRangesV[0];
+        const limited = Math.max(-range, Math.min(range, value));
+        analogInputs[tag] = Math.round(limited / range * spec.analogRawFullScale);
       } else {
         if (signalSpec.analogSignalUnit) continue;
         analogInputs[tag] = value;

@@ -160,6 +160,13 @@ function validateOptionalProjectData(project) {
       for (const field of ["ratedVoltageV", "ratedCurrentA", "nominalVoltageV", "signalValue"]) if (component[field] !== undefined && component[field] !== null && !Number.isFinite(component[field])) fail(`electrical component ${index + 1} has an invalid ${field} value.`);
       for (const field of ["manufacturer", "partNumber", "label"]) requireString(component[field], `electrical component ${index + 1} has an invalid ${field} value.`, { optional: true, max: 256 });
       if (component.ioMap !== undefined && !isRecord(component.ioMap)) fail(`electrical component ${index + 1} I/O map must be an object.`);
+      if (component.analogVoltageRangesV !== undefined) {
+        const ranges = component.analogVoltageRangesV, supported = definition.analogVoltageRangesV;
+        const groupCount = Math.ceil((definition.channels?.analogInputs?.length || 0) / definition.analogRangeGroupSize);
+        if (!supported || !Array.isArray(ranges) || ranges.length !== groupCount || ranges.some((range) => !supported.includes(range))) {
+          fail(`Electrical component ${index + 1} has invalid analog voltage ranges.`);
+        }
+      }
       if (component.ioMap) for (const [channel, mapping] of Object.entries(component.ioMap)) {
         if (!isRecord(mapping)) fail(`electrical component ${index + 1} has an invalid I/O mapping for ${channel}.`);
         requireString(mapping.tag, `electrical component ${index + 1} has an invalid I/O tag.`, { optional: true });
