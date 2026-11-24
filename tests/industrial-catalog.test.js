@@ -22,6 +22,21 @@ assert.equal(searchIndustrialCatalog({ category: "Power supplies", manufacturer:
 assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].identifier, "LC1D09B7");
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
+const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
+const cpuTerminalIds = [6, 10, 8].flatMap((count, index) =>
+  Array.from({ length:count }, (_, pin) => `X${[80, 10, 11][index]}-${pin + 1}`));
+const transistorCpu = inventory.records.find(({ id }) => id === "model:siemensS71212CG2");
+const relayCpu = inventory.records.find(({ id }) => id === "model:siemensS71212CG2Relay");
+for (const cpu of [transistorCpu, relayCpu]) {
+  assert.equal(cpu.readiness.terminalMap, "verified-topology");
+  assert.deepEqual(cpu.terminalSchedule.map(({ id }) => id), cpuTerminalIds);
+  assert.deepEqual(cpu.terminalSchedule.filter(({ connectable }) => !connectable).map(({ id }) => id), ["X80-3"]);
+  assert.deepEqual(cpu.commonGroups.inputCommonPins, ["X10-8", "X10-10"]);
+}
+assert.equal(transistorCpu.orderCode, "6ES7212-1AG50-0XB0");
+assert.equal(relayCpu.orderCode, "6ES7212-1HG50-0XB0");
+assert.deepEqual(transistorCpu.commonGroups.outputSupply, { positive:"X11-2", return:"X11-1" });
+assert.deepEqual(relayCpu.commonGroups.relayCommonPins, ["X11-1", "X11-2"]);
 assert.equal(searchIndustrialCatalog({ manufacturer: "Finder" }).total, 4902);
 const finderReference = searchIndustrialCatalog({ manufacturer: "Finder", query: "936100247" }).items[0];
 assert.equal(finderReference.identifier, "936100247");
