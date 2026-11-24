@@ -740,6 +740,66 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const beckhoffSignalTerminalReferences = [
+  {
+    category:"Digital I/O modules", signal:"digital input",
+    url:"https://www.beckhoff.com/en-us/products/i-o/ethercat-terminals/el-ed1xxx-digital-input/tabular-product-overview/",
+    identifiers:[
+      "EL1252-0050", "EL1124", "EL1262-0010", "EL1262-0050", "EL1252-0060", "EL1144",
+      "EL1002", "EL1004", "EL1008", "EL1809", "EL1004-0020", "EL1409",
+      "EL1104", "EL1429", "EL1024", "EL1804", "EL1808", "EL1084",
+      "EL1088", "EL1889", "EL1489", "EL1859", "EL1852", "EL1862",
+      "EL1862-0010", "EL1417", "EL1012", "EL1014", "EL1018", "EL1899",
+      "EL1252-0010", "EL1034", "EL1819", "EL1114", "EL1814", "EL1094",
+      "EL1098", "EL1872", "EL1872-0010", "EL1202", "EL1252", "EL1254",
+      "EL1258", "EL1259", "EL1262", "EL1264", "EL1258-0010", "EL1502",
+      "EL1512", "EL1904", "EL1918", "EL1134", "EL1712", "EL1712-0020",
+      "EL1702", "EL1722", "EL1702-0020", "EL1382", "EL1052", "EL1054",
+      "ELX1052", "ELX1054", "ELX1058", "ED1008", "ED1809", "ED1829",
+      "ED1889", "ED1859", "ED1839", "ED1837", "ED1897", "ED1819",
+    ],
+  },
+  {
+    category:"Digital I/O modules", signal:"digital output",
+    url:"https://www.beckhoff.com/en-us/products/i-o/ethercat-terminals/el-ed2xxx-digital-output/tabular-product-overview/",
+    identifiers:[
+      "EL2124", "EL2024-0010", "EL2002", "EL2004", "EL2008", "EL2809",
+      "EL2409", "EL2407", "EL2014", "EL2068", "EL2819", "EL2869",
+      "EL2808", "EL2084", "EL2088", "EL2889", "EL2489", "EL2878-0005",
+      "EL2872", "EL2872-0010", "EL2022", "EL2024", "EL2828", "EL2032",
+      "EL2034", "EL2838", "EL2044", "EL2042", "EL2202", "EL2202-0100",
+      "EL2212", "EL2252", "EL2258", "EL2262", "ELX2002", "ELX2008",
+      "ELX2792", "EL2911", "EL2912", "EL2904", "EL2784", "EL2788",
+      "EL2794", "EL2798", "EL2602", "EL2602-0010", "EL2612", "EL2622",
+      "EL2624", "EL2622-0010", "EL2634", "EL2652", "EL2712", "EL2722",
+      "EL2502", "EL2502-0010", "EL2535", "EL2535-0002", "EL2535-0005", "EL2535-0050",
+      "EL2535-0100", "EL2535-0103", "EL2521", "EL2522", "EL2521-0024", "EL2521-0025",
+      "EL2521-0124", "EL2564", "EL2564-0010", "EL2574", "EL2595", "EL2596",
+      "EL2596-0010", "EL2642", "ELM2742-0000", "ELM2744-0000", "ELM2642-0000", "ELM2644-0000",
+      "ED2008", "ED2809", "ED2807", "ED2889", "ED2887", "ED2032",
+      "ED2034", "ED2828", "ED2838", "ED2504",
+    ],
+  },
+  {
+    category:"Analog I/O modules", signal:"analog output",
+    url:"https://www.beckhoff.com/en-us/products/i-o/ethercat-terminals/el-ed4xxx-analog-output/tabular-product-overview/",
+    identifiers:[
+      "EL4001", "EL4002", "EL4004", "EL4008", "EL4102", "EL4104",
+      "EL4031", "EL4032", "EL4034", "EL4038", "EL4132", "EL4134",
+      "EL4732", "EL4011", "EL4012", "EL4014", "EL4018", "EL4112",
+      "EL4114", "EL4712", "EL4021", "EL4022", "EL4024", "EL4028",
+      "EL4122", "EL4124", "EL4072", "EL4074", "EL4078", "EL4172",
+      "EL4374", "EL4112-0010", "ELX4181", "ELX4154", "ELX4184", "ED4072",
+      "ED4074", "ED4078", "ED4172", "ED4174",
+    ],
+  },
+].flatMap(({ category, signal, url, identifiers }) => identifiers.map((identifier) => ({
+  manufacturer:"Beckhoff", identifier, family:identifier.replace(/(\d)\d{3}(?:-\d{4})?$/, "$1xxx"), category,
+  attributes:{ description:`EtherCAT ${signal} terminal` },
+  source:{ url, title:`Beckhoff EtherCAT ${signal} terminal product overview`, retrievedOn:"2026-11-24" },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Terminal wiring, signal behavior and EtherCAT operation are outside this catalog entry." },
+})));
+
 const beckhoffAnalogInputReferences = [
   ["EL3xxx", [
     "EL3061", "EL3062", "EL3064", "EL3068", "EL3161", "EL3162",
@@ -1273,6 +1333,7 @@ const industrialProductCatalog = Object.freeze([
   ...rockwellCompactLogixReferences,
   ...phoenixTerminalBlockReferences,
   ...beckhoffAnalogInputReferences,
+  ...beckhoffSignalTerminalReferences,
   ...siemensG2CpuReferences,
   ...legacySiemensCpuReferences,
   ...siemensG2ExpansionReferences,

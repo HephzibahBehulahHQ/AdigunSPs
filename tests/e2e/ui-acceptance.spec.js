@@ -2259,6 +2259,9 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["EL3062", "Beckhoff", "www.beckhoff.com"],
     ["ELX3314-0090", "Beckhoff", "www.beckhoff.com"],
     ["ED3362-0100", "Beckhoff", "www.beckhoff.com"],
+    ["EL1124", "Beckhoff", "www.beckhoff.com"],
+    ["EL2124", "Beckhoff", "www.beckhoff.com"],
+    ["EL4001", "Beckhoff", "www.beckhoff.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
