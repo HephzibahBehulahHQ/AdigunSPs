@@ -58,7 +58,7 @@ import { createAdigunBotCanvasPreview, resolveAdigunBotCanvasPreview } from "./a
 import { executeAdigunBotTools } from "./adigun-bot-tools.js";
 import { analyzeAdigunCopilot, adigunCopilotLabels, nextAdigunCopilotSuggestion, dismissAdigunCopilotSuggestion } from "./adigun-bot-copilot.js";
 import { createProtocolMemory, simulateModbusTcp } from "./protocol-sim.js";
-import { renderElectricalWorkspace } from "./electrical-ui.js";
+import { electricalSignalDisplay, renderElectricalWorkspace } from "./electrical-ui.js";
 import { allocateIoAddresses, ioHardwareProfiles, validateIoAllocation } from "./io-allocator.js";
 const $ = (s) => document.querySelector(s);
 
@@ -701,7 +701,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
     }
     for (const node of document.querySelectorAll("[data-electrical-signal]")) {
       const value=project.electrical.simulation.componentStates[node.dataset.electricalSignal]?.signalValue;
-      node.textContent=Number.isFinite(value)?String(value):"—";
+      node.textContent = electricalSignalDisplay(value, node.dataset.electricalUnit);
     }
     const liveWires = new Set(project.electrical.simulation.energizedWires || []); document.querySelectorAll("[data-wire-id]").forEach((node) => node.classList.toggle("energized", liveWires.has(node.dataset.wireId)));
   }

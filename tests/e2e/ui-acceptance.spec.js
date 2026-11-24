@@ -797,7 +797,9 @@ test("wired analog current feeds raw PLC counts and scales to engineering units"
     await page.getByRole("menuitem", { name:action, exact:true }).click();
   };
   await chooseMenu("online", "Record trace");
+  await page.locator("#electricalTab").click();
   await chooseMenu("plc", "Step");
+  await expect(page.locator(`[data-electrical-signal="${transmitter.id}"]`)).toHaveText("12 mA");
   await chooseMenu("online", "Record trace");
   await chooseMenu("debug", "Trace history");
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);

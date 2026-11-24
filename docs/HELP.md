@@ -60,7 +60,7 @@ In **Program Main**, choose LD, FBD, ST, or SFC. For a first ladder, add BOOL `S
 
 ## Components / Schematic
 
-Open **Components / Schematic**, search by name or order code, and choose **Place component**. Inspect supply, pins, and limits. Drag the header. Manufacturer references can find exact schematic models. Assign the Backplane CPU and power output banks. Analog modules model volts and milliamps. Choose **Connect wire**, select a terminal, add bends, then select the destination. Leave wire mode with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Electrical simulation is a teaching model, not a hardware or safety test.
+Open **Components / Schematic**, search by name or order code, and choose **Place component**. Inspect supply, pins, and limits. Drag the header. Manufacturer references can find exact schematic models. Assign the Backplane CPU and power output banks. Analog readings show V or mA. Choose **Connect wire**, select a terminal, add bends, then select the destination. Leave wire mode with **Select / Move**. **Replace** requires mapping review. **Validate** checks wiring. Electrical simulation is a teaching model, not a hardware or safety test.
 
 ## HMI
 
