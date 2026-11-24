@@ -4,9 +4,9 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10621, "catalog has 10621 distinct provenance-backed product references");
+assert.equal(validation.count, 10798, "catalog has 10798 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10621);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10798);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 338);
@@ -21,7 +21,7 @@ assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7214-1HH50-0
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1BG50-0XB0").simulation.model, "siemensS71212CG2AcRelay");
 assert.equal(g2Ordering.find(({ identifier }) => identifier === "6ES7212-1AG50-0XB0").simulation.model, "siemensS71212CG2");
 assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 140);
-assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 90);
+assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 267);
 const expansion = industrialProductCatalog.filter(({ source }) => /ordering-information\/signal-(boards-sbs|modules-sms)$/.test(source.url));
 assert.equal(expansion.length, 12);
 assert.equal(expansion.find(({ identifier }) => identifier === "6ES7233-4HF50-0XB0").simulation.model, "siemensSM1233G2AI4AQ4");
@@ -43,7 +43,7 @@ assert.deepEqual(categoryCoverage["Terminal systems"], { references: 53, exactEd
 assert.equal(searchIndustrialCatalog({ query: "3209510" }).items[0].simulation.model, "phoenixPT25FeedThrough");
 assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.model, "phoenixPT25PE");
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
-assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 90, exactEditableModels: 3, verifiedTerminalMaps: 3 });
+assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 267, exactEditableModels: 3, verifiedTerminalMaps: 3 });
 assert.deepEqual(categoryCoverage["PLC controllers"], { references: 338, exactEditableModels: 6, verifiedTerminalMaps: 6 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 146, exactEditableModels: 4, verifiedTerminalMaps: 4 });
 assert.equal(searchIndustrialCatalog({ query: "6AV2123-3DB32-0AW0" }).items[0].simulation.model, "siemensMtp400UnifiedBasic");
