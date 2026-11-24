@@ -30,6 +30,40 @@ for (const [name, { source, cases }] of Object.entries(structuredTextExamples)) 
   }
 }
 
+const structuredTextProgram = {
+  source: `FUNCTION IsReady : BOOL
+VAR_INPUT Count : INT; END_VAR
+IsReady := Count >= 2;
+END_FUNCTION
+FUNCTION_BLOCK Accumulator
+VAR_INPUT Enable : BOOL; END_VAR
+VAR_OUTPUT Count : INT; END_VAR
+IF Enable THEN Count := Count + 1; END_IF;
+END_FUNCTION_BLOCK
+PROGRAM Control
+VAR First : Accumulator; Second : Accumulator; END_VAR
+First(Enable := Start); Second(Enable := Other);
+Motor := IsReady(First.Count);
+OtherCount := Second.Count;
+END_PROGRAM`,
+  types: { Start: "BOOL", Other: "BOOL", Motor: "BOOL", OtherCount: "INT" },
+  scans: [
+    { inputs: { Start: true, Other: false }, outputs: { Motor: false, OtherCount: 0 } },
+    { inputs: { Start: false, Other: true }, outputs: { Motor: false, OtherCount: 1 } },
+    { inputs: { Start: true, Other: false }, outputs: { Motor: true, OtherCount: 1 } },
+  ],
+};
+const program = compileStructuredText(structuredTextProgram.source, Object.keys(structuredTextProgram.types));
+if (!program.ok) throw new Error(`Structured Text program inventory: ${program.errors.join("\n")}`);
+let programState = { outputs: {}, programState: {} };
+for (const [index, { inputs, outputs }] of structuredTextProgram.scans.entries()) {
+  const outputNames = Object.keys(outputs);
+  programState = executeStructuredText(program, inputs, programState.outputs, outputNames, structuredTextProgram.types, programState.programState);
+  if (programState.errors.length || outputNames.some((name) => programState.outputs[name] !== outputs[name])) {
+    throw new Error(`Structured Text program inventory scan ${index + 1}: ${JSON.stringify(programState.errors.length ? programState.errors : programState.outputs)}`);
+  }
+}
+
 const ladderExample = {
   project: {
     rungs: [
@@ -141,6 +175,7 @@ const softwareAndProcess = {
   ladderExample,
   fbdBlockTypes: supportedFbdTypes,
   structuredTextExamples,
+  structuredTextProgram,
   sfcExample,
   processModelTypes: supportedProcessTypes,
 };
