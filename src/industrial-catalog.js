@@ -923,7 +923,7 @@ const industrialProductCatalog = Object.freeze([
     manufacturer:"Phoenix Contact",identifier:"2966171",family:"PLC-RSC-24DC/21",category:"Relay modules",
     attributes:{productType:"Relay module",familyName:"PLC-INTERFACE",ratedInput:"24 V DC",mechanicalLife:"2 × 10^7 cycles",maxPowerDissipation:"0.22 W"},
     source:{url:"https://www.phoenixcontact.com/en-pc/products/relay-module-plc-rsc-24dc-21-2966171?type=pdf",title:"PLC-RSC-24DC/21 product data",retrievedOn:capturedOn},
-    simulation:{status:"reference-only",model:null,limitations:"The relay's coil, contact terminals, switching ratings, and contact behavior have not been modeled."},
+    simulation:{status:"educational-model",model:"phoenixPlcRsc24Dc21",limitations:"Ideal polarized 24 V DC input and changeover contacts. Switching delay, diode dynamics, and contact ratings are outside the simulation."},
   },
   {
     manufacturer:"Phoenix Contact",identifier:"5603678",family:"PLC-RSC-24DC/21-21/AEX",category:"Relay modules",

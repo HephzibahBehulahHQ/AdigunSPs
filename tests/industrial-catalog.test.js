@@ -38,6 +38,7 @@ assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).item
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
 const inventory = JSON.parse(readFileSync("docs/component-bank/inventory.json", "utf8"));
 const categoryCoverage = inventory.hardwareByCatalogCategory;
+assert.equal(searchIndustrialCatalog({ query: "2966171" }).items[0].simulation.model, "phoenixPlcRsc24Dc21");
 assert.deepEqual(categoryCoverage["Terminal systems"], { references: 4, exactEditableModels: 4, verifiedTerminalMaps: 1 });
 assert.equal(searchIndustrialCatalog({ query: "3209510" }).items[0].simulation.model, "phoenixPT25FeedThrough");
 assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.model, "phoenixPT25PE");
