@@ -31,4 +31,6 @@ Current totals are 10235 distinct hardware order codes, 10225 manufacturer catal
 
 The industrial component test saves and reopens a simulated Siemens expansion circuit, then traces a pushbutton through SM 1221 pin X11-3 and address I1.0, a two-scan TON, SM 1222 address Q1.0 and pin X11-5, and the lamp. It verifies that opening the external load feed drops the lamp while the PLC command and its HMI alarm remain active.
 
+The 1214C transistor circuit test reopens the project, then checks the path from a pushbutton at I1.5 through ladder logic and Q1.1 to the PLC-RSC relay coil and lamp. It verifies that opening the coil return drops the load while the PLC command stays active.
+
 The browser acceptance test imports a wired SM 1231 current loop, steps the PLC, and exports the trace. The transmitter enters 12 mA, the module supplies 13824 raw counts, and the LD SCALE instruction converts the input to 50 bar.
