@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { ADIGUN_SUPABASE_PROJECT_REF } from "../../src/supabase-client.js";
+import { connectElectricalTerminals, createElectricalComponent } from "../../src/electrical.js";
 
 const viewportCases = [
   { width: 1894, height: 704, minBoardHeight: 300 },
@@ -755,6 +756,58 @@ test("HMI alarm hysteresis, acknowledgement, and exported history agree", async 
   expect(exported.events.map(({ type, value }) => [type, value])).toEqual([
     ["cleared", 70], ["acknowledge", undefined], ["raised", 75]
   ]);
+});
+
+test("wired analog current feeds raw PLC counts and scales to engineering units", async ({ page }) => {
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1, 420, 100);
+  const input = createElectricalComponent("siemensSM1231G2AI8", 1, 680, 100);
+  const transmitter = { ...createElectricalComponent("analogLoopCurrentSource", 1, 220, 440), tag:"PressureRaw" };
+  const supplies = Array.from({ length:3 }, (_, index) => createElectricalComponent("supply24vdc", index + 1, 40, 80 + index * 180));
+  input.backplaneCpuId = cpu.id;
+  input.analogInputRanges = ["V10", "V10", "V10", "mA4-20"];
+  input.ioMap.AI8.tag = "PressureRaw";
+  const electrical = { components:[cpu,input,transmitter,...supplies], wires:[] };
+  const connect = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(electrical, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    expect(result.ok, result.error).toBe(true);
+    electrical.wires.push(result.wire);
+  };
+  connect(supplies[0], "+", cpu, "X80-1");
+  connect(supplies[0], "−", cpu, "X80-5");
+  connect(supplies[1], "+", input, "X11-1");
+  connect(supplies[1], "−", input, "X11-2");
+  connect(supplies[2], "+", transmitter, "L+");
+  connect(transmitter, "IOUT", input, "X11-9");
+  connect(supplies[2], "−", input, "X11-10");
+  const project = {
+    name:"Current-loop pressure scaling", editorType:"LD",
+    tags:[{ name:"PressureRaw", type:"INT", role:"input" }, { name:"PressureBar", type:"REAL", role:"output" }],
+    io:{ inputs:["PressureRaw"], outputs:["PressureBar"] }, initialState:{ PressureRaw:12 },
+    rungs:[{ id:"pressure-scale", branches:[[]], scale:{
+      inputTag:"PressureRaw", outputTag:"PressureBar", rawMin:0, rawMax:27648, scaledMin:0, scaledMax:100,
+    } }],
+    electrical,
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"pressure-loop.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(project)),
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(project.name);
+  const chooseMenu = async (menu, action) => {
+    await page.locator(`[data-app-menu="${menu}"]`).click();
+    await page.getByRole("menuitem", { name:action, exact:true }).click();
+  };
+  await chooseMenu("online", "Record trace");
+  await chooseMenu("plc", "Step");
+  await chooseMenu("online", "Record trace");
+  await chooseMenu("debug", "Trace history");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const { frames } = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  expect(frames).toHaveLength(1);
+  expect(frames[0].numericInputs.PressureRaw).toBe(12);
+  expect(frames[0].inputs.PressureRaw).toBe(13824);
+  expect(frames[0].outputs.PressureBar).toBe(50);
 });
 
 test("analog input fault offsets stay constant through process scans and replay", async ({ page }) => {

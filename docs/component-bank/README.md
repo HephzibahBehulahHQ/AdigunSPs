@@ -28,3 +28,5 @@ The Phoenix Contact PT 2,5-TWIN (`3209549`) adds one hardware order code and one
 Current totals are 10197 distinct hardware order codes, 10184 manufacturer catalog records, and 70 placeable schematic models. The export identifies seven verified terminal maps. They cover the PT 2,5-TWIN, the SM 1221 DI 16, both SM 1222 output variants, the SM 1231 analog input module, and both modeled 1212C DC-powered CPU variants. The relay CPU exports its external 1L common pins. The transistor CPU exports separate 2L+ and 2M terminals for its output supply.
 
 The industrial component test saves and reopens a simulated Siemens expansion circuit, then traces a pushbutton through SM 1221 pin X11-3 and address I1.0, a two-scan TON, SM 1222 address Q1.0 and pin X11-5, and the lamp. It verifies that opening the external load feed drops the lamp while the PLC command and its HMI alarm remain active.
+
+The browser acceptance test imports a wired SM 1231 current loop, steps the PLC, and exports the trace. The transmitter enters 12 mA, the module supplies 13824 raw counts, and the LD SCALE instruction converts the input to 50 bar.
