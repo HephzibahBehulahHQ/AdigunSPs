@@ -126,6 +126,9 @@ export function electricalSymbolSvg(component) {
     case "siemensSM1222G2Relay16":
       body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1222 · 16 RLY",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · 1L",6)}${text(48,35,"X11 · 2L",6)}`;
       break;
+    case "siemensSM1222G2Transistor16":
+      body=`<rect x="16" y="3" width="64" height="38" rx="2" ${common}/>${text(48,12,"SM 1222 · 16 DQ",7)}<rect x="21" y="16" width="54" height="9" ${common}/><rect x="21" y="28" width="54" height="9" ${common}/>${text(48,23,"X10 · 1L+ / 1M",6)}${text(48,35,"X11 · 2L+ / 2M",6)}`;
+      break;
     case "digitalInputModule4":case "digitalOutputModule4":case "analogInputModule2":case "analogOutputModule2": {const title=component.type.startsWith("analog")?component.type.startsWith("analogInput")?"AI":"AO":component.type.startsWith("digitalInput")?"DI":"DO";body=`<rect x="20" y="5" width="56" height="32" rx="2" ${common}/>${text(48,20,title,10)}${text(48,30,component.type.startsWith("analog")?"2 CH":"4 CH",7)}${[0,1,2].map((i)=>line(5,12+i*9,20,12+i*9)).join("")}${[0,1,2].map((i)=>line(76,12+i*9,91,12+i*9)).join("")}`;break;}
     case "analogSignalSource":body=`<circle cx="48" cy="22" r="13" ${common}/><path d="M40 22h5l4-7 5 14 4-7h5" ${common}/>${line(4,22,35,22)}${line(61,22,92,22)}`;break;
     case "analogSignalIndicator":body=`<circle cx="58" cy="22" r="12" ${common}/>${text(58,25,"AI",8)}${line(4,22,46,22)}<path d="M37 16l9 6-9 6" ${common}/>${line(70,22,92,22)}`;break;

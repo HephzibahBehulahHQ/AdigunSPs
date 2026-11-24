@@ -17,6 +17,13 @@ const sm1222RelayGroups = [
 ];
 const sm1222OutputPins = Object.fromEntries(sm1222RelayGroups.flatMap(({ outputs }) => outputs).map((pin, index) => [`Q${index + 1}`, pin]));
 const sm1222RelayLayout = [...connectorPins("X10", 14), ...connectorPins("X11", 14)];
+const sm1222TransistorGroups = ["X10", "X11"].map((connector) => ({
+  supply: `${connector}-1`,
+  return: `${connector}-2`,
+  outputs: [3, 5, 7, 9, 4, 6, 8, 10].map((pin) => `${connector}-${pin}`),
+}));
+const sm1222TransistorPins = Object.fromEntries(sm1222TransistorGroups.flatMap(({ outputs }) => outputs)
+  .map((pin, index) => [`Q${index + 1}`, pin]));
 
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
@@ -71,6 +78,24 @@ export const electricalComponentCatalog = Object.freeze({
         ...outputs.map((pin, index) => [pin, `Relay output DQ ${group ? "b" : "a"}.${index}`])
       ])) },
     simulationLimitations:"Ideal normally open contacts require the assigned powered CPU, a wired nominal 24 V DC relay control supply, and an external load circuit on the correct common. Contact ratings, protection, relay timing, and fieldbus timing are outside the simulation."
+  },
+  siemensSM1222G2Transistor16: {
+    name:"Siemens S7-1200 G2 SM 1222 · 16 sourcing DO · 6ES7222-5BH50-0XB0",
+    category:"PLC I/O modules", prefix:"DO", kind:"digital-output-module",
+    manufacturer:"Siemens", partNumber:"6ES7222-5BH50-0XB0",
+    terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 10)],
+    channels:{ outputs:Object.keys(sm1222TransistorPins), outputPins:sm1222TransistorPins },
+    sourcingOutputGroups:sm1222TransistorGroups,
+    backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
+    fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
+    ratedVoltageV:24, ratedCurrentA:0.5,
+    source:{ title:"Siemens S7-1200 G2 SM 1222 DC output specifications and wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm-1222-dq-16x24vdc", terminalMapSection:"Wiring diagram" },
+    terminalNotes:Object.fromEntries(sm1222TransistorGroups.flatMap(({ supply, return:returnPin, outputs }, index) => [
+      [supply, `Output group ${index + 1}L+`],
+      [returnPin, `Output group ${index + 1}M`],
+      ...outputs.map((pin, channel) => [pin, `Sourcing output DQ ${index ? "b" : "a"}.${channel}`]),
+    ])),
+    simulationLimitations:"Ideal sourcing outputs require a powered assigned CPU and the matching wired DC field supply and return. Current limits, overloads, leakage and switching delay are outside the simulation.",
   },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
@@ -566,6 +591,15 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
         const { powerPositivePin, powerNegativePin, outputPins, relayCommonPins } = spec.channels;
         if (coilPowered(sourceNets(nodes), component, powerPositivePin, powerNegativePin, spec.controllerSupply)) {
           addEdge(key(component.id, relayCommonPins[0]), key(component.id, outputPins[channel]));
+        }
+        continue;
+      }
+      if (spec.sourcingOutputGroups) {
+        const output = spec.channels.outputPins[channel];
+        const group = spec.sourcingOutputGroups.find(({ outputs }) => outputs.includes(output));
+        const nets = sourceNets(nodes);
+        if (group && hasPoweredBackplane(component, nets) && coilPowered(nets, component, group.supply, group.return, spec.fieldSupply)) {
+          addEdge(key(component.id, group.supply), key(component.id, output));
         }
         continue;
       }
