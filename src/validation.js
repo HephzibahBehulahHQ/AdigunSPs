@@ -4,6 +4,14 @@ import { validateFbdBlocks } from "./fbd-validation.js";
 import { validateElectricalDiagram } from "./electrical.js";
 import { supportedProcessTypes } from "./process.js";
 
+export const supportedLadderInstructions = Object.freeze({
+  contactModes: Object.freeze(["NO", "NC", "R_TRIG", "F_TRIG"]),
+  coilModes: Object.freeze(["normal", "set", "reset"]),
+  timerTypes: Object.freeze(["TON", "TOF", "TP", "RTO"]),
+  counterTypes: Object.freeze(["CTU", "CTD"]),
+  mcrModes: Object.freeze(["start", "end"]),
+});
+
 const taskProgramCache = new WeakMap();
 const mixedValidationCache = new WeakMap();
 
@@ -61,7 +69,7 @@ export function validateProject(project) {
   }
   for (const [index, rung] of (project.rungs || []).entries()) {
     if (!rung.coil?.trim()) issues.push({ level: "error", code: "coil-missing", message: `Rung ${index + 1} has no output coil.` });
-    if (rung.coilMode && !["normal", "set", "reset"].includes(rung.coilMode)) issues.push({ level:"error", code:"coil-mode", message:`Rung ${index + 1} has an unsupported coil mode.` });
+    if (rung.coilMode && !supportedLadderInstructions.coilModes.includes(rung.coilMode)) issues.push({ level:"error", code:"coil-mode", message:`Rung ${index + 1} has an unsupported coil mode.` });
     else if (tags.has(rung.coil) && tags.get(rung.coil).type !== "BOOL") issues.push({ level: "error", code: "coil-type", message: `Output coil ${rung.coil} must use BOOL; it is ${tags.get(rung.coil).type}.` });
     if (!(rung.branches?.length ? rung.branches : [rung.contacts || []]).flat().length) issues.push({ level: "warning", code: "logic-empty", message: `Rung ${index + 1} has no contacts and will always energize its coil.` });
     for (const contact of (rung.branches?.length ? rung.branches : [rung.contacts || []]).flat()) {
@@ -70,16 +78,16 @@ export function validateProject(project) {
       else if (!tag) issues.push({ level: "warning", code: "tag-undefined", message: `Contact ${contact.tag} is not declared in the tag table.` });
       else if (tag.type !== "BOOL") issues.push({ level: "error", code: "contact-type", message: `Contact ${contact.tag} must use BOOL; it is ${tag.type}.` });
       else if (tag?.role === "output") issues.push({ level: "warning", code: "output-contact", message: `Output ${contact.tag} is used as a contact.` });
-      if (!["NO", "NC", "R_TRIG", "F_TRIG"].includes(contact.mode)) issues.push({ level: "error", code: "contact-mode", message: `Contact ${contact.tag} has an unknown contact mode.` });
+      if (!supportedLadderInstructions.contactModes.includes(contact.mode)) issues.push({ level: "error", code: "contact-mode", message: `Contact ${contact.tag} has an unknown contact mode.` });
     }
-    if (rung.timer && rung.timer.type && !["TON", "TOF", "TP", "RTO"].includes(rung.timer.type)) issues.push({ level:"error", code:"timer-type", message:`Timer ${rung.timer.tag} has an unsupported type ${rung.timer.type}.` });
+    if (rung.timer && rung.timer.type && !supportedLadderInstructions.timerTypes.includes(rung.timer.type)) issues.push({ level:"error", code:"timer-type", message:`Timer ${rung.timer.tag} has an unsupported type ${rung.timer.type}.` });
     if (rung.timer && (!Number.isFinite(Number(rung.timer.preset)) || Number(rung.timer.preset) <= 0)) issues.push({ level: "error", code: "timer-preset", message: `Timer ${rung.timer.tag} needs a preset greater than zero.` });
     if (rung.timer?.type === "RTO" && rung.timer.resetTag && tags.get(rung.timer.resetTag)?.type !== "BOOL") issues.push({ level:"error", code:"timer-reset-tag", message:`RTO reset tag ${rung.timer.resetTag} must be a declared BOOL tag.` });
-    if (rung.counter && rung.counter.type && !["CTU", "CTD"].includes(rung.counter.type)) issues.push({level:"error",code:"counter-type",message:`Counter ${rung.counter.tag} has an unsupported type ${rung.counter.type}.`});
+    if (rung.counter && rung.counter.type && !supportedLadderInstructions.counterTypes.includes(rung.counter.type)) issues.push({level:"error",code:"counter-type",message:`Counter ${rung.counter.tag} has an unsupported type ${rung.counter.type}.`});
     if (rung.counter && (!Number.isFinite(Number(rung.counter.preset)) || Number(rung.counter.preset) <= 0)) issues.push({level:"error",code:"counter-preset",message:`Counter ${rung.counter.tag} needs a preset greater than zero.`});
     if (rung.counter?.resetTag && tags.get(rung.counter.resetTag)?.type !== "BOOL") issues.push({level:"error",code:"counter-reset-tag",message:`Counter reset tag ${rung.counter.resetTag} must be a declared BOOL tag.`});
     if (rung.res && !(project.rungs || []).some((item) => item.counter?.tag === rung.res.counterTag)) issues.push({level:"error",code:"res-target",message:`RES target ${rung.res.counterTag || "(missing)"} must match a declared ladder counter.`});
-    if (rung.mcr && !["start", "end"].includes(rung.mcr)) issues.push({level:"error",code:"mcr-type",message:`Rung ${index + 1} has an unsupported MCR instruction.`});
+    if (rung.mcr && !supportedLadderInstructions.mcrModes.includes(rung.mcr)) issues.push({level:"error",code:"mcr-type",message:`Rung ${index + 1} has an unsupported MCR instruction.`});
     if (rung.scale) {
       const input = tags.get(rung.scale.inputTag), output = tags.get(rung.scale.outputTag), range = [rung.scale.rawMin, rung.scale.rawMax, rung.scale.scaledMin, rung.scale.scaledMax].map(Number);
       if (!input || !["INT", "REAL"].includes(input.type)) issues.push({ level:"error", code:"ld-scale-input", message:`LD SCALE input ${rung.scale.inputTag || "(missing)"} must be a declared numeric tag.` });
