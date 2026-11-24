@@ -822,6 +822,20 @@ test("wired analog current feeds raw PLC counts and scales to engineering units"
   expect(frames[0].inputs.PressureRaw).toBe(13824);
   expect(frames[0].outputs.PressureBar).toBe(50);
   expect(frames[0].outputs.ValveRaw).toBe(13824);
+  await page.locator("#modal .modal-close").click();
+
+  const openReturn = {
+    ...project, name:"Current-loop output with an open return",
+    electrical:{ ...electrical, wires:electrical.wires.slice(0, -1) },
+  };
+  await page.locator("#fileInput").setInputFiles({
+    name:"pressure-loop-open-return.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(openReturn)),
+  });
+  await expect(page.locator("#projectTitle")).toHaveText(openReturn.name);
+  await page.locator("#electricalTab").click();
+  await chooseMenu("plc", "Step");
+  await expect(page.locator(`[data-electrical-signal="${transmitter.id}"]`)).toHaveText("12 mA");
+  await expect(page.locator(`[data-electrical-signal="${indicator.id}"]`)).toHaveText("—");
 });
 
 test("analog input fault offsets stay constant through process scans and replay", async ({ page }) => {
