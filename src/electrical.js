@@ -1,3 +1,5 @@
+import { ioHardwareProfiles } from "./io-allocator.js";
+
 const relayInputPins = { I1:"X10-1", I2:"X10-3", I3:"X10-5", I4:"X10-7", I5:"X10-9", I6:"X10-2", I7:"X10-4", I8:"X10-6" };
 const relayOutputPins = { Q1:"X11-3", Q2:"X11-5", Q3:"X11-7", Q4:"X11-4", Q5:"X11-6", Q6:"X11-8" };
 const connectorPins = (connector, count) => Array.from({ length: count }, (_, index) => `${connector}-${index + 1}`);
@@ -146,13 +148,14 @@ export function nextElectricalReference(type, components = []) {
 function electricalChannelAddress(channel, index = Number(channel.match(/\d+$/)?.[0] || 1) - 1) {
   if (channel.startsWith("AI")) return `IW${index * 2}`;
   if (channel.startsWith("AQ")) return `QW${index * 2}`;
-  return `${channel.startsWith("I") ? "I" : "Q"}0.${index}`;
+  return ioHardwareProfiles.siemensS7.address(channel.startsWith("I") ? "input" : "output", index);
 }
 
 export function hasElectricalChannelBinding(component, channel) {
   const mapping = component.ioMap?.[channel];
   const address = mapping?.address?.trim().toUpperCase();
-  return Boolean(mapping?.tag || (address && address !== electricalChannelAddress(channel)));
+  const legacyDefault = /^[IQ]\d+$/.test(channel) ? `${channel[0]}0.${Number(channel.slice(1)) - 1}` : null;
+  return Boolean(mapping?.tag || (address && address !== electricalChannelAddress(channel) && address !== legacyDefault));
 }
 
 export function createElectricalComponent(type, sequence, x = 120, y = 120) {
