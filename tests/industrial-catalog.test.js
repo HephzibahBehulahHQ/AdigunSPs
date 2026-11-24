@@ -4,12 +4,17 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 10184, "catalog has 10184 distinct provenance-backed product references");
+assert.equal(validation.count, 10192, "catalog has 10192 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10184);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 10192);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
-assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 87);
+assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 95);
+const g2Ordering = industrialProductCatalog.filter(({ source }) =>
+  source.url === "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus");
+assert.equal(g2Ordering.length, 8);
+assert.equal(g2Ordering.filter(({ attributes }) => attributes.failsafe).length, 4);
+assert.ok(g2Ordering.every(({ simulation }) => simulation.status === "reference-only"));
 assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 134);
 assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 83);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
