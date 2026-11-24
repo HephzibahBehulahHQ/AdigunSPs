@@ -2023,6 +2023,18 @@ test("electrical component search filters models and restores the full picker", 
 });
 
 
+test("manufacturer reference lookup finds an imported Finder order code", async ({ page }) => {
+  await page.locator("#electricalTab").click();
+  const form = page.locator("#industrialCatalogSearch");
+  const catalog = page.locator("details").filter({ has: form });
+  await catalog.locator(":scope > summary").click();
+  await form.locator("input").fill("936100247");
+  await form.locator('button[type="submit"]').click();
+  const result = catalog.locator("li").filter({ hasText: "936100247" });
+  await expect(result).toContainText("Finder");
+  await expect(result.locator('a[href*="findernet.com"]')).toHaveCount(1);
+});
+
 test("redesigned toolboxes still execute core LD, FBD, ST, SFC, HMI, and electrical actions", async ({ page }) => {
   const ladderRungs = page.locator("#ladderCanvas .rung");
   const initialRungs = await ladderRungs.count();

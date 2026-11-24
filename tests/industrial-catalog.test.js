@@ -4,13 +4,13 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 616, "catalog has 616 distinct provenance-backed product references");
+assert.equal(validation.count, 5518, "catalog has 5518 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 616);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 5518);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
 assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 87);
-assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 129);
+assert.equal(searchIndustrialCatalog({ category: "Digital I/O modules" }).total, 133);
 assert.equal(searchIndustrialCatalog({ category: "Analog I/O modules" }).total, 82);
 assert.equal(searchIndustrialCatalog({ category: "Communications modules" }).total, 84);
 assert.equal(searchIndustrialCatalog({ category: "Base units" }).total, 49);
@@ -18,6 +18,11 @@ assert.equal(searchIndustrialCatalog({ category: "Power supplies", manufacturer:
 assert.equal(searchIndustrialCatalog({ query: "24 V AC", limit: 1 }).items[0].identifier, "LC1D09B7");
 assert.equal(searchIndustrialCatalog({ query: "CPU", limit: 5, offset: 3 }).items.length, 5);
 assert.equal(searchIndustrialCatalog({ query: "not-a-real-model" }).total, 0);
+assert.equal(searchIndustrialCatalog({ manufacturer: "Finder" }).total, 4902);
+const finderReference = searchIndustrialCatalog({ manufacturer: "Finder", query: "936100247" }).items[0];
+assert.equal(finderReference.identifier, "936100247");
+assert.equal(finderReference.simulation.status, "reference-only");
+assert.equal(finderReference.source.exportDate, "2026-09-02");
 const et200al = industrialProductCatalog.filter(({ family }) => family === "SIMATIC ET 200AL");
 assert.equal(et200al.length, 23);
 assert.ok(et200al.every(({ source, simulation }) => source.exportDate === "2025-10-10" && simulation.status === "reference-only"));
@@ -58,6 +63,7 @@ assert.ok(ui.includes("searchIndustrialCatalog") && ui.includes('id="industrialC
 assert.ok(ui.includes("item.source.url") && ui.includes("item.simulation.limitations"), "catalog rows expose manufacturer provenance and simulation limits");
 assert.ok(!ui.includes('data-electrical-action="add-catalog"'), "reference-only catalog products cannot be placed as simulated devices");
 assert.ok(worker.includes('"./src/industrial-catalog.js"'), "offline shell caches the catalog module");
+assert.ok(worker.includes('"./src/finder-catalog-data.js"'), "offline shell caches Finder order data");
 const unsupported = industrialProductCatalog.find((item) => item.identifier === "LC1D09B7");
 assert.equal(unsupported.simulation.status, "reference-only");
 assert.match(unsupported.simulation.limitations, /24 V DC/);
