@@ -2028,6 +2028,13 @@ test("electrical component search filters models and restores the full picker", 
   const transistorModule = page.locator('#electricalBoard [data-component-type="siemensSM1222G2Transistor16"]');
   await expect(transistorModule.locator("[data-terminal]")).toHaveCount(20);
   await expect(transistorModule.getByRole("button", { name:/X11-2.*Output group 2M/ })).toBeEnabled();
+  await search.fill("6ES7231-4HF50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const analogModule = page.locator('#electricalBoard [data-component-type="siemensSM1231G2AI8"]');
+  await expect(analogModule.locator("[data-terminal]")).toHaveCount(18);
+  await expect(analogModule.getByRole("button", { name:/X10-9.*unassigned/ })).toBeDisabled();
+  await expect(analogModule.getByRole("button", { name:/X11-9.*Differential analog input AI 7/ })).toBeEnabled();
 });
 
 

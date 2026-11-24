@@ -685,7 +685,17 @@ for(const [type,spec] of Object.entries(electricalComponentCatalog)) {
   const component=createElectricalComponent(type,1);
   assert.deepEqual(component.terminals,spec.terminals,`${type} instance persists the catalog terminal layout`);
   assert.match(component.reference,new RegExp(`^${spec.prefix}\\d+$`),`${type} receives a reference designation`);
-  for(const [kind,channels] of Object.entries(spec.channels||{}))if(Array.isArray(channels))for(const channel of channels){const physicalPin=spec.channels.inputPins?.[channel]||spec.channels.outputPins?.[channel]||channel;assert.ok(spec.terminals.some((pin)=>pin===physicalPin||pin.startsWith(`${channel}+`)||pin.startsWith(`${channel}−`)),`${type} channel ${channel} maps to a declared terminal`);}
+  for (const channels of Object.values(spec.channels || {}).filter(Array.isArray)) for (const channel of channels) {
+    const pair = spec.channels.analogInputPins?.[channel];
+    if (pair) {
+      assert.ok(spec.terminals.includes(pair.positive) && spec.terminals.includes(pair.negative),
+        `${type} channel ${channel} maps to both declared differential terminals`);
+    } else {
+      const physicalPin = spec.channels.inputPins?.[channel] || spec.channels.outputPins?.[channel] || channel;
+      assert.ok(spec.terminals.some((pin) => pin === physicalPin || pin.startsWith(`${channel}+`) || pin.startsWith(`${channel}−`)),
+        `${type} channel ${channel} maps to a declared terminal`);
+    }
+  }
   for(const pair of [...(spec.mainPairs||[]),...(spec.coil?[spec.coil]:[]),...(spec.auxNOPair?[spec.auxNOPair]:[]),...(spec.auxNCPair?[spec.auxNCPair]:[]),...Object.values(spec.positionPairs||{})])assert.ok(pair.every((pin)=>spec.terminals.includes(pin)),`${type} internal pair ${pair.join("/")} uses declared terminals`);
   assert.match(electricalSymbolSvg(component),/^<svg class="electrical-standard-symbol"[\s\S]*<\/svg>$/u,`${type} renders a named electrical schematic symbol`);
 }

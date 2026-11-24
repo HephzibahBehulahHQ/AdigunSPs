@@ -693,7 +693,7 @@ function doScan(dt = getTaskCycleMs(project), inputOverride = null) { const star
   const forcedProcessValues = applyOutputFaults(processStep.values, simulationFaults);
   sim = { ...sim, numericInputValues:numericInputs, processStates:processStep.states, processValues:forcedProcessValues, values:{ ...sim.values, ...connectedAnalogInputs, ...forcedProcessValues } };
   if (project.electrical) {
-    project.electrical.simulation = simulateElectricalDiagram(project.electrical,{...project.electrical.inputStates,...inputs,...connectedAnalogInputs},{...sim.outputs,...sim.processValues});
+    project.electrical.simulation = simulateElectricalDiagram(project.electrical,{...project.electrical.inputStates,...inputs,...analogInputValues},{...sim.outputs,...sim.processValues});
     const electricalFaults = project.electrical.simulation.faults || [], electricalFaultSignature = JSON.stringify(electricalFaults); if (electricalFaultSignature !== priorElectricalFaultSignature && electricalFaults.length) { addNarratorEntry(`FAULT DETECTED · ${electricalFaults.map((fault) => fault.message).join("; ")}`); playSimulationTone("fault"); } priorElectricalFaultSignature = electricalFaultSignature;
     for (const node of document.querySelectorAll("[data-electrical-state]")) {
       const componentState=project.electrical.simulation.componentStates[node.dataset.electricalState];

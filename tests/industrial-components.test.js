@@ -251,6 +251,39 @@ const toggleOff = circuit("toggleSwitchNO","buzzer",{closed:false});
   supplyB.nominalVoltageV = 12;
   assert.deepEqual(state(), [true,false], "an undervoltage group cannot borrow the other supply");
 }
+{
+  const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
+  const module = createElectricalComponent("siemensSM1231G2AI8", 1);
+  const [cpuSupply, moduleSupply] = [createElectricalComponent("supply24vdc", 1), createElectricalComponent("supply24vdc", 2)];
+  const voltage = { ...createElectricalComponent("analogVoltageSource", 1), tag:"PressureRaw" };
+  const diagram = { components:[cpu,module,cpuSupply,moduleSupply,voltage], wires:[] };
+  const wire = (from, fromPin, to, toPin) => {
+    const result = connectElectricalTerminals(diagram, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
+    assert.equal(result.ok, true, result.error);
+    diagram.wires.push(result.wire);
+  };
+  assert.equal(electricalComponentCatalog[module.type].terminalLayout.length, 20);
+  assert.equal(module.terminals.length, 18);
+  module.ioMap.AI8 = { tag:"PressureRaw", address:"IW14" };
+  wire(cpuSupply, "+", cpu, "X80-1");
+  wire(cpuSupply, "−", cpu, "X80-5");
+  wire(moduleSupply, "+", module, "X11-1");
+  wire(moduleSupply, "−", module, "X11-2");
+  wire(voltage, "SIG+", module, "X11-9");
+  wire(voltage, "SIG−", module, "X11-10");
+  const simulate = (volts) => simulateElectricalDiagram(diagram, { PressureRaw:volts });
+  assert.equal(simulate(5).inputs.PressureRaw, 0, "the wired module still needs its CPU assignment");
+  module.backplaneCpuId = cpu.id;
+  assert.equal(simulate(-5).inputs.PressureRaw, -13824);
+  assert.equal(simulate(5).inputs.PressureRaw, 13824);
+  assert.equal(simulate(12).inputs.PressureRaw, 27648);
+  assert.equal(simulate(5).componentStates[voltage.id].signalValue, 5, "the indicator retains volts");
+  moduleSupply.nominalVoltageV = 12;
+  assert.equal(simulate(5).inputs.PressureRaw, 0, "undervoltage prevents conversion");
+  moduleSupply.nominalVoltageV = 24;
+  diagram.wires.pop();
+  assert.equal(simulate(5).inputs.PressureRaw, 0, "a broken differential pair prevents conversion");
+}
 for (const inputCommonPolarity of ["negative", "positive"]) {
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
   const cpuSupply = createElectricalComponent("supply24vdc", 1);

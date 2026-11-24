@@ -24,6 +24,12 @@ const sm1222TransistorGroups = ["X10", "X11"].map((connector) => ({
 }));
 const sm1222TransistorPins = Object.fromEntries(sm1222TransistorGroups.flatMap(({ outputs }) => outputs)
   .map((pin, index) => [`Q${index + 1}`, pin]));
+const sm1231AnalogPins = Object.fromEntries(Array.from({ length:8 }, (_, index) => {
+  const connector = index < 4 ? "X10" : "X11";
+  const pin = index < 4 ? index * 2 + 1 : (index - 4) * 2 + 3;
+  return [`AI${index + 1}`, { positive:`${connector}-${pin}`, negative:`${connector}-${pin + 1}` }];
+}));
+const sm1231Layout = [...connectorPins("X10", 10), ...connectorPins("X11", 10)];
 
 export const electricalComponentCatalog = Object.freeze({
   supply24vdc: { name:"24 V DC supply", category:"Power supplies", prefix:"PS", terminals:["+","−"], kind:"source", nominalVoltageV:24 },
@@ -97,6 +103,27 @@ export const electricalComponentCatalog = Object.freeze({
     ])),
     simulationLimitations:"Ideal sourcing outputs require a powered assigned CPU and the matching wired DC field supply and return. Current limits, overloads, leakage and switching delay are outside the simulation.",
   },
+  siemensSM1231G2AI8: {
+    name:"Siemens S7-1200 G2 SM 1231 · 8 AI · 6ES7231-4HF50-0XB0", category:"PLC I/O modules", prefix:"AI", kind:"analog-input-module",
+    manufacturer:"Siemens", partNumber:"6ES7231-4HF50-0XB0",
+    terminalLayout:sm1231Layout, terminals:sm1231Layout.filter((pin) => !["X10-9","X10-10"].includes(pin)),
+    channels:{ analogInputs:Object.keys(sm1231AnalogPins), analogInputPins:sm1231AnalogPins, powerPositivePin:"X11-1", powerNegativePin:"X11-2" },
+    backplaneCpuTypes:["siemensS71212CG2","siemensS71212CG2Relay"],
+    fieldSupply:{ minimumVoltageV:20.4, maximumVoltageV:28.8 },
+    analogVoltageRangeV:10, analogRawFullScale:27648,
+    source:{
+      title:"Siemens S7-1200 G2 SM 1231 AI 8x14bit specifications",
+      url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit",
+      terminalMapSection:"Wiring diagram",
+    },
+    terminalNotes:{
+      "X11-1":"Module supply L+", "X11-2":"Module supply M",
+      ...Object.fromEntries(Object.values(sm1231AnalogPins).flatMap(({ positive, negative }, index) => [
+        [positive,`Differential analog input AI ${index}+`], [negative,`Differential analog input AI ${index}−`],
+      ])),
+    },
+    simulationLimitations:"The educational model converts ±10 V to nominal PLC raw counts. It requires a powered compatible CPU, local DC supply and both differential signal wires. Current ranges, hardware diagnostics, input filtering and converter timing are outside the simulation.",
+  },
   analogInputModule2: { name:"analog input module · 2 channels", category:"PLC I/O modules", prefix:"AI", terminals:["MANA","AI1+","AI1−","AI2+","AI2−"], kind:"analog-input-module", channels:{analogInputs:["AI1","AI2"]} },
   analogOutputModule2: { name:"analog output module · 2 channels", category:"PLC I/O modules", prefix:"AO", terminals:["MANA","AQ1+","AQ1−","AQ2+","AQ2−"], kind:"analog-output-module", channels:{analogOutputs:["AQ1","AQ2"]} },
   siemens3SU1400NCContact: { name:"Siemens SIRIUS ACT 3SU1400-1AA10-1CA0 · 1 NC contact module", category:"Control devices", prefix:"S", terminals:["1","2"], kind:"contact", normallyClosed:true, manufacturer:"Siemens", partNumber:"3SU1400-1AA10-1CA0", source:{title:"Siemens SIRIUS ACT 3SU1 system manual · 1NC contact module and terminal marks",url:"https://support.industry.siemens.com/cs/attachments/107542462/manual_SIRIUS_ACT_3SU1_en-US.pdf"}, terminalNotes:{"1":"Normally-closed contact terminal 1","2":"Normally-closed contact terminal 2"}, simulationLimitations:"The Siemens manual identifies this as a 1 NC contact module and shows terminal marks 1 and 2. The educational model simulates an ideal manually controlled contact path; actuator mechanics, ratings, switching dynamics, and safety performance are not simulated." },
@@ -123,6 +150,7 @@ export const electricalComponentCatalog = Object.freeze({
   temperatureSwitchNC: { name:"Temperature switch · NC simulation", category:"Sensors", prefix:"B", terminals:["21","22"], kind:"contact", normallyClosed:true },
   floatSwitchNO: { name:"Float switch · NO simulation", category:"Sensors", prefix:"B", terminals:["13","14"], kind:"contact", normallyClosed:false },
   analogSignalSource: { name:"analog signal source · scalar simulation", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"tag-scaled scalar; no voltage physics" },
+  analogVoltageSource: { name:"Differential voltage source · volts", category:"Sensors", prefix:"B", terminals:["SIG+","SIG−"], kind:"analog-signal-source", signalModel:"Ideal differential voltage (V)", analogSignalUnit:"V" },
   analogSignalIndicator: { name:"analog signal indicator · scalar simulation", category:"Actuators and indicators", prefix:"Y", terminals:["SIG+","SIG−"], kind:"analog-signal-indicator", signalModel:"tag-scaled scalar; no voltage physics" },
   contactor3P: { name:"three-pole contactor · 24 V DC coil", category:"Contactors and relays", prefix:"K", terminals:["1L1","2T1","3L2","4T2","5L3","6T3","A1","A2","13","14","21","22"], kind:"contactor", mainPairs:[["1L1","2T1"],["3L2","4T2"],["5L3","6T3"]], coil:["A1","A2"], auxNOPair:["13","14"], auxNCPair:["21","22"] },
   siemensSirius3RT20171WB41: { name:"Siemens SIRIUS 3RT2017-1WB41 power contactor · 3-pole + 1 NO", category:"Contactors and relays", prefix:"K", terminals:["1/L1","3/L2","5/L3","13","A1+","2/T1","4/T2","6/T3","14","A2−"], kind:"contactor", mainPairs:[["1/L1","2/T1"],["3/L2","4/T2"],["5/L3","6/T3"]], coil:["A1+","A2−"], auxNOPair:["13","14"], coilSupply:{kind:"dc",minimumVoltageV:20.4,maximumVoltageV:44.4}, manufacturer:"Siemens", partNumber:"3RT2017-1WB41", source:{title:"Siemens SIRIUS 3RT2017-1WB41 data sheet",url:"https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=3RT2017-1WB41"}, terminalNotes:{"1/L1":"Main power contact pole 1 input","2/T1":"Main power contact pole 1 output","3/L2":"Main power contact pole 2 input","4/T2":"Main power contact pole 2 output","5/L3":"Main power contact pole 3 input","6/T3":"Main power contact pole 3 output","13":"Normally-open auxiliary contact input","14":"Normally-open auxiliary contact output","A1+":"Contactor coil positive","A2−":"Contactor coil negative"}, simulationLimitations:"The documented 24 V DC coil energizes only from a wired modeled DC source within the published 0.85–1.85 × Uc operating range (20.4–44.4 V). Main and auxiliary contacts switch immediately in the educational connectivity model; coil power, response time, contact ratings, arc behavior, motor protection, and device performance are not simulated." },
@@ -687,11 +715,22 @@ export function simulateElectricalDiagram(diagram, inputStates = {}, outputState
     for (const channel of spec.channels.analogInputs || []) {
       const tag=controller.ioMap?.[channel]?.tag, signal=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-source");
       if (!tag||!signal) continue;
-      const positivePin=`${channel}+`,negativePin=`${channel}−`;
+      const { positive:positivePin, negative:negativePin } = spec.channels.analogInputPins?.[channel] ||
+        { positive:`${channel}+`, negative:`${channel}−` };
       const signalSpec=electricalComponentCatalog[signal.type],signalPositive=signalSpec.signalPins?.positive||"SIG+",signalNegative=signalSpec.signalPins?.negative||"SIG−",powerPins=signalSpec.signalPowerPins;
       const powered=!powerPins||nets.some(({component:source,nets:poles})=>{const sourceSpec=electricalComponentCatalog[source.type],kind=sourceSpec?.kind,voltage=Number(source.nominalVoltageV??sourceSpec?.nominalVoltageV),dcSource=kind==="source"||kind==="power-converter";return dcSource&&(!Number.isFinite(powerPins.minimumVoltageV)||voltage>=powerPins.minimumVoltageV)&&(!Number.isFinite(powerPins.maximumVoltageV)||voltage<=powerPins.maximumVoltageV)&&!sourceHasShort(poles)&&(poles.positive||poles.L)?.has(key(signal.id,powerPins.positive))&&(poles.negative||poles.N)?.has(key(signal.id,powerPins.negative));});
       const value=Number(inputStates[tag]);
-      if (powered&&pairedConnected(signal,signalPositive,signalNegative,controller,positivePin,negativePin)&&Number.isFinite(value)) { analogInputs[tag]=value; componentStates[signal.id]={signalValue:value,signalModel:signal.signalModel}; }
+      if (!powered || !Number.isFinite(value) || !pairedConnected(signal,signalPositive,signalNegative,controller,positivePin,negativePin)) continue;
+      if (spec.analogVoltageRangeV) {
+        if (signalSpec.analogSignalUnit !== "V" || !hasPoweredBackplane(controller, nets) ||
+            !coilPowered(nets, controller, positivePowerPin, negativePowerPin, spec.fieldSupply)) continue;
+        const limited = Math.max(-spec.analogVoltageRangeV, Math.min(spec.analogVoltageRangeV, value));
+        analogInputs[tag] = Math.round(limited / spec.analogVoltageRangeV * spec.analogRawFullScale);
+      } else {
+        if (signalSpec.analogSignalUnit) continue;
+        analogInputs[tag] = value;
+      }
+      componentStates[signal.id] = { signalValue:value, signalModel:signal.signalModel };
     }
     for (const channel of spec.channels.analogOutputs || []) {
       const tag=controller.ioMap?.[channel]?.tag, indicator=all.find((item)=>item.tag===tag&&electricalComponentCatalog[item.type]?.kind==="analog-signal-indicator");

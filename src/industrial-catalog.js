@@ -853,6 +853,12 @@ const industrialProductCatalog = Object.freeze([
     simulation: { status: "educational-model", model: "siemensSM1221G2DI16", limitations: "The four field common groups require a linked, powered compatible CPU. Input filtering and bus communication are outside the simulation." }
   },
   {
+    manufacturer: "Siemens", identifier: "6ES7231-4HF50-0XB0", family: "SIMATIC S7-1200 G2 SM 1231", category: "Analog I/O modules",
+    attributes: { analogInputs:8, resolution:"14-bit", inputMode:"Differential voltage or current", ratedSupplyV:24 },
+    source: { url:"https://docs.tia.siemens.cloud/r/fail_safe_modules_manual_collection_enus_21/device-specific-information/s7-1200-fail-safe-modules/s7-1200-g2-programmable-logic-controller/technical-specifications/analog-signal-modules-sms/sm-1231-ai-8x14bit", title:"Siemens SM 1231 AI 8x14bit technical specifications", retrievedOn:"2026-11-24" },
+    simulation: { status:"educational-model", model:"siemensSM1231G2AI8", limitations:"Ideal ±10 V input only. Converts volts to nominal raw PLC counts when the CPU, module and signal wiring are present." }
+  },
+  {
     manufacturer: "Siemens", identifier: "6ES7222-5BH50-0XB0", family: "SIMATIC S7-1200 G2 SM 1222", category: "Digital I/O modules",
     attributes: { digitalOutputs: 16, ratedVoltageV: 24, ratedCurrentA: 0.5, isolationGroups: 2, outputType: "Sourcing MOSFET" },
     source: { url: "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm-1222-dq-16x24vdc", title: "Siemens SM 1222 DQ 16x24VDC technical specifications", retrievedOn: "2026-11-24" },
