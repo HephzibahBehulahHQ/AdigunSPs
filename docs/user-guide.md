@@ -33,7 +33,7 @@ Use PT 2,5-QUATTRO (3209578) to join four conductors at one potential. Its schem
 
 Place PT 4-HESI (3211861) to simulate continuity through a 5 × 20 mm fuse. In Properties, select **Blow fuse (manual test)** and apply to open the circuit. Use **Replace** to fit a new model or delete the blown fuse and place a new one. The simulation uses manual trips.
 
-For SM 1223 (6ES7223-5BH50-0XB0), assign its **Backplane CPU** and map the eight input and output channels. X10 uses separate 1M and 2M input commons. Wire the DC output supply to X11-1 (L+) and X11-2 (M) before using the sourcing outputs.
+For SM 1223 (6ES7223-5BH50-0XB0), assign its **Backplane CPU** and map the eight input and output channels. X10 uses separate 1M and 2M input commons. Wire the DC output supply to X11-1 (L+) and X11-2 (M) before using the sourcing outputs. The SM 1223 relay variant (6ES7223-5PH50-0XB0) uses the same X10 input wiring. Power its relay control at X11-1/X11-2, and connect a separate load feed to 1L at X11-13 or X11-14.
 
 Place a Siemens MTP400, MTP700, MTP1000, or MTP1200 Unified Basic to show simulated panel power. Its X80 supply accepts the documented 19.2–28.8 V DC range on X80-1 and X80-2. The schematic shows power presence. Use the HMI workspace separately for tag-bound controls and displays.
 

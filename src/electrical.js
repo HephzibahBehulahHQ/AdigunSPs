@@ -34,6 +34,8 @@ const sm1223InputPins = Object.fromEntries(sm1223InputGroups.flatMap(({ inputs }
   .map((pin, index) => [`I${index + 1}`, pin]));
 const sm1223OutputGroup = sm1222TransistorGroups[1];
 const sm1223OutputPins = Object.fromEntries(sm1223OutputGroup.outputs.map((pin, index) => [`Q${index + 1}`, pin]));
+const sm1223RelayOutputGroup = sm1222RelayGroups[1];
+const sm1223RelayOutputPins = Object.fromEntries(sm1223RelayOutputGroup.outputs.map((pin, index) => [`Q${index + 1}`, pin]));
 const sm1231AnalogPins = Object.fromEntries(Array.from({ length:8 }, (_, index) => {
   const connector = index < 4 ? "X10" : "X11";
   const pin = index < 4 ? index * 2 + 1 : (index - 4) * 2 + 3;
@@ -216,6 +218,29 @@ export const electricalComponentCatalog = Object.freeze({
       ...Object.fromEntries(Object.values(sm1223OutputPins).map((pin, index) => [pin, `Sourcing output DQ b.${index}`])),
     },
     simulationLimitations:"Both input common groups accept either DC polarity while the assigned CPU has power. The sourcing outputs also require an in-range supply across X11 L+ and M. The model represents ideal switching and omits current draw, current limits, protection, delays and bus timing.",
+  },
+  siemensSM1223G2DI8Relay8: {
+    name:"Siemens S7-1200 G2 SM 1223 · 8 DI / 8 relay DQ · 6ES7223-5PH50-0XB0",
+    category:"PLC I/O modules", prefix:"DIO", kind:"digital-io-module",
+    manufacturer:"Siemens", partNumber:"6ES7223-5PH50-0XB0",
+    terminalLayout:[...connectorPins("X10", 10), ...connectorPins("X11", 14)],
+    terminals:[...connectorPins("X10", 10), ...connectorPins("X11", 14).filter(pin => pin !== "X11-3" && pin !== "X11-4")],
+    channels:{
+      inputs:Object.keys(sm1223InputPins), inputPins:sm1223InputPins,
+      outputs:Object.keys(sm1223RelayOutputPins), outputPins:sm1223RelayOutputPins,
+      powerPositivePin:"X11-1", powerNegativePin:"X11-2",
+    },
+    inputGroups:sm1223InputGroups, inputSignalVoltage:{ minimumVoltageV:15, maximumVoltageV:30 },
+    relayOutputGroups:[sm1223RelayOutputGroup], backplaneCpuTypes:g2CompatibleCpuTypes,
+    source:{ title:"Siemens S7-1200 G2 SM 1223 DI 8x24VDC / DQ 8xRelay wiring", url:"https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/technical-specifications/digital-signal-modules-sms/sm-1223-di-8x24vdc/dq-8xrelay", terminalMapSection:"Wiring diagram · X10 and X11" },
+    terminalNotes:{
+      "X10-1":"Field input common 1M", "X10-2":"Field input common 2M",
+      "X11-1":"Relay control supply L+", "X11-2":"Relay control return M",
+      "X11-13":"Isolated load common 1L", "X11-14":"Isolated load common 1L",
+      ...Object.fromEntries(Object.values(sm1223InputPins).map((pin, index) => [pin, `Digital input DI a.${index}`])),
+      ...Object.fromEntries(Object.values(sm1223RelayOutputPins).map((pin, index) => [pin, `Relay output DQ a.${index}`])),
+    },
+    simulationLimitations:"Two input common groups accept either DC polarity. The ideal normally open contacts need a powered assigned CPU and a nominal 24 V DC relay control supply on X11. The separate load connects through 1L. Contact ratings, switching delay, minimum load and current limits are outside the model.",
   },
   siemensSM1231G2AI8: {
     name:"Siemens S7-1200 G2 SM 1231 · 8 AI · 6ES7231-4HF50-0XB0", category:"PLC I/O modules", prefix:"AI", kind:"analog-input-module",

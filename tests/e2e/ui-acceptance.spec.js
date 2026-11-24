@@ -2200,6 +2200,12 @@ test("electrical component search filters models and restores the full picker", 
   const digitalModule = page.locator('#electricalBoard [data-component-type="siemensSM1223G2DI8DQ8"]');
   await expect(digitalModule.getByRole("button", { name:/X10-2.*Field input common 2M/ })).toBeEnabled();
   await expect(digitalModule.getByRole("button", { name:/X11-10.*Sourcing output DQ b\.7/ })).toBeEnabled();
+  await search.fill("6ES7223-5PH50-0XB0");
+  await expect(palette.locator("option")).toHaveCount(1);
+  await add.click();
+  const mixedRelayModule = page.locator('#electricalBoard [data-component-type="siemensSM1223G2DI8Relay8"]');
+  await expect(mixedRelayModule.getByRole("button", { name:/X11-14.*Isolated load common 1L/ })).toBeEnabled();
+  await expect(mixedRelayModule.getByRole("button", { name:/X11-12.*Relay output DQ a\.7/ })).toBeEnabled();
   await search.fill("3211861");
   await expect(palette.locator("option")).toHaveCount(1);
   await add.click();
