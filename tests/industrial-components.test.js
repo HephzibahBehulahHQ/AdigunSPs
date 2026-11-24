@@ -134,17 +134,18 @@ for (const size of [400, 700, 1000, 1200]) {
   assert.equal(powered(), false, "reversed supply polarity leaves the panel unpowered");
 }
 
-{
+for (const type of ["siemensSM1223G2DI8DQ8", "siemensSM1223G2DI8Relay8"]) {
+  const relay = type === "siemensSM1223G2DI8Relay8";
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1);
-  const module = createElectricalComponent("siemensSM1223G2DI8DQ8", 1, 420, 120, [cpu]);
+  const module = createElectricalComponent(type, 1, 420, 120, [cpu]);
   const button = { ...createElectricalComponent("pushbuttonNO", 1), tag:"FieldSwitch" };
   const lamp = createElectricalComponent("pilotLamp", 1);
   const returnRail = createElectricalComponent("neutralRail", 1);
-  const [cpuSupply, inputSupply, outputSupply] = [1,2,3].map(index => createElectricalComponent("supply24vdc", index));
+  const [cpuSupply, inputSupply, outputSupply, loadSupply] = [1,2,3,4].map(index => createElectricalComponent("supply24vdc", index));
   module.backplaneCpuId = cpu.id;
   module.ioMap.I8.tag = "Start";
   module.ioMap.Q8.tag = "LampCommand";
-  const electrical = { components:[cpu,module,button,lamp,returnRail,cpuSupply,inputSupply,outputSupply], wires:[] };
+  const electrical = { components:[cpu,module,button,lamp,returnRail,cpuSupply,inputSupply,outputSupply,loadSupply], wires:[] };
   const wire = (from, fromPin, to, toPin) => {
     const result = connectElectricalTerminals(electrical, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
     assert.equal(result.ok, true, result.error);
@@ -159,8 +160,14 @@ for (const size of [400, 700, 1000, 1200]) {
   wire(outputSupply, "+", module, "X11-1");
   wire(outputSupply, "−", returnRail, "N1");
   const outputReturn = wire(returnRail, "N2", module, "X11-2");
-  wire(module, "X11-10", lamp, "X1");
-  wire(returnRail, "N3", lamp, "X2");
+  wire(module, relay ? "X11-12" : "X11-10", lamp, "X1");
+  let loadFeed;
+  if (relay) {
+    loadFeed = wire(loadSupply, "+", module, "X11-14");
+    wire(loadSupply, "−", lamp, "X2");
+  } else {
+    wire(returnRail, "N3", lamp, "X2");
+  }
   const project = normalizeImportedProject(JSON.parse(JSON.stringify({
     name:"SM 1223 mixed digital I/O", electrical,
     tags:[{ name:"Start", type:"BOOL", role:"input" }, { name:"LampCommand", type:"BOOL", role:"output" }],
@@ -181,8 +188,13 @@ for (const size of [400, 700, 1000, 1200]) {
   assert.deepEqual(check(true), [true,true,true]);
   project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== outputReturn);
   assert.deepEqual(check(true), [true,true,false]);
-  project.electrical.wires = project.electrical.wires.filter(({ id }) => id !== cpuPower);
+  if (relay) {
+    project.electrical.wires = [...electrical.wires].filter(({ id }) => id !== loadFeed);
+    assert.deepEqual(check(true), [true,true,false]);
+  }
+  project.electrical.wires = electrical.wires.filter(({ id }) => id !== cpuPower);
   assert.deepEqual(check(true), [false,false,false]);
+  assert.equal(simulateElectricalDiagram(project.electrical, { FieldSwitch:true }, { LampCommand:true }).energized[lamp.id], false);
 }
 
 {
