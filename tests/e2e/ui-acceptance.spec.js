@@ -762,11 +762,16 @@ test("wired analog current feeds raw PLC counts and scales to engineering units"
   const cpu = createElectricalComponent("siemensS71212CG2Relay", 1, 420, 100);
   const input = createElectricalComponent("siemensSM1231G2AI8", 1, 680, 100);
   const transmitter = { ...createElectricalComponent("analogLoopCurrentSource", 1, 220, 440), tag:"PressureRaw" };
-  const supplies = Array.from({ length:3 }, (_, index) => createElectricalComponent("supply24vdc", index + 1, 40, 80 + index * 180));
+  const output = createElectricalComponent("siemensSM1232G2AQ8", 1, 900, 100);
+  const indicator = { ...createElectricalComponent("analogCurrentIndicator", 1, 920, 440), tag:"ValveRaw" };
+  const supplies = Array.from({ length:4 }, (_, index) => createElectricalComponent("supply24vdc", index + 1, 40, 80 + index * 180));
   input.backplaneCpuId = cpu.id;
   input.analogInputRanges = ["V10", "V10", "V10", "mA4-20"];
   input.ioMap.AI8.tag = "PressureRaw";
-  const electrical = { components:[cpu,input,transmitter,...supplies], wires:[] };
+  output.backplaneCpuId = cpu.id;
+  output.ioMap.AQ8.tag = "ValveRaw";
+  output.analogOutputRanges = ["V10", "V10", "V10", "V10", "V10", "V10", "V10", "mA4-20"];
+  const electrical = { components:[cpu,input,transmitter,output,indicator,...supplies], wires:[] };
   const connect = (from, fromPin, to, toPin) => {
     const result = connectElectricalTerminals(electrical, { componentId:from.id, terminal:fromPin }, { componentId:to.id, terminal:toPin });
     expect(result.ok, result.error).toBe(true);
@@ -779,13 +784,18 @@ test("wired analog current feeds raw PLC counts and scales to engineering units"
   connect(supplies[2], "+", transmitter, "L+");
   connect(transmitter, "IOUT", input, "X11-9");
   connect(supplies[2], "−", input, "X11-10");
+  connect(supplies[3], "+", output, "X11-1");
+  connect(supplies[3], "−", output, "X11-2");
+  connect(output, "X11-9", indicator, "SIG+");
+  connect(output, "X11-10", indicator, "SIG−");
   const project = {
     name:"Current-loop pressure scaling", editorType:"LD",
-    tags:[{ name:"PressureRaw", type:"INT", role:"input" }, { name:"PressureBar", type:"REAL", role:"output" }],
-    io:{ inputs:["PressureRaw"], outputs:["PressureBar"] }, initialState:{ PressureRaw:12 },
-    rungs:[{ id:"pressure-scale", branches:[[]], scale:{
-      inputTag:"PressureRaw", outputTag:"PressureBar", rawMin:0, rawMax:27648, scaledMin:0, scaledMax:100,
-    } }],
+    tags:[{ name:"PressureRaw", type:"INT", role:"input" }, { name:"PressureBar", type:"REAL", role:"output" }, { name:"ValveRaw", type:"INT", role:"output" }],
+    io:{ inputs:["PressureRaw"], outputs:["PressureBar","ValveRaw"] }, initialState:{ PressureRaw:12 },
+    rungs:[
+      { id:"pressure-scale", branches:[[]], scale:{ inputTag:"PressureRaw", outputTag:"PressureBar", rawMin:0, rawMax:27648, scaledMin:0, scaledMax:100 } },
+      { id:"valve-scale", branches:[[]], scale:{ inputTag:"PressureBar", outputTag:"ValveRaw", rawMin:0, rawMax:100, scaledMin:0, scaledMax:27648 } },
+    ],
     electrical,
   };
   await page.locator("#fileInput").setInputFiles({
@@ -800,6 +810,7 @@ test("wired analog current feeds raw PLC counts and scales to engineering units"
   await page.locator("#electricalTab").click();
   await chooseMenu("plc", "Step");
   await expect(page.locator(`[data-electrical-signal="${transmitter.id}"]`)).toHaveText("12 mA");
+  await expect(page.locator(`[data-electrical-signal="${indicator.id}"]`)).toHaveText("12 mA");
   await chooseMenu("online", "Record trace");
   await chooseMenu("debug", "Trace history");
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#traceExport").click()]);
@@ -810,6 +821,7 @@ test("wired analog current feeds raw PLC counts and scales to engineering units"
   expect(frames[0].numericInputs.PressureRaw).toBe(12);
   expect(frames[0].inputs.PressureRaw).toBe(13824);
   expect(frames[0].outputs.PressureBar).toBe(50);
+  expect(frames[0].outputs.ValveRaw).toBe(13824);
 });
 
 test("analog input fault offsets stay constant through process scans and replay", async ({ page }) => {
