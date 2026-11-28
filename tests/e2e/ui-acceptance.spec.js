@@ -2287,6 +2287,10 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["1756-L980TSXT", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["1756-L84E-NSEXT", "Rockwell Automation", "literature.rockwellautomation.com"],
     ["1756-L73EROMS", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["NA5-9W001S-V2", "Omron", "www.ia.omron.com"],
+    ["NB15W-TW01B-V1-S", "Omron", "www.ia.omron.com"],
+    ["cMT3218XP", "Weintek", "www.weintek.com"],
+    ["MT8106iP", "Weintek", "www.weintek.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
