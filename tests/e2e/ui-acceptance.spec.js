@@ -2277,6 +2277,9 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["PFXGP6600TADFZ26", "Pro-face", "www.pro-face.com"],
     ["PFXSTM6400WADE", "Pro-face", "www.pro-face.com"],
     ["PFXSP5790WAD", "Pro-face", "www.pro-face.com"],
+    ["CP2E-N60DT-D", "Omron", "www.ia.omron.com"],
+    ["NX1P2-1140DT1", "Omron", "www.ia.omron.com"],
+    ["CJ2M-CPU35", "Omron", "www.ia.omron.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
