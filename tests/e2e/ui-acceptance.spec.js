@@ -2280,6 +2280,10 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["CP2E-N60DT-D", "Omron", "www.ia.omron.com"],
     ["NX1P2-1140DT1", "Omron", "www.ia.omron.com"],
     ["CJ2M-CPU35", "Omron", "www.ia.omron.com"],
+    ["FX5UC-32MR/DS-TS", "Mitsubishi Electric", "dl.mitsubishielectric.com"],
+    ["R120ENCPU", "Mitsubishi Electric", "www.mitsubishielectric.com"],
+    ["Q26UDVCPU", "Mitsubishi Electric", "fa-faq.mitsubishielectric.com"],
+    ["L26CPU-PBT", "Mitsubishi Electric", "www.mitsubishielectric.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();
