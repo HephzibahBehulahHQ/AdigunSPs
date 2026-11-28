@@ -4,12 +4,12 @@ import { industrialProductCatalog, searchIndustrialCatalog, validateIndustrialCa
 
 const validation = validateIndustrialCatalog();
 assert.equal(validation.ok, true, validation.errors.join(", "));
-assert.equal(validation.count, 11157, "catalog has 11157 distinct provenance-backed product references");
+assert.equal(validation.count, 11255, "catalog has 11255 distinct provenance-backed product references");
 assert.equal(validation.unique, validation.count);
-assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 11157);
+assert.equal(new Set(industrialProductCatalog.map(({ manufacturer, identifier }) => `${manufacturer}|${identifier}`)).size, 11255);
 assert.equal(searchIndustrialCatalog({ query: "E3Z-T61" }).items[0].identifier, "E3Z-T61");
 assert.equal(searchIndustrialCatalog({ manufacturer: "OMRON" }).total, 28);
-assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 458);
+assert.equal(searchIndustrialCatalog({ category: "PLC controllers" }).total, 556);
 const g2Ordering = industrialProductCatalog.filter(({ source }) =>
   source.url === "https://docs.tia.siemens.cloud/r/simatic_s7_1200_g2_manual_collection_enus_20/ordering-information/cpus");
 assert.equal(g2Ordering.length, 9);
@@ -47,7 +47,7 @@ assert.equal(searchIndustrialCatalog({ query: "3209536" }).items[0].simulation.m
 assert.equal(Object.values(categoryCoverage).reduce((total, category) => total + category.references, 0), inventory.totals.vendorHardwareReferences);
 assert.deepEqual(categoryCoverage["Digital I/O modules"], { references: 300, exactEditableModels: 5, verifiedTerminalMaps: 5 });
 assert.deepEqual(categoryCoverage["Analog I/O modules"], { references: 307, exactEditableModels: 3, verifiedTerminalMaps: 3 });
-assert.deepEqual(categoryCoverage["PLC controllers"], { references: 458, exactEditableModels: 6, verifiedTerminalMaps: 6 });
+assert.deepEqual(categoryCoverage["PLC controllers"], { references: 556, exactEditableModels: 6, verifiedTerminalMaps: 6 });
 assert.deepEqual(categoryCoverage["HMI devices"], { references: 185, exactEditableModels: 4, verifiedTerminalMaps: 4 });
 assert.equal(searchIndustrialCatalog({ query: "6AV2123-3DB32-0AW0" }).items[0].simulation.model, "siemensMtp400UnifiedBasic");
 for (const query of ["EL3062", "3044665", "3209578", "3211861", "5069-L320ERP", "2080-LC10-12AWA", "2711R-T4T"]) {

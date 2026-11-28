@@ -740,6 +740,56 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const mitsubishiControllerReferences = [
+  {
+    family:"MELSEC iQ-F", url:"https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082452eng/sh082452engp.pdf",
+    identifiers:[
+      "FX5U-32MR/ES", "FX5S-30MR/ES", "FX5S-30MT/ES", "FX5S-30MT/ESS", "FX5S-40MR/ES",
+      "FX5S-40MT/ES", "FX5S-40MT/ESS", "FX5S-60MR/ES", "FX5S-60MT/ES", "FX5S-60MT/ESS",
+      "FX5S-80MR/ES", "FX5S-80MT/ES", "FX5S-80MT/ESS", "FX5S-30MR/DS", "FX5S-30MT/DSS",
+      "FX5S-40MR/DS", "FX5S-40MT/DS", "FX5S-40MT/DSS", "FX5S-60MR/DS", "FX5S-60MT/DS",
+      "FX5S-80MR/DS", "FX5S-80MT/DS", "FX5S-80MT/DSS", "FX5UJ-24MR/ES", "FX5UJ-24MT/ES",
+      "FX5UJ-24MT/ESS", "FX5UJ-40MR/ES", "FX5UJ-40MT/ES", "FX5UJ-40MT/ESS", "FX5UJ-60MT/ES",
+      "FX5UJ-60MT/ESS", "FX5UJ-24MR/DS", "FX5UJ-24MT/DS", "FX5UJ-24MT/DSS", "FX5UJ-40MR/DS",
+      "FX5UJ-40MT/DS", "FX5UJ-40MT/DSS", "FX5UJ-60MR/DS", "FX5UJ-60MT/DS", "FX5UJ-60MT/DSS",
+      "FX5U-32MT/ES", "FX5U-32MT/ESS", "FX5U-64MR/ES", "FX5U-64MT/ES", "FX5U-64MT/ESS",
+      "FX5U-80MR/ES", "FX5U-80MT/ES", "FX5U-80MT/ESS", "FX5U-32MR/DS", "FX5U-32MT/DS",
+      "FX5U-32MT/DSS", "FX5U-64MR/DS", "FX5U-64MT/DS", "FX5U-64MT/DSS", "FX5U-80MR/DS",
+      "FX5U-80MT/DS", "FX5U-80MT/DSS", "FX5UC-32MT/D", "FX5UC-32MT/DSS", "FX5UC-32MT/DS-TS",
+      "FX5UC-32MT/DSS-TS", "FX5UC-32MR/DS-TS", "FX5UC-64MT/D", "FX5UC-64MT/DSS", "FX5UC-96MT/D",
+      "FX5UC-96MT/DSS",
+    ],
+  },
+  {
+    family:"MELSEC iQ-R", url:"https://www.mitsubishielectric.com/fa/products/cnt/plcr/pmerit/cpu/cpu.html",
+    identifiers:[
+      "R04CPU", "R08CPU", "R16CPU", "R32CPU", "R120CPU",
+      "R00CPU", "R01CPU", "R02CPU", "R04ENCPU", "R08ENCPU",
+      "R16ENCPU", "R32ENCPU", "R120ENCPU",
+    ],
+  },
+  {
+    family:"MELSEC Q", url:"https://fa-faq.mitsubishielectric.com/fa/products/cnt/plcq/pmerit/cpu/",
+    identifiers:[
+      "Q26UDVCPU", "Q13UDVCPU", "Q06UDVCPU", "Q04UDVCPU", "Q03UDVCPU",
+      "Q100UDEHCPU", "Q50UDEHCPU", "Q02UCPU", "Q01UCPU", "Q00UCPU",
+      "Q00UJCPU",
+    ],
+  },
+  {
+    family:"MELSEC L", url:"https://www.mitsubishielectric.com/fa/products/cnt/plcl/pmerit/cpu/index.html",
+    identifiers:[
+      "L02CPU", "L02CPU-P", "L06CPU", "L06CPU-P", "L26CPU",
+      "L26CPU-P", "L26CPU-BT", "L26CPU-PBT",
+    ],
+  },
+].flatMap(({ family, url, identifiers }) => identifiers.map((identifier) => ({
+  manufacturer:"Mitsubishi Electric", identifier, family, category:"PLC controllers",
+  attributes:{ description:`${family} programmable controller CPU` },
+  source:{ url, title:`Mitsubishi Electric ${family} CPU specifications`, retrievedOn:"2026-11-28" },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Terminal wiring, physical I/O, and controller runtime are outside this catalog entry." },
+})));
+
 const omronControllerReferences = [
   {
     family:"CP2E", url:"https://www.ia.omron.com/products/family/3777/lineup.html",
@@ -1482,6 +1532,7 @@ const industrialProductCatalog = Object.freeze([
   ...rockwellPanelViewReferences,
   ...proFacePanelReferences,
   ...omronControllerReferences,
+  ...mitsubishiControllerReferences,
   ...rockwellMicro800References,
   ...rockwellCompactLogixReferences,
   ...phoenixTerminalBlockReferences,
