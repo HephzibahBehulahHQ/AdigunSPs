@@ -891,6 +891,49 @@ const omronControllerReferences = [
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Terminal wiring, physical I/O, and controller runtime are outside this catalog entry." },
 })));
 
+const omronWeintekPanelReferences = [
+  {
+    manufacturer:"Omron", family:"NA Series (-V2)", url:"https://www.ia.omron.com/products/family/3960/lineup.html",
+    identifiers:[
+      "NA5-15W101B-V2", "NA5-15W101S-V2", "NA5-12W101B-V2", "NA5-12W101S-V2", "NA5-9W001B-V2",
+      "NA5-9W001S-V2", "NA5-7W001B-V2", "NA5-7W001S-V2",
+    ],
+  },
+  {
+    manufacturer:"Omron", family:"NS-B Series", url:"https://www.ia.omron.com/products/family/3983/lineup.html",
+    identifiers:[
+      "NB15W-TW01B-V1-S", "NB10W-TW01B-V1-S", "NB7W-TW01B-V1-S",
+    ],
+  },
+  {
+    manufacturer:"Omron", family:"NB Series (-V1)", url:"https://www.ia.omron.com/products/family/3894/lineup.html",
+    identifiers:[
+      "NB7W-TW00B-V1", "NB7W-TW01B-V1", "NB10W-TW01B-V1",
+    ],
+  },
+  {
+    manufacturer:"Weintek", family:"cMT X", url:"https://www.weintek.com/Download/Specification",
+    identifiers:[
+      "cMT1106X", "cMT2058XH", "cMT2078X", "cMT2102X", "cMT2108X2",
+      "cMT2128X", "cMT2158X", "cMT2166X", "cMT2168X", "cMT3072XH2",
+      "cMT3072XH3", "cMT3072XHT", "cMT3072XP", "cMT3092X", "cMT3102X",
+      "cMT3106XM", "cMT3108XH", "cMT3108XP", "cMT3152X", "cMT3162X",
+      "cMT3218XP",
+    ],
+  },
+  {
+    manufacturer:"Weintek", family:"iP Series", url:"https://www.weintek.com/Download/Specification",
+    identifiers:[
+      "MT8052iP", "MT8072iP", "MT8106iP",
+    ],
+  },
+].flatMap(({ manufacturer, family, url, identifiers }) => identifiers.map((identifier) => ({
+  manufacturer, identifier, family, category:"HMI devices",
+  attributes:{ description:`${manufacturer} ${family} operator panel` },
+  source:{ url, title:`${manufacturer} ${family} panel ordering information`, retrievedOn:"2026-11-28" },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Panel wiring, physical interfaces, and operator-panel runtime are outside this catalog entry." },
+})));
+
 const proFacePanelReferences = [
   {
     family:"GP6000",
@@ -1573,6 +1616,7 @@ const industrialProductCatalog = Object.freeze([
   ...basicMobilePanelReferences,
   ...rockwellPanelViewReferences,
   ...proFacePanelReferences,
+  ...omronWeintekPanelReferences,
   ...omronControllerReferences,
   ...mitsubishiControllerReferences,
   ...rockwellMicro800References,
