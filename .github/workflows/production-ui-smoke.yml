@@ -42,6 +42,7 @@ jobs:
           ADIGUNSP_SCREENSHOT_PATH: artifacts/adigunsps-electrical-1894x850.png
           ADIGUNSP_HMI_SCREENSHOT_PATH: artifacts/adigunsps-hmi-1894x850.png
           ADIGUNSP_EDITOR_SCREENSHOT_DIR: artifacts
+          ADIGUNSP_OVERVIEW_SCREENSHOT_PATH: artifacts/adigunsps-overview.png
         shell: bash
         run: |
           read_release() {
@@ -62,7 +63,7 @@ jobs:
 
           node scripts/verify-live-component-bank.js
           node scripts/verify-live-component-bank.js https://hephzibahbehulahhq.github.io/AdigunSPs/
-          npx playwright test --grep "offline PWA navigation|cached member|offline program round-trip|local project metadata edits preserve|opening a palette result uses the latest saved project|mobile drawer keyboard|Issues tab shows|Ladder and Function Block outlines|SFC starts and resets|project explorer switches|project header shows the reference breadcrumb|side-panel layout changes|electrical duplicate placement|electrical component search filters|manufacturer reference lookup|wired analog current feeds|selected schematic components can be replaced|editor visual matrix|workspace layout remains bounded|canvas toolbars stay compact|retains its viewport|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
+          npx playwright test --grep "Studio navigation|offline PWA navigation|cached member|offline program round-trip|local project metadata edits preserve|opening a palette result uses the latest saved project|mobile drawer keyboard|Issues tab shows|Ladder and Function Block outlines|SFC starts and resets|project explorer switches|project header shows the reference breadcrumb|side-panel layout changes|electrical duplicate placement|electrical component search filters|manufacturer reference lookup|wired analog current feeds|selected schematic components can be replaced|editor visual matrix|workspace layout remains bounded|canvas toolbars stay compact|retains its viewport|1894px electrical workspace geometry|real multi-pin schematic models recover from example-style overlap without changing wires|component bodies remain draggable while wire mode is armed"
 
           served_sha=$(read_release) || served_sha=""
           if [[ "$served_sha" != "$EXPECTED_RELEASE_SHA" ]]; then

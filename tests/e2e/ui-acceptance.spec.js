@@ -80,12 +80,65 @@ test.beforeEach(async ({ page }) => {
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/#studio");
   const welcomeContinue = page.locator("#welcomeContinue");
   await expect(welcomeContinue).toBeVisible();
   await expect(page.locator("#modal")).toHaveAccessibleName(/AdigunSPs/i);
   await welcomeContinue.click();
   await expect(page.locator("#modal")).toBeHidden();
+});
+
+test("Studio navigation keeps the project and scan in the same tab", async ({ page }) => {
+  const context = page.context();
+  await page.goto("/");
+  const overview = page.locator("#overviewView");
+  const studio = page.locator("#studioView");
+  await expect(overview.getByRole("heading", { level:1 })).toHaveText("Build logic.Watch it run.");
+  await expect(studio).toBeHidden();
+  const screenshot = process.env.ADIGUNSP_OVERVIEW_SCREENSHOT_PATH;
+  if (screenshot) await page.screenshot({ path:screenshot, fullPage:true });
+  const pause = overview.getByRole("button", { name:"Pause preview" });
+  await pause.click();
+  await expect(pause).toHaveAttribute("aria-pressed", "true");
+  await overview.getByRole("link", { name:"Launch Studio" }).first().click();
+  await expect(page).toHaveURL(/#studio$/);
+  await expect(studio).toBeVisible();
+  await expect(page.locator("#modal")).toBeHidden();
+  const initialPageCount = context.pages().length;
+  await page.locator('[data-action="run"]').first().click();
+  await expect(page.locator("#plcStatus")).toHaveText("RUNNING");
+  const projectName = await page.locator("#projectTitle").textContent();
+  await studio.getByRole("link", { name:"Back to Overview" }).click();
+  await expect(page).not.toHaveURL(/#studio/);
+  await expect(overview).toBeVisible();
+  await page.goBack();
+  await expect(studio).toBeVisible();
+  await expect(page.locator("#projectTitle")).toHaveText(projectName);
+  await expect(page.locator("#plcStatus")).toHaveText("RUNNING");
+  await page.goForward();
+  await expect(overview).toBeVisible();
+  expect(context.pages()).toHaveLength(initialPageCount);
+  await overview.getByRole("link", { name:"Open the schematic" }).click();
+  await expect(page).toHaveURL(/#studio\/electrical$/);
+  await expect(page.locator("#electricalPane")).toBeVisible();
+});
+
+test("Studio navigation supports mobile, reduced motion, and direct examples", async ({ page }) => {
+  await page.setViewportSize({ width:390, height:844 });
+  await page.emulateMedia({ reducedMotion:"reduce" });
+  await page.goto("/");
+  const canvas = page.locator("#overviewTelemetry");
+  await expect(canvas).toBeVisible();
+  const still = await canvas.evaluate(element => element.toDataURL());
+  await expect(canvas).toBeVisible();
+  expect(await canvas.evaluate(element => element.toDataURL())).toBe(still);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.goto("/#studio/examples");
+  await expect(page.locator("#exampleSearch")).toBeVisible();
+  await page.locator("#modal").press("Escape");
+  expect(await page.locator("#studioView").evaluate(view => ({
+    width:view.clientWidth, height:view.clientHeight, overflow:getComputedStyle(view).overflow,
+  }))).toEqual({ width:390, height:844, overflow:"hidden" });
 });
 
 test("PLCopen TON XML preserves timer-done and immediate coil modes", async ({ page }) => {

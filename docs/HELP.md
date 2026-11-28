@@ -1,6 +1,6 @@
 # AdigunSPs Help and User Guide
 
-AdigunSPs simulates PLC logic and HMIs. Physical control unavailable.
+**Launch Studio** opens the simulator. Physical control unavailable.
 
 ## Table of contents
 

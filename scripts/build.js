@@ -28,7 +28,7 @@ const manifestSync = spawnSync(process.execPath, [join(root, "scripts", "sync-br
 if (manifestSync.status !== 0) throw new Error(manifestSync.stderr || "Manifest generation failed.");
 await rm(output, { recursive:true, force:true });
 await mkdir(output, { recursive:true });
-for (const file of ["index.html", "styles.css", "service-worker.js", "manifest.webmanifest", "manifest.de.webmanifest", "manifest.yo.webmanifest", "manifest.pcm.webmanifest"]) {
+for (const file of ["index.html", "styles.css", "overview.css", "service-worker.js", "manifest.webmanifest", "manifest.de.webmanifest", "manifest.yo.webmanifest", "manifest.pcm.webmanifest"]) {
   await cp(join(root, file), join(output, file));
 }
 for (const directory of ["src", "assets", "docs", "reset-password", "update"]) await cp(join(root, directory), join(output, directory), { recursive:true });
