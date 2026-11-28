@@ -1,3 +1,4 @@
+import { connectStudioRoutes } from "./studio-routing.js";
 import { executeProgramTasks, programUnitUsesTag, renameProgramUnitTag } from "./program-unit.js";
 import { cyclicTaskEditor, readCyclicTaskRows } from "./cyclic-task-ui.js";
 import { validateCyclicTasks } from "./cyclic-tasks.js";
@@ -445,7 +446,7 @@ function setupCanvasPanning() {
   wrap.addEventListener("pointermove", (event) => { if (!canvasPan || canvasPan.id !== event.pointerId) return; wrap.scrollLeft = canvasPan.left - (event.clientX - canvasPan.x); wrap.scrollTop = canvasPan.top - (event.clientY - canvasPan.y); });
   const finish = (event) => { if (!canvasPan || (event && canvasPan.id !== event.pointerId)) return; canvasPan = null; wrap.classList.remove("is-panning"); project.viewState = { ...(project.viewState || {}), scrollLeft:wrap.scrollLeft, scrollTop:wrap.scrollTop, zoom }; persist(); };
   wrap.addEventListener("pointerup", finish); wrap.addEventListener("pointercancel", finish); wrap.addEventListener("lostpointercapture", finish);
-  window.addEventListener("keydown", (event) => { if (event.code === "Space" && !editable(event.target)) { panSpaceHeld = true; wrap.classList.add("pan-enabled"); event.preventDefault(); } });
+  window.addEventListener("keydown", (event) => { if (!$("#studioView").hidden && event.code === "Space" && !editable(event.target)) { panSpaceHeld = true; wrap.classList.add("pan-enabled"); event.preventDefault(); } });
   window.addEventListener("keyup", (event) => { if (event.code === "Space") { panSpaceHeld = false; wrap.classList.remove("pan-enabled"); } });
 }
 function setupFbdPanning() {
@@ -459,7 +460,7 @@ function setupFbdPanning() {
   pane.addEventListener("pointermove", (event) => { if (!canvasPan || canvasPan.pane !== pane || canvasPan.id !== event.pointerId) return; pane.scrollLeft = canvasPan.left - (event.clientX - canvasPan.x); pane.scrollTop = canvasPan.top - (event.clientY - canvasPan.y); });
   const finish = (event) => { if (!canvasPan || canvasPan.pane !== pane || (event && canvasPan.id !== event.pointerId)) return; canvasPan = null; pane.classList.remove("is-panning"); project.viewState = { ...(project.viewState || {}), fbdScrollLeft:pane.scrollLeft, fbdScrollTop:pane.scrollTop, fbdZoom:zoom }; persist(); };
   pane.addEventListener("pointerup", finish); pane.addEventListener("pointercancel", finish); pane.addEventListener("lostpointercapture", finish);
-  window.addEventListener("keydown", (event) => { if (event.code === "Space" && !editable(event.target)) { panSpaceHeld = true; pane.classList.add("pan-enabled"); event.preventDefault(); } });
+  window.addEventListener("keydown", (event) => { if (!$("#studioView").hidden && event.code === "Space" && !editable(event.target)) { panSpaceHeld = true; pane.classList.add("pan-enabled"); event.preventDefault(); } });
   window.addEventListener("keyup", (event) => { if (event.code === "Space") { panSpaceHeld = false; pane.classList.remove("pan-enabled"); } });
 }
 const issuePanelCopy = {
@@ -1306,7 +1307,7 @@ function confirmProjectChange() {
     dialog.className = "modal";
     dialog.setAttribute("aria-labelledby", "unsavedChangesTitle");
     dialog.innerHTML = `<div class="modal-head"><h2 id="unsavedChangesTitle">Unsaved changes</h2></div><div class="modal-body"><p class="safety-copy">You have changes since your last file or cloud save. Save a copy before switching projects?</p><div class="modal-actions"><button type="button" class="secondary" data-change-cancel>Cancel</button><button type="button" class="secondary" data-change-continue>Switch without an extra save</button><button type="button" class="primary" data-change-save>Save and continue</button></div></div>`;
-    document.body.append(dialog);
+    $("#studioView").append(dialog);
     let complete = false;
     const finish = (proceed) => { if (complete) return; complete = true; if (dialog.open) dialog.close(); dialog.remove(); resolve(proceed); };
     dialog.querySelector("[data-change-cancel]").onclick = () => finish(false);
@@ -1329,6 +1330,7 @@ function refreshWatch() { document.querySelectorAll("[data-watch-value]").forEac
 function showWatch() { const tags = inferTags(), names = [...new Set([...tags.inputs, ...tags.outputs])]; modal("Watch table · Simulated values", `<div class="modal-body"><p class="safety-copy">Live values update after each scan. Force applies to simulated digital inputs only and is session-only.</p><div class="watch-list">${names.map((name) => { const input = tags.inputs.includes(name); return `<div class="watch-row"><span class="io-name">${escapeHtml(name)}</span><b data-watch-value="${escapeAttr(name)}">${escapeHtml(String(sim.outputs[name] ?? sim.values[name] ?? false))}</b>${input ? `<select aria-label="Force ${escapeAttr(name)}" data-watch-force="${escapeAttr(name)}"><option value="none">No force</option><option value="on">Force on</option><option value="off">Force off</option></select>` : '<span class="io-address">OUTPUT</span>'}</div>`; }).join("") || '<p class="safety-copy">No tags to watch.</p>'}</div></div>`); $("#modal").dataset.view = "watch"; document.querySelectorAll("[data-watch-force]").forEach((field) => field.addEventListener("change", () => { if (field.value === "none") delete forcedInputs[field.dataset.watchForce]; else forcedInputs[field.dataset.watchForce] = field.value === "on"; logEvent("force", `${field.dataset.watchForce} forced ${field.value}`); doScan(); })); refreshWatch(); }
 async function showExamples(initialSearch = "") {
   const examples = await loadExamples();
+  if ($("#studioView").hidden) return;
   const categories = [...new Set(examples.map((example) => example.category[language]))];
   const reportLabel = ({ en:"Export test report CSV", de:"Testbericht als CSV exportieren", yo:"Gba àbájáde ìdánwò jáde sí CSV", pcm:"Export test report CSV" })[language];
   modal(`${t("titleExamples")} <span class="count-pill">${examples.length}</span>`, `<div class="modal-body"><div class="example-tools"><input id="exampleSearch" placeholder="${t("search")}"/><select id="categoryFilter"><option value="">${t("all")}</option>${categories.map((c) => `<option>${escapeHtml(c)}</option>`).join("")}</select></div><div class="example-list" id="exampleList"></div><div class="modal-actions"><button class="secondary" id="examplesMore" type="button">Show 50 more</button><button class="secondary" id="exportExampleTests">${reportLabel}</button></div></div>`);
@@ -1987,7 +1989,7 @@ function showAccount() {
             throw new Error("The account service did not grant access.");
           }
           await updateAccountAfterAuth(result.user);
-          if (new URLSearchParams(location.search).has("account")) history.replaceState(null, "", location.pathname);
+          if (new URLSearchParams(location.search).has("account")) history.replaceState(null, "", location.pathname + (location.hash.startsWith("#studio") ? location.hash : "#studio"));
           $("#modal").close();
         } else {
           const mode = productAccountRecovery ? "reset-password"
@@ -2023,7 +2025,7 @@ function showAccount() {
   const resetPasswordRedirectTo = "https://adigunsps.hephzibahbehulah.com/reset-password";
   const accountEmail = () => $("#accountEmail")?.value.trim().toLowerCase() || "";
   const accountPassword = () => $("#accountPassword")?.value || "";
-  $("#accountSignIn")?.addEventListener("click", async () => { try { const email = accountEmail(), password = accountPassword(); if (!$("#accountEmail")?.reportValidity() || !$("#accountPassword")?.reportValidity()) return; const { data, error } = await accountService.signInWithPassword(email, password); if (error) throw error; const user = data?.user || data?.session?.user; if (!user) throw new Error("Sign-in did not return a user session."); accountGuestSignInMode = false; await updateAccountAfterAuth(user); if (new URLSearchParams(location.search).has("account")) history.replaceState(null, "", location.pathname); $("#modal").close(); } catch (error) { setFeedback(`${accountText("error")}: ${error.message}`); } });
+  $("#accountSignIn")?.addEventListener("click", async () => { try { const email = accountEmail(), password = accountPassword(); if (!$("#accountEmail")?.reportValidity() || !$("#accountPassword")?.reportValidity()) return; const { data, error } = await accountService.signInWithPassword(email, password); if (error) throw error; const user = data?.user || data?.session?.user; if (!user) throw new Error("Sign-in did not return a user session."); accountGuestSignInMode = false; await updateAccountAfterAuth(user); if (new URLSearchParams(location.search).has("account")) history.replaceState(null, "", location.pathname + (location.hash.startsWith("#studio") ? location.hash : "#studio")); $("#modal").close(); } catch (error) { setFeedback(`${accountText("error")}: ${error.message}`); } });
   $("#accountRegister")?.addEventListener("click", async () => { try { const email = accountEmail(); if (!$("#accountEmail")?.reportValidity()) return; if (isGuest) { const result = await accountService.beginGuestUpgradeEmail(accountUser, email, emailRedirectTo); if (result?.error) throw result.error; setGuestUpgradeEmail(email); setFeedback(accountAuthText("guestUpgradeSent")); return; } const password = accountPassword(); if (!$("#accountPassword")?.reportValidity()) return; const { data, error } = await accountService.signUpWithPassword(email, password, $("#accountName")?.value || "", emailRedirectTo); if (error) throw error; if (data?.session?.user || data?.user?.email_confirmed_at) { await updateAccountAfterAuth(data.session?.user || data.user); $("#modal").close(); } else setFeedback(accountAuthText("signupSent")); } catch (error) { setFeedback(error.code === "guest-upgrade-email-exists" ? accountText("guestEmailExists") : `${accountText("error")}: ${error.message}`); } });
   $("#accountResendSignup")?.addEventListener("click", async () => { try { const email = accountEmail(); if (!$("#accountEmail")?.reportValidity()) return; const { error } = await accountService.resendSignupConfirmation(email, emailRedirectTo); if (error) throw error; setFeedback(accountAuthText("signupSent")); } catch (error) { setFeedback(`${accountText("error")}: ${error.message}`); } });
   $("#accountSendReset")?.addEventListener("click", async () => { try { const email = accountEmail(); if (!$("#accountEmail")?.reportValidity()) return; const { error } = await accountService.sendPasswordReset(email, resetPasswordRedirectTo); if (error) throw error; setFeedback(accountAuthText("resetSent")); } catch (error) { setFeedback(`${accountText("error")}: ${error.message}`); } });
@@ -2039,7 +2041,7 @@ function showAccount() {
   if (signedIn) loadCloudProjectList().catch((error) => { const list = $("#cloudProjectList"); if (list) list.textContent = `${accountText("error")}: ${error.message}`; });
 }
 document.addEventListener("keydown", (event) => {
-  if (event.target.closest?.("dialog")) return;
+  if ($("#studioView").hidden || event.target.closest?.("dialog")) return;
   if (accountAccess === "guest-expired") { event.preventDefault(); event.stopImmediatePropagation(); showAccount(); return; }
   if (accountAccess !== "guest" && accountAccess !== "member") { event.preventDefault(); event.stopImmediatePropagation(); }
 }, true);
@@ -2194,7 +2196,7 @@ function confirmBotPreviewCommit() {
     dialog.id = "botPreviewCommitConfirm"; dialog.className = "modal";
     dialog.setAttribute("aria-labelledby", "botPreviewCommitTitle");
     dialog.innerHTML = '<div class="modal-head"><h2 id="botPreviewCommitTitle">Replace current project?</h2></div><div class="modal-body"><p class="safety-copy">The current project has unsaved changes. Commit will replace it with the verified Bot draft. Cancel and discard the preview first if you need to save or keep the current work.</p><div class="modal-actions"><button type="button" class="secondary" data-bot-commit-cancel>Cancel</button><button type="button" class="primary" data-bot-commit-confirm>Replace and commit</button></div></div>';
-    document.body.append(dialog);
+    $("#studioView").append(dialog);
     let complete = false;
     const finish = (answer) => { if (complete) return; complete = true; if (dialog.open) dialog.close(); dialog.remove(); resolve(answer); };
     dialog.querySelector("[data-bot-commit-cancel]").onclick = () => finish(false);
@@ -2247,7 +2249,7 @@ function previewAdigunBotDraftOnCanvas() {
   const guard = document.createElement("div");
   guard.id = "botPreviewGuard";
   guard.innerHTML = '<section class="bot-preview-banner" role="dialog" aria-label="Bot project preview"><strong>Previewing verified Bot draft</strong><span>Nothing is saved yet. Commit to replace the current project or discard to restore it.</span><button type="button" id="botPreviewCommit">Commit project</button><button type="button" id="botPreviewDiscard">Discard preview</button></section>';
-  document.body.append(guard);
+  $("#studioView").append(guard);
   adigunBotCanvasPreview = { transaction, guard, sim:structuredClone(sim), scans, workspaceView, wasRunning, focusTarget, viewProjectId, zoom, selection:selection ? structuredClone(selection) : null, selectedContacts:[...selectedContacts], fbdSelection:[...fbdSelection], simulationFaults:structuredClone(simulationFaults), sessionOperations:structuredClone(sessionOperations), hmiHistory:structuredClone(hmiHistory), scrollLeft:$("#canvasWrap").scrollLeft, scrollTop:$("#canvasWrap").scrollTop, fbdScrollLeft:$("#fbdPane").scrollLeft, fbdScrollTop:$("#fbdPane").scrollTop };
   project = structuredClone(transaction.candidate);
   workspaceView = "logic";
@@ -2266,7 +2268,7 @@ document.addEventListener("click", (event) => {
   event.preventDefault(); event.stopImmediatePropagation();
 }, true);
 document.addEventListener("keydown", (event) => {
-  if (!adigunBotCanvasPreview) return;
+  if ($("#studioView").hidden || !adigunBotCanvasPreview) return;
   if (event.target.closest?.("#botPreviewCommitConfirm")) { event.stopImmediatePropagation(); return; }
   if (event.target.closest?.("#botPreviewGuard")) {
     if (event.key === "Escape") { event.preventDefault(); void finishAdigunBotCanvasPreview("discard"); return; }
@@ -2594,6 +2596,7 @@ $("#stSource").addEventListener("input", () => { project.stSource = $("#stSource
 $("#stSource").addEventListener("blur", () => { stEditRecorded = false; });
 $("#projectMenu").addEventListener("click", () => showProjects()); $("#paletteButton").addEventListener("click", showPalette); $("#helpButton").addEventListener("click", showHelp); $("#footerHelpLink").addEventListener("click", showHelp); $("#zoomFit").addEventListener("click", fitZoom); $("#minimapButton").addEventListener("click", () => $("#minimap").classList.toggle("hidden")); $("#fullscreenButton").addEventListener("click", () => document.fullscreenElement ? document.exitFullscreen() : $(".editor-area").requestFullscreen?.()); $("#languageButton").addEventListener("click", () => { language = supportedLocales[(supportedLocales.indexOf(language) + 1) % supportedLocales.length]; localStorage.setItem("adigun-language", language); $("#languageButton").textContent = language.toUpperCase(); applyLocale(); toast(t("languageChanged")); render(); });
 document.addEventListener("keydown", (event) => {
+  if ($("#studioView").hidden) return;
   const key = event.key.toLowerCase(), modifier = event.ctrlKey || event.metaKey, active = document.activeElement;
   if (event.key === "Escape" && $("#modal").open) { $("#modal").close(); return; }
   if (event.key === "Escape" && !$("#contextMenu").hidden) { hideContextMenu(); return; }
@@ -2639,8 +2642,6 @@ async function init() {
   sim.values = { ...(project.initialState || {}) }; render();
   if (accountAccess === "guest") await persist(false, true, { markDirty:false, markSaved:true });
   setUnsavedChanges(false);
-  if (["unconfigured", "account-required"].includes(accountAccess)) showAccount();
-  else if (!localStorage.getItem("adigun-safety-seen")) showWelcome();
 }
 $("#accountButton").addEventListener("click", showAccount);
 $("#guestExpirySignIn").addEventListener("click", () => { showAccount(); $("#accountEmail")?.focus(); });
@@ -2724,8 +2725,28 @@ for (const button of document.querySelectorAll("[data-mobile-drawer-close]")) bu
 mobileDrawerViewport.addEventListener("change", (event) => {
   if (!event.matches) setMobileDrawer(null);
 });
-startAdigunCopilotObservers();
-init().then(setupAdigunBotWindow);
+let studioReady;
+let studioEntryHandled = false;
+connectStudioRoutes(async (tool) => {
+  studioReady ??= init().then(() => { startAdigunCopilotObservers(); setupAdigunBotWindow(); });
+  await studioReady;
+  if ($("#studioView").hidden || (tool && location.hash !== `#studio/${tool}`)) return;
+  const dialog = $("#modal");
+  if (!studioEntryHandled) {
+    studioEntryHandled = true;
+    if (["unconfigured", "account-required"].includes(accountAccess)) showAccount();
+    else if (!localStorage.getItem("adigun-safety-seen")) showWelcome();
+  }
+  if (tool === "logic") $("#logicTab").click();
+  if (tool === "electrical") $("#electricalTab").click();
+  if (tool === "examples") {
+    const browse = () => {
+      if (location.hash === "#studio/examples" && ["guest", "member"].includes(accountAccess)) void showExamples();
+    };
+    if (dialog.open) dialog.addEventListener("close", browse, { once:true });
+    else browse();
+  }
+});
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./service-worker.js", { updateViaCache:"none" }).catch(() => {});
 
 

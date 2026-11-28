@@ -13,6 +13,8 @@
 
 ## First project across three workspaces
 
+From the overview, select **Launch Studio** to open the engineering workspace in the same tab. Use **Back to Overview** to leave the workspace and return to the same open project when you come back. The overview also links directly to the schematic, logic editor, and example library.
+
 1. Open **File → Example browser** and load a small example that lists **How to test** steps. This gives you known tags, logic, inputs, and expected outputs.
 2. In **Program Main**, review the tags and logic. Follow **How to test** using the **Simulated inputs** panel; use **Run** or **Step**, then read the output and diagnostics.
 3. In **Components / Schematic**, select each part to inspect its source and terminal names. Move parts by their headers; connect two terminal markers with **Connect wire**, add route bends, then **Validate**.

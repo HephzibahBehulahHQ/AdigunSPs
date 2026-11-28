@@ -12,12 +12,68 @@
   <link rel="apple-touch-startup-image" media="(prefers-color-scheme: light)" href="assets/brand/splash-light.svg">
   <link rel="apple-touch-startup-image" media="(prefers-color-scheme: dark)" href="assets/brand/splash-dark.svg">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overview.css">
   <link rel="stylesheet" href="assets/brand/brand-overrides.css">
   <title>AdigunSPs — HB Elektroniker — HEPHZIBAH BEHULAH</title>
 </head>
 <body>
+  <div id="overviewView" class="studio-overview" lang="en">
+    <header class="overview-nav">
+      <a class="overview-brand" href="./" data-overview-link>
+        <img src="assets/brand/adigunsps-icon-dark-192.svg" width="40" height="40" alt="">
+        <span>AdigunSPs<small>PLC Engineering Studio</small></span>
+      </a>
+      <nav aria-label="Overview">
+        <a class="overview-section-link" href="#overview-engine">How it works</a>
+        <a class="overview-section-link" href="#overview-tools">Studio tools</a>
+        <a class="overview-pill" href="#studio">Studio <span aria-hidden="true">→</span></a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="overview-hero">
+        <div class="overview-hero-copy">
+          <p class="overview-kicker">BROWSER-BASED PLC LAB</p>
+          <h1 id="overviewHeading" tabindex="-1">Build logic.<br><em>Watch it run.</em></h1>
+          <p>Write a PLC program, wire a virtual machine, and see your inputs drive real-time outputs. All from one engineering workspace.</p>
+          <a class="overview-cta" href="#studio">Launch Studio <span aria-hidden="true">→</span></a>
+          <span class="overview-hero-note">Educational simulation · No hardware required</span>
+        </div>
+        <figure class="overview-preview">
+          <figcaption><span><i></i> CONVEYOR DEMO</span><button id="overviewPreviewPause" type="button" aria-pressed="false">Pause preview</button></figcaption>
+          <canvas id="overviewTelemetry" width="640" height="352" aria-label="Animated illustration showing a conveyor sensor triggering an output through PLC logic."></canvas>
+          <div class="overview-preview-footer" aria-hidden="true"><span>INPUT · SENSOR</span><span>LOGIC · SCAN</span><span>OUTPUT · ACTUATOR</span></div>
+        </figure>
+      </section>
+
+      <section class="overview-section" id="overview-engine">
+        <p class="overview-kicker">THE PLC SCAN</p>
+        <h2>From a sensor to a signal.</h2>
+        <p>Think of the PLC as a loop that keeps asking what changed and what should happen next. Step through one scan to see each decision, or run continuously to watch the sequence unfold.</p>
+        <ol class="overview-grid">
+          <li><h3>Read inputs</h3><p>A pushbutton, a sensor, or a simulated wire updates the tags that your program reads.</p></li>
+          <li><h3>Evaluate logic</h3><p>The engine evaluates your program using those values. Contacts, timers, and counters help decide what happens next.</p></li>
+          <li><h3>Write outputs</h3><p>Outputs feed the schematic and HMI. Watch a lamp energize or trace why a signal stayed off.</p></li>
+        </ol>
+      </section>
+
+      <section class="overview-section" id="overview-tools">
+        <p class="overview-kicker">INSIDE THE STUDIO</p>
+        <h2>Start with what you want to explore.</h2>
+        <div class="overview-grid">
+          <article><h3>Real-time workspaces</h3><p>Build ladder logic or switch to the schematic to wire components and inspect the signals between them.</p><a href="#studio/electrical">Open the schematic <span aria-hidden="true">→</span></a></article>
+          <article><h3>Floating controls</h3><p>Run, pause, or step through the program. Keep the canvas in view while you watch tags or open the simulation HUD.</p><a href="#studio/logic">Open the logic editor <span aria-hidden="true">→</span></a></article>
+          <article><h3>Sandbox presets</h3><p>Start with a working example. Try a motor starter or a timer sequence, then change an input and see what follows.</p><a href="#studio/examples">Browse Studio examples <span aria-hidden="true">→</span></a></article>
+        </div>
+      </section>
+    </main>
+    <footer class="overview-footer"><span>AdigunSPs · HEPHZIBAH BEHULAH</span><a href="#studio">Launch Studio <span aria-hidden="true">→</span></a></footer>
+  </div>
+
+  <div id="studioView" class="studio-view" hidden>
   <header class="topbar">
-    <a class="brand" href="#" aria-label="AdigunSPs home"><span class="brand-mark" aria-hidden="true">HB</span></a>
+    <a class="studio-back" href="./" data-overview-link aria-label="Back to Overview"><span aria-hidden="true">←</span> <span class="studio-back-label">Back to Overview</span></a>
+    <a class="brand" href="./" data-overview-link aria-label="AdigunSPs home"><span class="brand-mark" aria-hidden="true">HB</span></a>
     <span class="product-brand"><strong id="headerProductName">AdigunSPs</strong><small id="headerDivisionLabel">PLC / SPS ENGINEERING STUDIO</small></span>
     <div class="project-name"><span class="live-dot"></span><button id="projectMenu" aria-label="Project menu"><span id="projectTitle">My first program</span><span class="chevron">▾</span></button><span class="project-context-separator" aria-hidden="true">/</span><span id="workspaceBreadcrumb" class="workspace-breadcrumb">Main program</span></div>
     <div id="globalQuickCommands" class="header-quick-commands" aria-label="Essential global commands"></div><div class="top-actions"><span id="saveState" class="save-state">Saved locally</span><span id="guestSessionStatus" class="guest-session-status" aria-live="polite" hidden></span><button id="accountButton" class="icon-button account-button account-state-unknown" type="button" aria-label="Sign In" title="Sign In"><svg id="accountFallbackIcon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.25 20c.55-3.55 2.8-5.35 6.75-5.35s6.2 1.8 6.75 5.35"></path></svg><img id="accountAvatarImage" class="account-avatar-image" alt="" aria-hidden="true" hidden><span class="account-status-dot" aria-hidden="true"></span></button><button id="languageButton" class="icon-button" aria-label="Change language">EN</button><button id="settingsButton" class="icon-button" aria-label="Settings">⚙</button><button id="paletteButton" class="icon-button" aria-label="Search all commands" title="Search all commands"><span class="command-search-symbol" aria-hidden="true">⌕</span><span id="paletteButtonLabel" class="command-search-label">Search all commands</span></button><button id="helpButton" class="icon-button" aria-label="Safety and help">?</button></div>
@@ -74,7 +130,6 @@
   </main>
 
   <footer class="statusbar"><div class="statusbar-main"><span class="editor-ready-status"><i class="status-indicator"></i><span id="editorReadyStatus">EDITOR READY</span></span><span><span id="plcPrefix">PLC:</span> <span id="plcStatus">STOPPED</span></span><span><span id="scanTimeLabel">Scan:</span> <b id="scanTime">0 ms</b></span><span><span id="cycleLabel">Cycle</span> <b id="cycleCount">0</b></span><span id="taskCycleInfo">Main · 100 ms</span><span class="status-spacer"></span><span id="autosaveStatus">Local autosave active</span><span id="gridSizeStatus" hidden>Grid: 20 px</span><span id="educationalStatus">Educational simulation · no hardware connected</span><span id="savedOnDeviceLabel">Project saved on this device</span><span class="footer-company-brand"><img id="footerCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"><span id="footerBrandAttribution">AdigunSPs — HB Elektroniker, a product of HEPHZIBAH BEHULAH</span></span><span id="languageStatus">English</span></div><div class="corporate-footer"><button id="footerHelpLink" type="button">Help &amp; docs</button><nav id="corporateFooterLinks" aria-label="Company links"></nav><span id="footerYear">© 2026 HEPHZIBAH BEHULAH</span></div></footer>
-  <main id="ioPrintReport" class="io-print-report" aria-hidden="true"></main>
   <div id="printBrandAttribution" class="print-brand-attribution"><img id="printCorporateLogo" class="corporate-logo" src="assets/brand/company-official.jpg" alt="HEPHZIBAH BEHULAH official corporate logo"><span><strong id="printProductName">AdigunSPs</strong><small id="printDivisionLabel">BY HB ELEKTRONIKER</small><span id="printBrandAttributionText">AdigunSPs — HB Elektroniker, a product of HEPHZIBAH BEHULAH</span></span></div>
   <aside id="adigunCopilotPanel" class="copilot-panel" aria-label="Adigun BOT live co-pilot" aria-live="polite" hidden></aside>
   <button id="adigunAiButton" class="floating-bot" aria-label="Adigun BOT" aria-controls="adigunBotWindow" aria-expanded="false">✦ <span>Adigun BOT</span><i class="bot-unread-badge" aria-hidden="true"></i></button>
@@ -86,6 +141,8 @@
   <input id="fileInput" type="file" accept="application/json,.json,application/xml,.xml" hidden>
   <div id="contextMenu" class="context-menu" role="menu" aria-label="Ladder editor context menu" hidden></div>
   <dialog id="modal" class="modal" aria-labelledby="workspaceDialogTitle"><div id="modalContent"></div></dialog>
+  </div>
+  <main id="ioPrintReport" class="io-print-report" aria-hidden="true"></main>
   <script src="runtime-config.js"></script>
   <script src="vendor/supabase.js"></script>
   <script>

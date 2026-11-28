@@ -83,7 +83,7 @@ for (const { mode, logic, hmi, mixed } of [
     test.setTimeout(60_000);
     await useOfflineMember(page, context);
     try {
-      await page.goto("/?offline-program=author", { waitUntil: "domcontentloaded" });
+      await page.goto("/?offline-program=author#studio", { waitUntil: "domcontentloaded" });
       await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
       const name = `${mixed ? "Mixed-language" : hmi ? "HMI" : mode} offline round-trip`;
       const project = { name, editorType: mode, rungs: [], initialState: { Start: false },
@@ -180,7 +180,7 @@ for (const { mode, logic, hmi, mixed } of [
       const [originalId] = await savedIds(page);
 
       const reopened = await context.newPage();
-      await reopened.goto("/?offline-program=reopen", { waitUntil: "domcontentloaded" });
+      await reopened.goto("/?offline-program=reopen#studio", { waitUntil: "domcontentloaded" });
       await expect(reopened.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
       await reopened.locator("#projectMenu").click();
       await reopened.locator(`[data-open="${originalId}"]`).click();
@@ -207,7 +207,7 @@ test("a cached member can reopen and restore a local project while offline", asy
   test.setTimeout(60_000);
   await useOfflineMember(page, context);
   try {
-    await page.goto("/?offline-project=author", { waitUntil:"domcontentloaded" });
+    await page.goto("/?offline-project=author#studio", { waitUntil:"domcontentloaded" });
     await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
     const name = "Offline recovery exercise";
     const project = {
@@ -229,7 +229,7 @@ test("a cached member can reopen and restore a local project while offline", asy
     }, name)).toBe("Edited offline");
 
     const reopened = await context.newPage();
-    await reopened.goto("/?offline-project=recovery", { waitUntil:"domcontentloaded" });
+    await reopened.goto("/?offline-project=recovery#studio", { waitUntil:"domcontentloaded" });
     await expect(reopened.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
     await reopened.locator("#projectMenu").click();
     await reopened.locator("[data-open]").filter({ hasText:name }).click();
@@ -312,7 +312,7 @@ test("a cached member can reopen and restore a local project while offline", asy
 
 test("snapshot comparison displays separated ST edits with independent line numbers", async ({ page, context }) => {
   await useOfflineMember(page, context);
-  await page.goto("/?offline-project=diff", { waitUntil:"domcontentloaded" });
+  await page.goto("/?offline-project=diff#studio", { waitUntil:"domcontentloaded" });
   await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
   const id = await page.evaluate(async () => {
     const { store } = await import("/src/store.js");
@@ -333,7 +333,7 @@ test("snapshot comparison displays separated ST edits with independent line numb
 
 test("local snapshot history records which revision was restored or copied", async ({ page, context }) => {
   await useOfflineMember(page, context);
-  await page.goto("/?offline-project=history", { waitUntil:"domcontentloaded" });
+  await page.goto("/?offline-project=history#studio", { waitUntil:"domcontentloaded" });
   await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
   const { id, copy } = await page.evaluate(async () => {
     const { store } = await import("/src/store.js");
@@ -363,7 +363,7 @@ test("local project metadata edits preserve saves from another tab", async ({ pa
   await useOfflineMember(page, context);
   const writer = await context.newPage();
   try {
-    await page.goto("/?offline-project=metadata", { waitUntil:"domcontentloaded" });
+    await page.goto("/?offline-project=metadata#studio", { waitUntil:"domcontentloaded" });
     await writer.goto("/?offline-project=metadata-writer", { waitUntil:"domcontentloaded" });
     await expect(page.locator("#accountButton")).toHaveAttribute("data-account-state", "member");
     const id = "local-metadata-fixture", name = "Shared local metadata fixture";
