@@ -104,10 +104,10 @@ test("Studio navigation keeps the project and scan in the same tab", async ({ pa
   await expect(page).toHaveURL(/#studio$/);
   await expect(studio).toBeVisible();
   await expect(page.locator("#modal")).toBeHidden();
-  const projectName = await page.locator("#projectTitle").textContent();
   const initialPageCount = context.pages().length;
   await page.locator('[data-action="run"]').first().click();
   await expect(page.locator("#plcStatus")).toHaveText("RUNNING");
+  const projectName = await page.locator("#projectTitle").textContent();
   await studio.getByRole("link", { name:"Back to Overview" }).click();
   await expect(page).not.toHaveURL(/#studio/);
   await expect(overview).toBeVisible();
