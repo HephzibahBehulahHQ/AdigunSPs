@@ -2284,6 +2284,9 @@ test("manufacturer reference lookup finds imported Finder and Doepke order codes
     ["R120ENCPU", "Mitsubishi Electric", "www.mitsubishielectric.com"],
     ["Q26UDVCPU", "Mitsubishi Electric", "fa-faq.mitsubishielectric.com"],
     ["L26CPU-PBT", "Mitsubishi Electric", "www.mitsubishielectric.com"],
+    ["1756-L980TSXT", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["1756-L84E-NSEXT", "Rockwell Automation", "literature.rockwellautomation.com"],
+    ["1756-L73EROMS", "Rockwell Automation", "literature.rockwellautomation.com"],
   ]) {
     await form.locator("input").fill(orderCode);
     await form.locator('button[type="submit"]').click();

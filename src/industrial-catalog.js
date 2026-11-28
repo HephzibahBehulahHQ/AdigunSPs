@@ -1111,6 +1111,48 @@ const phoenixTerminalBlockReferences = [
   simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Conductor paths, ratings, disconnection and fuse behavior are outside this catalog entry." },
 }));
 
+const rockwellControlLogixReferences = [
+  ["ControlLogix 5590", [
+    "1756-L902TS", "1756-L905TS", "1756-L908TS", "1756-L915TS", "1756-L925TS",
+    "1756-L950TS", "1756-L980TS", "1756-L902TSXT", "1756-L905TSXT", "1756-L908TSXT",
+    "1756-L915TSXT", "1756-L925TSXT", "1756-L950TSXT", "1756-L980TSXT", "1756-L905TPSXT",
+    "1756-L915TPSXT", "1756-L950TPSXT", "1756-L980TPSXT",
+  ]],
+  ["ControlLogix 5580", [
+    "1756-L81E", "1756-L82E", "1756-L83E", "1756-L84E", "1756-L85E",
+    "1756-L81EK", "1756-L82EK", "1756-L83EK", "1756-L84EK", "1756-L85EK",
+    "1756-L81EXT", "1756-L82EXT", "1756-L83EXT", "1756-L84EXT", "1756-L85EXT",
+    "1756-L81E-NSE", "1756-L82E-NSE", "1756-L83E-NSE", "1756-L84E-NSE", "1756-L85E-NSE",
+    "1756-L81E-NSEXT", "1756-L82E-NSEXT", "1756-L83E-NSEXT", "1756-L84E-NSEXT", "1756-L85E-NSEXT",
+    "1756-L81EP", "1756-L83EP", "1756-L85EP", "1756-L81EPXT", "1756-L83EPXT",
+    "1756-L85EPXT",
+  ]],
+  ["GuardLogix 5580", [
+    "1756-L81ES", "1756-L82ES", "1756-L83ES", "1756-L84ES", "1756-L85ES",
+    "1756-L81ESK", "1756-L82ESK", "1756-L83ESK", "1756-L84ESK", "1756-L81EXTS",
+    "1756-L82EXTS", "1756-L83EXTS", "1756-L84EXTS", "1756-L81ESXT", "1756-L82ESXT",
+    "1756-L83ESXT", "1756-L84ESXT",
+  ]],
+  ["ControlLogix 5570", [
+    "1756-L71", "1756-L72", "1756-L73", "1756-L74", "1756-L75",
+    "1756-L71K", "1756-L72K", "1756-L73K", "1756-L74K", "1756-L75K",
+    "1756-L73XT", "1756-L72EROM", "1756-L73EROM",
+  ]],
+  ["GuardLogix 5570", [
+    "1756-L71S", "1756-L72S", "1756-L73S", "1756-L71SK", "1756-L72SK",
+    "1756-L73SK", "1756-L73SXT", "1756-L72EROMS", "1756-L73EROMS",
+  ]],
+].flatMap(([family, identifiers]) => identifiers.map((identifier) => ({
+  manufacturer:"Rockwell Automation", identifier, family, category:"PLC controllers",
+  attributes:{ description:`Allen-Bradley ${family} controller` },
+  source:{
+    url:"https://literature.rockwellautomation.com/idc/groups/literature/documents/td/1756-td001_-en-p.pdf",
+    title:"Rockwell Automation publication 1756-TD001 · Controller catalog numbers",
+    retrievedOn:"2026-11-28",
+  },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Controller runtime, physical I/O, safety functions and safety validation are outside this catalog entry." },
+})));
+
 const rockwellCompactLogixReferences = [
   ["CompactLogix 5380", [
     "5069-L306ER", "5069-L306ERM", "5069-L310ER", "5069-L310ERM",
@@ -1535,6 +1577,7 @@ const industrialProductCatalog = Object.freeze([
   ...mitsubishiControllerReferences,
   ...rockwellMicro800References,
   ...rockwellCompactLogixReferences,
+  ...rockwellControlLogixReferences,
   ...phoenixTerminalBlockReferences,
   ...beckhoffAnalogInputReferences,
   ...beckhoffSignalTerminalReferences,
