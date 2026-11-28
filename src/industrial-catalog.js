@@ -740,6 +740,107 @@ const unifiedComfortPanels = [
   simulation: { status: "reference-only", model: null, limitations: "Manufacturer order reference. Panel wiring, display hardware, and vendor HMI runtime are outside the simulation." },
 }));
 
+const omronControllerReferences = [
+  {
+    family:"CP2E", url:"https://www.ia.omron.com/products/family/3777/lineup.html",
+    identifiers:[
+      "CP2E-E14DR-A", "CP2E-E20DR-A", "CP2E-E30DR-A", "CP2E-E40DR-A", "CP2E-E60DR-A",
+      "CP2E-N14DR-A", "CP2E-N14DR-D", "CP2E-N14DT-A", "CP2E-N14DT-D", "CP2E-N20DR-A",
+      "CP2E-N20DR-D", "CP2E-N20DT-A", "CP2E-N20DT-D", "CP2E-N30DR-A", "CP2E-N30DR-D",
+      "CP2E-N30DT-A", "CP2E-N30DT-D", "CP2E-N40DR-A", "CP2E-N40DR-D", "CP2E-N40DT-A",
+      "CP2E-N40DT-D", "CP2E-N60DR-A", "CP2E-N60DR-D", "CP2E-N60DT-A", "CP2E-N60DT-D",
+      "CP2E-S30DR-A", "CP2E-S30DT-D", "CP2E-S40DR-A", "CP2E-S40DT-D", "CP2E-S60DR-A",
+      "CP2E-S60DT-D",
+    ],
+  },
+  {
+    family:"CP1L", url:"https://www.ia.omron.com/products/family/1916/lineup.html",
+    identifiers:[
+      "CP1L-EL20DR-D", "CP1L-EL20DT-D", "CP1L-EM30DR-D", "CP1L-EM30DT-D", "CP1L-EM40DR-D",
+      "CP1L-EM40DT-D", "CP1L-L10DR-A", "CP1L-L10DR-D", "CP1L-L10DT-A", "CP1L-L10DT-D",
+      "CP1L-L14DR-A", "CP1L-L14DR-D", "CP1L-L14DT-A", "CP1L-L14DT-D", "CP1L-L20DR-A",
+      "CP1L-L20DR-D", "CP1L-L20DT-A", "CP1L-L20DT-D", "CP1L-M30DR-A", "CP1L-M30DR-D",
+      "CP1L-M30DT-A", "CP1L-M30DT-D", "CP1L-M40DR-A", "CP1L-M40DR-D", "CP1L-M40DT-A",
+      "CP1L-M40DT-D", "CP1L-M60DR-A", "CP1L-M60DR-D", "CP1L-M60DT-A", "CP1L-M60DT-D",
+    ],
+  },
+  {
+    family:"CP1H", url:"https://www.ia.omron.com/products/family/1778/lineup.html",
+    identifiers:[
+      "CP1H-X40DR-A", "CP1H-X40DT-D", "CP1H-XA40DR-A", "CP1H-XA40DT-D", "CP1H-Y20DT-D",
+    ],
+  },
+  {
+    family:"NX102", url:"https://www.ia.omron.com/products/family/3705/lineup.html",
+    identifiers:[
+      "NX102-1200", "NX102-1100", "NX102-1000", "NX102-9000", "NX102-1220",
+      "NX102-1120", "NX102-1020", "NX102-9020",
+    ],
+  },
+  {
+    family:"NX701", url:"https://www.ia.omron.com/products/family/3436/lineup.html",
+    identifiers:[
+      "NX701-1700", "NX701-1600",
+    ],
+  },
+  {
+    family:"CJ2H", url:"https://www.ia.omron.com/products/family/1993/lineup.html",
+    identifiers:[
+      "CJ2H-CPU68-EIP", "CJ2H-CPU67-EIP", "CJ2H-CPU66-EIP", "CJ2H-CPU65-EIP", "CJ2H-CPU64-EIP",
+    ],
+  },
+  {
+    family:"CJ2M", url:"https://www.ia.omron.com/products/family/2712/lineup.html",
+    identifiers:[
+      "CJ2M-CPU35", "CJ2M-CPU34", "CJ2M-CPU33", "CJ2M-CPU32", "CJ2M-CPU31",
+      "CJ2M-CPU15", "CJ2M-CPU14", "CJ2M-CPU13", "CJ2M-CPU12", "CJ2M-CPU11",
+    ],
+  },
+  {
+    family:"NX502", url:"https://www.ia.omron.com/products/family/3900/lineup.html",
+    identifiers:[
+      "NX502-1700", "NX502-1600", "NX502-1500", "NX502-1400", "NX502-1300",
+    ],
+  },
+  {
+    family:"NJ101", url:"https://www.ia.omron.com/products/family/3438/lineup.html",
+    identifiers:[
+      "NJ101-1000", "NJ101-9000",
+    ],
+  },
+  {
+    family:"NJ501 Robot", url:"https://www.ia.omron.com/products/family/3798/lineup.html",
+    identifiers:[
+      "NJ501-R500", "NJ501-R520", "NJ501-R400", "NJ501-R420", "NJ501-R300",
+      "NJ501-R320",
+    ],
+  },
+  {
+    family:"NJ Database", url:"https://www.ia.omron.com/products/family/3196/lineup.html",
+    identifiers:[
+      "NJ501-1520", "NJ501-1420", "NJ501-1320", "NJ101-1020", "NJ101-9020",
+    ],
+  },
+  {
+    family:"NJ501 Robotics", url:"https://www.ia.omron.com/products/family/3387/lineup.html",
+    identifiers:[
+      "NJ501-4500", "NJ501-4400", "NJ501-4300", "NJ501-4310", "NJ501-4320",
+    ],
+  },
+  {
+    family:"NX1P2", url:"https://www.ia.omron.com/products/family/3650/lineup.html",
+    identifiers:[
+      "NX1P2-1140DT", "NX1P2-1140DT1", "NX1P2-1040DT", "NX1P2-1040DT1", "NX1P2-9024DT",
+      "NX1P2-9024DT1",
+    ],
+  },
+].flatMap(({ family, url, identifiers }) => identifiers.map((identifier) => ({
+  manufacturer:"Omron", identifier, family, category:"PLC controllers",
+  attributes:{ description:`Omron ${family} CPU unit` },
+  source:{ url, title:`Omron ${family} CPU unit lineup`, retrievedOn:"2026-11-28" },
+  simulation:{ status:"reference-only", model:null, limitations:"Reference for product lookup. Terminal wiring, physical I/O, and controller runtime are outside this catalog entry." },
+})));
+
 const proFacePanelReferences = [
   {
     family:"GP6000",
@@ -1380,6 +1481,7 @@ const industrialProductCatalog = Object.freeze([
   ...basicMobilePanelReferences,
   ...rockwellPanelViewReferences,
   ...proFacePanelReferences,
+  ...omronControllerReferences,
   ...rockwellMicro800References,
   ...rockwellCompactLogixReferences,
   ...phoenixTerminalBlockReferences,
